@@ -456,7 +456,7 @@ mod test {
     use datafusion::prelude::{SessionConfig, SessionContext};
     use datafusion::sql::unparser::plan_to_sql;
     use insta::assert_snapshot;
-    use wren_core_base::mdl::DataSource;
+    use wren_core_base::mdl::{DataSource, SessionProperty};
 
     #[test]
     fn test_sync_transform() -> Result<()> {
@@ -1671,6 +1671,169 @@ mod test {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_rlac_with_requried_properties() -> Result<()> {
+        env_logger::init();
+        let ctx = SessionContext::new();
+
+        // test required property
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_nationkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .add_row_level_access_control(
+                        "nation",
+                        vec![SessionProperty::new_required("session_nation")],
+                        "c_nationkey = @session_nation",
+                    )
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let sql = "SELECT * FROM customer";
+        let headers =
+            build_headers(&[("session_nation".to_string(), Some("1".to_string()))]);
+        let result =
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
+                .await?;
+        assert_snapshot!(
+            result,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer WHERE customer.c_nationkey = 1) AS customer"
+        );
+
+        match transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await
+        {
+            Err(e) => {
+                assert_snapshot!(
+                    e.to_string(),
+                    @r"
+                ModelAnalyzeRule
+                caused by
+                Error during planning: Row level access control property session_nation is required, but not found in headers
+                "
+                )
+            }
+            _ => panic!("Expected error"),
+        }
+
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_custkey", "int").build())
+                    .column(ColumnBuilder::new("c_nationkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .add_row_level_access_control(
+                        "nation",
+                        vec![SessionProperty::new_required("session_nation")],
+                        "c_nationkey = @session_nation",
+                    )
+                    .add_row_level_access_control(
+                        "name",
+                        vec![SessionProperty::new_required("session_user")],
+                        "c_name = @session_user",
+                    )
+                    .build(),
+            )
+            .model(
+                ModelBuilder::new("orders")
+                    .table_reference("orders")
+                    .column(ColumnBuilder::new("o_orderkey", "int").build())
+                    .column(ColumnBuilder::new("o_custkey", "int").build())
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let sql = "SELECT * FROM customer";
+        let headers = build_headers(&[
+            ("session_nation".to_string(), Some("1".to_string())),
+            ("session_user".to_string(), Some("'Gura'".to_string())),
+        ]);
+        let result = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            headers.clone(),
+            sql,
+        )
+        .await?;
+        assert_snapshot!(
+            result,
+            @"SELECT customer.c_custkey, customer.c_nationkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Gura') AS customer"
+        );
+
+        let sql = "SELECT * FROM customer WHERE c_custkey = 1";
+        let result =
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
+                .await?;
+        assert_snapshot!(
+            result,
+            @"SELECT customer.c_custkey, customer.c_nationkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Gura') AS customer WHERE customer.c_custkey = 1"
+        );
+
+        // test other model won't be affected
+        let sql = "SELECT o_orderkey FROM orders";
+        let result = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
+        assert_snapshot!(
+            result,
+            @"SELECT orders.o_orderkey FROM (SELECT orders.o_orderkey FROM (SELECT __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders) AS orders"
+        );
+
+        let sql = "SELECT o_orderkey FROM customer JOIN orders ON customer.c_custkey = orders.o_custkey";
+        let headers = build_headers(&[
+            ("session_nation".to_string(), Some("1".to_string())),
+            ("session_user".to_string(), Some("'Gura'".to_string())),
+        ]);
+        let result =
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
+                .await?;
+        assert_snapshot!(
+            result,
+            @"SELECT orders.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Gura') AS customer JOIN (SELECT orders.o_custkey, orders.o_orderkey FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders) AS orders ON customer.c_custkey = orders.o_custkey"
+        );
+
+        // test property is required
+        let headers =
+            build_headers(&[("session_nation".to_string(), Some("1".to_string()))]);
+        let sql = "SELECT * FROM customer";
+        match transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
+            .await
+        {
+            Err(e) => {
+                assert_snapshot!(
+                    e.to_string(),
+                    @r"
+                ModelAnalyzeRule
+                caused by
+                Error during planning: Row level access control property session_user is required, but not found in headers
+                "
+                )
+            }
+            _ => panic!("Expected error"),
+        }
+        Ok(())
+    }
+
     /// Return a RecordBatch with made up data about customer
     fn customer() -> RecordBatch {
         let custkey: ArrayRef = Arc::new(Int64Array::from(vec![1, 2, 3]));
@@ -1741,5 +1904,15 @@ mod test {
             .to_string();
 
         actual.trim().to_string()
+    }
+
+    fn build_headers(
+        field: &[(String, Option<String>)],
+    ) -> HashMap<String, Option<String>> {
+        let mut headers = HashMap::new();
+        for (key, value) in field {
+            headers.insert(key.clone(), value.clone());
+        }
+        headers
     }
 }

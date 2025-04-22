@@ -75,16 +75,13 @@ impl ModelGenerationRule {
                     } else {
                         model_plan.required_exprs.clone()
                     };
+
                     let projections = eliminate_ambiguous_columns(projections);
                     let mut builder = if let Some(plan) = source_plan {
                         LogicalPlanBuilder::from(plan)
                     } else {
                         return plan_err!("Failed to generate source plan");
                     };
-
-                    if !model_plan.required_exprs.is_empty() {
-                        builder = builder.project(projections)?
-                    }
 
                     let filters: Vec<Option<Expr>> = model_plan
                         .model
@@ -110,8 +107,14 @@ impl ModelGenerationRule {
                         })
                         .flatten();
 
+                    // follow the logical plan of DataFusion.
+                    // the filter should be placed top on the relation.
                     if let Some(filter) = rls_filter {
                         builder = builder.filter(filter)?
+                    }
+
+                    if !model_plan.required_exprs.is_empty() {
+                        builder = builder.project(projections)?
                     }
 
                     // calculated field scope
