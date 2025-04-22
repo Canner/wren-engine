@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use datafusion::prelude::SessionContext;
@@ -15,8 +16,14 @@ async fn main() -> datafusion::common::Result<()> {
 
     let sql = "select * from wrenai.public.customers_view";
     println!("Original SQL: \n{}", sql);
-    let sql =
-        transform_sql_with_ctx(&SessionContext::new(), analyzed_mdl, &[], sql).await?;
+    let sql = transform_sql_with_ctx(
+        &SessionContext::new(),
+        analyzed_mdl,
+        &[],
+        HashMap::new(),
+        sql,
+    )
+    .await?;
     println!("Wren engine generated SQL: \n{}", sql);
     Ok(())
 }

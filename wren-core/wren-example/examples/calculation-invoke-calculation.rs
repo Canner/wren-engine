@@ -81,6 +81,7 @@ async fn main() -> Result<()> {
         &ctx,
         Arc::clone(&analyzed_mdl),
         &[],
+        HashMap::new(),
         "select totalprice from wrenai.public.customers",
     )
     .await
@@ -106,6 +107,7 @@ async fn main() -> Result<()> {
         &ctx,
         Arc::clone(&analyzed_mdl),
         &[],
+        HashMap::new(),
         "select customer_state_cf from wrenai.public.order_items",
     )
     .await

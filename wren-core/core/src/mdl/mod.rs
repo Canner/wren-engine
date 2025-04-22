@@ -1,7 +1,6 @@
 use crate::logical_plan::utils::{from_qualified_name_str, try_map_data_type};
 use crate::mdl::builder::ManifestBuilder;
 use crate::mdl::context::{create_ctx_with_mdl, WrenDataSource};
-use crate::mdl::dialect::WrenDialect;
 use crate::mdl::function::{
     ByPassAggregateUDF, ByPassScalarUDF, ByPassWindowFunction, FunctionType,
     RemoteFunction,
@@ -22,6 +21,7 @@ use datafusion::sql::sqlparser::dialect::dialect_from_str;
 use datafusion::sql::unparser::Unparser;
 use datafusion::sql::TableReference;
 pub use dataset::Dataset;
+use dialect::WrenDialect;
 use log::{debug, info};
 use manifest::Relationship;
 use parking_lot::RwLock;
@@ -331,6 +331,7 @@ impl WrenMDL {
 pub fn transform_sql(
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
     remote_functions: &[RemoteFunction],
+    properties: HashMap<String, Option<String>>,
     sql: &str,
 ) -> Result<String> {
     let runtime = tokio::runtime::Runtime::new().unwrap();
@@ -338,6 +339,7 @@ pub fn transform_sql(
         &SessionContext::new(),
         analyzed_mdl,
         remote_functions,
+        properties,
         sql,
     ))
 }
@@ -349,6 +351,7 @@ pub async fn transform_sql_with_ctx(
     ctx: &SessionContext,
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
     remote_functions: &[RemoteFunction],
+    properties: HashMap<String, Option<String>>,
     sql: &str,
 ) -> Result<String> {
     info!("wren-core received SQL: {}", sql);
@@ -357,7 +360,9 @@ pub async fn transform_sql_with_ctx(
         register_remote_function(ctx, remote_function)?;
         Ok::<_, DataFusionError>(())
     })?;
-    let ctx = create_ctx_with_mdl(ctx, Arc::clone(&analyzed_mdl), false).await?;
+    let properties_ref = Arc::new(properties);
+    let ctx = create_ctx_with_mdl(ctx, Arc::clone(&analyzed_mdl), properties_ref, false)
+        .await?;
     let plan = ctx.state().create_logical_plan(sql).await?;
     debug!("wren-core original plan:\n {plan}");
     let analyzed = ctx.state().optimize(&plan)?;
@@ -466,6 +471,7 @@ mod test {
         let _ = mdl::transform_sql(
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             "select o_orderkey + o_orderkey from test.test.orders",
         )?;
         Ok(())
@@ -503,6 +509,7 @@ mod test {
                 &SessionContext::new(),
                 Arc::clone(&analyzed_mdl),
                 &[],
+                HashMap::new(),
                 sql,
             )
             .await?;
@@ -531,6 +538,7 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
@@ -558,6 +566,7 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
@@ -575,6 +584,7 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
@@ -613,6 +623,7 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
@@ -652,6 +663,7 @@ mod test {
             &ctx,
             Arc::clone(&analyzed_mdl),
             &functions,
+            HashMap::new(),
             r#"select add_two("Custkey") from "Customer""#,
         )
         .await?;
@@ -662,6 +674,7 @@ mod test {
             &ctx,
             Arc::clone(&analyzed_mdl),
             &functions,
+            HashMap::new(),
             r#"select median("Custkey") from "CTest"."STest"."Customer" group by "Name""#,
         )
         .await?;
@@ -721,6 +734,7 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
@@ -736,6 +750,7 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
@@ -748,6 +763,7 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
@@ -786,6 +802,7 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await
@@ -801,6 +818,7 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await
@@ -839,6 +857,7 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
@@ -849,6 +868,7 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
@@ -860,6 +880,7 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
             .await.map_err(|e| {
@@ -878,6 +899,7 @@ mod test {
             &SessionContext::new(),
             Arc::new(AnalyzedWrenMDL::default()),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
@@ -907,6 +929,7 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
@@ -922,8 +945,14 @@ mod test {
 
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
         let sql = "select count(*) from (select 1)";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         // TODO: BigQuery doesn't support the alias include invalid characters (e.g. `*`, `()`).
         //      We should remove the invalid characters for the alias.
         assert_eq!(actual, "SELECT count(1) AS \"count(*)\" FROM (SELECT 1)");
@@ -956,18 +985,36 @@ mod test {
         let ctx = SessionContext::new();
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
         let sql = "select interval 1 day";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         assert_eq!(actual, "SELECT INTERVAL 1 DAY");
 
         let sql = "SELECT INTERVAL '1 YEAR 1 MONTH'";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         assert_eq!(actual, "SELECT INTERVAL 13 MONTH");
 
         let sql = "SELECT INTERVAL '1' YEAR + INTERVAL '2' MONTH + INTERVAL '3' DAY";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         assert_eq!(
             actual,
             "SELECT INTERVAL 12 MONTH + INTERVAL 2 MONTH + INTERVAL 3 DAY"
@@ -981,7 +1028,8 @@ mod test {
         let manifest = ManifestBuilder::new().build();
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
         let sql = "select * from unnest([1, 2, 3])";
-        let actual = transform_sql_with_ctx(&ctx, analyzed_mdl, &[], sql).await?;
+        let actual =
+            transform_sql_with_ctx(&ctx, analyzed_mdl, &[], HashMap::new(), sql).await?;
         assert_eq!(actual, "SELECT \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\" FROM (SELECT UNNEST([1, 2, 3]) AS \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\")");
 
         let manifest = ManifestBuilder::new()
@@ -989,7 +1037,8 @@ mod test {
             .build();
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
         let sql = "select * from unnest([1, 2, 3])";
-        let actual = transform_sql_with_ctx(&ctx, analyzed_mdl, &[], sql).await?;
+        let actual =
+            transform_sql_with_ctx(&ctx, analyzed_mdl, &[], HashMap::new(), sql).await?;
         assert_eq!(actual, "SELECT \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\" FROM UNNEST([1, 2, 3])");
         Ok(())
     }
@@ -999,13 +1048,25 @@ mod test {
         let ctx = SessionContext::new();
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
         let sql = "select timestamp '2011-01-01 18:00:00 +08:00'";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         assert_eq!(actual, "SELECT CAST('2011-01-01 10:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00 +08:00\"\")\"");
 
         let sql = "select timestamp '2011-01-01 18:00:00 Asia/Taipei'";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         assert_eq!(actual, "SELECT CAST('2011-01-01 10:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00 Asia/Taipei\"\")\"");
         Ok(())
     }
@@ -1018,14 +1079,26 @@ mod test {
         let ctx = SessionContext::new_with_config(session_config);
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
         let sql = "select timestamp '2011-01-01 18:00:00'";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         // TIMESTAMP doesn't have timezone, so the timezone will be ignored
         assert_eq!(actual, "SELECT CAST('2011-01-01 18:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00\"\")\"");
 
         let sql = "select timestamp with time zone '2011-01-01 18:00:00'";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         // TIMESTAMP WITH TIME ZONE will be converted to the session timezone
         assert_eq!(actual, "SELECT CAST('2011-01-01 10:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00\"\")\"");
 
@@ -1036,14 +1109,26 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
         // TIMESTAMP WITH TIME ZONE will be converted to the session timezone with daylight saving (UTC -5)
         let sql = "select timestamp with time zone '2024-01-15 18:00:00'";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         assert_eq!(actual, "SELECT CAST('2024-01-15 23:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2024-01-15 18:00:00\"\")\"");
 
         // TIMESTAMP WITH TIME ZONE will be converted to the session timezone without daylight saving (UTC -4)
         let sql = "select timestamp with time zone '2024-07-15 18:00:00'";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         assert_eq!(actual, "SELECT CAST('2024-07-15 22:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2024-07-15 18:00:00\"\")\"");
         Ok(())
     }
@@ -1078,6 +1163,7 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
@@ -1121,7 +1207,10 @@ mod test {
 
         let analyzed_mdl =
             Arc::new(AnalyzedWrenMDL::analyze_with_tables(manifest, registers)?);
-        let ctx = create_ctx_with_mdl(&ctx, Arc::clone(&analyzed_mdl), true).await?;
+        let properties_ref = Arc::new(HashMap::new());
+        let ctx =
+            create_ctx_with_mdl(&ctx, Arc::clone(&analyzed_mdl), properties_ref, true)
+                .await?;
         let sql = r#"select arrow_typeof(timestamp_col), arrow_typeof(timestamptz_col) from wren.test.timestamp_table limit 1"#;
         let result = ctx.sql(sql).await?.collect().await?;
         let expected = vec![
@@ -1163,6 +1252,7 @@ mod test {
                 &SessionContext::new(),
                 Arc::clone(&analyzed_mdl),
                 &[],
+                HashMap::new(),
                 sql,
             )
             .await?;
@@ -1177,6 +1267,7 @@ mod test {
                 &SessionContext::new(),
                 Arc::clone(&analyzed_mdl),
                 &[],
+                HashMap::new(),
                 sql,
             )
             .await?;
@@ -1190,6 +1281,7 @@ mod test {
                 &SessionContext::new(),
                 Arc::clone(&analyzed_mdl),
                 &[],
+                HashMap::new(),
                 sql,
             )
             .await?;
@@ -1204,6 +1296,7 @@ mod test {
                 &SessionContext::new(),
                 Arc::clone(&analyzed_mdl),
                 &[],
+                HashMap::new(),
                 sql,
             )
             .await?;
@@ -1231,8 +1324,14 @@ mod test {
             .build();
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
         let sql = "select list_col[1] from wren.test.list_table";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         assert_eq!(actual, "SELECT list_table.list_col[1] FROM (SELECT list_table.list_col FROM \
         (SELECT __source.list_col AS list_col FROM list_table AS __source) AS list_table) AS list_table");
         Ok(())
@@ -1266,8 +1365,14 @@ mod test {
             .build();
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
         let sql = "select struct_col.float_field from wren.test.struct_table";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         assert_eq!(
             actual,
             "SELECT struct_table.struct_col.float_field FROM \
@@ -1276,16 +1381,28 @@ mod test {
         );
 
         let sql = "select struct_array_col[1].float_field from wren.test.struct_table";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         assert_eq!(actual, "SELECT struct_table.struct_array_col[1].float_field FROM \
         (SELECT struct_table.struct_array_col FROM (SELECT __source.struct_array_col AS struct_array_col \
         FROM struct_table AS __source) AS struct_table) AS struct_table");
 
         let sql =
             "select {float_field: 1.0, time_field: timestamp '2021-01-01 00:00:00'}";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         assert_eq!(actual, "SELECT {float_field: 1.0, time_field: CAST('2021-01-01 00:00:00' AS TIMESTAMP)}");
 
         let manifest = ManifestBuilder::new()
@@ -1300,7 +1417,7 @@ mod test {
             .build();
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
         let sql = "select struct_col.float_field from wren.test.struct_table";
-        let _ = transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql)
+        let _ = transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], HashMap::new(), sql)
             .await
             .map_err(|e| {
                 assert_eq!(
@@ -1317,9 +1434,14 @@ mod test {
         let sql =
             "SELECT CAST(TIMESTAMP '2021-01-01 00:00:00' as TIMESTAMP WITH TIME ZONE) = \
         CAST(TIMESTAMP '2021-01-01 00:00:00' as TIMESTAMP WITH TIME ZONE)";
-        let result =
-            transform_sql_with_ctx(&ctx, Arc::new(AnalyzedWrenMDL::default()), &[], sql)
-                .await?;
+        let result = transform_sql_with_ctx(
+            &ctx,
+            Arc::new(AnalyzedWrenMDL::default()),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         assert_eq!(result, "SELECT CAST(CAST('2021-01-01 00:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE) = \
         CAST(CAST('2021-01-01 00:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE)");
         Ok(())
@@ -1332,9 +1454,14 @@ mod test {
     SELECT 1 x, 'b' y UNION ALL
     SELECT 2 x, 'a' y UNION ALL
     SELECT 2 x, 'c' y)"#;
-        let result =
-            transform_sql_with_ctx(&ctx, Arc::new(AnalyzedWrenMDL::default()), &[], sql)
-                .await?;
+        let result = transform_sql_with_ctx(
+            &ctx,
+            Arc::new(AnalyzedWrenMDL::default()),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         assert_eq!(
             result,
             "SELECT x, y FROM (SELECT 1 AS x, 'a' AS y \
@@ -1352,7 +1479,8 @@ mod test {
         let ctx = SessionContext::new();
         let expected = "SELECT trim(' abc')";
         let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&mdl), &[], expected).await?;
+            transform_sql_with_ctx(&ctx, Arc::clone(&mdl), &[], HashMap::new(), expected)
+                .await?;
         assert_eq!(actual, expected);
         Ok(())
     }
@@ -1373,8 +1501,14 @@ mod test {
             .build();
         let sql = r#"SELECT c_custkey, count(distinct c_name) FROM customer GROUP BY c_custkey"#;
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
-        let result =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let result = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         assert_eq!(
             result,
             "SELECT customer.c_custkey, count(DISTINCT customer.c_name) FROM \
@@ -1401,8 +1535,14 @@ mod test {
             .build();
         let sql = r#"SELECT c_custkey, (SELECT c_name FROM customer WHERE c_custkey = 1) FROM customer"#;
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
-        let result =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let result = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         assert_eq!(
             result,
             "SELECT customer.c_custkey, (SELECT customer.c_name FROM (SELECT customer.c_custkey, customer.c_name \
@@ -1428,8 +1568,14 @@ mod test {
             .build();
         let sql = r#"SELECT * FROM customer WHERE c_custkey = 1"#;
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
-        let result =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let result = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         assert_eq!(
             result,
             "SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM \

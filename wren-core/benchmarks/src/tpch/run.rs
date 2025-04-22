@@ -3,6 +3,7 @@ use crate::util::options::CommonOpt;
 use crate::util::run::BenchmarkRun;
 use datafusion::common::Result;
 use datafusion::prelude::SessionContext;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
@@ -57,7 +58,14 @@ impl RunOpt {
             let start = Instant::now();
             let sql = &get_query_sql(query_id)?;
             for query in sql {
-                transform_sql_with_ctx(&ctx, Arc::clone(&mdl), &[], query).await?;
+                transform_sql_with_ctx(
+                    &ctx,
+                    Arc::clone(&mdl),
+                    &[],
+                    HashMap::new(),
+                    query,
+                )
+                .await?;
             }
 
             let elapsed = start.elapsed(); //.as_secs_f64() * 1000.0;

@@ -1,4 +1,5 @@
 use datafusion::prelude::SessionContext;
+use std::collections::HashMap;
 use std::sync::Arc;
 use wren_core::mdl::builder::{
     ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder,
@@ -13,8 +14,14 @@ async fn main() -> datafusion::common::Result<()> {
 
     let sql = "select customer_state from wrenai.public.orders_model";
     println!("Original SQL: \n{}", sql);
-    let sql =
-        transform_sql_with_ctx(&SessionContext::new(), analyzed_mdl, &[], sql).await?;
+    let sql = transform_sql_with_ctx(
+        &SessionContext::new(),
+        analyzed_mdl,
+        &[],
+        HashMap::new(),
+        sql,
+    )
+    .await?;
     println!("Wren engine generated SQL: \n{}", sql);
     Ok(())
 }
