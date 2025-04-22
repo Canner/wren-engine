@@ -448,12 +448,14 @@ mod test {
     use datafusion::arrow::array::{
         ArrayRef, Int64Array, RecordBatch, StringArray, TimestampNanosecondArray,
     };
-    use datafusion::assert_batches_eq;
+    use datafusion::arrow::util::pretty::pretty_format_batches_with_options;
+    use datafusion::common::format::DEFAULT_FORMAT_OPTIONS;
     use datafusion::common::not_impl_err;
     use datafusion::common::Result;
     use datafusion::config::ConfigOptions;
     use datafusion::prelude::{SessionConfig, SessionContext};
     use datafusion::sql::unparser::plan_to_sql;
+    use insta::assert_snapshot;
     use wren_core_base::mdl::DataSource;
 
     #[test]
@@ -570,14 +572,13 @@ mod test {
             sql,
         )
         .await?;
-        let expected = "SELECT \"profile\".totalcost FROM (SELECT totalcost.totalcost FROM \
+        assert_snapshot!(result, @"SELECT \"profile\".totalcost FROM (SELECT totalcost.totalcost FROM \
         (SELECT __relation__2.p_custkey AS p_custkey, sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost FROM \
         (SELECT __relation__1.c_custkey, orders.o_custkey, orders.o_totalprice, __relation__1.p_custkey FROM \
         (SELECT __source.o_custkey AS o_custkey, __source.o_totalprice AS o_totalprice FROM orders AS __source) AS orders RIGHT JOIN \
         (SELECT customer.c_custkey, \"profile\".p_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer RIGHT JOIN \
         (SELECT __source.p_custkey AS p_custkey FROM \"profile\" AS __source) AS \"profile\" ON customer.c_custkey = \"profile\".p_custkey) AS __relation__1 \
-        ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost) AS \"profile\"";
-        assert_eq!(result, expected);
+        ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost) AS \"profile\"");
 
         let sql = "select totalcost from profile where p_sex = 'M'";
         let result = transform_sql_with_ctx(
@@ -588,8 +589,8 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(result,
-          "SELECT \"profile\".totalcost FROM (SELECT __relation__1.p_sex, __relation__1.totalcost FROM \
+        assert_snapshot!(result,
+          @"SELECT \"profile\".totalcost FROM (SELECT __relation__1.p_sex, __relation__1.totalcost FROM \
           (SELECT totalcost.p_custkey, \"profile\".p_sex, totalcost.totalcost FROM (SELECT __relation__2.p_custkey AS p_custkey, \
           sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost FROM (SELECT __relation__1.c_custkey, orders.o_custkey, \
           orders.o_totalprice, __relation__1.p_custkey FROM (SELECT __source.o_custkey AS o_custkey, __source.o_totalprice AS o_totalprice \
@@ -627,8 +628,8 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(actual,
-            "SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" FROM \
+        assert_snapshot!(actual,
+            @"SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" FROM \
             (SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" FROM \
             (SELECT __source.\"Custkey\" AS \"Custkey\", __source.\"Name\" AS \"Name\" FROM datafusion.\"public\".customer AS __source) AS \"Customer\") AS \"Customer\"");
         Ok(())
@@ -667,7 +668,7 @@ mod test {
             r#"select add_two("Custkey") from "Customer""#,
         )
         .await?;
-        assert_eq!(actual, "SELECT add_two(\"Customer\".\"Custkey\") FROM (SELECT \"Customer\".\"Custkey\" \
+        assert_snapshot!(actual, @"SELECT add_two(\"Customer\".\"Custkey\") FROM (SELECT \"Customer\".\"Custkey\" \
         FROM (SELECT __source.\"Custkey\" AS \"Custkey\" FROM datafusion.\"public\".customer AS __source) AS \"Customer\") AS \"Customer\"");
 
         let actual = transform_sql_with_ctx(
@@ -678,7 +679,7 @@ mod test {
             r#"select median("Custkey") from "CTest"."STest"."Customer" group by "Name""#,
         )
         .await?;
-        assert_eq!(actual, "SELECT median(\"Customer\".\"Custkey\") FROM (SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" \
+        assert_snapshot!(actual, @"SELECT median(\"Customer\".\"Custkey\") FROM (SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" \
         FROM (SELECT __source.\"Custkey\" AS \"Custkey\", __source.\"Name\" AS \"Name\" FROM datafusion.\"public\".customer AS __source) AS \"Customer\") AS \"Customer\" \
         GROUP BY \"Customer\".\"Name\"");
 
@@ -738,11 +739,11 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(actual,
-                   "SELECT artist.\"名字\", artist.name_append, artist.\"group\", artist.subscribe, artist.subscribe_plus FROM \
-                   (SELECT artist.\"group\", artist.name_append, artist.subscribe, artist.subscribe_plus, artist.\"名字\" FROM \
-                   (SELECT __source.\"名字\" AS \"名字\", __source.\"名字\" || __source.\"名字\" AS name_append, __source.\"組別\" AS \"group\", CAST(__source.\"訂閱數\" AS BIGINT) + 1 AS subscribe_plus, __source.\"訂閱數\" AS subscribe FROM artist AS __source) AS artist) AS artist"
-);
+        assert_snapshot!(actual,
+                           @"SELECT artist.\"名字\", artist.name_append, artist.\"group\", artist.subscribe, artist.subscribe_plus FROM \
+                           (SELECT artist.\"group\", artist.name_append, artist.subscribe, artist.subscribe_plus, artist.\"名字\" FROM \
+                           (SELECT __source.\"名字\" AS \"名字\", __source.\"名字\" || __source.\"名字\" AS name_append, __source.\"組別\" AS \"group\", CAST(__source.\"訂閱數\" AS BIGINT) + 1 AS subscribe_plus, __source.\"訂閱數\" AS subscribe FROM artist AS __source) AS artist) AS artist"
+        );
         ctx.sql(&actual).await?.show().await?;
 
         let sql = r#"select group from wren.test.artist"#;
@@ -754,8 +755,8 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(actual,
-                   "SELECT artist.\"group\" FROM (SELECT artist.\"group\" FROM (SELECT __source.\"組別\" AS \"group\" FROM artist AS __source) AS artist) AS artist");
+        assert_snapshot!(actual,
+                   @"SELECT artist.\"group\" FROM (SELECT artist.\"group\" FROM (SELECT __source.\"組別\" AS \"group\" FROM artist AS __source) AS artist) AS artist");
         ctx.sql(&actual).await?.show().await?;
 
         let sql = r#"select subscribe_plus from wren.test.artist"#;
@@ -767,8 +768,8 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(actual,
-                   "SELECT artist.subscribe_plus FROM (SELECT artist.subscribe_plus FROM (SELECT CAST(__source.\"訂閱數\" AS BIGINT) + 1 AS subscribe_plus FROM artist AS __source) AS artist) AS artist");
+        assert_snapshot!(actual,
+                   @"SELECT artist.subscribe_plus FROM (SELECT artist.subscribe_plus FROM (SELECT CAST(__source.\"訂閱數\" AS BIGINT) + 1 AS subscribe_plus FROM artist AS __source) AS artist) AS artist");
         ctx.sql(&actual).await?.show().await
     }
 
@@ -807,9 +808,9 @@ mod test {
         )
         .await
         .map_err(|e| {
-            assert_eq!(
+            assert_snapshot!(
                 e.to_string(),
-                "ModelAnalyzeRule\ncaused by\nSchema error: No field named \"名字\"."
+                @"ModelAnalyzeRule\ncaused by\nSchema error: No field named \"名字\"."
             )
         });
 
@@ -823,9 +824,9 @@ mod test {
         )
         .await
         .map_err(|e| {
-            assert_eq!(
+            assert_snapshot!(
                 e.to_string(),
-                "ModelAnalyzeRule\ncaused by\nSchema error: No field named \"名字\"."
+                @"ModelAnalyzeRule\ncaused by\nSchema error: No field named \"名字\"."
             )
         });
         Ok(())
@@ -861,8 +862,8 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(actual,
-                   "SELECT artist.\"串接名字\" FROM (SELECT artist.\"串接名字\" FROM (SELECT __source.\"名字\" || __source.\"名字\" AS \"串接名字\" FROM artist AS __source) AS artist) AS artist");
+        assert_snapshot!(actual,
+                   @"SELECT artist.\"串接名字\" FROM (SELECT artist.\"串接名字\" FROM (SELECT __source.\"名字\" || __source.\"名字\" AS \"串接名字\" FROM artist AS __source) AS artist) AS artist");
         let sql = r#"select * from wren.test.artist"#;
         let actual = transform_sql_with_ctx(
             &SessionContext::new(),
@@ -872,8 +873,8 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(actual,
-                   "SELECT artist.\"串接名字\" FROM (SELECT artist.\"串接名字\" FROM (SELECT __source.\"名字\" || __source.\"名字\" AS \"串接名字\" FROM artist AS __source) AS artist) AS artist");
+        assert_snapshot!(actual,
+                   @"SELECT artist.\"串接名字\" FROM (SELECT artist.\"串接名字\" FROM (SELECT __source.\"名字\" || __source.\"名字\" AS \"串接名字\" FROM artist AS __source) AS artist) AS artist");
 
         let sql = r#"select "名字" from wren.test.artist"#;
         let _ = transform_sql_with_ctx(
@@ -884,9 +885,9 @@ mod test {
             sql,
         )
             .await.map_err(|e| {
-                assert_eq!(
+                assert_snapshot!(
                     e.to_string(),
-                    "Schema error: No field named \"名字\". Valid fields are wren.test.artist.\"串接名字\"."
+                    @"Schema error: No field named \"名字\". Valid fields are wren.test.artist.\"串接名字\"."
                 )
             });
         Ok(())
@@ -903,7 +904,7 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(actual, "SELECT current_date()");
+        assert_snapshot!(actual, @"SELECT current_date()");
         Ok(())
     }
 
@@ -933,8 +934,8 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(actual,
-                   "SELECT CAST(current_date() AS TIMESTAMP) > artist.\"出道時間\" FROM \
+        assert_snapshot!(actual,
+                   @"SELECT CAST(current_date() AS TIMESTAMP) > artist.\"出道時間\" FROM \
                    (SELECT artist.\"出道時間\" FROM (SELECT __source.\"出道時間\" AS \"出道時間\" FROM artist AS __source) AS artist) AS artist");
         Ok(())
     }
@@ -955,7 +956,7 @@ mod test {
         .await?;
         // TODO: BigQuery doesn't support the alias include invalid characters (e.g. `*`, `()`).
         //      We should remove the invalid characters for the alias.
-        assert_eq!(actual, "SELECT count(1) AS \"count(*)\" FROM (SELECT 1)");
+        assert_snapshot!(actual, @"SELECT count(1) AS \"count(*)\" FROM (SELECT 1)");
         Ok(())
     }
 
@@ -993,7 +994,7 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(actual, "SELECT INTERVAL 1 DAY");
+        assert_snapshot!(actual, @"SELECT INTERVAL 1 DAY");
 
         let sql = "SELECT INTERVAL '1 YEAR 1 MONTH'";
         let actual = transform_sql_with_ctx(
@@ -1004,7 +1005,7 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(actual, "SELECT INTERVAL 13 MONTH");
+        assert_snapshot!(actual, @"SELECT INTERVAL 13 MONTH");
 
         let sql = "SELECT INTERVAL '1' YEAR + INTERVAL '2' MONTH + INTERVAL '3' DAY";
         let actual = transform_sql_with_ctx(
@@ -1015,9 +1016,9 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(
+        assert_snapshot!(
             actual,
-            "SELECT INTERVAL 12 MONTH + INTERVAL 2 MONTH + INTERVAL 3 DAY"
+            @"SELECT INTERVAL 12 MONTH + INTERVAL 2 MONTH + INTERVAL 3 DAY"
         );
         Ok(())
     }
@@ -1030,7 +1031,7 @@ mod test {
         let sql = "select * from unnest([1, 2, 3])";
         let actual =
             transform_sql_with_ctx(&ctx, analyzed_mdl, &[], HashMap::new(), sql).await?;
-        assert_eq!(actual, "SELECT \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\" FROM (SELECT UNNEST([1, 2, 3]) AS \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\")");
+        assert_snapshot!(actual, @"SELECT \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\" FROM (SELECT UNNEST([1, 2, 3]) AS \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\")");
 
         let manifest = ManifestBuilder::new()
             .data_source(DataSource::BigQuery)
@@ -1039,7 +1040,7 @@ mod test {
         let sql = "select * from unnest([1, 2, 3])";
         let actual =
             transform_sql_with_ctx(&ctx, analyzed_mdl, &[], HashMap::new(), sql).await?;
-        assert_eq!(actual, "SELECT \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\" FROM UNNEST([1, 2, 3])");
+        assert_snapshot!(actual, @"SELECT \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\" FROM UNNEST([1, 2, 3])");
         Ok(())
     }
 
@@ -1056,7 +1057,7 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(actual, "SELECT CAST('2011-01-01 10:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00 +08:00\"\")\"");
+        assert_snapshot!(actual, @"SELECT CAST('2011-01-01 10:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00 +08:00\"\")\"");
 
         let sql = "select timestamp '2011-01-01 18:00:00 Asia/Taipei'";
         let actual = transform_sql_with_ctx(
@@ -1067,7 +1068,7 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(actual, "SELECT CAST('2011-01-01 10:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00 Asia/Taipei\"\")\"");
+        assert_snapshot!(actual, @"SELECT CAST('2011-01-01 10:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00 Asia/Taipei\"\")\"");
         Ok(())
     }
 
@@ -1088,7 +1089,7 @@ mod test {
         )
         .await?;
         // TIMESTAMP doesn't have timezone, so the timezone will be ignored
-        assert_eq!(actual, "SELECT CAST('2011-01-01 18:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00\"\")\"");
+        assert_snapshot!(actual, @"SELECT CAST('2011-01-01 18:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00\"\")\"");
 
         let sql = "select timestamp with time zone '2011-01-01 18:00:00'";
         let actual = transform_sql_with_ctx(
@@ -1100,7 +1101,7 @@ mod test {
         )
         .await?;
         // TIMESTAMP WITH TIME ZONE will be converted to the session timezone
-        assert_eq!(actual, "SELECT CAST('2011-01-01 10:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00\"\")\"");
+        assert_snapshot!(actual, @"SELECT CAST('2011-01-01 10:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00\"\")\"");
 
         let mut config = ConfigOptions::new();
         config.execution.time_zone = Some("America/New_York".to_string());
@@ -1117,7 +1118,7 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(actual, "SELECT CAST('2024-01-15 23:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2024-01-15 18:00:00\"\")\"");
+        assert_snapshot!(actual, @"SELECT CAST('2024-01-15 23:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2024-01-15 18:00:00\"\")\"");
 
         // TIMESTAMP WITH TIME ZONE will be converted to the session timezone without daylight saving (UTC -4)
         let sql = "select timestamp with time zone '2024-07-15 18:00:00'";
@@ -1129,7 +1130,7 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(actual, "SELECT CAST('2024-07-15 22:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2024-07-15 18:00:00\"\")\"");
+        assert_snapshot!(actual, @"SELECT CAST('2024-07-15 22:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2024-07-15 18:00:00\"\")\"");
         Ok(())
     }
 
@@ -1167,10 +1168,10 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(actual,
+        assert_snapshot!(actual,
                    // TODO: BigQuery doesn't support the alias include invalid characters (e.g. `*`, `()`).
                    //      We should remove the invalid characters for the alias.
-                   "SELECT count(1) AS \"count(*)\" FROM (SELECT artist.cast_timestamptz FROM \
+                   @"SELECT count(1) AS \"count(*)\" FROM (SELECT artist.cast_timestamptz FROM \
                    (SELECT CAST(__source.\"出道時間\" AS TIMESTAMP WITH TIME ZONE) AS cast_timestamptz \
                    FROM artist AS __source) AS artist) AS artist WHERE CAST(artist.cast_timestamptz AS TIMESTAMP) > CAST('2011-01-01 21:00:00' AS TIMESTAMP)");
         Ok(())
@@ -1213,14 +1214,13 @@ mod test {
                 .await?;
         let sql = r#"select arrow_typeof(timestamp_col), arrow_typeof(timestamptz_col) from wren.test.timestamp_table limit 1"#;
         let result = ctx.sql(sql).await?.collect().await?;
-        let expected = vec![
-            "+---------------------------------------------+-----------------------------------------------+",
-            "| arrow_typeof(timestamp_table.timestamp_col) | arrow_typeof(timestamp_table.timestamptz_col) |",
-            "+---------------------------------------------+-----------------------------------------------+",
-            "| Timestamp(Nanosecond, None)                 | Timestamp(Nanosecond, Some(\"UTC\"))            |",
-            "+---------------------------------------------+-----------------------------------------------+",
-        ];
-        assert_batches_eq!(&expected, &result);
+        assert_snapshot!(batches_to_string(&result), @r#"
+        +---------------------------------------------+-----------------------------------------------+
+        | arrow_typeof(timestamp_table.timestamp_col) | arrow_typeof(timestamp_table.timestamptz_col) |
+        +---------------------------------------------+-----------------------------------------------+
+        | Timestamp(Nanosecond, None)                 | Timestamp(Nanosecond, Some("UTC"))            |
+        +---------------------------------------------+-----------------------------------------------+
+        "#);
         Ok(())
     }
 
@@ -1332,7 +1332,7 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(actual, "SELECT list_table.list_col[1] FROM (SELECT list_table.list_col FROM \
+        assert_snapshot!(actual, @"SELECT list_table.list_col[1] FROM (SELECT list_table.list_col FROM \
         (SELECT __source.list_col AS list_col FROM list_table AS __source) AS list_table) AS list_table");
         Ok(())
     }
@@ -1373,9 +1373,9 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(
+        assert_snapshot!(
             actual,
-            "SELECT struct_table.struct_col.float_field FROM \
+            @"SELECT struct_table.struct_col.float_field FROM \
         (SELECT struct_table.struct_col FROM (SELECT __source.struct_col AS struct_col \
         FROM struct_table AS __source) AS struct_table) AS struct_table"
         );
@@ -1389,7 +1389,7 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(actual, "SELECT struct_table.struct_array_col[1].float_field FROM \
+        assert_snapshot!(actual, @"SELECT struct_table.struct_array_col[1].float_field FROM \
         (SELECT struct_table.struct_array_col FROM (SELECT __source.struct_array_col AS struct_array_col \
         FROM struct_table AS __source) AS struct_table) AS struct_table");
 
@@ -1403,7 +1403,7 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(actual, "SELECT {float_field: 1.0, time_field: CAST('2021-01-01 00:00:00' AS TIMESTAMP)}");
+        assert_snapshot!(actual, @"SELECT {float_field: 1.0, time_field: CAST('2021-01-01 00:00:00' AS TIMESTAMP)}");
 
         let manifest = ManifestBuilder::new()
             .catalog("wren")
@@ -1420,9 +1420,9 @@ mod test {
         let _ = transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], HashMap::new(), sql)
             .await
             .map_err(|e| {
-                assert_eq!(
+                assert_snapshot!(
                     e.to_string(),
-                    "Execution error: The expression to get an indexed field is only valid for `Struct`, `Map` or `Null` types, got Utf8"
+                    @"Execution error: The expression to get an indexed field is only valid for `Struct`, `Map` or `Null` types, got Utf8"
                 )
             });
         Ok(())
@@ -1442,7 +1442,7 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(result, "SELECT CAST(CAST('2021-01-01 00:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE) = \
+        assert_snapshot!(result, @"SELECT CAST(CAST('2021-01-01 00:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE) = \
         CAST(CAST('2021-01-01 00:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE)");
         Ok(())
     }
@@ -1462,9 +1462,9 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(
+        assert_snapshot!(
             result,
-            "SELECT x, y FROM (SELECT 1 AS x, 'a' AS y \
+            @"SELECT x, y FROM (SELECT 1 AS x, 'a' AS y \
         UNION ALL SELECT 1 AS x, 'b' AS y \
         UNION ALL SELECT 2 AS x, 'a' AS y \
         UNION ALL SELECT 2 AS x, 'c' AS y)"
@@ -1477,11 +1477,11 @@ mod test {
         let manifest = ManifestBuilder::default().data_source(MySQL).build();
         let mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
         let ctx = SessionContext::new();
-        let expected = "SELECT trim(' abc')";
+        let sql = "SELECT trim(' abc')";
         let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&mdl), &[], HashMap::new(), expected)
+            transform_sql_with_ctx(&ctx, Arc::clone(&mdl), &[], HashMap::new(), sql)
                 .await?;
-        assert_eq!(actual, expected);
+        assert_snapshot!(actual, @"SELECT trim(' abc')");
         Ok(())
     }
 
@@ -1509,9 +1509,9 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(
+        assert_snapshot!(
             result,
-            "SELECT customer.c_custkey, count(DISTINCT customer.c_name) FROM \
+            @"SELECT customer.c_custkey, count(DISTINCT customer.c_name) FROM \
             (SELECT customer.c_custkey, customer.c_name FROM \
             (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer \
             GROUP BY customer.c_custkey"
@@ -1543,9 +1543,9 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(
+        assert_snapshot!(
             result,
-            "SELECT customer.c_custkey, (SELECT customer.c_name FROM (SELECT customer.c_custkey, customer.c_name \
+            @"SELECT customer.c_custkey, (SELECT customer.c_name FROM (SELECT customer.c_custkey, customer.c_name \
             FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer \
             WHERE customer.c_custkey = 1) FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer"
         );
@@ -1576,9 +1576,9 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(
+        assert_snapshot!(
             result,
-            "SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM \
+            @"SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM \
             (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer \
             WHERE customer.c_custkey = 1"
         );
@@ -1733,5 +1733,13 @@ mod test {
             ("timestamptz_col", timestamptz),
         ])
         .unwrap()
+    }
+
+    fn batches_to_string(batches: &[RecordBatch]) -> String {
+        let actual = pretty_format_batches_with_options(batches, &DEFAULT_FORMAT_OPTIONS)
+            .unwrap()
+            .to_string();
+
+        actual.trim().to_string()
     }
 }
