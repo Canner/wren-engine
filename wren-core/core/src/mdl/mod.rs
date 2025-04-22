@@ -1673,7 +1673,6 @@ mod test {
 
     #[tokio::test]
     async fn test_rlac_with_requried_properties() -> Result<()> {
-        env_logger::init();
         let ctx = SessionContext::new();
 
         // test required property
@@ -1697,11 +1696,8 @@ mod test {
         let sql = "SELECT * FROM customer";
         let headers =
             build_headers(&[("session_nation".to_string(), Some("1".to_string()))]);
-        let result =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
-                .await?;
         assert_snapshot!(
-            result,
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
             @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer WHERE customer.c_nationkey = 1) AS customer"
         );
 
@@ -1762,40 +1758,21 @@ mod test {
             ("session_nation".to_string(), Some("1".to_string())),
             ("session_user".to_string(), Some("'Gura'".to_string())),
         ]);
-        let result = transform_sql_with_ctx(
-            &ctx,
-            Arc::clone(&analyzed_mdl),
-            &[],
-            headers.clone(),
-            sql,
-        )
-        .await?;
         assert_snapshot!(
-            result,
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers.clone(), sql,).await?,
             @"SELECT customer.c_custkey, customer.c_nationkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Gura') AS customer"
         );
 
         let sql = "SELECT * FROM customer WHERE c_custkey = 1";
-        let result =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
-                .await?;
         assert_snapshot!(
-            result,
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
             @"SELECT customer.c_custkey, customer.c_nationkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Gura') AS customer WHERE customer.c_custkey = 1"
         );
 
         // test other model won't be affected
         let sql = "SELECT o_orderkey FROM orders";
-        let result = transform_sql_with_ctx(
-            &ctx,
-            Arc::clone(&analyzed_mdl),
-            &[],
-            HashMap::new(),
-            sql,
-        )
-        .await?;
         assert_snapshot!(
-            result,
+            transform_sql_with_ctx(&ctx,Arc::clone(&analyzed_mdl),&[],HashMap::new(),sql).await?,
             @"SELECT orders.o_orderkey FROM (SELECT orders.o_orderkey FROM (SELECT __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders) AS orders"
         );
 
@@ -1804,11 +1781,8 @@ mod test {
             ("session_nation".to_string(), Some("1".to_string())),
             ("session_user".to_string(), Some("'Gura'".to_string())),
         ]);
-        let result =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
-                .await?;
         assert_snapshot!(
-            result,
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
             @"SELECT orders.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Gura') AS customer JOIN (SELECT orders.o_custkey, orders.o_orderkey FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders) AS orders ON customer.c_custkey = orders.o_custkey"
         );
 
@@ -1831,6 +1805,178 @@ mod test {
             }
             _ => panic!("Expected error"),
         }
+
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_nationkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .add_row_level_access_control(
+                        "nation",
+                        vec![
+                            SessionProperty::new_required("session_nation"),
+                            SessionProperty::new_optional("session_user", None),
+                        ],
+                        "c_nationkey = @session_nation AND c_name = @session_user",
+                    )
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let sql = "SELECT * FROM customer";
+
+        let headers = build_headers(&[
+            ("session_nation".to_string(), Some("1".to_string())),
+            ("session_user".to_string(), Some("'Peko'".to_string())),
+        ]);
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Peko') AS customer"
+        );
+
+        // expect ignore the rule because session_user is optional without default value
+        let headers =
+            build_headers(&[("session_nation".to_string(), Some("1".to_string()))]);
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer"
+        );
+        // expect error because session_user is required
+        let headers =
+            build_headers(&[("session_user".to_string(), Some("'Peko'".to_string()))]);
+        match transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
+            .await
+        {
+            Err(e) => {
+                assert_snapshot!(
+                    e.to_string(),
+                    @r"
+                ModelAnalyzeRule
+                caused by
+                Error during planning: Row level access control property session_nation is required, but not found in headers
+                "
+                )
+            }
+            _ => panic!("Expected error"),
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_rlac_with_optional_properties() -> Result<()> {
+        let ctx = SessionContext::new();
+
+        // test required property
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_nationkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .add_row_level_access_control(
+                        "nation",
+                        vec![SessionProperty::new_optional(
+                            "session_nation",
+                            Some("3".to_string()),
+                        )],
+                        "c_nationkey = @session_nation",
+                    )
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let sql = "SELECT * FROM customer";
+        let headers =
+            build_headers(&[("session_nation".to_string(), Some("1".to_string()))]);
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
+                .await?,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer WHERE customer.c_nationkey = 1) AS customer"
+        );
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], HashMap::new(), sql)
+                .await?,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer WHERE customer.c_nationkey = 3) AS customer"
+        );
+
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_nationkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .add_row_level_access_control(
+                        "nation",
+                        vec![SessionProperty::new_optional("session_nation", None)],
+                        "c_nationkey = @session_nation",
+                    )
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let headers =
+            build_headers(&[("session_nation".to_string(), Some("1".to_string()))]);
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
+                .await?,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer WHERE customer.c_nationkey = 1) AS customer"
+        );
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], HashMap::new(), sql)
+                .await?,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer"
+        );
+
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_nationkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .add_row_level_access_control(
+                        "nation",
+                        vec![
+                            SessionProperty::new_optional("session_nation", None),
+                            SessionProperty::new_optional(
+                                "session_user",
+                                Some("'Gura'".to_string()),
+                            ),
+                        ],
+                        "c_nationkey = @session_nation and c_name = @session_user",
+                    )
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let headers =
+            build_headers(&[("session_nation".to_string(), Some("1".to_string()))]);
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
+                .await?,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Gura') AS customer"
+        );
+        // the rule is expected to be skipped because the optional property is None without default value
+        let headers =
+            build_headers(&[("session_user".to_string(), Some("'Peko'".to_string()))]);
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
+                .await?,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer"
+        );
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], HashMap::new(), sql)
+                .await?,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer"
+        );
         Ok(())
     }
 
