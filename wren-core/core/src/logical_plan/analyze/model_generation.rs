@@ -7,6 +7,7 @@ use crate::logical_plan::analyze::plan::{
 use crate::logical_plan::utils::{
     create_remote_table_source, eliminate_ambiguous_columns, rebase_column,
 };
+use crate::mdl::context::SessionPropertiesRef;
 use crate::mdl::manifest::Model;
 use crate::mdl::utils::quoted;
 use crate::mdl::{AnalyzedWrenMDL, SessionStateRef};
@@ -20,6 +21,9 @@ use datafusion::logical_expr::{Expr, LogicalPlan, LogicalPlanBuilder};
 use datafusion::optimizer::analyzer::AnalyzerRule;
 use datafusion::physical_plan::internal_err;
 use datafusion::sql::TableReference;
+use wren_core_base::mdl::RowLevelAccessControl;
+
+use super::access_control::{build_filter_expression, validate_rule};
 
 pub const SOURCE_ALIAS: &str = "__source";
 
@@ -27,13 +31,19 @@ pub const SOURCE_ALIAS: &str = "__source";
 pub struct ModelGenerationRule {
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
     session_state: SessionStateRef,
+    properties: SessionPropertiesRef,
 }
 
 impl ModelGenerationRule {
-    pub fn new(mdl: Arc<AnalyzedWrenMDL>, session_state: SessionStateRef) -> Self {
+    pub fn new(
+        mdl: Arc<AnalyzedWrenMDL>,
+        session_state: SessionStateRef,
+        properties: SessionPropertiesRef,
+    ) -> Self {
         Self {
             analyzed_wren_mdl: mdl,
             session_state,
+            properties,
         }
     }
 
@@ -51,6 +61,7 @@ impl ModelGenerationRule {
                         ModelGenerationRule::new(
                             Arc::clone(&self.analyzed_wren_mdl),
                             Arc::clone(&self.session_state),
+                            Arc::clone(&self.properties),
                         ),
                         &alias_generator,
                     )?;
@@ -65,22 +76,46 @@ impl ModelGenerationRule {
                         model_plan.required_exprs.clone()
                     };
                     let projections = eliminate_ambiguous_columns(projections);
-                    let result = match source_plan {
-                        Some(plan) => {
-                            if model_plan.required_exprs.is_empty() {
-                                plan
-                            } else {
-                                LogicalPlanBuilder::from(plan)
-                                    .project(projections)?
-                                    .build()?
-                            }
-                        }
-                        _ => {
-                            return plan_err!("Failed to generate source plan");
-                        }
+                    let mut builder = if let Some(plan) = source_plan {
+                        LogicalPlanBuilder::from(plan)
+                    } else {
+                        return plan_err!("Failed to generate source plan");
                     };
+
+                    if !model_plan.required_exprs.is_empty() {
+                        builder = builder.project(projections)?
+                    }
+
+                    let filters: Vec<Option<Expr>> = model_plan
+                        .model
+                        .row_level_access_controls()
+                        .iter()
+                        .map(|rule| {
+                            self.generate_row_level_access_control_filter(
+                                Arc::clone(&model_plan.model),
+                                rule,
+                            )
+                        })
+                        .collect::<Result<_>>()?;
+                    let rls_filter = filters
+                        .into_iter()
+                        .reduce(|acc, filter| {
+                            if acc.is_none() {
+                                filter
+                            } else if let Some(filter) = filter {
+                                Some(acc.unwrap().and(filter))
+                            } else {
+                                acc
+                            }
+                        })
+                        .flatten();
+
+                    if let Some(filter) = rls_filter {
+                        builder = builder.filter(filter)?
+                    }
+
                     // calculated field scope
-                    Ok(Transformed::yes(result))
+                    Ok(Transformed::yes(builder.build()?))
                 } else if let Some(model_plan) =
                     extension.node.as_any().downcast_ref::<ModelSourceNode>()
                 {
@@ -150,6 +185,7 @@ impl ModelGenerationRule {
                             ModelGenerationRule::new(
                                 Arc::clone(&self.analyzed_wren_mdl),
                                 Arc::clone(&self.session_state),
+                                Arc::clone(&self.properties),
                             ),
                             &alias_generator,
                         )?;
@@ -210,7 +246,7 @@ impl ModelGenerationRule {
                     let projection = eliminate_ambiguous_columns(projection);
                     let alias = LogicalPlanBuilder::from(source_plan)
                         .project(projection)?
-                        .alias(quoted(&partial_model.model_node.plan_name))?
+                        .alias(quoted(partial_model.model_node.plan_name()))?
                         .build()?;
                     Ok(Transformed::yes(alias))
                 } else {
@@ -218,6 +254,24 @@ impl ModelGenerationRule {
                 }
             }
             _ => Ok(Transformed::yes(plan.recompute_schema()?)),
+        }
+    }
+
+    fn generate_row_level_access_control_filter(
+        &self,
+        model: Arc<Model>,
+        rule: &RowLevelAccessControl,
+    ) -> Result<Option<Expr>> {
+        if validate_rule(&rule.required_properties, &self.properties)? {
+            let filter = build_filter_expression(
+                &self.session_state,
+                model,
+                &self.properties,
+                rule,
+            )?;
+            Ok(Some(filter))
+        } else {
+            Ok(None)
         }
     }
 }

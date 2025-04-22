@@ -277,6 +277,10 @@ impl Model {
     pub fn table_reference(&self) -> &str {
         self.table_reference.as_deref().unwrap_or("")
     }
+
+    pub fn row_level_access_controls(&self) -> &[RowLevelAccessControl] {
+        &self.row_level_access_controls
+    }
 }
 
 impl Column {
