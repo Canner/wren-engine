@@ -24,6 +24,7 @@ datafusion = { workspace = true, features = [
     "unicode_expressions",
 ] }
 env_logger = { workspace = true }
+insta = { workspace = true }
 log = { workspace = true }
 parking_lot = "0.12.3"
 petgraph = "0.7.1"
