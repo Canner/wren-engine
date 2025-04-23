@@ -107,14 +107,16 @@ impl ModelGenerationRule {
                         })
                         .flatten();
 
-                    // follow the logical plan of DataFusion.
-                    // the filter should be placed top on the relation.
-                    if let Some(filter) = rls_filter {
-                        builder = builder.filter(filter)?
-                    }
 
                     if !model_plan.required_exprs.is_empty() {
                         builder = builder.project(projections)?
+                    }
+
+                    // apply the rule for row level access control
+                    // The filter should be on on the top of the model plan
+                    // and the model plan should be another subquery alias
+                    if let Some(filter) = rls_filter {
+                        builder = builder.alias(model_plan.plan_name())?.filter(filter)?
                     }
 
                     // calculated field scope

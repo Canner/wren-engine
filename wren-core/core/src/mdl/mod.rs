@@ -456,7 +456,9 @@ mod test {
     use datafusion::prelude::{SessionConfig, SessionContext};
     use datafusion::sql::unparser::plan_to_sql;
     use insta::assert_snapshot;
-    use wren_core_base::mdl::{DataSource, SessionProperty};
+    use wren_core_base::mdl::{
+        DataSource, JoinType, RelationshipBuilder, SessionProperty,
+    };
 
     #[test]
     fn test_sync_transform() -> Result<()> {
@@ -1698,7 +1700,7 @@ mod test {
             build_headers(&[("session_nation".to_string(), Some("1".to_string()))]);
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
-            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer WHERE customer.c_nationkey = 1) AS customer"
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1"
         );
 
         match transform_sql_with_ctx(
@@ -1760,13 +1762,13 @@ mod test {
         ]);
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers.clone(), sql,).await?,
-            @"SELECT customer.c_custkey, customer.c_nationkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Gura') AS customer"
+            @"SELECT customer.c_custkey, customer.c_nationkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Gura'"
         );
 
         let sql = "SELECT * FROM customer WHERE c_custkey = 1";
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
-            @"SELECT customer.c_custkey, customer.c_nationkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Gura') AS customer WHERE customer.c_custkey = 1"
+            @"SELECT customer.c_custkey, customer.c_nationkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_custkey = 1 AND customer.c_nationkey = 1 AND customer.c_name = 'Gura'"
         );
 
         // test other model won't be affected
@@ -1783,7 +1785,7 @@ mod test {
         ]);
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
-            @"SELECT orders.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Gura') AS customer JOIN (SELECT orders.o_custkey, orders.o_orderkey FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders) AS orders ON customer.c_custkey = orders.o_custkey"
+            @"SELECT orders.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer JOIN (SELECT orders.o_custkey, orders.o_orderkey FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders) AS orders ON customer.c_custkey = orders.o_custkey WHERE customer.c_nationkey = 1 AND customer.c_name = 'Gura'"
         );
 
         // test property is required
@@ -1834,7 +1836,7 @@ mod test {
         ]);
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
-            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Peko') AS customer"
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Peko'"
         );
 
         // expect ignore the rule because session_user is optional without default value
@@ -1896,12 +1898,12 @@ mod test {
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
                 .await?,
-            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer WHERE customer.c_nationkey = 1) AS customer"
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1"
         );
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], HashMap::new(), sql)
                 .await?,
-            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer WHERE customer.c_nationkey = 3) AS customer"
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 3"
         );
 
         let manifest = ManifestBuilder::new()
@@ -1926,7 +1928,7 @@ mod test {
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
                 .await?,
-            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer WHERE customer.c_nationkey = 1) AS customer"
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1"
         );
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], HashMap::new(), sql)
@@ -1962,7 +1964,7 @@ mod test {
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
                 .await?,
-            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Gura') AS customer"
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Gura'"
         );
         // the rule is expected to be skipped because the optional property is None without default value
         let headers =
@@ -1977,6 +1979,129 @@ mod test {
                 .await?,
             @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer"
         );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_rlac_on_calculated_field() -> Result<()> {
+        let ctx = SessionContext::new();
+
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_custkey", "int").build())
+                    .column(ColumnBuilder::new("c_nationkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .primary_key("c_custkey")
+                    .build(),
+            )
+            .model(
+                ModelBuilder::new("orders")
+                    .table_reference("orders")
+                    .column(ColumnBuilder::new("o_orderkey", "int").build())
+                    .column(ColumnBuilder::new("o_custkey", "int").build())
+                    .column(
+                        ColumnBuilder::new("customer", "customer")
+                            .relationship("customer_orders")
+                            .build(),
+                    )
+                    .column(
+                        ColumnBuilder::new("customer_name", "string")
+                            .calculated(true)
+                            .expression("customer.c_name")
+                            .build(),
+                    )
+                    .primary_key("o_orderkey")
+                    .add_row_level_access_control(
+                        "customer name",
+                        vec![SessionProperty::new_required("session_user")],
+                        "customer_name = @session_user",
+                    )
+                    .build(),
+            )
+            .relationship(
+                RelationshipBuilder::new("customer_orders")
+                    .model("customer")
+                    .model("orders")
+                    .join_type(JoinType::OneToMany)
+                    .condition("customer.c_custkey = orders.o_custkey")
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let headers =
+            build_headers(&[("session_user".to_string(), Some("'Gura'".to_string()))]);
+        let sql = "SELECT * FROM orders";
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers.clone(), sql).await?,
+            @"SELECT orders.o_orderkey, orders.o_custkey, orders.customer_name FROM (SELECT __relation__1.c_name AS customer_name, __relation__1.o_custkey, __relation__1.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name, orders.o_custkey, orders.o_orderkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer RIGHT JOIN (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders ON customer.c_custkey = orders.o_custkey) AS __relation__1) AS orders WHERE orders.customer_name = 'Gura'"
+        );
+
+        let sql = "SELECT * FROM orders where o_orderkey > 10";
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
+            @"SELECT orders.o_orderkey, orders.o_custkey, orders.customer_name FROM (SELECT __relation__1.c_name AS customer_name, __relation__1.o_custkey, __relation__1.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name, orders.o_custkey, orders.o_orderkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer RIGHT JOIN (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders ON customer.c_custkey = orders.o_custkey) AS __relation__1) AS orders WHERE orders.o_orderkey > 10 AND orders.customer_name = 'Gura'"
+        );
+
+        // TODO: the rlac rule should be applied for the model used by the calculated field
+        // both to_one or to_many relationship should be supported
+        //    
+        // let manifest = ManifestBuilder::new()
+        //     .catalog("wren")
+        //     .schema("test")
+        //     .model(
+        //         ModelBuilder::new("customer")
+        //             .table_reference("customer")
+        //             .column(ColumnBuilder::new("c_custkey", "int").build())
+        //             .column(ColumnBuilder::new("c_nationkey", "int").build())
+        //             .column(ColumnBuilder::new("c_name", "string").build())
+        //             .primary_key("c_custkey")
+        //             .add_row_level_access_control(
+        //                 "nation rule",
+        //                 vec![SessionProperty::new_optional("session_nation", None)],
+        //                 "c_nationkey = @session_nation",
+        //             )
+        //             .build(),
+        //     )
+        //     .model(
+        //         ModelBuilder::new("orders")
+        //             .table_reference("orders")
+        //             .column(ColumnBuilder::new("o_orderkey", "int").build())
+        //             .column(ColumnBuilder::new("o_custkey", "int").build())
+        //             .column(
+        //                 ColumnBuilder::new("customer", "customer")
+        //                     .relationship("customer_orders")
+        //                     .build(),
+        //             )
+        //             .column(
+        //                 ColumnBuilder::new("customer_name", "string")
+        //                     .calculated(true)
+        //                     .expression("customer.c_name")
+        //                     .build(),
+        //             )
+        //             .primary_key("o_orderkey")
+        //             .build(),
+        //     )
+        //     .relationship(
+        //         RelationshipBuilder::new("customer_orders")
+        //             .model("customer")
+        //             .model("orders")
+        //             .join_type(JoinType::OneToMany)
+        //             .condition("customer.c_custkey = orders.o_custkey")
+        //             .build(),
+        //     )
+        //     .build();
+        // let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        // let headers =
+        //     build_headers(&[("session_nation".to_string(), Some("1".to_string()))]);
+        // let sql = "SELECT customer_name FROM orders";
+        // assert_snapshot!(
+        //     transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
+        //     @"SELECT orders.customer_name FROM (SELECT __relation__1.c_name AS customer_name FROM (SELECT customer.c_custkey, customer.c_name, orders.o_custkey, orders.o_orderkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer RIGHT JOIN (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders ON customer.c_custkey = orders.o_custkey) AS __relation__1) AS orders"
+        // );
         Ok(())
     }
 
