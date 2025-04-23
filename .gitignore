@@ -21,3 +21,4 @@ venv/
 **/.env*
 **/*.so
 .devcontainer
+.vscode

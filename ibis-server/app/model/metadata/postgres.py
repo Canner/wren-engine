@@ -51,13 +51,16 @@ class PostgresMetadata(Metadata):
                 AND c.table_schema = kcu.table_schema
             LEFT JOIN information_schema.table_constraints tc
                 ON kcu.constraint_name = tc.constraint_name
+                AND kcu.table_schema = tc.table_schema
             WHERE
                 t.table_type IN ('BASE TABLE', 'VIEW')
-                AND t.table_schema NOT IN ('information_schema', 'pg_catalog');
+                AND t.table_schema NOT IN ('information_schema', 'pg_catalog')
+                AND (tc.constraint_type == 'PRIMARY KEY' OR tc.constraint_type IS NULL);
             """
         response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
 
         unique_tables = {}
+        unique_tables_primary_key = {}
         for row in response:
             # generate unique table name
             schema_table = self._format_postgres_compact_table_name(
@@ -78,18 +81,37 @@ class PostgresMetadata(Metadata):
                 )
 
             # table exists, and add column to the table
-            unique_tables[schema_table].columns.append(
-                Column(
-                    name=row["column_name"],
-                    type=self._transform_postgres_column_type(row["data_type"]),
-                    notNull=row["is_nullable"].lower() == "no",
-                    description=row["column_comment"],
-                    properties=None,
-                )
+            column = Column(
+                name=row["column_name"],
+                type=self._transform_postgres_column_type(row["data_type"]),
+                notNull=row["is_nullable"].lower() == "no",
+                description=row["column_comment"],
+                properties=None,
             )
+            unique_tables[schema_table].columns.append(column)
 
             if row["constraint_type"] == "PRIMARY KEY":
-                unique_tables[schema_table].primaryKey = row["column_name"]
+                if schema_table in unique_tables_primary_key:
+                    unique_tables_primary_key[schema_table].append(column)
+                else:
+                    unique_tables_primary_key[schema_table] = [ column ]
+        
+        for schema_table, columns in unique_tables_primary_key.items():
+            if len(columns) == 0:
+                continue
+            elif len(columns) == 1 :
+                unique_tables[schema_table].primaryKey = columns[0].name
+            else :
+                composite_primary_key_column = Column(
+                    name="composed_primary_key",
+                    type="json",
+                    notNull="yes",
+                    description=f"Composed primary key based on fields: {[col.name for col in columns]}",
+                    properties=None,
+                    nestedColumns=columns
+                )
+                unique_tables[schema_table].columns.append(composite_primary_key_column)
+                unique_tables[schema_table].primaryKey = "composed_primary_key"
 
         return list(unique_tables.values())
 
