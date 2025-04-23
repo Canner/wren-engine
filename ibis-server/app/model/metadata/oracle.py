@@ -88,7 +88,7 @@ class OracleMetadata(Metadata):
                         catalog="",  # Oracle doesn't use catalogs.
                         table=row["TABLE_NAME"],
                     ),
-                    primaryKey=[],
+                    primaryKey="",
                 )
 
             unique_tables[schema_table].columns.append(

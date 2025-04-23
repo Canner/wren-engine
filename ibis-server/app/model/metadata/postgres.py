@@ -74,7 +74,7 @@ class PostgresMetadata(Metadata):
                         catalog=row["table_catalog"],
                         table=row["table_name"],
                     ),
-                    primaryKey=[],
+                    primaryKey="",
                 )
 
             # table exists, and add column to the table
@@ -89,7 +89,7 @@ class PostgresMetadata(Metadata):
             )
 
             if row["constraint_type"] == "PRIMARY KEY":
-                unique_tables[schema_table].primaryKey.append(row["column_name"])
+                unique_tables[schema_table].primaryKey = row["column_name"]
 
         return list(unique_tables.values())
 

@@ -81,7 +81,7 @@ class MSSQLMetadata(Metadata):
                         catalog=row["catalog"],
                         table=row["table_name"],
                     ),
-                    primaryKey=[],
+                    primaryKey="",
                 )
 
             # table exists, and add column to the table
@@ -96,8 +96,7 @@ class MSSQLMetadata(Metadata):
             )
             # if column is primary key
             if row["is_pk"] == "YES":
-                unique_tables[schema_table].primaryKey.append(row["column_name"])
-
+                unique_tables[schema_table].primaryKey = row["column_name"]
         return list(unique_tables.values())
 
     def get_constraints(self) -> list[Constraint]:

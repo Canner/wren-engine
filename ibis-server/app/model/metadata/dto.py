@@ -76,7 +76,7 @@ class Table(BaseModel):
     columns: list[Column]
     description: str | None = None
     properties: TableProperties = None
-    primaryKey: list[str] | None = None
+    primaryKey: str | None = None
 
 
 class ConstraintType(Enum):
