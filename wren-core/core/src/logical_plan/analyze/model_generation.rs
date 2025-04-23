@@ -107,7 +107,6 @@ impl ModelGenerationRule {
                         })
                         .flatten();
 
-
                     if !model_plan.required_exprs.is_empty() {
                         builder = builder.project(projections)?
                     }

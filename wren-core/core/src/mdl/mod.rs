@@ -2048,7 +2048,7 @@ mod test {
 
         // TODO: the rlac rule should be applied for the model used by the calculated field
         // both to_one or to_many relationship should be supported
-        //    
+        //
         // let manifest = ManifestBuilder::new()
         //     .catalog("wren")
         //     .schema("test")
