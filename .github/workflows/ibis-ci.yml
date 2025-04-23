@@ -27,7 +27,7 @@ jobs:
           java-version: '21'
           cache: 'maven'
       - name: Start Wren JAVA engine
-        working-directory: .
+        working-directory: ./wren-core-legacy
         run: |
           mkdir etc
           echo "node.environment=production" >> etc/config.properties

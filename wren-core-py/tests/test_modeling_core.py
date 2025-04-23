@@ -90,15 +90,15 @@ def test_session_context():
     rewritten_sql = session_context.transform_sql(sql)
     assert (
         rewritten_sql
-        == "SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM main.customer AS __source) AS customer"
+        == "SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM main.customer AS __source) AS customer) AS customer"
     )
 
     session_context = SessionContext(manifest_str, "tests/functions.csv")
-    sql = "SELECT add_two(c_custkey) FROM my_catalog.my_schema.customer"
+    sql = "SELECT add_two(c_custkey, c_custkey) FROM my_catalog.my_schema.customer"
     rewritten_sql = session_context.transform_sql(sql)
     assert (
         rewritten_sql
-        == "SELECT add_two(customer.c_custkey) FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM main.customer AS __source) AS customer) AS customer"
+        == "SELECT add_two(customer.c_custkey, customer.c_custkey) FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM main.customer AS __source) AS customer) AS customer"
     )
 
 
@@ -106,19 +106,19 @@ def test_read_function_list():
     path = "tests/functions.csv"
     session_context = SessionContext(manifest_str, path)
     functions = session_context.get_available_functions()
-    assert len(functions) == 275
+    assert len(functions) == 283
 
     rewritten_sql = session_context.transform_sql(
-        "SELECT add_two(c_custkey) FROM my_catalog.my_schema.customer"
+        "SELECT add_two(c_custkey, c_custkey) FROM my_catalog.my_schema.customer"
     )
     assert (
         rewritten_sql
-        == "SELECT add_two(customer.c_custkey) FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM main.customer AS __source) AS customer) AS customer"
+        == "SELECT add_two(customer.c_custkey, customer.c_custkey) FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM main.customer AS __source) AS customer) AS customer"
     )
 
     session_context = SessionContext(manifest_str, None)
     functions = session_context.get_available_functions()
-    assert len(functions) == 273
+    assert len(functions) == 276
 
 
 def test_get_available_functions():
@@ -128,15 +128,50 @@ def test_get_available_functions():
     assert add_two.name == "add_two"
     assert add_two.function_type == "scalar"
     assert add_two.description == "Adds two numbers together."
-    assert add_two.return_type == "int"
-    assert add_two.param_names == "f1,f2"
-    assert add_two.param_types == "int,int"
+    assert add_two.return_type is None
+    assert add_two.param_names is None
+    assert add_two.param_types is None
 
     max_if = next(f for f in functions if f.name == "max_if")
     assert max_if.name == "max_if"
     assert max_if.function_type == "window"
     assert max_if.param_names is None
     assert max_if.param_types is None
+
+    func = next(f for f in functions if f.name == "add_custom")
+    assert func.name == "add_custom"
+    assert func.function_type == "scalar"
+    assert func.description == "Adds two numbers together."
+    assert func.return_type is None
+    assert func.param_names is None
+    assert func.param_types is None
+
+    func = next(f for f in functions if f.name == "test_same_as_input_array")
+    assert func.name == "test_same_as_input_array"
+    assert func.function_type == "scalar"
+    assert func.description == "Returns the greatest value from the first array."
+    assert func.return_type is None
+    assert func.param_names is None
+    assert func.param_types is None
+
+    func = next(f for f in functions if f.name == "test_return_type")
+    assert func.name == "test_return_type"
+    assert func.function_type == "scalar"
+    assert func.description == "Returns the same type as the input."
+    assert func.return_type is None
+    assert func.param_names is None
+    assert func.param_types is None
+
+    func = next(f for f in functions if f.name == "test_without_param_type")
+    assert func.name == "test_without_param_type"
+    assert func.function_type == "scalar"
+    assert func.description == "Without param type"
+    # It's a string type actually. However, it misses the param type in the CSV.
+    # DataFusion builds the return type from the param type in information_schema.
+    # If lossing the param type, it will be None.
+    assert func.return_type is None
+    assert func.param_names is None
+    assert func.param_types is None
 
 
 @pytest.mark.parametrize(

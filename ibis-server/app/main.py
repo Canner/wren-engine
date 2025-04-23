@@ -13,6 +13,7 @@ from app.config import get_config
 from app.mdl.java_engine import JavaEngineConnector
 from app.middleware import ProcessTimeMiddleware, RequestLogMiddleware
 from app.model import ConfigModel, CustomHttpError
+from app.query_cache import QueryCacheManager
 from app.routers import v2, v3
 
 get_config().init_logger()
@@ -22,15 +23,21 @@ get_config().init_logger()
 # Use state to store the singleton instance
 class State(TypedDict):
     java_engine_connector: JavaEngineConnector
+    query_cache_manager: QueryCacheManager
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[State]:
+    query_cache_manager = QueryCacheManager()
+
     async with JavaEngineConnector() as java_engine_connector:
-        yield {"java_engine_connector": java_engine_connector}
+        yield {
+            "java_engine_connector": java_engine_connector,
+            "query_cache_manager": query_cache_manager,
+        }
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, title="Wren Engine API")
 app.include_router(v2.router)
 app.include_router(v3.router)
 app.add_middleware(RequestLogMiddleware)

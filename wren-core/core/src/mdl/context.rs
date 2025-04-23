@@ -34,7 +34,6 @@ use datafusion::optimizer::extract_equijoin_predicate::ExtractEquijoinPredicate;
 use datafusion::optimizer::filter_null_join_keys::FilterNullJoinKeys;
 use datafusion::optimizer::propagate_empty_relation::PropagateEmptyRelation;
 use datafusion::optimizer::replace_distinct_aggregate::ReplaceDistinctWithAggregate;
-use datafusion::optimizer::scalar_subquery_to_join::ScalarSubqueryToJoin;
 use datafusion::optimizer::unwrap_cast_in_comparison::UnwrapCastInComparison;
 use datafusion::optimizer::{AnalyzerRule, OptimizerRule};
 use datafusion::physical_plan::ExecutionPlan;
@@ -92,6 +91,8 @@ fn analyze_rule_for_local_runtime(
     session_state_ref: SessionStateRef,
 ) -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     vec![
+        // To align the lastest change in datafusion, apply this this rule first.
+        Arc::new(ExpandWildcardRule::new()),
         // expand the view should be the first rule
         Arc::new(ExpandWrenViewRule::new(
             Arc::clone(&analyzed_mdl),
@@ -119,6 +120,8 @@ fn analyze_rule_for_unparsing(
     session_state_ref: SessionStateRef,
 ) -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     vec![
+        // To align the lastest change in datafusion, apply this this rule first.
+        Arc::new(ExpandWildcardRule::new()),
         // expand the view should be the first rule
         Arc::new(ExpandWrenViewRule::new(
             Arc::clone(&analyzed_mdl),
@@ -158,7 +161,8 @@ fn optimize_rule_for_unparsing() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
         Arc::new(ReplaceDistinctWithAggregate::new()),
         Arc::new(EliminateJoin::new()),
         Arc::new(DecorrelatePredicateSubquery::new()),
-        Arc::new(ScalarSubqueryToJoin::new()),
+        // Disable ScalarSubqueryToJoin to avoid generate invalid sql (join without condition)
+        // Arc::new(ScalarSubqueryToJoin::new()),
         Arc::new(ExtractEquijoinPredicate::new()),
         // Disable SimplifyExpressions to avoid apply some function locally
         // Arc::new(SimplifyExpressions::new()),

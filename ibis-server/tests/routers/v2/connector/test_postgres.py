@@ -23,6 +23,7 @@ manifest = {
         {
             "name": "Orders",
             "tableReference": {
+                "catalog": "test",
                 "schema": "public",
                 "table": "orders",
             },
@@ -101,10 +102,34 @@ manifest = {
     ],
 }
 
+manifest_model_without_catalog = {
+    "catalog": "my_catalog",
+    "schema": "my_schema",
+    "models": [
+        {
+            "name": "Orders",
+            "tableReference": {
+                "schema": "public",
+                "table": "orders",
+            },
+            "columns": [
+                {"name": "o_orderkey", "type": "integer"},
+            ],
+        },
+    ],
+}
+
 
 @pytest.fixture(scope="module")
 def manifest_str():
     return base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
+
+
+@pytest.fixture(scope="module")
+def manifest_without_catalog_str():
+    return base64.b64encode(orjson.dumps(manifest_model_without_catalog)).decode(
+        "utf-8"
+    )
 
 
 @pytest.fixture(scope="module")
@@ -162,6 +187,74 @@ async def test_query(client, manifest_str, postgres: PostgresContainer):
         "test_null_time": "datetime64[ns]",
         "bytea_column": "object",
     }
+
+
+async def test_query_with_cache(client, manifest_str, postgres: PostgresContainer):
+    connection_info = _to_connection_info(postgres)
+
+    # First request - should miss cache
+    response1 = await client.post(
+        url=f"{base_url}/query?cacheEnable=true",  # Enable cache
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT * FROM "Orders" LIMIT 10',
+        },
+    )
+
+    assert response1.status_code == 200
+    assert response1.headers["X-Cache-Hit"] == "false"
+    result1 = response1.json()
+
+    # Second request with same SQL - should hit cache
+    response2 = await client.post(
+        url=f"{base_url}/query?cacheEnable=true",  # Enable cache
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT * FROM "Orders" LIMIT 10',
+        },
+    )
+    assert response2.status_code == 200
+    assert response2.headers["X-Cache-Hit"] == "true"
+    assert int(response2.headers["X-Cache-Create-At"]) > 1743984000  # 2025.04.07
+    result2 = response2.json()
+
+    # Verify results are identical
+    assert result1["data"] == result2["data"]
+    assert result1["columns"] == result2["columns"]
+    assert result1["dtypes"] == result2["dtypes"]
+
+
+async def test_query_with_cache_override(
+    client, manifest_str, postgres: PostgresContainer
+):
+    connection_info = _to_connection_info(postgres)
+    # First request - should miss cache then create cache
+    response1 = await client.post(
+        url=f"{base_url}/query?cacheEnable=true",  # Enable cache
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT * FROM "Orders" LIMIT 10',
+        },
+    )
+    assert response1.status_code == 200
+
+    # Second request with same SQL - should hit cache and override it
+    response2 = await client.post(
+        url=f"{base_url}/query?cacheEnable=true&overrideCache=true",  # Enable cache
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT * FROM "Orders" LIMIT 10',
+        },
+    )
+    assert response2.status_code == 200
+    assert response2.headers["X-Cache-Override"] == "true"
+    assert int(response2.headers["X-Cache-Override-At"]) > int(
+        response2.headers["X-Cache-Create-At"]
+    )
 
 
 async def test_query_with_connection_url(
@@ -640,10 +733,57 @@ async def test_dry_plan(client, manifest_str):
     assert response.text is not None
 
 
-async def test_model_substitute(client, manifest_str, postgres: PostgresContainer):
+async def test_model_substitute(
+    client, manifest_str, manifest_without_catalog_str, postgres: PostgresContainer
+):
     connection_info = _to_connection_info(postgres)
+    # Test with catalog and schema in SQL
     response = await client.post(
         url=f"{base_url}/model-substitute",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT * FROM "test"."public"."orders"',
+        },
+    )
+    assert response.status_code == 200
+    assert (
+        response.text
+        == '"SELECT * FROM \\"my_catalog\\".\\"my_schema\\".\\"Orders\\" AS \\"orders\\""'
+    )
+
+    # Test without catalog and schema in SQL but in headers(x-user-xxx)
+    response = await client.post(
+        url=f"{base_url}/model-substitute",
+        headers={"x-user-catalog": "test", "x-user-schema": "public"},
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT * FROM "orders"',
+        },
+    )
+    assert response.status_code == 200
+    assert (
+        response.text
+        == '"SELECT * FROM \\"my_catalog\\".\\"my_schema\\".\\"Orders\\" AS \\"orders\\""'
+    )
+
+    # Test only have x-user-catalog
+    response = await client.post(
+        url=f"{base_url}/model-substitute",
+        headers={"x-user-catalog": "test"},
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT * FROM "orders"',
+        },
+    )
+    assert response.status_code == 422
+
+    # Test only have x-user-catalog but have schema in SQL
+    response = await client.post(
+        url=f"{base_url}/model-substitute",
+        headers={"x-user-catalog": "test"},
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
@@ -656,11 +796,49 @@ async def test_model_substitute(client, manifest_str, postgres: PostgresContaine
         == '"SELECT * FROM \\"my_catalog\\".\\"my_schema\\".\\"Orders\\" AS \\"orders\\""'
     )
 
+    # Test only have x-user-schema
+    response = await client.post(
+        url=f"{base_url}/model-substitute",
+        headers={"x-user-schema": "public"},
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT * FROM "orders"',
+        },
+    )
+    assert response.status_code == 422
+
+    # Test only have x-user-schema
+    response = await client.post(
+        url=f"{base_url}/model-substitute",
+        headers={"x-user-schema": "public"},
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_without_catalog_str,
+            "sql": 'SELECT * FROM "orders"',
+        },
+    )
+    assert response.status_code == 200
+
+    # Test only have x-user-schema
+    response = await client.post(
+        url=f"{base_url}/model-substitute",
+        # empty catalog
+        headers={"x-user-catalog": "", "x-user-schema": "public"},
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_without_catalog_str,
+            "sql": 'SELECT * FROM "orders"',
+        },
+    )
+    assert response.status_code == 200
+
 
 async def test_model_substitute_with_cte(
     client, manifest_str, postgres: PostgresContainer
 ):
     connection_info = _to_connection_info(postgres)
+    # Test with catalog and schema in SQL
     response = await client.post(
         url=f"{base_url}/model-substitute",
         json={
@@ -668,7 +846,28 @@ async def test_model_substitute_with_cte(
             "manifestStr": manifest_str,
             "sql": """
                 WITH orders_cte AS (
-                    SELECT * FROM "public"."orders"
+                    SELECT * FROM "test"."public"."orders"
+                )
+                SELECT * FROM orders_cte;
+            """,
+        },
+    )
+    assert response.status_code == 200
+    assert (
+        response.text
+        == '"WITH orders_cte AS (SELECT * FROM \\"my_catalog\\".\\"my_schema\\".\\"Orders\\" AS \\"orders\\") SELECT * FROM orders_cte"'
+    )
+
+    # Test without catalog and schema in SQL but in headers(x-user-xxx)
+    response = await client.post(
+        url=f"{base_url}/model-substitute",
+        headers={"x-user-catalog": "test", "x-user-schema": "public"},
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": """
+                WITH orders_cte AS (
+                    SELECT * FROM "orders"
                 )
                 SELECT * FROM orders_cte;
             """,
@@ -685,6 +884,7 @@ async def test_model_substitute_with_subquery(
     client, manifest_str, postgres: PostgresContainer
 ):
     connection_info = _to_connection_info(postgres)
+    # Test with catalog and schema in SQL
     response = await client.post(
         url=f"{base_url}/model-substitute",
         json={
@@ -692,7 +892,27 @@ async def test_model_substitute_with_subquery(
             "manifestStr": manifest_str,
             "sql": """
                 SELECT * FROM (
-                    SELECT * FROM "public"."orders"
+                    SELECT * FROM "test"."public"."orders"
+                ) AS orders_subquery;
+            """,
+        },
+    )
+    assert response.status_code == 200
+    assert (
+        response.text
+        == '"SELECT * FROM (SELECT * FROM \\"my_catalog\\".\\"my_schema\\".\\"Orders\\" AS \\"orders\\") AS orders_subquery"'
+    )
+
+    # Test without catalog and schema in SQL but in headers(x-user-xxx)
+    response = await client.post(
+        url=f"{base_url}/model-substitute",
+        headers={"x-user-catalog": "test", "x-user-schema": "public"},
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": """
+                SELECT * FROM (
+                    SELECT * FROM "orders"
                 ) AS orders_subquery;
             """,
         },
@@ -708,8 +928,22 @@ async def test_model_substitute_out_of_scope(
     client, manifest_str, postgres: PostgresContainer
 ):
     connection_info = _to_connection_info(postgres)
+    # Test with catalog and schema in SQL
     response = await client.post(
         url=f"{base_url}/model-substitute",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT * FROM "Nation" LIMIT 1',
+        },
+    )
+    assert response.status_code == 422
+    assert response.text == 'Model not found: "Nation"'
+
+    # Test without catalog and schema in SQL but in headers(x-user-xxx)
+    response = await client.post(
+        url=f"{base_url}/model-substitute",
+        headers={"x-user-catalog": "test", "x-user-schema": "public"},
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
@@ -724,12 +958,26 @@ async def test_model_substitute_non_existent_column(
     client, manifest_str, postgres: PostgresContainer
 ):
     connection_info = _to_connection_info(postgres)
+    # Test with catalog and schema in SQL
     response = await client.post(
         url=f"{base_url}/model-substitute",
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": 'SELECT x FROM "public"."orders" LIMIT 1',
+            "sql": 'SELECT x FROM "test"."public"."orders" LIMIT 1',
+        },
+    )
+    assert response.status_code == 422
+    assert 'column "x" does not exist' in response.text
+
+    # Test without catalog and schema in SQL but in headers(x-user-xxx)
+    response = await client.post(
+        url=f"{base_url}/model-substitute",
+        headers={"x-user-catalog": "test", "x-user-schema": "public"},
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT x FROM "orders" LIMIT 1',
         },
     )
     assert response.status_code == 422

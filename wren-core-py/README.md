@@ -1,6 +1,6 @@
-# Wren Core in Python
+# Wren Core Python binding
 
-Here is a dependency package for Python. It is a wrapper for the Rust package [wren-core](../wren-core). The Rust package is compiled to a Python package and can be used in Python.
+This is a python binding for [wren-core](../wren-core). It uses [PyO3](https://github.com/PyO3/pyo3) to build the required wheel for [ibis-server](../ibis-server/).
 
 ## Developer Guide
 
@@ -12,7 +12,7 @@ Here is a dependency package for Python. It is a wrapper for the Rust package [w
 - Install [casey/just](https://github.com/casey/just)
 
 ### Test and build
-
+After install `casey/just`, you can use the following command to build or test:
 - Execute `just install` to create Python venv and install dependencies.
 - **Important**: Before testing Python, you need to build the Rust package by running `just develop`.
 - Use `just test-rs` to test Rust only, and `just test-py` to test Python only.

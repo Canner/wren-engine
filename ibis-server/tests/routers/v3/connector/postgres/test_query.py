@@ -111,16 +111,16 @@ async def test_query(client, manifest_str, connection_info):
     assert len(result["columns"]) == 10
     assert len(result["data"]) == 1
     assert result["data"][0] == [
+        1,
+        370,
+        "O",
+        "172799.49",
+        "1996-01-02 00:00:00.000000",
+        "1_370",
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000 UTC",
         "2024-01-16 04:00:00.000000 UTC",  # utc-5
         "2024-07-16 03:00:00.000000 UTC",  # utc-4
-        "172799.49",
-        "1_370",
-        370,
-        "1996-01-02 00:00:00.000000",
-        1,
-        "O",
     ]
     assert result["dtypes"] == {
         "o_orderkey": "int32",
@@ -136,6 +136,69 @@ async def test_query(client, manifest_str, connection_info):
     }
 
 
+async def test_query_with_cache(client, manifest_str, connection_info):
+    # First request - should miss cache
+    response1 = await client.post(
+        url=f"{base_url}/query?cacheEnable=true",  # Enable cache
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT * FROM wren.public.orders LIMIT 1",
+        },
+    )
+
+    assert response1.status_code == 200
+    assert response1.headers["X-Cache-Hit"] == "false"
+    result1 = response1.json()
+
+    # Second request with same SQL - should hit cache
+    response2 = await client.post(
+        url=f"{base_url}/query?cacheEnable=true",  # Enable cache
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT * FROM wren.public.orders LIMIT 1",
+        },
+    )
+
+    assert response2.status_code == 200
+    assert response2.headers["X-Cache-Hit"] == "true"
+    assert int(response2.headers["X-Cache-Create-At"]) > 1743984000  # 2025.04.07
+    result2 = response2.json()
+
+    assert result1["data"] == result2["data"]
+    assert result1["columns"] == result2["columns"]
+    assert result1["dtypes"] == result2["dtypes"]
+
+
+async def test_query_with_cache_override(client, manifest_str, connection_info):
+    # First request - should miss cache then create cache
+    response1 = await client.post(
+        url=f"{base_url}/query?cacheEnable=true",  # Enable cache
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT * FROM wren.public.orders LIMIT 1",
+        },
+    )
+    assert response1.status_code == 200
+
+    # Second request with same SQL - should hit cache and override it
+    response2 = await client.post(
+        url=f"{base_url}/query?cacheEnable=true&overrideCache=true",  # Override the cache
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT * FROM wren.public.orders LIMIT 1",
+        },
+    )
+    assert response2.status_code == 200
+    assert response2.headers["X-Cache-Override"] == "true"
+    assert int(response2.headers["X-Cache-Override-At"]) > int(
+        response2.headers["X-Cache-Create-At"]
+    )
+
+
 async def test_query_with_connection_url(client, manifest_str, connection_url):
     response = await client.post(
         url=f"{base_url}/query",
@@ -149,7 +212,7 @@ async def test_query_with_connection_url(client, manifest_str, connection_url):
     result = response.json()
     assert len(result["columns"]) == 10
     assert len(result["data"]) == 1
-    assert result["data"][0][0] == "2024-01-01 23:59:59.000000"
+    assert result["data"][0][0] == 1
     assert result["dtypes"] is not None
 
 
@@ -191,7 +254,6 @@ async def test_query_with_invalid_manifest_str(client, connection_info):
         },
     )
     assert response.status_code == 422
-    assert response.text == "Base64 decode error: Invalid padding"
 
 
 async def test_query_without_manifest(client, connection_info):

@@ -72,6 +72,7 @@ manifest = {
             "condition": "Customer.custkey = Orders.custkey",
         }
     ],
+    "dataSource": "local_file",
 }
 
 

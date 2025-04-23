@@ -1,4 +1,4 @@
-use crate::logical_plan::utils::{from_qualified_name_str, map_data_type};
+use crate::logical_plan::utils::{from_qualified_name_str, try_map_data_type};
 use crate::mdl::builder::ManifestBuilder;
 use crate::mdl::context::{create_ctx_with_mdl, WrenDataSource};
 use crate::mdl::dialect::WrenDialect;
@@ -219,7 +219,7 @@ impl WrenMDL {
             if let Some(name) = Self::collect_one_column(&expr) {
                 Ok(Some(Field::new(
                     alias.map(|a| a.value).unwrap_or_else(|| name.value.clone()),
-                    map_data_type(&column.r#type)?,
+                    try_map_data_type(&column.r#type)?,
                     column.not_null,
                 )))
             } else {
@@ -388,19 +388,19 @@ fn register_remote_function(
         FunctionType::Scalar => {
             ctx.register_udf(ScalarUDF::new_from_impl(ByPassScalarUDF::new(
                 &remote_function.name,
-                map_data_type(&remote_function.return_type)?,
+                try_map_data_type(&remote_function.return_type)?,
             )))
         }
         FunctionType::Aggregate => {
             ctx.register_udaf(AggregateUDF::new_from_impl(ByPassAggregateUDF::new(
                 &remote_function.name,
-                map_data_type(&remote_function.return_type)?,
+                try_map_data_type(&remote_function.return_type)?,
             )))
         }
         FunctionType::Window => {
             ctx.register_udwf(WindowUDF::new_from_impl(ByPassWindowFunction::new(
                 &remote_function.name,
-                map_data_type(&remote_function.return_type)?,
+                try_map_data_type(&remote_function.return_type)?,
             )))
         }
     };
@@ -449,6 +449,7 @@ mod test {
     use datafusion::config::ConfigOptions;
     use datafusion::prelude::{SessionConfig, SessionContext};
     use datafusion::sql::unparser::plan_to_sql;
+    use wren_core_base::mdl::DataSource;
 
     #[test]
     fn test_sync_transform() -> Result<()> {
@@ -617,8 +618,8 @@ mod test {
         .await?;
         assert_eq!(actual,
             "SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" FROM \
-            (SELECT __source.\"Custkey\" AS \"Custkey\", __source.\"Name\" AS \"Name\" FROM \
-            datafusion.\"public\".customer AS __source) AS \"Customer\"");
+            (SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" FROM \
+            (SELECT __source.\"Custkey\" AS \"Custkey\", __source.\"Name\" AS \"Name\" FROM datafusion.\"public\".customer AS __source) AS \"Customer\") AS \"Customer\"");
         Ok(())
     }
 
@@ -724,9 +725,9 @@ mod test {
         )
         .await?;
         assert_eq!(actual,
-                   "SELECT artist.\"名字\", artist.name_append, artist.\"group\", artist.subscribe_plus, artist.subscribe \
-                   FROM (SELECT __source.\"名字\" AS \"名字\", __source.\"名字\" || __source.\"名字\" AS name_append, __source.\"組別\" AS \"group\", \
-                   CAST(__source.\"訂閱數\" AS BIGINT) + 1 AS subscribe_plus, __source.\"訂閱數\" AS subscribe FROM artist AS __source) AS artist"
+                   "SELECT artist.\"名字\", artist.name_append, artist.\"group\", artist.subscribe, artist.subscribe_plus FROM \
+                   (SELECT artist.\"group\", artist.name_append, artist.subscribe, artist.subscribe_plus, artist.\"名字\" FROM \
+                   (SELECT __source.\"名字\" AS \"名字\", __source.\"名字\" || __source.\"名字\" AS name_append, __source.\"組別\" AS \"group\", CAST(__source.\"訂閱數\" AS BIGINT) + 1 AS subscribe_plus, __source.\"訂閱數\" AS subscribe FROM artist AS __source) AS artist) AS artist"
 );
         ctx.sql(&actual).await?.show().await?;
 
@@ -842,9 +843,7 @@ mod test {
         )
         .await?;
         assert_eq!(actual,
-                   "SELECT artist.\"串接名字\" FROM (SELECT artist.\"串接名字\" FROM \
-                   (SELECT __source.\"名字\" || __source.\"名字\" AS \"串接名字\" FROM artist AS __source) AS artist) AS artist");
-
+                   "SELECT artist.\"串接名字\" FROM (SELECT artist.\"串接名字\" FROM (SELECT __source.\"名字\" || __source.\"名字\" AS \"串接名字\" FROM artist AS __source) AS artist) AS artist");
         let sql = r#"select * from wren.test.artist"#;
         let actual = transform_sql_with_ctx(
             &SessionContext::new(),
@@ -854,7 +853,7 @@ mod test {
         )
         .await?;
         assert_eq!(actual,
-                   "SELECT artist.\"串接名字\" FROM (SELECT __source.\"名字\" || __source.\"名字\" AS \"串接名字\" FROM artist AS __source) AS artist");
+                   "SELECT artist.\"串接名字\" FROM (SELECT artist.\"串接名字\" FROM (SELECT __source.\"名字\" || __source.\"名字\" AS \"串接名字\" FROM artist AS __source) AS artist) AS artist");
 
         let sql = r#"select "名字" from wren.test.artist"#;
         let _ = transform_sql_with_ctx(
@@ -973,6 +972,25 @@ mod test {
             actual,
             "SELECT INTERVAL 12 MONTH + INTERVAL 2 MONTH + INTERVAL 3 DAY"
         );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_unnest_as_table_factor() -> Result<()> {
+        let ctx = SessionContext::new();
+        let manifest = ManifestBuilder::new().build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let sql = "select * from unnest([1, 2, 3])";
+        let actual = transform_sql_with_ctx(&ctx, analyzed_mdl, &[], sql).await?;
+        assert_eq!(actual, "SELECT \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\" FROM (SELECT UNNEST([1, 2, 3]) AS \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\")");
+
+        let manifest = ManifestBuilder::new()
+            .data_source(DataSource::BigQuery)
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let sql = "select * from unnest([1, 2, 3])";
+        let actual = transform_sql_with_ctx(&ctx, analyzed_mdl, &[], sql).await?;
+        assert_eq!(actual, "SELECT \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\" FROM UNNEST([1, 2, 3])");
         Ok(())
     }
 
@@ -1287,7 +1305,7 @@ mod test {
             .map_err(|e| {
                 assert_eq!(
                     e.to_string(),
-                    "Error during planning: struct must have at least one field"
+                    "Execution error: The expression to get an indexed field is only valid for `Struct`, `Map` or `Null` types, got Utf8"
                 )
             });
         Ok(())
@@ -1363,6 +1381,60 @@ mod test {
             (SELECT customer.c_custkey, customer.c_name FROM \
             (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer \
             GROUP BY customer.c_custkey"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_disable_scalar_subquery() -> Result<()> {
+        let ctx = SessionContext::new();
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_custkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .build(),
+            )
+            .build();
+        let sql = r#"SELECT c_custkey, (SELECT c_name FROM customer WHERE c_custkey = 1) FROM customer"#;
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let result =
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        assert_eq!(
+            result,
+            "SELECT customer.c_custkey, (SELECT customer.c_name FROM (SELECT customer.c_custkey, customer.c_name \
+            FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer \
+            WHERE customer.c_custkey = 1) FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_wildcard_where() -> Result<()> {
+        let ctx = SessionContext::new();
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_custkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .build(),
+            )
+            .build();
+        let sql = r#"SELECT * FROM customer WHERE c_custkey = 1"#;
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let result =
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        assert_eq!(
+            result,
+            "SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM \
+            (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer \
+            WHERE customer.c_custkey = 1"
         );
         Ok(())
     }

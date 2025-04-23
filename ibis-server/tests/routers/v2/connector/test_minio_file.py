@@ -75,6 +75,7 @@ manifest = {
             "condition": "Customer.custkey = Orders.custkey",
         }
     ],
+    "dataSource": "minio_file",
 }
 
 

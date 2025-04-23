@@ -55,6 +55,7 @@ jobs:
           java-version: '21'
           cache: 'maven'
       - name: Maven Prepare Release
+        working-directory: wren-core-legacy
         id: maven_prepare_release
         run: |
           if [ -n "${{ github.event.inputs.specific_version }}" ]; then
@@ -93,6 +94,7 @@ jobs:
           java-version: '21'
           cache: 'maven'
       - name: Build
+        working-directory: wren-core-legacy
         run: |
           ./mvnw clean install -B -DskipTests -P exec-jar
       - name: Docker meta
@@ -114,6 +116,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Prepare
+        working-directory: wren-core-legacy
         id: prepare
         run: |
           WREN_VERSION=$(./mvnw --quiet help:evaluate -Dexpression=project.version -DforceStdout)
@@ -122,7 +125,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: ./docker
+          context: ./wren-core-legacy/docker
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |

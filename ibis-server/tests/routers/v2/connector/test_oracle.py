@@ -76,10 +76,43 @@ manifest = {
     ],
 }
 
+# for testing substitute case sensitivity
+duplicate_key_manifest = {
+    "catalog": "my_catalog",
+    "schema": "my_schema",
+    "models": [
+        {
+            "name": "ORDERS",
+            "tableReference": {
+                "schema": "SYSTEM",  # uppercase schema name
+                "table": "ORDERS",
+            },
+            "columns": [
+                {"name": "orderkey", "expression": "O_ORDERKEY", "type": "number"},
+            ],
+        },
+        {
+            "name": "orders",
+            "tableReference": {
+                "schema": "system",  # lowercase schema name
+                "table": "ORDERS",
+            },
+            "columns": [
+                {"name": "orderkey", "expression": "O_ORDERKEY", "type": "number"},
+            ],
+        },
+    ],
+}
+
 
 @pytest.fixture(scope="module")
 def manifest_str():
     return base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
+
+
+@pytest.fixture(scope="module")
+def duplicate_key_manifest_str():
+    return base64.b64encode(orjson.dumps(duplicate_key_manifest)).decode("utf-8")
 
 
 @pytest.fixture(scope="module")
@@ -398,6 +431,56 @@ async def test_metadata_db_version(client, oracle: OracleDbContainer):
     )
     assert response.status_code == 200
     assert "23.0" in response.text
+
+
+async def test_model_substitute(
+    client, manifest_str, duplicate_key_manifest_str, oracle: OracleDbContainer
+):
+    connection_info = _to_connection_info(oracle)
+    response = await client.post(
+        url=f"{base_url}/model-substitute",
+        headers={"x-user-schema": "SYSTEM"},  # uppoercase to test case insensitivity
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "modelName": "Orders",
+            "sql": 'SELECT * FROM "ORDERS"',
+        },
+    )
+    assert response.status_code == 200
+    assert (
+        response.text
+        == '"SELECT * FROM \\"my_catalog\\".\\"my_schema\\".\\"Orders\\" AS \\"ORDERS\\""'
+    )
+
+    response = await client.post(
+        url=f"{base_url}/model-substitute",
+        headers={"x-user-schema": "system"},  # lowercase to test case insensitivity
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "modelName": "Orders",
+            "sql": 'SELECT * FROM "ORDERS"',
+        },
+    )
+    assert response.status_code == 200
+    assert (
+        response.text
+        == '"SELECT * FROM \\"my_catalog\\".\\"my_schema\\".\\"Orders\\" AS \\"ORDERS\\""'
+    )
+
+    # test ambiguous model name
+    response = await client.post(
+        url=f"{base_url}/model-substitute",
+        headers={"x-user-schema": "system"},
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": duplicate_key_manifest_str,
+            "sql": 'SELECT * FROM "ORDERS"',
+        },
+    )
+    assert response.status_code == 422
+    assert response.text == 'Ambiguous model: found multiple matches for "ORDERS"'
 
 
 def _to_connection_info(oracle: OracleDbContainer):

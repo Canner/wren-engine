@@ -77,6 +77,7 @@ manifest = {
             "condition": "Customer.custkey = Orders.custkey",
         }
     ],
+    "dataSource": "s3_file",
 }
 
 
