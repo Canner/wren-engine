@@ -62,7 +62,7 @@ class TrinoMetadata(Metadata):
                         catalog=row["table_catalog"],
                         table=row["table_name"],
                     ),
-                    primaryKey=[],
+                    primaryKey="",
                 )
 
             # table exists, and add column to the table

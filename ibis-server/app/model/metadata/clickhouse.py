@@ -52,7 +52,7 @@ class ClickHouseMetadata(Metadata):
                         schema=row["table_schema"],
                         table=row["table_name"],
                     ),
-                    primaryKey=[],
+                    primaryKey="",
                 )
 
             # table exists, and add column to the table

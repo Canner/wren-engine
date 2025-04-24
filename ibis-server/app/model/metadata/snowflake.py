@@ -58,7 +58,7 @@ class SnowflakeMetadata(Metadata):
                         catalog=row["TABLE_CATALOG"],
                         table=row["TABLE_NAME"],
                     ),
-                    primaryKey=[],
+                    primaryKey="",
                 )
 
             # table exists, and add column to the table
