@@ -358,7 +358,9 @@ pub fn view(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream 
 }
 
 #[proc_macro]
-pub fn row_level_access_control(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn row_level_access_control(
+    python_binding: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
     let input = parse_macro_input!(python_binding as LitBool);
     let python_binding = if input.value {
         quote! {

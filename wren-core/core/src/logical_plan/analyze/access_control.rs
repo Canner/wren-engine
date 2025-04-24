@@ -93,7 +93,8 @@ pub fn build_filter_expression(
     visit_expressions_mut(&mut expr, |expr| {
         if let ast::Expr::Identifier(ast::Ident { value, .. }) = expr {
             if value.starts_with("@") {
-                let property_name = value.trim_start_matches("@").to_string().to_lowercase();
+                let property_name =
+                    value.trim_start_matches("@").to_string().to_lowercase();
                 let Some(property_value) = properties.get(&property_name).or_else(|| {
                     required_properties
                         .iter()
