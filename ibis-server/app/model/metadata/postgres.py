@@ -55,7 +55,7 @@ class PostgresMetadata(Metadata):
             WHERE
                 t.table_type IN ('BASE TABLE', 'VIEW')
                 AND t.table_schema NOT IN ('information_schema', 'pg_catalog')
-                AND (tc.constraint_type == 'PRIMARY KEY' OR tc.constraint_type IS NULL);
+                AND (tc.constraint_type = 'PRIMARY KEY' OR tc.constraint_type IS NULL);
             """
         response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
 
@@ -94,21 +94,21 @@ class PostgresMetadata(Metadata):
                 if schema_table in unique_tables_primary_key:
                     unique_tables_primary_key[schema_table].append(column)
                 else:
-                    unique_tables_primary_key[schema_table] = [ column ]
-        
+                    unique_tables_primary_key[schema_table] = [column]
+
         for schema_table, columns in unique_tables_primary_key.items():
             if len(columns) == 0:
                 continue
-            elif len(columns) == 1 :
+            elif len(columns) == 1:
                 unique_tables[schema_table].primaryKey = columns[0].name
-            else :
+            else:
                 composite_primary_key_column = Column(
                     name="composed_primary_key",
                     type="json",
-                    notNull="yes",
+                    notNull=True,
                     description=f"Composed primary key based on fields: {[col.name for col in columns]}",
                     properties=None,
-                    nestedColumns=columns
+                    nestedColumns=columns,
                 )
                 unique_tables[schema_table].columns.append(composite_primary_key_column)
                 unique_tables[schema_table].primaryKey = "composed_primary_key"
@@ -130,6 +130,7 @@ class PostgresMetadata(Metadata):
                 AND tc.table_schema = kcu.table_schema
             JOIN information_schema.constraint_column_usage AS ccu
                 ON ccu.constraint_name = tc.constraint_name
+                AND ccu.table_schema = tc.table_schema
             WHERE tc.constraint_type = 'FOREIGN KEY'
             """
         res = self.connection.sql(sql).to_pandas().to_dict(orient="records")
