@@ -20,6 +20,7 @@ use crate::manifest::to_manifest;
 use crate::remote_functions::PyRemoteFunction;
 use log::debug;
 use pyo3::{pyclass, pymethods, PyErr, PyResult};
+use std::collections::HashMap;
 use std::hash::Hash;
 use std::ops::ControlFlow;
 use std::str::FromStr;
@@ -123,8 +124,14 @@ impl PySessionContext {
 
         let analyzed_mdl = Arc::new(analyzed_mdl);
 
+        // the headers won't be used in the context. Provide an empty map.
         let ctx = runtime
-            .block_on(create_ctx_with_mdl(&ctx, Arc::clone(&analyzed_mdl), false))
+            .block_on(create_ctx_with_mdl(
+                &ctx,
+                Arc::clone(&analyzed_mdl),
+                Arc::new(HashMap::new()),
+                false,
+            ))
             .map_err(CoreError::from)?;
 
         Ok(Self {
@@ -135,12 +142,23 @@ impl PySessionContext {
     }
 
     /// Transform the given Wren SQL to the equivalent Planned SQL.
-    pub fn transform_sql(&self, sql: &str) -> PyResult<String> {
+    #[pyo3(signature = (sql=None, properties=None))]
+    pub fn transform_sql(
+        &self,
+        sql: Option<&str>,
+        properties: Option<HashMap<String, Option<String>>>,
+    ) -> PyResult<String> {
+        let Some(sql) = sql else {
+            return Err(CoreError::new("SQL is required").into());
+        };
         self.runtime
             .block_on(mdl::transform_sql_with_ctx(
                 &self.ctx,
                 Arc::clone(&self.mdl),
+                // the ctx has been initialized when PySessionContext is created
+                // so we can pass the empty array here
                 &[],
+                properties.unwrap_or_default(),
                 sql,
             ))
             .map_err(|e| PyErr::from(CoreError::from(e)))

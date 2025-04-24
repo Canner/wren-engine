@@ -43,6 +43,7 @@ mod tests {
                     primary_key: None,
                     cached: false,
                     refresh_time: None,
+                    row_level_access_controls: vec![],
                 }),
                 Arc::from(Model {
                     name: "model_2".to_string(),
@@ -53,6 +54,7 @@ mod tests {
                     primary_key: None,
                     cached: false,
                     refresh_time: None,
+                    row_level_access_controls: vec![],
                 }),
             ],
             relationships: vec![],
