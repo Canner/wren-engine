@@ -93,11 +93,11 @@ pub fn build_filter_expression(
     visit_expressions_mut(&mut expr, |expr| {
         if let ast::Expr::Identifier(ast::Ident { value, .. }) = expr {
             if value.starts_with("@") {
-                let property_name = value.trim_start_matches("@").to_string();
+                let property_name = value.trim_start_matches("@").to_string().to_lowercase();
                 let Some(property_value) = properties.get(&property_name).or_else(|| {
                     required_properties
                         .iter()
-                        .filter(|r| r.name == property_name && !r.required)
+                        .filter(|r| r.name.to_lowercase() == property_name && !r.required)
                         .map(|r| &r.default_expr)
                         .next()
                 }) else {
@@ -199,7 +199,7 @@ fn is_property_present(
     property_name: &str,
 ) -> bool {
     headers
-        .get(property_name)
+        .get(&property_name.to_lowercase())
         .map(|v| v.as_ref().is_some_and(|value| !value.is_empty()))
         .unwrap_or(false)
 }
@@ -511,5 +511,33 @@ mod test {
     fn expr_to_sql(expr: &Expr) -> Result<String> {
         let unparser = Unparser::default().with_pretty(true);
         unparser.expr_to_sql(expr).map(|sql| sql.to_string())
+    }
+
+    #[test]
+    pub fn test_match_case_insensitive() -> Result<()> {
+        let ctx = SessionContext::new();
+        let state = ctx.state_ref();
+        let model = ModelBuilder::new("m1")
+            .column(ColumnBuilder::new("id", "int").build())
+            .column(ColumnBuilder::new("name", "varchar").build())
+            .build();
+
+        let headers: Arc<HashMap<String, Option<String>>> = Arc::new(build_headers(&[
+            ("session_id".to_string(), Some("1".to_string())),
+            ("session_name".to_string(), Some("'test'".to_string())),
+        ]));
+
+        let rule = RowLevelAccessControl {
+            condition: "id = @session_id AND name = @SESSION_NAME".to_string(),
+            required_properties: vec![
+                SessionProperty::new_required("SESSION_ID"),
+                SessionProperty::new_required("session_name"),
+            ],
+            name: "test".to_string(),
+        };
+
+        let expr = build_filter_expression(&state, Arc::clone(&model), &headers, &rule)?;
+        assert_snapshot!(expr_to_sql(&expr)?, @"m1.id = 1 AND m1.\"name\" = 'test'");
+        Ok(())
     }
 }

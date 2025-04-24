@@ -68,6 +68,15 @@ pub async fn create_ctx_with_mdl(
         reset_default_catalog_schema.clone().read().deref().clone(),
     );
 
+    // ensure all the key in properties is lowercase
+    let properties = Arc::new(properties
+        .iter()
+        .map(|(k, v)| {
+            let k = k.to_lowercase();
+            (k, v.clone())
+        })
+        .collect::<HashMap<_, _>>());
+
     let new_state = if is_local_runtime {
         new_state.with_analyzer_rules(analyze_rule_for_local_runtime(
             Arc::clone(&analyzed_mdl),
