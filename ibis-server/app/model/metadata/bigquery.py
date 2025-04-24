@@ -76,7 +76,7 @@ class BigQueryMetadata(Metadata):
                     catalog=row["table_catalog"],
                     table=row["table_name"],
                 ),
-                primaryKey=[],
+                primaryKey="",
             )
 
         def is_root_column(row) -> bool:
