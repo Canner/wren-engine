@@ -383,3 +383,16 @@ async def test_validate(client, manifest_str, connection_info):
         },
     )
     assert response.status_code == 422
+
+
+async def test_query_rlac(client, manifest_str, connection_info):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT orderkey FROM orders LIMIT 1",
+        },
+        headers={"x-wren-variables-session_user": "1"},
+    )
+    assert response.status_code == 422

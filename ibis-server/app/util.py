@@ -147,3 +147,11 @@ def get_fallback_message(
 
 def safe_strtobool(val: str) -> bool:
     return val.lower() in {"1", "true", "yes", "y"}
+
+
+def exist_wren_variables_header(
+    headers: Header,
+) -> bool:
+    if headers is None:
+        return False
+    return any(key.startswith("x-wren-variables-") for key in headers.keys())
