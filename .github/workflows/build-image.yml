@@ -1,4 +1,8 @@
 name: Build image
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
 
 on:
   push:

@@ -1,4 +1,8 @@
 name: Stable Release
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
 
 on:
   workflow_dispatch:
