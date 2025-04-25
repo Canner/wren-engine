@@ -7,7 +7,7 @@ import opendal
 from loguru import logger
 from opentelemetry import trace
 
-from app.model import ConnectionUrl
+from app.model import BigQueryConnectionInfo, ConnectionUrl
 
 tracer = trace.get_tracer(__name__)
 
@@ -75,6 +75,14 @@ class QueryCacheManager:
         key_parts = []
         if isinstance(info, ConnectionUrl):
             key_parts = [data_source, sql, info.connection_url.get_secret_value()]
+        elif isinstance(info, BigQueryConnectionInfo):
+            key_parts = [
+                data_source,
+                sql,
+                info.project_id.get_secret_value(),
+                info.dataset_id.get_secret_value(),
+                info.credentials.get_secret_value(),
+            ]
         else:
             key_parts = [
                 data_source,
