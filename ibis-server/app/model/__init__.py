@@ -14,6 +14,18 @@ manifest_str_field = Field(alias="manifestStr", description="Base64 manifest")
 connection_info_field = Field(alias="connectionInfo")
 
 
+class BaseConnectionInfo(BaseModel):
+    def to_key_string(self) -> str:
+        key_parts = []
+
+        # Get all fields that are SecretStr and get their values
+        for _, field_value in self:
+            if isinstance(field_value, SecretStr):
+                key_parts.append(field_value.get_secret_value())
+
+        return "|".join(key_parts)
+
+
 class QueryDTO(BaseModel):
     sql: str
     manifest_str: str = manifest_str_field
@@ -72,7 +84,11 @@ class QueryGcsFileDTO(QueryDTO):
     connection_info: GcsFileConnectionInfo = connection_info_field
 
 
-class BigQueryConnectionInfo(BaseModel):
+class ConnectionUrl(BaseConnectionInfo):
+    connection_url: SecretStr = Field(alias="connectionUrl")
+
+
+class BigQueryConnectionInfo(BaseConnectionInfo):
     project_id: SecretStr = Field(description="GCP project id", examples=["my-project"])
     dataset_id: SecretStr = Field(
         description="BigQuery dataset id", examples=["my_dataset"]
@@ -82,7 +98,7 @@ class BigQueryConnectionInfo(BaseModel):
     )
 
 
-class CannerConnectionInfo(BaseModel):
+class CannerConnectionInfo(BaseConnectionInfo):
     host: SecretStr = Field(
         description="the hostname of your database", examples=["localhost"]
     )
@@ -101,7 +117,7 @@ class CannerConnectionInfo(BaseModel):
     )
 
 
-class ClickHouseConnectionInfo(BaseModel):
+class ClickHouseConnectionInfo(BaseConnectionInfo):
     host: SecretStr = Field(
         description="the hostname of your database", examples=["localhost"]
     )
@@ -117,7 +133,7 @@ class ClickHouseConnectionInfo(BaseModel):
     )
 
 
-class MSSqlConnectionInfo(BaseModel):
+class MSSqlConnectionInfo(BaseConnectionInfo):
     host: SecretStr = Field(
         description="the hostname of your database", examples=["localhost"]
     )
@@ -142,7 +158,7 @@ class MSSqlConnectionInfo(BaseModel):
     )
 
 
-class MySqlConnectionInfo(BaseModel):
+class MySqlConnectionInfo(BaseConnectionInfo):
     host: SecretStr = Field(
         description="the hostname of your database", examples=["localhost"]
     )
@@ -170,11 +186,7 @@ class MySqlConnectionInfo(BaseModel):
     )
 
 
-class ConnectionUrl(BaseModel):
-    connection_url: SecretStr = Field(alias="connectionUrl")
-
-
-class PostgresConnectionInfo(BaseModel):
+class PostgresConnectionInfo(BaseConnectionInfo):
     host: SecretStr = Field(
         examples=["localhost"], description="the hostname of your database"
     )
@@ -190,7 +202,7 @@ class PostgresConnectionInfo(BaseModel):
     )
 
 
-class OracleConnectionInfo(BaseModel):
+class OracleConnectionInfo(BaseConnectionInfo):
     host: SecretStr = Field(
         examples=["localhost"], description="the hostname of your database"
     )
@@ -206,7 +218,7 @@ class OracleConnectionInfo(BaseModel):
     )
 
 
-class SnowflakeConnectionInfo(BaseModel):
+class SnowflakeConnectionInfo(BaseConnectionInfo):
     user: SecretStr = Field(
         description="the username of your database", examples=["admin"]
     )
@@ -226,7 +238,7 @@ class SnowflakeConnectionInfo(BaseModel):
     )  # Use `sf_schema` to avoid `schema` shadowing in BaseModel
 
 
-class TrinoConnectionInfo(BaseModel):
+class TrinoConnectionInfo(BaseConnectionInfo):
     host: SecretStr = Field(
         description="the hostname of your database", examples=["localhost"]
     )
@@ -247,7 +259,7 @@ class TrinoConnectionInfo(BaseModel):
     )
 
 
-class LocalFileConnectionInfo(BaseModel):
+class LocalFileConnectionInfo(BaseConnectionInfo):
     url: SecretStr = Field(
         description="the root path of the local file", default="/", examples=["/data"]
     )
@@ -256,7 +268,7 @@ class LocalFileConnectionInfo(BaseModel):
     )
 
 
-class S3FileConnectionInfo(BaseModel):
+class S3FileConnectionInfo(BaseConnectionInfo):
     url: SecretStr = Field(
         description="the root path of the s3 bucket", default="/", examples=["/data"]
     )
@@ -277,7 +289,7 @@ class S3FileConnectionInfo(BaseModel):
     )
 
 
-class MinioFileConnectionInfo(BaseModel):
+class MinioFileConnectionInfo(BaseConnectionInfo):
     url: SecretStr = Field(
         description="the root path of the minio bucket", default="/", examples=["/data"]
     )
@@ -303,7 +315,7 @@ class MinioFileConnectionInfo(BaseModel):
     )
 
 
-class GcsFileConnectionInfo(BaseModel):
+class GcsFileConnectionInfo(BaseConnectionInfo):
     url: SecretStr = Field(
         description="the root path of the gcs bucket", default="/", examples=["/data"]
     )
