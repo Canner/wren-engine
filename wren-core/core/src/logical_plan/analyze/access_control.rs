@@ -11,7 +11,10 @@ use datafusion::{
     sql::{
         parser::DFParserBuilder,
         sqlparser::{
-            ast::{self, visit_expressions, visit_expressions_mut, ExprWithAlias},
+            ast::{
+                self, visit_expressions, visit_expressions_mut, Array, ExprWithAlias,
+                Map, MapEntry,
+            },
             dialect::GenericDialect,
         },
         TableReference,
@@ -156,7 +159,36 @@ fn parse_expr(expr: &str) -> Result<ExprWithAlias> {
     let dialect = GenericDialect {};
     let mut parser = DFParserBuilder::new(expr).with_dialect(&dialect).build()?;
     let expr = parser.parse_expr()?;
+    prevent_invalid_expr(&expr.expr)?;
     Ok(expr)
+}
+
+/// Prevent invalid expression for the session property.
+/// Only literal values are allowed.
+fn prevent_invalid_expr(expr: &ast::Expr) -> Result<()> {
+    match &expr {
+        ast::Expr::Value(_) | ast::Expr::Interval(_) => Ok(()),
+        ast::Expr::Array(Array { elem, .. }) => {
+            for e in elem {
+                prevent_invalid_expr(e)?;
+            }
+            Ok(())
+        }
+        ast::Expr::Map(Map { entries }) => {
+            for MapEntry { key, value } in entries {
+                prevent_invalid_expr(key)?;
+                prevent_invalid_expr(value)?;
+            }
+            Ok(())
+        }
+        ast::Expr::Dictionary(fileds) => {
+            for field in fileds {
+                prevent_invalid_expr(&field.value)?;
+            }
+            Ok(())
+        }
+        _ => plan_err!("The session property {} allow only literal value", expr),
+    }
 }
 
 /// Validate the input headers with the required properties.
@@ -539,6 +571,73 @@ mod test {
 
         let expr = build_filter_expression(&state, Arc::clone(&model), &headers, &rule)?;
         assert_snapshot!(expr_to_sql(&expr)?, @"m1.id = 1 AND m1.\"name\" = 'test'");
+        Ok(())
+    }
+
+    #[test]
+    pub fn test_property_value() -> Result<()> {
+        let ctx = SessionContext::new();
+        let state = ctx.state_ref();
+        let model = ModelBuilder::new("m1")
+            .column(ColumnBuilder::new("id", "int").build())
+            .column(ColumnBuilder::new("name", "varchar").build())
+            .build();
+
+        let rule = RowLevelAccessControl {
+            condition: "id = @session_id".to_string(),
+            required_properties: vec![SessionProperty::new_required("SESSION_ID")],
+            name: "test".to_string(),
+        };
+
+        let valid_values = vec![
+            "1",
+            "'aaa'",
+            "1.0",
+            "true",
+            "false",
+            "[1,2,3]",
+            "{'key': 'value'}",
+            "{key: 'value'}",
+            "INTERVAL '1' YEAR",
+        ];
+
+        for value in valid_values {
+            let headers: Arc<HashMap<String, Option<String>>> = Arc::new(build_headers(
+                &[("session_id".to_string(), Some(value.to_string()))],
+            ));
+
+            let expr =
+                build_filter_expression(&state, Arc::clone(&model), &headers, &rule)?;
+            expr_to_sql(&expr)?;
+        }
+
+        let invalid_values = vec![
+            "1 + 1",
+            "upper('aaa')",
+            "(select 1)",
+            "1 or 1",
+            "aaa",
+            "is null",
+            "is not null",
+            "case when 1 then 1 else 2 end",
+            "[upper('aaa'), upper('aaa')]",
+            "{'key': upper('aaa')}",
+            "{ key: upper('aaa') }",
+        ];
+
+        for value in invalid_values {
+            let headers: Arc<HashMap<String, Option<String>>> = Arc::new(build_headers(
+                &[("session_id".to_string(), Some(value.to_string()))],
+            ));
+
+            match build_filter_expression(&state, Arc::clone(&model), &headers, &rule) {
+                Err(_) => {}
+                _ => panic!(
+                    "should be error: {}",
+                    &headers.get("session_id").unwrap().as_ref().unwrap()
+                ),
+            }
+        }
         Ok(())
     }
 }
