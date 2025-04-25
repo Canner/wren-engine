@@ -39,6 +39,7 @@ pub fn collect_condition(
         .build()?;
     let expr = parser.parse_expr()?;
     visit_expressions(&expr, |expr| {
+        // TODO: consider CompoundIdentifier and CompoundFieldAccess
         if let ast::Expr::Identifier(ast::Ident { value, .. }) = expr {
             if !value.starts_with("@") {
                 if model.get_column(value).is_none() {
