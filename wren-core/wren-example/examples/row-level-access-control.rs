@@ -170,7 +170,7 @@ fn init_manifest() -> Manifest {
         // 1. Member only can see the documents created by himself or the documents with status 'PUBLIC' in his department
         // 2. Admin can see all the documents
         .add_row_level_access_control("auth", vec![
-            SessionProperty::new_optional("session_role", Some("MEMBER".to_string())),
+            SessionProperty::new_optional("session_role", Some("'MEMBER'".to_string())),
             SessionProperty::new_required("session_department"),
             SessionProperty::new_required("session_user_id")],
              "@session_role = 'ADMIN' OR (department = @session_department AND (created_by = @session_user_id OR status = 'PUBLIC'))")
