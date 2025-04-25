@@ -74,7 +74,6 @@ class QueryCacheManager:
 
         # Combine with data source and SQL
         key_string = f"{data_source}|{sql}|{connection_key}"
-        logger.debug("Hash key components: ", key_string)
 
         return hashlib.sha256(key_string.encode()).hexdigest()
 
