@@ -141,7 +141,7 @@ pub fn model(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream
             #[serde(default)]
             pub refresh_time: Option<String>,
             #[serde(default)]
-            pub row_level_access_controls: Vec<RowLevelAccessControl>,
+            pub row_level_access_controls: Vec<Arc<RowLevelAccessControl>>,
         }
     };
     proc_macro::TokenStream::from(expanded)

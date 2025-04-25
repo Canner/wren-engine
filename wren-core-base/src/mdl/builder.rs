@@ -162,7 +162,7 @@ impl ModelBuilder {
             required_properties,
             condition: condition.to_string(),
         };
-        self.model.row_level_access_controls.push(rule);
+        self.model.row_level_access_controls.push(Arc::new(rule));
         self
     }
 

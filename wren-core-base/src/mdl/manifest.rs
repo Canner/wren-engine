@@ -278,7 +278,7 @@ impl Model {
         self.table_reference.as_deref().unwrap_or("")
     }
 
-    pub fn row_level_access_controls(&self) -> &[RowLevelAccessControl] {
+    pub fn row_level_access_controls(&self) -> &[Arc<RowLevelAccessControl>] {
         &self.row_level_access_controls
     }
 }
