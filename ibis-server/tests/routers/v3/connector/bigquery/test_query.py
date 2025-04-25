@@ -103,6 +103,62 @@ async def test_query(client, manifest_str, connection_info):
     }
 
 
+async def test_query_with_cache(client, manifest_str, connection_info):
+    response1 = await client.post(
+        url=f"{base_url}/query?cacheEnable=true",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT * FROM wren.public.orders LIMIT 1",
+        },
+    )
+    assert response1.status_code == 200
+    assert response1.headers["X-Cache-Hit"] == "false"
+    result1 = response1.json()
+
+    response2 = await client.post(
+        url=f"{base_url}/query?cacheEnable=true",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT * FROM wren.public.orders LIMIT 1",
+        },
+    )
+
+    assert response2.status_code == 200
+    assert response2.headers["X-Cache-Hit"] == "true"
+    result2 = response2.json()
+
+    assert result1["dtypes"] == result2["dtypes"]
+
+
+async def test_query_with_cache_override(client, manifest_str, connection_info):
+    response1 = await client.post(
+        url=f"{base_url}/query?cacheEnable=true",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT * FROM wren.public.orders LIMIT 1",
+        },
+    )
+    assert response1.status_code == 200
+
+    response2 = await client.post(
+        url=f"{base_url}/query?cacheEnable=true&overrideCache=true",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT * FROM wren.public.orders LIMIT 1",
+        },
+    )
+
+    assert response2.status_code == 200
+    assert response2.headers["X-Cache-Override"] == "true"
+    assert int(response2.headers["X-Cache-Override-At"]) > int(
+        response2.headers["X-Cache-Create-At"]
+    )
+
+
 async def test_query_with_limit(client, manifest_str, connection_info):
     response = await client.post(
         url=f"{base_url}/query",
