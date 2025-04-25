@@ -7,6 +7,8 @@ import opendal
 from loguru import logger
 from opentelemetry import trace
 
+from app.model import ConnectionUrl
+
 tracer = trace.get_tracer(__name__)
 
 
@@ -70,13 +72,18 @@ class QueryCacheManager:
         return None
 
     def _generate_cache_key(self, data_source: str, sql: str, info) -> str:
-        key_parts = [
-            data_source,
-            sql,
-            info.host.get_secret_value(),
-            info.port.get_secret_value(),
-            info.user.get_secret_value(),
-        ]
+        key_parts = []
+        if isinstance(info, ConnectionUrl):
+            key_parts = [data_source, sql, info.connection_url.get_secret_value()]
+        else:
+            key_parts = [
+                data_source,
+                sql,
+                info.host.get_secret_value(),
+                info.port.get_secret_value(),
+                info.user.get_secret_value(),
+            ]
+        logger.debug(f"Hash key components: {key_parts}")
         key_string = "|".join(key_parts)
 
         return hashlib.sha256(key_string.encode()).hexdigest()
