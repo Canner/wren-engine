@@ -31,7 +31,7 @@ pub fn collect_condition(
     condition: &str,
 ) -> Result<(Vec<Expr>, Vec<String>)> {
     let mut conditions = vec![];
-    let mut seesion_properties: HashSet<String> = HashSet::new();
+    let mut session_properties: HashSet<String> = HashSet::new();
     let mut error: Option<Result<_, DataFusionError>> = None;
     let dialect = GenericDialect {};
     let mut parser = DFParserBuilder::new(condition)
@@ -57,8 +57,8 @@ pub fn collect_condition(
                 }));
             } else {
                 let session_property = value.trim_start_matches("@").to_string();
-                if !seesion_properties.contains(&session_property) {
-                    seesion_properties.insert(session_property);
+                if !session_properties.contains(&session_property) {
+                    session_properties.insert(session_property);
                 }
             }
         }
@@ -71,7 +71,7 @@ pub fn collect_condition(
 
     Ok((
         conditions,
-        seesion_properties.into_iter().collect::<Vec<_>>(),
+        session_properties.into_iter().collect::<Vec<_>>(),
     ))
 }
 
@@ -215,7 +215,7 @@ pub fn validate_rule(
             Ok(true)
         } else {
             let exist = is_property_present(headers, &property.name);
-            if exist || property.default_expr.is_some() {
+            if exist || property.default_expr.as_ref().is_some_and(|expr| !expr.is_empty()) {
                 Ok(true)
             } else {
                 Ok(false)
