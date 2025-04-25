@@ -58,7 +58,7 @@ with open(connection_info_path) as file:
 
 print("### Starting the session context ###")
 print("#")
-session_context = SessionContext(encoded_str, function_list_path)
+session_context = SessionContext(encoded_str, function_list_path + f"{data_source}.csv")
 planned_sql = session_context.transform_sql(sql)
 print("# Planned SQL:\n", planned_sql)
 
