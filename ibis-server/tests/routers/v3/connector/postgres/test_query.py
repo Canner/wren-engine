@@ -3,6 +3,7 @@ import base64
 import orjson
 import pytest
 
+from app.dependencies import X_WREN_VARIABLE_PREFIX
 from tests.routers.v3.connector.postgres.conftest import base_url
 
 manifest = {
@@ -501,7 +502,7 @@ async def test_rlac_query(client, manifest_str, connection_info):
             "sql": "SELECT c_name FROM customer",
         },
         headers={
-            "x-wren-variables-session_user": "'Customer#000000001'",
+            X_WREN_VARIABLE_PREFIX + "session_user": "'Customer#000000001'",
         },
     )
     assert response.status_code == 200
@@ -517,7 +518,7 @@ async def test_rlac_query(client, manifest_str, connection_info):
             "sql": "SELECT c_name FROM customer",
         },
         headers={
-            "X-WREN-VARIABLES-SESSION_USER": "'Customer#000000001'",
+            X_WREN_VARIABLE_PREFIX + "SESSION_USER": "'Customer#000000001'",
         },
     )
     assert response.status_code == 200

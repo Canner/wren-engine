@@ -3,7 +3,7 @@ import base64
 import orjson
 import pytest
 
-from app.dependencies import X_WREN_FALLBACK_DISABLE
+from app.dependencies import X_WREN_FALLBACK_DISABLE, X_WREN_VARIABLE_PREFIX
 from tests.routers.v3.connector.postgres.conftest import base_url
 
 # It's not a valid manifest for v3. We expect the query to fail and fallback to v2.
@@ -393,6 +393,6 @@ async def test_query_rlac(client, manifest_str, connection_info):
             "manifestStr": manifest_str,
             "sql": "SELECT orderkey FROM orders LIMIT 1",
         },
-        headers={"x-wren-variables-session_user": "1"},
+        headers={X_WREN_VARIABLE_PREFIX + "session_user": "1"},
     )
     assert response.status_code == 422

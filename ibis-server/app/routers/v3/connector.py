@@ -7,7 +7,12 @@ from opentelemetry import trace
 from starlette.datastructures import Headers
 
 from app.config import get_config
-from app.dependencies import X_WREN_FALLBACK_DISABLE, get_wren_headers, verify_query_dto
+from app.dependencies import (
+    X_WREN_FALLBACK_DISABLE,
+    exist_wren_variables_header,
+    get_wren_headers,
+    verify_query_dto,
+)
 from app.mdl.core import get_session_context
 from app.mdl.java_engine import JavaEngineConnector
 from app.mdl.rewriter import Rewriter

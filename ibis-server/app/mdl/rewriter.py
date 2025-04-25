@@ -7,6 +7,7 @@ from loguru import logger
 from opentelemetry import trace
 
 from app.config import get_config
+from app.dependencies import X_WREN_VARIABLE_PREFIX
 from app.mdl.core import (
     get_manifest_extractor,
     get_session_context,
@@ -133,13 +134,13 @@ class EmbeddedEngineRewriter:
     def get_session_properties(self, properties: dict) -> dict | None:
         if properties is None:
             return None
-        # filter the properties which name starts with "x-wren-variables-"
-        # and remove the prefix "x-wren-variables-"
+        # filter the properties which name starts with "x-wren-variable-"
+        # and remove the prefix "x-wren-variable-"
 
         return {
-            k.replace("x-wren-variables-", ""): v
+            k.replace(X_WREN_VARIABLE_PREFIX, ""): v
             for k, v in properties.items()
-            if k.startswith("x-wren-variables-")
+            if k.startswith(X_WREN_VARIABLE_PREFIX)
         }
 
     @staticmethod
