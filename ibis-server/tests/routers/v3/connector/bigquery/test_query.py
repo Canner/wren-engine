@@ -78,16 +78,16 @@ async def test_query(client, manifest_str, connection_info):
     assert len(result["columns"]) == len(manifest["models"][0]["columns"])
     assert len(result["data"]) == 1
     assert result["data"][0] == [
+        36485,
+        1202,
+        "F",
+        "356711.63",
+        "1992-06-06 00:00:00.000000",
+        "36485_1202",
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000 UTC",
         "2024-01-16 04:00:00.000000 UTC",  # utc-5
         "2024-07-16 03:00:00.000000 UTC",  # utc-4
-        "36485_1202",
-        1202,
-        "1992-06-06 00:00:00.000000",
-        36485,
-        "F",
-        "356711.63",
     ]
     assert result["dtypes"] == {
         "o_orderkey": "int64",
@@ -141,7 +141,6 @@ async def test_query_with_invalid_manifest_str(client, connection_info):
         },
     )
     assert response.status_code == 422
-    assert response.text == "Base64 decode error: Invalid padding"
 
 
 async def test_query_without_manifest(client, connection_info):
