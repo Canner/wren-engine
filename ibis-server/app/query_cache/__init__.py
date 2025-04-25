@@ -83,7 +83,7 @@ class QueryCacheManager:
                 info.port.get_secret_value(),
                 info.user.get_secret_value(),
             ]
-        logger.debug(f"Hash key components: {key_parts}")
+        logger.debug("Hash key components:  ", key_parts)
         key_string = "|".join(key_parts)
 
         return hashlib.sha256(key_string.encode()).hexdigest()
