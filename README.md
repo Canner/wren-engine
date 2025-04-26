@@ -28,6 +28,19 @@
 
 <img src="./misc/wren_engine_overview.png">
 
+## 🔌 Supported Data Sources
+- [BigQuery](https://docs.getwren.ai/oss/wren_engine_api#tag/BigQueryConnectionInfo)
+- [Google Cloud Storage](https://docs.getwren.ai/oss/wren_engine_api#tag/GcsFileConnectionInfo)
+- [Local Files](https://docs.getwren.ai/oss/wren_engine_api#tag/LocalFileConnectionInfo)
+- [MS SQL Server](https://docs.getwren.ai/oss/wren_engine_api#tag/MSSqlConnectionInfo)
+- [Minio](https://docs.getwren.ai/oss/wren_engine_api#tag/MinioFileConnectionInfo)
+- [MySQL Server](https://docs.getwren.ai/oss/wren_engine_api#tag/MySqlConnectionInfo)
+- [Oracle Server](https://docs.getwren.ai/oss/wren_engine_api#tag/OracleConnectionInfo)
+- [PostgreSQL Server](https://docs.getwren.ai/oss/wren_engine_api#tag/PostgresConnectionInfo)
+- [Amazon S3](https://docs.getwren.ai/oss/wren_engine_api#tag/S3FileConnectionInfo)
+- [Snowflake](https://docs.getwren.ai/oss/wren_engine_api#tag/SnowflakeConnectionInfo)
+- [Trino](https://docs.getwren.ai/oss/wren_engine_api#tag/TrinoConnectionInfo)
+
 ## 😫 Challenge Today
 
 At the enterprise level, the stakes - and the complexity - are much higher. Businesses run on structured data stored in cloud warehouses, relational databases, and secure filesystems. From BI dashboards to CRM updates and compliance workflows, AI must not only execute commands but also **understand and retrieve the right data, with precision and in context**.
