@@ -17,6 +17,7 @@ scalar,timestamp_trunc,timestamp,,"timestamp,granularity","Truncates a timestamp
 scalar,timestamp_micros,timestamp,,"int64","Converts the number of microseconds since 1970-01-01 00:00:00 UTC to a TIMESTAMP."
 scalar,timestamp_millis,timestamp,,"int64","Converts the number of milliseconds since 1970-01-01 00:00:00 UTC to a TIMESTAMP."
 scalar,timestamp_seconds,timestamp,,"int64","Converts the number of seconds since 1970-01-01 00:00:00 UTC to a TIMESTAMP."
+scalar,timestamp,timestamp,,"text","Converts a string to a TIMESTAMP."
 scalar,format_date,string,,"string,date","Formats a date according to the specified format string."
 scalar,format_timestamp,string,,"string,timestamp","Formats a timestamp according to the specified format string."
 scalar,parse_date,date,,"text,text","Parses a date from a string."
