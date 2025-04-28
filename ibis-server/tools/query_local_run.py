@@ -14,6 +14,7 @@
 import base64
 import json
 import os
+from app.model import MySqlConnectionInfo
 import sqlglot
 import sys
 
@@ -70,6 +71,13 @@ print("#")
 if data_source == "bigquery":
     connection_info = BigQueryConnectionInfo.model_validate_json(json.dumps(connection_info))
     connection = DataSourceExtension.get_bigquery_connection(connection_info)
+    df = connection.sql(dialect_sql).limit(10).to_pandas()
+    print("### Result ###")
+    print("")
+    print(df)
+elif data_source == "mysql":
+    connection_info = MySqlConnectionInfo.model_validate_json(json.dumps(connection_info))
+    connection = DataSourceExtension.get_mysql_connection(connection_info)
     df = connection.sql(dialect_sql).limit(10).to_pandas()
     print("### Result ###")
     print("")
