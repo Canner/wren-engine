@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>253</version>
+        <version>254</version>
     </parent>
 
     <groupId>io.wren</groupId>
@@ -67,7 +67,7 @@
         <dep.airlift.version>269</dep.airlift.version>
         <dep.packaging.version>${dep.airlift.version}</dep.packaging.version>
         <dep.drift.version>1.22</dep.drift.version>
-        <dep.testcontainers.version>1.20.6</dep.testcontainers.version>
+        <dep.testcontainers.version>1.21.0</dep.testcontainers.version>
         <dep.errorprone.version>2.38.0</dep.errorprone.version>
         <dep.plugin.failsafe.version>${dep.plugin.surefire.version}</dep.plugin.failsafe.version>
         <netty.version>4.1.45.Final</netty.version>
@@ -92,7 +92,7 @@
             <dependency>
                 <groupId>org.jdbi</groupId>
                 <artifactId>jdbi3-bom</artifactId>
-                <version>3.49.0</version>
+                <version>3.49.2</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -108,13 +108,13 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-annotations</artifactId>
-                <version>2.18.3</version>
+                <version>2.19.0</version>
             </dependency>
 
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
-                <version>2.18.3</version>
+                <version>2.19.0</version>
             </dependency>
 
             <dependency>
@@ -126,7 +126,7 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.dataformat</groupId>
                 <artifactId>jackson-dataformat-yaml</artifactId>
-                <version>2.18.3</version>
+                <version>2.19.0</version>
             </dependency>
 
             <dependency>
@@ -138,7 +138,7 @@
             <dependency>
                 <groupId>com.google.code.gson</groupId>
                 <artifactId>gson</artifactId>
-                <version>2.13.0</version>
+                <version>2.13.1</version>
             </dependency>
 
             <dependency>
