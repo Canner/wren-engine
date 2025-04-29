@@ -26,6 +26,8 @@ def get_wren_headers(request: Request) -> Headers:
 def _filter_headers(header_string: str) -> bool:
     if header_string.startswith("x-wren-"):
         return True
+    elif header_string.startswith("x-user-"):
+        return True
     elif header_string == "traceparent":
         return True
     elif header_string == "tracestate":
