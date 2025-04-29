@@ -1439,6 +1439,92 @@ mod test {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_uppercase_table_reference() -> Result<()> {
+        let mdl_json = r#"
+        {
+            "catalog": "wren",
+            "schema": "test",
+            "models": [
+                {
+                    "name": "customer",
+                    "tableReference": {
+                        "table": "CUSTOMER",
+                        "schema": "test",
+                        "catalog": "remote"
+                    },
+                    "columns": [
+                        {
+                            "name": "c_custkey",
+                            "type": "int"
+                        },
+                        {
+                            "name": "c_name",
+                            "type": "string"
+                        }
+                    ]
+                }
+            ]
+        }
+        "#;
+        let manifest: Manifest = serde_json::from_str(mdl_json).unwrap();
+        let ctx = SessionContext::new();
+        let sql = r#"SELECT * FROM customer WHERE c_custkey = 1"#;
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let result =
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        assert_eq!(
+            result,
+            "SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM \
+            (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM \"remote\".test.\"CUSTOMER\" AS __source) AS customer) AS customer \
+            WHERE customer.c_custkey = 1"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_unicode_table_reference() -> Result<()> {
+        let mdl_json = r#"
+        {
+            "catalog": "wren",
+            "schema": "test",
+            "models": [
+                {
+                    "name": "customer",
+                    "tableReference": {
+                        "table": "客戶",
+                        "schema": "test",
+                        "catalog": "遠端"
+                    },
+                    "columns": [
+                        {
+                            "name": "c_custkey",
+                            "type": "int"
+                        },
+                        {
+                            "name": "c_name",
+                            "type": "string"
+                        }
+                    ]
+                }
+            ]
+        }
+        "#;
+        let manifest: Manifest = serde_json::from_str(mdl_json).unwrap();
+        let ctx = SessionContext::new();
+        let sql = r#"SELECT * FROM customer WHERE c_custkey = 1"#;
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let result =
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        assert_eq!(
+            result,
+            "SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM \
+            (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM \"遠端\".test.\"客戶\" AS __source) AS customer) AS customer \
+            WHERE customer.c_custkey = 1"
+        );
+        Ok(())
+    }
+
     /// Return a RecordBatch with made up data about customer
     fn customer() -> RecordBatch {
         let custkey: ArrayRef = Arc::new(Int64Array::from(vec![1, 2, 3]));

@@ -21,6 +21,7 @@ pub mod builder;
 pub mod cls;
 pub mod manifest;
 mod py_method;
+mod utils;
 
 pub use builder::*;
 pub use manifest::*;
