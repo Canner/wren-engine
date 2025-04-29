@@ -160,6 +160,7 @@ async def query(
                 java_engine_connector=java_engine_connector,
                 query_cache_manager=query_cache_manager,
                 headers=headers,
+                is_fallback=True,
             )
 
 
