@@ -1,4 +1,3 @@
-from distutils.util import strtobool
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response
@@ -25,7 +24,13 @@ from app.model.validator import Validator
 from app.query_cache import QueryCacheManager
 from app.routers import v2
 from app.routers.v2.connector import get_java_engine_connector, get_query_cache_manager
-from app.util import append_fallback_context, build_context, pushdown_limit, to_json
+from app.util import (
+    append_fallback_context,
+    build_context,
+    pushdown_limit,
+    safe_strtobool,
+    to_json,
+)
 
 router = APIRouter(prefix="/connector", tags=["connector"])
 tracer = trace.get_tracer(__name__)
@@ -136,7 +141,7 @@ async def query(
         except Exception as e:
             is_fallback_disable = bool(
                 headers.get(X_WREN_FALLBACK_DISABLE)
-                and strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
+                and safe_strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
             )
             if is_fallback_disable:
                 raise e
@@ -172,7 +177,7 @@ async def dry_plan(
         except Exception as e:
             is_fallback_disable = bool(
                 headers.get(X_WREN_FALLBACK_DISABLE)
-                and strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
+                and safe_strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
             )
             if is_fallback_disable:
                 raise e
@@ -210,7 +215,7 @@ async def dry_plan_for_data_source(
         except Exception as e:
             is_fallback_disable = bool(
                 headers.get(X_WREN_FALLBACK_DISABLE)
-                and strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
+                and safe_strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
             )
             if is_fallback_disable:
                 raise e
@@ -253,7 +258,7 @@ async def validate(
         except Exception as e:
             is_fallback_disable = bool(
                 headers.get(X_WREN_FALLBACK_DISABLE)
-                and strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
+                and safe_strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
             )
             if is_fallback_disable:
                 raise e
@@ -320,7 +325,7 @@ async def model_substitute(
         except Exception as e:
             is_fallback_disable = bool(
                 headers.get(X_WREN_FALLBACK_DISABLE)
-                and strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
+                and safe_strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
             )
             if is_fallback_disable:
                 raise e

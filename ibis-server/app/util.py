@@ -143,3 +143,7 @@ def get_fallback_message(
         {"datasource": datasource, "mdl_hash": mdl_hash, "sql": sql}
     ).decode("utf-8")
     logger.warning("Fallback to v2 {} -- {}\n{}", prefix, message, MIGRATION_MESSAGE)  # noqa: PLE1205
+
+
+def safe_strtobool(val: str) -> bool:
+    return val.lower() in {"1", "true", "yes", "y"}
