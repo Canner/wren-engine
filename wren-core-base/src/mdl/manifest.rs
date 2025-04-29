@@ -113,6 +113,8 @@ impl Display for DataSource {
 mod table_reference {
     use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
 
+    use crate::mdl::utils::{parse_identifiers_normalized, quote_identifier};
+
     #[derive(Deserialize, Serialize, Default)]
     struct TableReference {
         catalog: Option<String>,
@@ -133,7 +135,10 @@ mod table_reference {
                  }| {
                     [catalog, schema, table]
                         .into_iter()
-                        .filter_map(|s| s.filter(|x| !x.is_empty()))
+                        .filter_map(|s| {
+                            s.filter(|x| !x.is_empty())
+                                .map(|x| quote_identifier(&x).to_string())
+                        })
                         .collect::<Vec<_>>()
                         .join(".")
                 },
@@ -146,7 +151,7 @@ mod table_reference {
         S: Serializer,
     {
         if let Some(table_ref) = table_ref {
-            let parts: Vec<&str> = table_ref.split('.').filter(|p| !p.is_empty()).collect();
+            let parts: Vec<String> = parse_identifiers_normalized(table_ref, false);
             if parts.len() > 3 {
                 return Err(serde::ser::Error::custom(format!(
                     "Invalid table reference: {table_ref}"
@@ -313,5 +318,17 @@ mod tests {
             table_reference::serialize(table_ref, &mut Serializer::new(&mut buf)).unwrap();
             assert_eq!(String::from_utf8(buf).unwrap(), *expected);
         });
+    }
+
+    #[test]
+    fn test_case_sensitive() {
+        let table_ref = Some(r#""Catalog"."Schema"."Table""#.to_string());
+        let mut buf = Vec::new();
+        table_reference::serialize(&table_ref, &mut Serializer::new(&mut buf)).unwrap();
+        let serialized = String::from_utf8(buf).unwrap();
+        assert_eq!(
+            serialized,
+            r#"{"catalog":"Catalog","schema":"Schema","table":"Table"}"#
+        );
     }
 }

@@ -481,6 +481,15 @@ mod test {
         let json_str = serde_json::to_string(&model).unwrap();
         let actual: Arc<Model> = serde_json::from_str(&json_str).unwrap();
         assert_eq!(actual, model);
+
+        let model = ModelBuilder::new("test")
+            .table_reference(r#""Wren"."Public"."Source""#)
+            .column(ColumnBuilder::new("id", "integer").build())
+            .build();
+
+        let json_str = serde_json::to_string(&model).unwrap();
+        let actual: Arc<Model> = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(actual, model);
     }
 
     #[test]
