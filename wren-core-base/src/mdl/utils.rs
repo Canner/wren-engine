@@ -28,16 +28,19 @@ pub(crate) fn parse_identifiers(s: &str) -> Result<Vec<Ident>, sqlparser::parser
     Ok(idents)
 }
 
-pub(crate) fn parse_identifiers_normalized(s: &str, ignore_case: bool) -> Vec<String> {
-    parse_identifiers(s)
-        .unwrap_or_default()
-        .into_iter()
-        .map(|id| match id.quote_style {
-            Some(_) => id.value,
-            None if ignore_case => id.value,
-            _ => id.value.to_ascii_lowercase(),
-        })
-        .collect::<Vec<_>>()
+pub(crate) fn parse_identifiers_normalized(
+    s: &str,
+    ignore_case: bool,
+) -> Result<Vec<String>, sqlparser::parser::ParserError> {
+    parse_identifiers(s).map(|v| {
+        v.into_iter()
+            .map(|id| match id.quote_style {
+                Some(_) => id.value,
+                None if ignore_case => id.value,
+                _ => id.value.to_ascii_lowercase(),
+            })
+            .collect::<Vec<_>>()
+    })
 }
 
 pub fn quote_identifier(s: &str) -> Cow<str> {

@@ -151,7 +151,12 @@ mod table_reference {
         S: Serializer,
     {
         if let Some(table_ref) = table_ref {
-            let parts: Vec<String> = parse_identifiers_normalized(table_ref, false);
+            let parts: Vec<String> =
+                parse_identifiers_normalized(table_ref, false).map_err(|e| {
+                    serde::ser::Error::custom(format!(
+                        "Failed to parse table reference: {table_ref}, error: {e}"
+                    ))
+                })?;
             if parts.len() > 3 {
                 return Err(serde::ser::Error::custom(format!(
                     "Invalid table reference: {table_ref}"
