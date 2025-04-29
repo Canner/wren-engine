@@ -34,7 +34,7 @@ public class Model
     private final String baseObject;
     private final TableReference tableReference;
     private final List<Column> columns;
-    private final List<String> primaryKey;
+    private final String primaryKey;
     private final boolean cached;
     private final Duration refreshTime;
 
@@ -48,17 +48,17 @@ public class Model
         return new Model(name, refSql, null, null, columns, null, cached, null);
     }
 
-    public static Model model(String name, String refSql, List<Column> columns, List<String> primaryKey)
+    public static Model model(String name, String refSql, List<Column> columns, String primaryKey)
     {
         return new Model(name, refSql, null, null, columns, primaryKey, false, null);
     }
 
-    public static Model onBaseObject(String name, String baseObject, List<Column> columns, List<String> primaryKey)
+    public static Model onBaseObject(String name, String baseObject, List<Column> columns, String primaryKey)
     {
         return new Model(name, null, baseObject, null, columns, primaryKey, false, null);
     }
 
-    public static Model onTableReference(String name, TableReference tableReference, List<Column> columns, List<String> primaryKey)
+    public static Model onTableReference(String name, TableReference tableReference, List<Column> columns, String primaryKey)
     {
         return new Model(name, null, null, tableReference, columns, primaryKey, false, null);
     }
@@ -70,7 +70,7 @@ public class Model
             @JsonProperty("baseObject") String baseObject,
             @JsonProperty("tableReference") TableReference tableReference,
             @JsonProperty("columns") List<Column> columns,
-            @JsonProperty("primaryKey") List<String> primaryKey,
+            @JsonProperty("primaryKey") String primaryKey,
             @JsonProperty("cached") boolean cached,
             @JsonProperty("refreshTime") Duration refreshTime)
     {
@@ -130,7 +130,7 @@ public class Model
     }
 
     @JsonProperty
-    public List<String> getPrimaryKey()
+    public String getPrimaryKey()
     {
         return primaryKey;
     }

@@ -17,16 +17,14 @@ package io.wren.base.sqlrewrite;
 import io.wren.base.dto.Model;
 import io.wren.base.dto.TableReference;
 
-import java.util.List;
-
 public class TestModelTableReference
         extends AbstractTestModel
 {
     public TestModelTableReference()
     {
         super();
-        orders = Model.onTableReference("Orders", TableReference.tableReference("memory", "main", "orders"), ordersColumns, List.of("orderkey"));
-        lineitem = Model.onTableReference("Lineitem", TableReference.tableReference("memory", "main", "lineitem"), lineitemColumns, List.of("orderkey_linenumber"));
-        customer = Model.onTableReference("Customer", TableReference.tableReference("memory", "main", "customer"), customerColumns, List.of("custkey"));
+        orders = Model.onTableReference("Orders", TableReference.tableReference("memory", "main", "orders"), ordersColumns, "orderkey");
+        lineitem = Model.onTableReference("Lineitem", TableReference.tableReference("memory", "main", "lineitem"), lineitemColumns, "orderkey_linenumber");
+        customer = Model.onTableReference("Customer", TableReference.tableReference("memory", "main", "customer"), customerColumns, "custkey");
     }
 }

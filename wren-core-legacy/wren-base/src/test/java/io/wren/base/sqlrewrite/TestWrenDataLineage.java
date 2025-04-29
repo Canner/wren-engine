@@ -211,7 +211,7 @@ public class TestWrenDataLineage
                         Column.column("mom_name", "VARCHAR", null, true, "name"),
                         Column.column("mom_custkey", "VARCHAR", null, true, "custkey"),
                         Column.column("mom_totalprice", "VARCHAR", null, true, "total_price")),
-                List.of("mom_custkey"));
+                "mom_custkey");
         Model newOrders = addColumnsToModel(
                 orders,
                 Column.column("on_customer", "OnCustomer", "OrdersOnCustomer", true),
@@ -447,7 +447,7 @@ public class TestWrenDataLineage
                 ImmutableList.of(
                         Column.column("c_totalprice", WrenTypes.INTEGER, null, true, "totalprice"),
                         Column.column("c_orderdate", WrenTypes.DATE, null, true, "orderdate")),
-                List.of("orderdate"));
+                "orderdate");
 
         Manifest manifest = withDefaultCatalogSchema()
                 .setModels(List.of(onDailyRevenue, orders))

@@ -52,7 +52,7 @@ public class TestView
                         Column.column("shippriority", WrenTypes.INTEGER, null, true),
                         Column.column("comment", WrenTypes.VARCHAR, null, true),
                         Column.column("lineitem", "Lineitem", "OrdersLineitem", true)),
-                List.of("orderkey"));
+                "orderkey");
     }
 
     @Override

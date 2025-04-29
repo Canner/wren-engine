@@ -41,7 +41,7 @@ manifest = {
                     "type": "varchar",
                 },
             ],
-            "primaryKey": ["orderkey"],
+            "primaryKey": "orderkey",
         },
         {
             "name": "Customer",

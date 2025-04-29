@@ -59,7 +59,7 @@ manifest = {
                     "type": "timestamptz",
                 },
             ],
-            "primaryKey": ["o_orderkey"],
+            "primaryKey": "o_orderkey",
         },
         {
             "name": "customer",
@@ -78,7 +78,7 @@ manifest = {
                     "expression": "sum(orders.o_totalprice_double)",
                 },
             ],
-            "primaryKey": ["c_custkey"],
+            "primaryKey": "c_custkey",
         },
     ],
     "relationships": [

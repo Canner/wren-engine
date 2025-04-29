@@ -60,7 +60,7 @@ public class TestAllRulesRewrite
                                         Column.column("status", "Inventory", null, true),
                                         Column.column("statusA", "InventoryA", null, true),
                                         Column.relationshipColumn("orders", "Order", "AlbumOrder")),
-                                List.of("id")),
+                                "id"),
                         Model.model("Band",
                                 "select * from (values (1, 'ZUTOMAYO'), " +
                                         "(2, 'Yorushika')) " +
@@ -69,12 +69,12 @@ public class TestAllRulesRewrite
                                         Column.column("id", WrenTypes.INTEGER, null, true),
                                         Column.column("name", WrenTypes.VARCHAR, null, true),
                                         Column.relationshipColumn("albums", "Album", "AlbumBand")),
-                                List.of("id")),
+                                "id"),
                         Model.model("Order", "select * from (values (1, 1), (2, 1), (3, 2), (4, 3)) Orders(orderkey, albumId)",
                                 List.of(
                                         Column.column("orderkey", WrenTypes.INTEGER, null, true),
                                         Column.column("albumId", WrenTypes.INTEGER, null, true)),
-                                List.of("orderkey"))))
+                                "orderkey")))
                 .setRelationships(List.of(
                         Relationship.relationship("AlbumBand", List.of("Album", "Band"), JoinType.MANY_TO_ONE, "Album.bandId = Band.id"),
                         Relationship.relationship("AlbumOrder", List.of("Album", "Order"), JoinType.ONE_TO_MANY,

@@ -34,7 +34,7 @@
           }
         }
       ],
-      "primaryKey": ["c_custkey"],
+      "primaryKey": "c_custkey",
       "properties": {
         "description": "This is a customer table",
         "maintainer": "test"
@@ -70,7 +70,7 @@
           "expression": "sum(customer.orders.o_totalprice)"
         }
       ],
-      "primaryKey": ["p_custkey"]
+      "primaryKey": "p_custkey"
     },
     {
       "name": "orders",
@@ -116,7 +116,7 @@
           "isCalculated": true
         }
       ],
-      "primaryKey": ["o_orderkey"]
+      "primaryKey": "o_orderkey"
     }
   ],
   "relationships": [

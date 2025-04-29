@@ -62,7 +62,7 @@ manifest = {
                     "type": "bytea",
                 },
             ],
-            "primaryKey": ["orderkey"],
+            "primaryKey": "orderkey",
         },
     ],
 }

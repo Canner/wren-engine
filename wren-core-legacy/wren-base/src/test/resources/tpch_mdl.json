@@ -42,7 +42,7 @@
           "relationship": "OrdersLineitem"
         }
       ],
-      "primaryKey": ["orderkey"]
+      "primaryKey": "orderkey"
     },
     {
       "name": "Customer",
@@ -74,7 +74,7 @@
           "relationship": "CustomerNation"
         }
       ],
-      "primaryKey": ["custkey"]
+      "primaryKey": "custkey"
     },
     {
       "name": "Lineitem",
@@ -126,7 +126,7 @@
           "expression": "concat(l_orderkey, l_linenumber)"
         }
       ],
-      "primaryKey": ["orderkey_linenumber"]
+      "primaryKey": "orderkey_linenumber"
     },
     {
       "name": "Part",
@@ -143,7 +143,7 @@
           "type": "varchar"
         }
       ],
-      "primaryKey": ["partkey"]
+      "primaryKey": "partkey"
     },
     {
       "name": "Nation",
@@ -185,7 +185,7 @@
           "relationship": "NationSupplier"
         }
       ],
-      "primaryKey": ["nationkey"]
+      "primaryKey": "nationkey"
     },
     {
       "name": "Region",
@@ -212,7 +212,7 @@
           "relationship": "NationRegion"
         }
       ],
-      "primaryKey": ["regionkey"]
+      "primaryKey": "regionkey"
     }
   ],
   "relationships": [

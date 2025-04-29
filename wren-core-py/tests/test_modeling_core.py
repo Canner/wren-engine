@@ -25,7 +25,7 @@ manifest = {
                 {"name": "c_name", "type": "varchar"},
                 {"name": "orders", "type": "orders", "relationship": "orders_customer"},
             ],
-            "primaryKey": ["c_custkey"],
+            "primaryKey": "c_custkey",
         },
         {
             "name": "orders",
@@ -43,7 +43,7 @@ manifest = {
                     "relationship": "orders_lineitem",
                 },
             ],
-            "primaryKey": ["o_orderkey"],
+            "primaryKey": "o_orderkey",
         },
         {
             "name": "lineitem",
@@ -56,7 +56,7 @@ manifest = {
                 {"name": "l_quantity", "type": "decimal"},
                 {"name": "l_extendedprice", "type": "decimal"},
             ],
-            "primaryKey": ["l_orderkey"],
+            "primaryKey": "l_orderkey",
         },
     ],
     "relationships": [

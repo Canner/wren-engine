@@ -111,8 +111,8 @@ public class TestAnalysisResource
         manifest = Manifest.builder()
                 .setCatalog(DEFAULT_SESSION_CONTEXT.getCatalog().orElseThrow())
                 .setSchema(DEFAULT_SESSION_CONTEXT.getSchema().orElseThrow())
-                .setModels(List.of(onTableReference("customer", tableReference(null, "main", "customer"), customerColumns, List.of("custkey")),
-                        onTableReference("orders", tableReference(null, "main", "orders"), ordersColumns, List.of("orderkey")),
+                .setModels(List.of(onTableReference("customer", tableReference(null, "main", "customer"), customerColumns, "custkey"),
+                        onTableReference("orders", tableReference(null, "main", "orders"), ordersColumns, "orderkey"),
                         onTableReference("lineitem", tableReference(null, "main", "lineitem"), lineitemColumns, null)))
                 .build();
     }

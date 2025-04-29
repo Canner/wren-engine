@@ -59,7 +59,7 @@ public class TestManifestSerDe
                                         new Column("shippriority", "integer", null, false, true, null),
                                         new Column("comment", "string", null, false, true, null),
                                         new Column("customer", "CustomerModel", "OrdersCustomer", false, true, null)),
-                                List.of("orderkey"),
+                                "orderkey",
                                 false,
                                 null),
                         new Model("LineitemModel",
@@ -89,7 +89,7 @@ public class TestManifestSerDe
                                         new Column("orders", "OrdersModel", "OrdersCustomer", false, true, null),
                                         // calculated field
                                         new Column("orders_totalprice", WrenTypes.VARCHAR, null, true, false, "SUM(orders.totalprice)")),
-                                List.of("custkey"),
+                                "custkey",
                                 false,
                                 null)))
                 .setRelationships(List.of(

@@ -91,7 +91,7 @@ manifest = {
                     "expression": "sum(orders.totalprice)",
                 },
             ],
-            "primaryKey": ["custkey"],
+            "primaryKey": "custkey",
         },
     ],
     "relationships": [

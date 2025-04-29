@@ -115,7 +115,7 @@ public class TestMDLResource
                                         column("custkey", "integer", null, false, "o_custkey"),
                                         column("customer", "Customer", "CustomerOrders", false),
                                         calculatedColumn("customer_name", "varchar", "customer.name")),
-                                List.of("orderkey"))))
+                                "orderkey")))
                 .setRelationships(List.of(relationship("CustomerOrders", List.of("Customer", "Orders"), JoinType.ONE_TO_MANY, "Customer.custkey = Orders.custkey")))
                 .build();
 
