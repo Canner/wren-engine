@@ -1,3 +1,4 @@
+from distutils.util import strtobool
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response
@@ -7,7 +8,7 @@ from opentelemetry import trace
 from starlette.datastructures import Headers
 
 from app.config import get_config
-from app.dependencies import get_wren_headers, verify_query_dto
+from app.dependencies import X_WREN_FALLBACK_DISABLE, get_wren_headers, verify_query_dto
 from app.mdl.core import get_session_context
 from app.mdl.java_engine import JavaEngineConnector
 from app.mdl.rewriter import Rewriter
@@ -133,6 +134,13 @@ async def query(
 
             return response
         except Exception as e:
+            is_fallback_disable = bool(
+                headers.get(X_WREN_FALLBACK_DISABLE)
+                and strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
+            )
+            if is_fallback_disable:
+                raise e
+
             logger.warning(
                 "Failed to execute v3 query, try to fallback to v2: {}\n", str(e)
             )
@@ -162,6 +170,13 @@ async def dry_plan(
         try:
             return await Rewriter(dto.manifest_str, experiment=True).rewrite(dto.sql)
         except Exception as e:
+            is_fallback_disable = bool(
+                headers.get(X_WREN_FALLBACK_DISABLE)
+                and strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
+            )
+            if is_fallback_disable:
+                raise e
+
             logger.warning(
                 "Failed to execute v3 dry-plan, try to fallback to v2: {}", str(e)
             )
@@ -193,6 +208,13 @@ async def dry_plan_for_data_source(
                 dto.manifest_str, data_source=data_source, experiment=True
             ).rewrite(dto.sql)
         except Exception as e:
+            is_fallback_disable = bool(
+                headers.get(X_WREN_FALLBACK_DISABLE)
+                and strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
+            )
+            if is_fallback_disable:
+                raise e
+
             logger.warning(
                 "Failed to execute v3 dry-plan, try to fallback to v2: {}",
                 str(e),
@@ -229,6 +251,13 @@ async def validate(
             await validator.validate(rule_name, dto.parameters, dto.manifest_str)
             return Response(status_code=204)
         except Exception as e:
+            is_fallback_disable = bool(
+                headers.get(X_WREN_FALLBACK_DISABLE)
+                and strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
+            )
+            if is_fallback_disable:
+                raise e
+
             logger.warning(
                 "Failed to execute v3 validate, try to fallback to v2: {}",
                 str(e),
@@ -289,8 +318,16 @@ async def model_substitute(
             )
             return sql
         except Exception as e:
+            is_fallback_disable = bool(
+                headers.get(X_WREN_FALLBACK_DISABLE)
+                and strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
+            )
+            if is_fallback_disable:
+                raise e
+
             logger.warning(
-                "Failed to execute v3 model-substitute, fallback to v2: {}", str(e)
+                "Failed to execute v3 model-substitute, try to fallback to v2: {}",
+                str(e),
             )
             headers = append_fallback_context(headers, span)
             return await v2.connector.model_substitute(

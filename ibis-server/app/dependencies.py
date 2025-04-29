@@ -4,6 +4,8 @@ from starlette.datastructures import Headers
 from app.model import QueryDTO
 from app.model.data_source import DataSource
 
+X_WREN_FALLBACK_DISABLE = "x-wren-fallback_disable"
+
 
 # Rebuild model to validate the dto is correct via validation of the pydantic
 def verify_query_dto(data_source: DataSource, dto: QueryDTO):
