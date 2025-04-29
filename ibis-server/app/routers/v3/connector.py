@@ -24,7 +24,7 @@ from app.model.validator import Validator
 from app.query_cache import QueryCacheManager
 from app.routers import v2
 from app.routers.v2.connector import get_java_engine_connector, get_query_cache_manager
-from app.util import build_context, pushdown_limit, to_json
+from app.util import append_fallback_context, build_context, pushdown_limit, to_json
 
 router = APIRouter(prefix="/connector", tags=["connector"])
 tracer = trace.get_tracer(__name__)
@@ -136,6 +136,7 @@ async def query(
             logger.warning(
                 "Failed to execute v3 query, try to fallback to v2: {}\n", str(e)
             )
+            headers = append_fallback_context(headers, span)
             return await v2.connector.query(
                 data_source=data_source,
                 dto=dto,
@@ -157,13 +158,14 @@ async def dry_plan(
 ) -> str:
     with tracer.start_as_current_span(
         name="dry_plan", kind=trace.SpanKind.SERVER, context=build_context(headers)
-    ):
+    ) as span:
         try:
             return await Rewriter(dto.manifest_str, experiment=True).rewrite(dto.sql)
         except Exception as e:
             logger.warning(
                 "Failed to execute v3 dry-plan, try to fallback to v2: {}", str(e)
             )
+            headers = append_fallback_context(headers, span)
             return await v2.connector.dry_plan(
                 dto=dto,
                 java_engine_connector=java_engine_connector,
@@ -185,7 +187,7 @@ async def dry_plan_for_data_source(
     span_name = f"v3_dry_plan_{data_source}"
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
-    ):
+    ) as span:
         try:
             return await Rewriter(
                 dto.manifest_str, data_source=data_source, experiment=True
@@ -195,6 +197,7 @@ async def dry_plan_for_data_source(
                 "Failed to execute v3 dry-plan, try to fallback to v2: {}",
                 str(e),
             )
+            headers = append_fallback_context(headers, span)
             return await v2.connector.dry_plan_for_data_source(
                 data_source=data_source,
                 dto=dto,
@@ -217,7 +220,7 @@ async def validate(
     span_name = f"v3_validate_{data_source}"
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
-    ):
+    ) as span:
         try:
             validator = Validator(
                 Connector(data_source, dto.connection_info),
@@ -230,6 +233,7 @@ async def validate(
                 "Failed to execute v3 validate, try to fallback to v2: {}",
                 str(e),
             )
+            headers = append_fallback_context(headers, span)
             return await v2.connector.validate(
                 data_source=data_source,
                 rule_name=rule_name,
@@ -271,7 +275,7 @@ async def model_substitute(
     span_name = f"v3_model-substitute_{data_source}"
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
-    ):
+    ) as span:
         try:
             sql = ModelSubstitute(data_source, dto.manifest_str, headers).substitute(
                 dto.sql
@@ -288,6 +292,7 @@ async def model_substitute(
             logger.warning(
                 "Failed to execute v3 model-substitute, fallback to v2: {}", str(e)
             )
+            headers = append_fallback_context(headers, span)
             return await v2.connector.model_substitute(
                 data_source=data_source,
                 dto=dto,

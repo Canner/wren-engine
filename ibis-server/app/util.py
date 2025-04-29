@@ -7,9 +7,16 @@ import pandas as pd
 import wren_core
 from fastapi import Header
 from opentelemetry import trace
+from opentelemetry.baggage.propagation import W3CBaggagePropagator
 from opentelemetry.context import Context
 from opentelemetry.propagate import extract
+from opentelemetry.trace import (
+    NonRecordingSpan,
+    set_span_in_context,
+)
+from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from pandas.core.dtypes.common import is_datetime64_any_dtype
+from starlette.datastructures import Headers
 
 from app.model.data_source import DataSource
 
@@ -105,6 +112,19 @@ def build_context(headers: Header) -> Context:
     if headers is None:
         return None
     return extract(headers)
+
+
+def append_fallback_context(headers: Header, span: trace.Span) -> Headers:
+    if headers is None:
+        headers = {}
+    else:
+        headers = dict(headers)
+    span = NonRecordingSpan(span.get_span_context())
+    context = set_span_in_context(span)
+    # https://opentelemetry.io/docs/languages/python/propagation/
+    W3CBaggagePropagator().inject(headers, context)
+    TraceContextTextMapPropagator().inject(headers, context)
+    return Headers(headers)
 
 
 @tracer.start_as_current_span("pushdown_limit", kind=trace.SpanKind.INTERNAL)
