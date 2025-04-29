@@ -29,9 +29,6 @@ from app.util import build_context, pushdown_limit, to_json
 router = APIRouter(prefix="/connector", tags=["connector"])
 tracer = trace.get_tracer(__name__)
 
-MIGRATION_MESSAGE = "Wren engine is migrating to Rust version now. \
-    Wren AI team are appreciate if you can provide the error messages and related logs for us."
-
 
 @router.post(
     "/{data_source}/query",
@@ -137,26 +134,25 @@ async def query(
             return response
         except Exception as e:
             logger.warning(
-                "Failed to execute v3 query, fallback to v2: {}\n" + MIGRATION_MESSAGE,
-                str(e),
+                "Failed to execute v3 query, try to fallback to v2: {}\n", str(e)
             )
             return await v2.connector.query(
-                data_source,
-                dto,
-                dry_run,
-                cache_enable,
-                override_cache,
-                limit,
-                java_engine_connector,
-                query_cache_manager,
-                headers,
+                data_source=data_source,
+                dto=dto,
+                dry_run=dry_run,
+                cache_enable=cache_enable,
+                override_cache=override_cache,
+                limit=limit,
+                java_engine_connector=java_engine_connector,
+                query_cache_manager=query_cache_manager,
+                headers=headers,
             )
 
 
 @router.post("/dry-plan", description="get the planned WrenSQL")
 async def dry_plan(
+    headers: Annotated[Headers, Depends(get_wren_headers)],
     dto: DryPlanDTO,
-    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
 ) -> str:
     with tracer.start_as_current_span(
@@ -166,11 +162,14 @@ async def dry_plan(
             return await Rewriter(dto.manifest_str, experiment=True).rewrite(dto.sql)
         except Exception as e:
             logger.warning(
-                "Failed to execute v3 dry-plan, fallback to v2: {}\n"
-                + MIGRATION_MESSAGE,
-                str(e),
+                "Failed to execute v3 dry-plan, try to fallback to v2: {}", str(e)
             )
-            return await v2.connector.dry_plan(dto, java_engine_connector, headers)
+            return await v2.connector.dry_plan(
+                dto=dto,
+                java_engine_connector=java_engine_connector,
+                headers=headers,
+                is_fallback=True,
+            )
 
 
 @router.post(
@@ -178,9 +177,9 @@ async def dry_plan(
     description="get the dialect SQL for the specified data source",
 )
 async def dry_plan_for_data_source(
+    headers: Annotated[Headers, Depends(get_wren_headers)],
     data_source: DataSource,
     dto: DryPlanDTO,
-    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
 ) -> str:
     span_name = f"v3_dry_plan_{data_source}"
@@ -193,12 +192,15 @@ async def dry_plan_for_data_source(
             ).rewrite(dto.sql)
         except Exception as e:
             logger.warning(
-                "Failed to execute v3 dry-plan, fallback to v2: {}\n"
-                + MIGRATION_MESSAGE,
+                "Failed to execute v3 dry-plan, try to fallback to v2: {}",
                 str(e),
             )
             return await v2.connector.dry_plan_for_data_source(
-                data_source, dto, java_engine_connector, headers
+                data_source=data_source,
+                dto=dto,
+                java_engine_connector=java_engine_connector,
+                headers=headers,
+                is_fallback=True,
             )
 
 
@@ -206,10 +208,10 @@ async def dry_plan_for_data_source(
     "/{data_source}/validate/{rule_name}", description="validate the specified rule"
 )
 async def validate(
+    headers: Annotated[Headers, Depends(get_wren_headers)],
     data_source: DataSource,
     rule_name: str,
     dto: ValidateDTO,
-    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
 ) -> Response:
     span_name = f"v3_validate_{data_source}"
@@ -225,12 +227,16 @@ async def validate(
             return Response(status_code=204)
         except Exception as e:
             logger.warning(
-                "Failed to execute v3 validate, fallback to v2: {}\n"
-                + MIGRATION_MESSAGE,
+                "Failed to execute v3 validate, try to fallback to v2: {}",
                 str(e),
             )
             return await v2.connector.validate(
-                data_source, rule_name, dto, java_engine_connector, headers
+                data_source=data_source,
+                rule_name=rule_name,
+                dto=dto,
+                java_engine_connector=java_engine_connector,
+                headers=headers,
+                is_fallback=True,
             )
 
 
@@ -283,5 +289,9 @@ async def model_substitute(
                 "Failed to execute v3 model-substitute, fallback to v2: {}", str(e)
             )
             return await v2.connector.model_substitute(
-                data_source, dto, headers, java_engine_connector
+                data_source=data_source,
+                dto=dto,
+                headers=headers,
+                java_engine_connector=java_engine_connector,
+                is_fallback=True,
             )
