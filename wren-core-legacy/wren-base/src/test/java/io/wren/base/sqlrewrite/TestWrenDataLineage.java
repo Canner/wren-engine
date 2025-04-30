@@ -62,7 +62,7 @@ public class TestWrenDataLineage
                         Column.column("acctbal", WrenTypes.INTEGER, null, true),
                         Column.column("mktsegment", WrenTypes.VARCHAR, null, true),
                         Column.column("comment", WrenTypes.VARCHAR, null, true)),
-                List.of("custkey"));
+                "custkey");
         orders = Model.model("Orders",
                 "select * from main.orders",
                 List.of(
@@ -76,7 +76,7 @@ public class TestWrenDataLineage
                         Column.column("shippriority", WrenTypes.INTEGER, null, true),
                         Column.column("comment", WrenTypes.VARCHAR, null, true),
                         Column.column("lineitem", "Lineitem", "OrdersLineitem", true)),
-                List.of("orderkey"));
+                "orderkey");
         lineitem = Model.model("Lineitem",
                 "select * from main.lineitem",
                 List.of(
@@ -97,7 +97,7 @@ public class TestWrenDataLineage
                         Column.column("shipmode", WrenTypes.VARCHAR, null, true),
                         Column.column("comment", WrenTypes.VARCHAR, null, true),
                         Column.column("orderkey_linenumber", WrenTypes.VARCHAR, null, true, "concat(orderkey, '-', linenumber)")),
-                List.of("orderkey_linenumber"));
+                "orderkey_linenumber");
         ordersCustomer = Relationship.relationship("OrdersCustomer", List.of("Orders", "Customer"), JoinType.MANY_TO_ONE, "Orders.custkey = Customer.custkey");
         ordersLineitem = Relationship.relationship("OrdersLineitem", List.of("Orders", "Lineitem"), JoinType.ONE_TO_MANY, "Orders.orderkey = Lineitem.orderkey");
     }
