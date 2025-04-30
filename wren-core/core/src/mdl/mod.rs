@@ -1619,8 +1619,14 @@ mod test {
         let ctx = SessionContext::new();
         let sql = r#"SELECT * FROM customer WHERE c_custkey = 1"#;
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
-        let result =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let result = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         assert_eq!(
             result,
             "SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM \
@@ -1662,8 +1668,14 @@ mod test {
         let ctx = SessionContext::new();
         let sql = r#"SELECT * FROM customer WHERE c_custkey = 1"#;
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
-        let result =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let result = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         assert_eq!(
             result,
             "SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM \
