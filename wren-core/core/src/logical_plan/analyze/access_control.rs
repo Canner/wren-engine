@@ -30,7 +30,7 @@ pub fn collect_condition(
     model: &Model,
     condition: &str,
 ) -> Result<(Vec<Expr>, Vec<String>)> {
-    let mut conditions = vec![];
+    let mut conditions = HashSet::new();
     let mut session_properties: HashSet<String> = HashSet::new();
     let mut error: Option<Result<_, DataFusionError>> = None;
     let dialect = GenericDialect {};
@@ -50,7 +50,7 @@ pub fn collect_condition(
                     ));
                     return ControlFlow::Break(());
                 }
-                conditions.push(Expr::Column(datafusion::common::Column {
+                conditions.insert(Expr::Column(datafusion::common::Column {
                     relation: Some(TableReference::bare(model.name())),
                     name: value.to_string(),
                     spans: Spans::new(),
@@ -70,7 +70,7 @@ pub fn collect_condition(
     }
 
     Ok((
-        conditions,
+        conditions.into_iter().collect(),
         session_properties.into_iter().collect::<Vec<_>>(),
     ))
 }
@@ -102,7 +102,9 @@ pub fn build_filter_expression(
                 let Some(property_value) = properties.get(&property_name).or_else(|| {
                     required_properties
                         .iter()
-                        .filter(|r| r.name.to_lowercase() == property_name && !r.required)
+                        .filter(|r| {
+                            !r.required && r.name.eq_ignore_ascii_case(&property_name)
+                        })
                         .map(|r| &r.default_expr)
                         .next()
                 }) else {
@@ -121,7 +123,7 @@ pub fn build_filter_expression(
                     return ControlFlow::Break(());
                 };
 
-                if property_value.is_empty() {
+                if property_value.trim().is_empty() {
                     error = Some(plan_err!(
                         "The session property {} should not be empty",
                         property_name
@@ -240,7 +242,10 @@ fn is_property_present(
 
 #[cfg(test)]
 mod test {
-    use std::{collections::HashMap, sync::Arc};
+    use std::{
+        collections::{HashMap, HashSet},
+        sync::Arc,
+    };
 
     use datafusion::{
         error::Result,
@@ -278,7 +283,13 @@ mod test {
                 .into_iter()
                 .map(|e| e.schema_name().to_string())
                 .collect::<Vec<_>>();
-            assert_eq!(name, vec!["model1.id", "model1.name"]);
+            let expected: HashSet<&str> =
+                ["model1.name", "model1.id"].iter().cloned().collect();
+            let all_match = name.iter().all(|n| expected.contains(n.as_str()));
+
+            if !all_match {
+                panic!("should be all match, but got: {:?}", name);
+            }
             assert_eq!(session_properties.len(), 1);
             assert_eq!(session_properties[0], "session_id");
         }
