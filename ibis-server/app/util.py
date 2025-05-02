@@ -7,11 +7,24 @@ import pandas as pd
 import wren_core
 from fastapi import Header
 from opentelemetry import trace
+from opentelemetry.baggage.propagation import W3CBaggagePropagator
 from opentelemetry.context import Context
 from opentelemetry.propagate import extract
+from opentelemetry.trace import (
+    NonRecordingSpan,
+    set_span_in_context,
+)
+from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from pandas.core.dtypes.common import is_datetime64_any_dtype
+from starlette.datastructures import Headers
+
+from app.model.data_source import DataSource
 
 tracer = trace.get_tracer(__name__)
+
+
+MIGRATION_MESSAGE = "Wren engine is migrating to Rust version now. \
+    Wren AI team are appreciate if you can provide the error messages and related logs for us."
 
 
 @tracer.start_as_current_span("base64_to_dict", kind=trace.SpanKind.INTERNAL)
@@ -101,7 +114,36 @@ def build_context(headers: Header) -> Context:
     return extract(headers)
 
 
+def append_fallback_context(headers: Header, span: trace.Span) -> Headers:
+    if headers is None:
+        headers = {}
+    else:
+        headers = dict(headers)
+    span = NonRecordingSpan(span.get_span_context())
+    context = set_span_in_context(span)
+    # https://opentelemetry.io/docs/languages/python/propagation/
+    W3CBaggagePropagator().inject(headers, context)
+    TraceContextTextMapPropagator().inject(headers, context)
+    return Headers(headers)
+
+
 @tracer.start_as_current_span("pushdown_limit", kind=trace.SpanKind.INTERNAL)
 def pushdown_limit(sql: str, limit: int | None) -> str:
     ctx = wren_core.SessionContext()
     return ctx.pushdown_limit(sql, limit)
+
+
+def get_fallback_message(
+    logger, prefix: str, datasource: DataSource, mdl_base64: str, sql: str
+) -> str:
+    if sql is not None:
+        sql = sql.replace("\n", " ")
+
+    message = orjson.dumps(
+        {"datasource": datasource, "mdl_base64": mdl_base64, "sql": sql}
+    ).decode("utf-8")
+    logger.warning("Fallback to v2 {} -- {}\n{}", prefix, message, MIGRATION_MESSAGE)  # noqa: PLE1205
+
+
+def safe_strtobool(val: str) -> bool:
+    return val.lower() in {"1", "true", "yes", "y"}
