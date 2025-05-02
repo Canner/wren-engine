@@ -20,9 +20,12 @@
 use crate::mdl::dialect::utils::scalar_function_to_sql_internal;
 use crate::mdl::manifest::DataSource;
 use datafusion::common::Result;
+use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
 use datafusion::logical_expr::Expr;
+
 use datafusion::sql::sqlparser::ast;
 use datafusion::sql::unparser::Unparser;
+use regex::Regex;
 
 /// [InnerDialect] is a trait that defines the methods that for dialect-specific SQL generation.
 pub trait InnerDialect: Send + Sync {
@@ -41,6 +44,10 @@ pub trait InnerDialect: Send + Sync {
     fn unnest_as_table_factor(&self) -> bool {
         false
     }
+
+    fn identifier_quote_style(&self, _identifier: &str) -> Option<char> {
+        None
+    }
 }
 
 /// [get_inner_dialect] returns the suitable InnerDialect for the given data source.
@@ -48,6 +55,7 @@ pub fn get_inner_dialect(data_source: &DataSource) -> Box<dyn InnerDialect> {
     match data_source {
         DataSource::MySQL => Box::new(MySQLDialect {}),
         DataSource::BigQuery => Box::new(BigQueryDialect {}),
+        DataSource::Oracle => Box::new(OracleDialect {}),
         _ => Box::new(GenericDialect {}),
     }
 }
@@ -81,4 +89,26 @@ impl InnerDialect for BigQueryDialect {
     fn unnest_as_table_factor(&self) -> bool {
         true
     }
+}
+
+pub struct OracleDialect {}
+
+impl InnerDialect for OracleDialect {
+    fn identifier_quote_style(&self, identifier: &str) -> Option<char> {
+        // Oracle defaults to upper case for identifiers
+        let identifier_regex = Regex::new(r"^[a-zA-Z_][a-zA-Z0-9_]*$").unwrap();
+        if ALL_KEYWORDS.contains(&identifier.to_uppercase().as_str())
+            || !identifier_regex.is_match(identifier)
+            || non_uppercase(identifier)
+        {
+            Some('"')
+        } else {
+            None
+        }
+    }
+}
+
+fn non_uppercase(sql: &str) -> bool {
+    let uppsercase = sql.to_uppercase();
+    uppsercase != sql
 }
