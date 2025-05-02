@@ -119,3 +119,57 @@ async def test_validate_rule_column_is_valid_without_one_parameter(
     )
     assert response.status_code == 422
     assert response.text == "Missing required parameter: `modelName`"
+
+
+async def test_validate_rlac_condition_syntax_is_valid(
+    client, manifest_str, connection_info
+):
+    response = await client.post(
+        url=f"{base_url}/validate/rlac_condition_syntax_is_valid",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "parameters": {
+                "modelName": "orders",
+                "requiredProperties": [
+                    {"name": "session_order", "required": "false"},
+                ],
+                "condition": "@session_order = o_orderkey",
+            },
+        },
+    )
+    assert response.status_code == 204
+
+    response = await client.post(
+        url=f"{base_url}/validate/rlac_condition_syntax_is_valid",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "parameters": {
+                "modelName": "orders",
+                "requiredProperties": [
+                    {"name": "session_order", "required": False},
+                ],
+                "condition": "@session_order = o_orderkey",
+            },
+        },
+    )
+    assert response.status_code == 204
+
+    response = await client.post(
+        url=f"{base_url}/validate/rlac_condition_syntax_is_valid",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "parameters": {
+                "modelName": "orders",
+                "requiredProperties": [
+                    {"name": "session_order", "required": "false"},
+                ],
+                "condition": "@session_not_found = o_orderkey",
+            },
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.text == "Error during planning: The session property @session_not_found is used, but not found in the session properties"
