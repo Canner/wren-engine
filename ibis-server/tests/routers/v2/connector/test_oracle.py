@@ -20,6 +20,7 @@ oracle_database = "FREEPDB1"
 manifest = {
     "catalog": "my_catalog",
     "schema": "my_schema",
+    "dataSource": "oracle",
     "models": [
         {
             "name": "Orders",
