@@ -134,13 +134,13 @@ def pushdown_limit(sql: str, limit: int | None) -> str:
 
 
 def get_fallback_message(
-    logger, prefix: str, datasource: DataSource, mdl_hash: str, sql: str
+    logger, prefix: str, datasource: DataSource, mdl_base64: str, sql: str
 ) -> str:
     if sql is not None:
         sql = sql.replace("\n", " ")
 
     message = orjson.dumps(
-        {"datasource": datasource, "mdl_hash": mdl_hash, "sql": sql}
+        {"datasource": datasource, "mdl_base64": mdl_base64, "sql": sql}
     ).decode("utf-8")
     logger.warning("Fallback to v2 {} -- {}\n{}", prefix, message, MIGRATION_MESSAGE)  # noqa: PLE1205
 
