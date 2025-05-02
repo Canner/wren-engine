@@ -51,7 +51,7 @@ impl From<serde_json::Error> for CoreError {
 
 impl From<wren_core::DataFusionError> for CoreError {
     fn from(err: wren_core::DataFusionError) -> Self {
-        CoreError::new(&format!("DataFusion error: {}", err))
+        CoreError::new(err.to_string().as_str())
     }
 }
 
