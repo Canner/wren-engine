@@ -6,6 +6,7 @@ import sqlalchemy
 from sqlalchemy import text
 from testcontainers.oracle import OracleDbContainer
 
+from app.config import get_config
 from tests.conftest import file_path
 
 pytestmark = pytest.mark.oracle
@@ -68,3 +69,14 @@ def connection_info(oracle: OracleDbContainer):
 def connection_url(connection_info: dict[str, str]):
     info = connection_info
     return f"oracle://{info['user']}:{info['password']}@{info['host']}:{info['port']}/{info['database']}"
+
+
+function_list_path = file_path("../resources/function_list")
+
+
+@pytest.fixture(autouse=True)
+def set_remote_function_list_path():
+    config = get_config()
+    config.set_remote_function_list_path(function_list_path)
+    yield
+    config.set_remote_function_list_path(None)
