@@ -140,7 +140,7 @@ def oracle(request) -> OracleDbContainer:
         # Add table and column comments
         conn.execute(text("COMMENT ON TABLE orders IS 'This is a table comment'"))
         conn.execute(text("COMMENT ON COLUMN orders.o_comment IS 'This is a comment'"))
-
+    request.addfinalizer(oracle.stop)
     return oracle
 
 
