@@ -81,6 +81,23 @@ OpenTelemetry zero-code instrumentation is highly configurable. You can set the 
 
 [Metrics we are tracing right now](./Metrics.md)
 
+### Tracing with Jaeger
+- Follow the [Jaeger official documentation](https://www.jaegertracing.io/docs/2.5/getting-started/#all-in-one) to start Jaeger in a container. Use the following command:
+```
+docker run --rm --name jaeger \
+  -p 16686:16686 \
+  -p 4317:4317 \
+  -p 4318:4318 \
+  -p 5778:5778 \
+  -p 9411:9411 \
+  jaegertracing/jaeger:2.5.0
+```
+- Use the following `just` command to start the `ibis-server` and export tracing logs to Jaeger:
+```
+just run-trace-otlp 
+```
+- Open the Jaeger UI at [http://localhost:16686](http://localhost:16686) to view the tracing logs for your requests.
+
 ## Contributing
 Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for more information.
 

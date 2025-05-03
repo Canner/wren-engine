@@ -26,6 +26,13 @@ run:
 run-trace-console:
     opentelemetry-instrument --traces_exporter console --metrics_exporter none fastapi run --port {{ port }}
 
+run-trace-otlp:
+    opentelemetry-instrument \
+        --traces_exporter otlp \
+        --exporter_otlp_endpoint http://localhost:4318 \
+        --exporter_otlp_protocol http/protobuf \
+        --service_name wren-engine \
+        fastapi run --port {{ port }}
 dev:
     poetry run fastapi dev --port {{ port }}
 
