@@ -65,11 +65,6 @@ async def query(
     if cache_enable:
         span_name += "_cache_enable"
 
-    is_fallback_disable = bool(
-        headers.get(X_WREN_FALLBACK_DISABLE)
-        and safe_strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
-    )
-
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
     ) as span:
@@ -94,15 +89,7 @@ async def query(
                 )
                 cache_hit = cached_result is not None
             # case 1: cache hit read
-            # We also need to check `is_fallback_disable` because a previous request
-            # might have fallen back successfully  and created a cache.
-            # If the current request has fallback disabled, we should bypass the cache hit check.
-            if (
-                cache_enable
-                and cache_hit
-                and not override_cache
-                and not is_fallback_disable
-            ):
+            if cache_enable and cache_hit and not override_cache:
                 span.add_event("cache hit")
                 response = ORJSONResponse(to_json(cached_result))
                 response.headers["X-Cache-Hit"] = "true"
@@ -154,6 +141,10 @@ async def query(
 
             return response
         except Exception as e:
+            is_fallback_disable = bool(
+                headers.get(X_WREN_FALLBACK_DISABLE)
+                and safe_strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
+            )
             if is_fallback_disable:
                 raise e
 
