@@ -114,14 +114,15 @@ async def query(
                 match (cache_enable, cache_hit, override_cache):
                     # case 2: override existing cache
                     case (True, True, True):
-                        query_cache_manager.set(
-                            data_source, dto.sql, result, dto.connection_info
-                        )
                         response.headers["X-Cache-Create-At"] = str(
                             query_cache_manager.get_cache_file_timestamp(
                                 data_source, dto.sql, dto.connection_info
                             )
                         )
+                        query_cache_manager.set(
+                            data_source, dto.sql, result, dto.connection_info
+                        )
+
                         response.headers["X-Cache-Override"] = "true"
                         response.headers["X-Cache-Override-At"] = str(
                             query_cache_manager.get_cache_file_timestamp(
