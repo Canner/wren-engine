@@ -78,6 +78,10 @@ async def query(
                 connector.dry_run(rewritten_sql)
                 return Response(status_code=204)
 
+            is_fallback_disable = bool(
+                headers.get(X_WREN_FALLBACK_DISABLE)
+                and safe_strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
+            )
             # Not a dry run
             # Check if the query is cached
             cached_result = None
@@ -89,7 +93,15 @@ async def query(
                 )
                 cache_hit = cached_result is not None
             # case 1: cache hit read
-            if cache_enable and cache_hit and not override_cache:
+            # We also need to check `is_fallback_disable` because a previous request
+            # might have fallen back successfully  and created a cache.
+            # If the current request has fallback disabled, we should bypass the cache hit check.
+            if (
+                cache_enable
+                and cache_hit
+                and not override_cache
+                and not is_fallback_disable
+            ):
                 span.add_event("cache hit")
                 response = ORJSONResponse(to_json(cached_result))
                 response.headers["X-Cache-Hit"] = "true"
@@ -141,10 +153,6 @@ async def query(
 
             return response
         except Exception as e:
-            is_fallback_disable = bool(
-                headers.get(X_WREN_FALLBACK_DISABLE)
-                and safe_strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
-            )
             if is_fallback_disable:
                 raise e
 
