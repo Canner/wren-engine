@@ -117,6 +117,7 @@ async def query(
                 data_source=data_source,
                 java_engine_connector=java_engine_connector,
             ).rewrite(sql)
+            connector = Connector(data_source, dto.connection_info)
             result = connector.query(rewritten_sql, limit=limit)
             response = ORJSONResponse(to_json(result))
 
