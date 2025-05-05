@@ -101,7 +101,7 @@ async def query(
             cache_hit = cached_result is not None
 
         # case 1: cache hit read
-        if cache_enable and cache_hit:
+        if cache_enable and cache_hit and not override_cache:
             span.add_event("cache hit")
             response = ORJSONResponse(to_json(cached_result))
             response.headers["X-Cache-Hit"] = "true"
