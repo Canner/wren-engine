@@ -32,7 +32,6 @@ from app.routers.v2.connector import get_java_engine_connector, get_query_cache_
 from app.util import (
     append_fallback_context,
     build_context,
-    exist_wren_variables_header,
     pushdown_limit,
     safe_strtobool,
     to_json,

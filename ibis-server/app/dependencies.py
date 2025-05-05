@@ -36,7 +36,6 @@ def _filter_headers(header_string: str) -> bool:
     elif header_string == "sentry-trace":
         return True
     return False
-    return request.headers
 
 
 def exist_wren_variables_header(
