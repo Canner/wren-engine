@@ -65,6 +65,11 @@ async def query(
     if cache_enable:
         span_name += "_cache_enable"
 
+    is_fallback_disable = bool(
+        headers.get(X_WREN_FALLBACK_DISABLE)
+        and safe_strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
+    )
+
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
     ) as span:
@@ -78,10 +83,6 @@ async def query(
                 connector.dry_run(rewritten_sql)
                 return Response(status_code=204)
 
-            is_fallback_disable = bool(
-                headers.get(X_WREN_FALLBACK_DISABLE)
-                and safe_strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
-            )
             # Not a dry run
             # Check if the query is cached
             cached_result = None
