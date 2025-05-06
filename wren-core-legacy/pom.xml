@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>254</version>
+        <version>257</version>
     </parent>
 
     <groupId>io.wren</groupId>
@@ -92,7 +92,7 @@
             <dependency>
                 <groupId>org.jdbi</groupId>
                 <artifactId>jdbi3-bom</artifactId>
-                <version>3.49.2</version>
+                <version>3.49.3</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -349,7 +349,7 @@
             <dependency>
                 <groupId>org.checkerframework</groupId>
                 <artifactId>checker-qual</artifactId>
-                <version>3.49.2</version>
+                <version>3.49.3</version>
             </dependency>
 
             <dependency>
