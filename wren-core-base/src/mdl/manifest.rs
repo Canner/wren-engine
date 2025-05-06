@@ -106,6 +106,7 @@ impl Display for DataSource {
             DataSource::S3File => write!(f, "S3_FILE"),
             DataSource::GcsFile => write!(f, "GCS_FILE"),
             DataSource::MinioFile => write!(f, "MINIO_FILE"),
+            DataSource::Oracle => write!(f, "ORACLE"),
         }
     }
 }

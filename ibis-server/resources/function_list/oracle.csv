@@ -1,0 +1,2 @@
+function_type,name,return_type,param_names,param_types,description
+scalar,to_timestamp_tz,timestamp with time zone,,,"Convert string to timestamp with time zone"

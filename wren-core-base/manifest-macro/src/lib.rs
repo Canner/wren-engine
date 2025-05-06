@@ -102,6 +102,8 @@ pub fn data_source(python_binding: proc_macro::TokenStream) -> proc_macro::Token
             GcsFile,
             #[serde(alias = "minio_file")]
             MinioFile,
+            #[serde(alias = "oracle")]
+            Oracle,
         }
     };
     proc_macro::TokenStream::from(expanded)
