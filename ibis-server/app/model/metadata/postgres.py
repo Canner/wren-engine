@@ -11,6 +11,92 @@ from app.model.metadata.dto import (
 from app.model.metadata.metadata import Metadata
 
 
+class ExtensionHandler:
+    def __init__(self, connection):
+        self.connection = connection
+
+        self.handlers = {
+            "postgis": self.postgis_handler,
+        }
+
+    def augment(self, tables: list[Table]) -> list[Table]:
+        # Get the list of extensions from the database
+        extensions = self.get_extensions()
+
+        # Iterate through the extensions and call the appropriate handler
+        for ext in extensions:
+            ext_name = ext["extension_name"]
+            schema_name = ext["schema_name"]
+
+            if ext_name in self.handlers:
+                handler = self.handlers[ext_name]
+                tables = handler(tables, schema_name)
+
+        return tables
+
+    def get_extensions(self) -> list[str]:
+        sql = """
+            SELECT
+                e.extname AS extension_name,
+                n.nspname AS schema_name
+            FROM
+                pg_extension e
+            JOIN
+                pg_namespace n ON n.oid = e.extnamespace;
+            """
+        df = self.connection.sql(sql).to_pandas()
+        if df.empty:
+            return []
+        response = df.to_dict(orient="records")
+        return response
+
+    def postgis_handler(self, tables: list[Table], schema_name: str) -> list[Table]:
+        # Get the list of geometry and geography columns
+        sql = f"""
+            SELECT
+                f_table_schema,
+                f_table_name,
+                f_geometry_column AS column_name,
+                'geometry' AS column_type
+            FROM
+                {schema_name}.geometry_columns
+            UNION ALL
+            SELECT
+                f_table_schema,
+                f_table_name,
+                f_geography_column AS column_name,
+                'geography' AS column_type
+            FROM
+                {schema_name}.geography_columns;
+            """
+        response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
+
+        # Update tables
+        for row in response:
+            table_name = f"{row['f_table_schema']}.{row['f_table_name']}"  # ? Might want to use a global `_format_postgres_compact_table_name` function.
+            table = tables[table_name]
+            for column in table.columns:
+                if column.name == row["column_name"]:
+                    column.type = self._transform_postgres_column_type(
+                        row["column_type"]
+                    )
+                    break
+
+        return tables
+
+    def _transform_postgres_column_type(self, data_type):
+        # lower case the data_type
+        data_type = data_type.lower()
+
+        # Extension types
+        switcher = {
+            "geometry": RustWrenEngineColumnType.GEOMETRY,
+            "geography": RustWrenEngineColumnType.GEOGRAPHY,
+        }
+
+        return switcher.get(data_type, RustWrenEngineColumnType.UNKNOWN)
+
+
 class PostgresMetadata(Metadata):
     def __init__(self, connection_info: PostgresConnectionInfo):
         super().__init__(connection_info)
@@ -80,6 +166,8 @@ class PostgresMetadata(Metadata):
                     properties=None,
                 )
             )
+        extension_handler = ExtensionHandler(self.connection)
+        unique_tables = extension_handler.augment(unique_tables)
         return list(unique_tables.values())
 
     def get_constraints(self) -> list[Constraint]:
