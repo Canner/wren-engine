@@ -71,7 +71,7 @@ manifest = {
                     "expression": "customer.name",
                 },
             ],
-            "primaryKey": ["orderkey"],
+            "primaryKey": "orderkey",
         },
         {
             "name": "Customer",
