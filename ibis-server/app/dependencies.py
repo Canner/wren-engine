@@ -29,6 +29,8 @@ def _filter_headers(header_string: str) -> bool:
         return True
     elif header_string.startswith("x-user-"):
         return True
+    elif header_string.startswith("x-correlation-id"):
+        return True
     elif header_string == "traceparent":
         return True
     elif header_string == "tracestate":

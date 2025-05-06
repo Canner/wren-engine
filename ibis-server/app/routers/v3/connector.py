@@ -34,6 +34,7 @@ from app.util import (
     build_context,
     pushdown_limit,
     safe_strtobool,
+    set_attribute,
     to_json,
 )
 
@@ -73,6 +74,7 @@ async def query(
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
     ) as span:
+        set_attribute(headers, span)
         try:
             if dry_run:
                 sql = pushdown_limit(dto.sql, limit)
@@ -188,6 +190,7 @@ async def dry_plan(
     with tracer.start_as_current_span(
         name="dry_plan", kind=trace.SpanKind.SERVER, context=build_context(headers)
     ) as span:
+        set_attribute(headers, span)
         try:
             return await Rewriter(
                 dto.manifest_str, experiment=True, properties=dict(headers)
@@ -228,6 +231,7 @@ async def dry_plan_for_data_source(
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
     ) as span:
+        set_attribute(headers, span)
         try:
             return await Rewriter(
                 dto.manifest_str,
@@ -273,6 +277,7 @@ async def validate(
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
     ) as span:
+        set_attribute(headers, span)
         try:
             validator = Validator(
                 Connector(data_source, dto.connection_info),
@@ -342,6 +347,7 @@ async def model_substitute(
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
     ) as span:
+        set_attribute(headers, span)
         try:
             sql = ModelSubstitute(data_source, dto.manifest_str, headers).substitute(
                 dto.sql

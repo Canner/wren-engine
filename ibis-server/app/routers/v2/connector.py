@@ -22,7 +22,13 @@ from app.model.metadata.dto import Constraint, MetadataDTO, Table
 from app.model.metadata.factory import MetadataFactory
 from app.model.validator import Validator
 from app.query_cache import QueryCacheManager
-from app.util import build_context, get_fallback_message, pushdown_limit, to_json
+from app.util import (
+    build_context,
+    get_fallback_message,
+    pushdown_limit,
+    set_attribute,
+    to_json,
+)
 
 router = APIRouter(prefix="/connector", tags=["connector"])
 tracer = trace.get_tracer(__name__)
@@ -70,6 +76,7 @@ async def query(
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
     ) as span:
+        set_attribute(headers, span)
         try:
             sql = pushdown_limit(dto.sql, limit)
         except Exception as e:
@@ -176,7 +183,8 @@ async def validate(
     span_name = f"v2_validate_{data_source}"
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
-    ):
+    ) as span:
+        set_attribute(headers, span)
         validator = Validator(
             Connector(data_source, dto.connection_info),
             Rewriter(
@@ -208,7 +216,8 @@ def get_table_list(
     span_name = f"v2_metadata_tables_{data_source}"
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
-    ):
+    ) as span:
+        set_attribute(headers, span)
         return MetadataFactory.get_metadata(
             data_source, dto.connection_info
         ).get_table_list()
@@ -228,7 +237,8 @@ def get_constraints(
     span_name = f"v2_metadata_constraints_{data_source}"
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
-    ):
+    ) as span:
+        set_attribute(headers, span)
         return MetadataFactory.get_metadata(
             data_source, dto.connection_info
         ).get_constraints()
@@ -252,7 +262,8 @@ async def dry_plan(
 ) -> str:
     with tracer.start_as_current_span(
         name="dry_plan", kind=trace.SpanKind.SERVER, context=build_context(headers)
-    ):
+    ) as span:
+        set_attribute(headers, span)
         sql = await Rewriter(
             dto.manifest_str, java_engine_connector=java_engine_connector
         ).rewrite(dto.sql)
@@ -278,7 +289,8 @@ async def dry_plan_for_data_source(
     span_name = f"v2_dry_plan_{data_source}"
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
-    ):
+    ) as span:
+        set_attribute(headers, span)
         sql = await Rewriter(
             dto.manifest_str,
             data_source=data_source,
@@ -306,7 +318,8 @@ async def model_substitute(
     span_name = f"v2_model_substitute_{data_source}"
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
-    ):
+    ) as span:
+        set_attribute(headers, span)
         sql = ModelSubstitute(data_source, dto.manifest_str, headers).substitute(
             dto.sql, write="trino"
         )

@@ -23,6 +23,17 @@ port := "8000"
 run:
     poetry run fastapi run --port {{ port }}
 
+workers := "2"
+
+run-gunicorn:
+    gunicorn app.main:app --bind 0.0.0.0:{{ port }} \
+        -k app.worker.WrenUvicornWorker \
+        --workers {{ workers }} \
+        --max-requests 1000 \
+        --max-requests-jitter 100 \
+        --timeout 300 \
+        --graceful-timeout 60
+
 run-trace-console:
     opentelemetry-instrument --traces_exporter console --metrics_exporter none fastapi run --port {{ port }}
 
