@@ -101,6 +101,8 @@ class OracleMetadata(Metadata):
                 )
             )
 
+            # TODO: manage primary key
+
         return list(unique_tables.values())
 
     def get_constraints(self) -> list[Constraint]:
