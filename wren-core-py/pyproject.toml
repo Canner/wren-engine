@@ -15,7 +15,7 @@ maturin = "1.8.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "8.3.5"
-ruff = "0.11.7"
+ruff = "0.11.8"
 
 [tool.maturin]
 module-name = "wren_core"
