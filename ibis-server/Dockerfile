@@ -64,6 +64,13 @@ COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 COPY app app
 COPY resources resources
 
+# Install Opentelemetry zero-instrumentation python
+RUN pip install opentelemetry-distro opentelemetry-exporter-otlp \
+    && opentelemetry-bootstrap -a install
+
+COPY entrypoint.sh ./
+RUN chmod +x ./entrypoint.sh
+
 EXPOSE 8000
 
-CMD ["fastapi", "run"]
+CMD ["./entrypoint.sh"]

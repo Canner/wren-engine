@@ -114,6 +114,16 @@ def build_context(headers: Header) -> Context:
     return extract(headers)
 
 
+def set_attribute(
+    header: Header,
+    span: trace.Span,
+) -> None:
+    if header is None:
+        return
+    if "X-Correlation-ID" in header:
+        span.set_attribute("correlation_id", header["X-Correlation-ID"])
+
+
 def append_fallback_context(headers: Header, span: trace.Span) -> Headers:
     if headers is None:
         headers = {}
