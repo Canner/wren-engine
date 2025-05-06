@@ -5,6 +5,7 @@ from app.model import QueryDTO
 from app.model.data_source import DataSource
 
 X_WREN_FALLBACK_DISABLE = "x-wren-fallback_disable"
+X_WREN_VARIABLE_PREFIX = "x-wren-variable-"
 
 
 # Rebuild model to validate the dto is correct via validation of the pydantic
@@ -35,3 +36,11 @@ def _filter_headers(header_string: str) -> bool:
     elif header_string == "sentry-trace":
         return True
     return False
+
+
+def exist_wren_variables_header(
+    headers: Headers,
+) -> bool:
+    if headers is None:
+        return False
+    return any(key.startswith(X_WREN_VARIABLE_PREFIX) for key in headers.keys())

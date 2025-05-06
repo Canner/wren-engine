@@ -7,6 +7,7 @@ from loguru import logger
 from opentelemetry import trace
 
 from app.config import get_config
+from app.dependencies import X_WREN_VARIABLE_PREFIX
 from app.mdl.core import (
     get_manifest_extractor,
     get_session_context,
@@ -32,10 +33,12 @@ class Rewriter:
         data_source: DataSource = None,
         java_engine_connector: JavaEngineConnector = None,
         experiment=False,
+        properties: dict | None = None,
     ):
         self.manifest_str = manifest_str
         self.data_source = data_source
         self.experiment = experiment
+        self.properties = properties
         if experiment:
             function_path = get_config().get_remote_function_list_path(data_source)
             self._rewriter = EmbeddedEngineRewriter(function_path)
@@ -54,7 +57,7 @@ class Rewriter:
             self._extract_manifest(self.manifest_str, sql) or self.manifest_str
         )
         logger.debug("Extracted manifest: {}", manifest_str)
-        planned_sql = await self._rewriter.rewrite(manifest_str, sql)
+        planned_sql = await self._rewriter.rewrite(manifest_str, sql, self.properties)
         logger.debug("Planned SQL: {}", planned_sql)
         dialect_sql = self._transpile(planned_sql) if self.data_source else planned_sql
         logger.debug("Dialect SQL: {}", dialect_sql)
@@ -93,7 +96,9 @@ class ExternalEngineRewriter:
         self.java_engine_connector = java_engine_connector
 
     @tracer.start_as_current_span("external_rewrite", kind=trace.SpanKind.CLIENT)
-    async def rewrite(self, manifest_str: str, sql: str) -> str:
+    async def rewrite(
+        self, manifest_str: str, sql: str, properties: dict | None = None
+    ) -> str:
         try:
             return await self.java_engine_connector.dry_plan(manifest_str, sql)
         except httpx.ConnectError as e:
@@ -113,12 +118,30 @@ class EmbeddedEngineRewriter:
         self.function_path = function_path
 
     @tracer.start_as_current_span("embedded_rewrite", kind=trace.SpanKind.INTERNAL)
-    async def rewrite(self, manifest_str: str, sql: str) -> str:
+    async def rewrite(
+        self, manifest_str: str, sql: str, properties: dict | None = None
+    ) -> str:
         try:
             session_context = get_session_context(manifest_str, self.function_path)
-            return await to_thread.run_sync(session_context.transform_sql, sql)
+            return await to_thread.run_sync(
+                session_context.transform_sql,
+                sql,
+                self.get_session_properties(properties),
+            )
         except Exception as e:
             raise RewriteError(str(e))
+
+    def get_session_properties(self, properties: dict) -> dict | None:
+        if properties is None:
+            return None
+        # filter the properties which name starts with "x-wren-variable-"
+        # and remove the prefix "x-wren-variable-"
+
+        return {
+            k.replace(X_WREN_VARIABLE_PREFIX, ""): v
+            for k, v in properties.items()
+            if k.startswith(X_WREN_VARIABLE_PREFIX)
+        }
 
     @staticmethod
     def handle_extract_exception(e: Exception):

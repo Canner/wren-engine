@@ -1,5 +1,6 @@
 use crate::logical_plan::analyze::plan::ModelPlanNode;
 use crate::logical_plan::utils::{belong_to_mdl, expr_to_columns};
+use crate::mdl::context::SessionPropertiesRef;
 use crate::mdl::utils::quoted;
 use crate::mdl::{AnalyzedWrenMDL, Dataset, SessionStateRef};
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
@@ -33,6 +34,7 @@ use std::sync::Arc;
 pub struct ModelAnalyzeRule {
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
     session_state: SessionStateRef,
+    properties: SessionPropertiesRef,
 }
 
 impl Debug for ModelAnalyzeRule {
@@ -67,10 +69,12 @@ impl ModelAnalyzeRule {
     pub fn new(
         analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
         session_state: SessionStateRef,
+        properties: SessionPropertiesRef,
     ) -> Self {
         Self {
             analyzed_wren_mdl,
             session_state,
+            properties,
         }
     }
 
@@ -449,6 +453,7 @@ impl ModelAnalyzeRule {
                         Some(LogicalPlan::TableScan(table_scan.clone())),
                         Arc::clone(&self.analyzed_wren_mdl),
                         Arc::clone(&self.session_state),
+                        Arc::clone(&self.properties),
                     )?),
                 });
                 let subquery = LogicalPlanBuilder::from(model_plan)
@@ -505,6 +510,7 @@ impl ModelAnalyzeRule {
                             None,
                             Arc::clone(&self.analyzed_wren_mdl),
                             Arc::clone(&self.session_state),
+                            Arc::clone(&self.properties),
                         )?),
                     });
                     let subquery =

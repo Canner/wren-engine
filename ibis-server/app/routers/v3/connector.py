@@ -7,7 +7,12 @@ from opentelemetry import trace
 from starlette.datastructures import Headers
 
 from app.config import get_config
-from app.dependencies import X_WREN_FALLBACK_DISABLE, get_wren_headers, verify_query_dto
+from app.dependencies import (
+    X_WREN_FALLBACK_DISABLE,
+    exist_wren_variables_header,
+    get_wren_headers,
+    verify_query_dto,
+)
 from app.mdl.core import get_session_context
 from app.mdl.java_engine import JavaEngineConnector
 from app.mdl.rewriter import Rewriter
@@ -72,7 +77,10 @@ async def query(
             if dry_run:
                 sql = pushdown_limit(dto.sql, limit)
                 rewritten_sql = await Rewriter(
-                    dto.manifest_str, data_source=data_source, experiment=True
+                    dto.manifest_str,
+                    data_source=data_source,
+                    experiment=True,
+                    properties=dict(headers),
                 ).rewrite(sql)
                 connector = Connector(data_source, dto.connection_info)
                 connector.dry_run(rewritten_sql)
@@ -102,7 +110,10 @@ async def query(
             else:
                 sql = pushdown_limit(dto.sql, limit)
                 rewritten_sql = await Rewriter(
-                    dto.manifest_str, data_source=data_source, experiment=True
+                    dto.manifest_str,
+                    data_source=data_source,
+                    experiment=True,
+                    properties=dict(headers),
                 ).rewrite(sql)
                 connector = Connector(data_source, dto.connection_info)
                 result = connector.query(rewritten_sql, limit=limit)
@@ -145,7 +156,9 @@ async def query(
                 headers.get(X_WREN_FALLBACK_DISABLE)
                 and safe_strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
             )
-            if is_fallback_disable:
+            # because the v2 API doesn't support row-level access control,
+            # we don't fallback to v2 if the header include row-level access control properties.
+            if is_fallback_disable or exist_wren_variables_header(headers):
                 raise e
 
             logger.warning(
@@ -176,13 +189,17 @@ async def dry_plan(
         name="dry_plan", kind=trace.SpanKind.SERVER, context=build_context(headers)
     ) as span:
         try:
-            return await Rewriter(dto.manifest_str, experiment=True).rewrite(dto.sql)
+            return await Rewriter(
+                dto.manifest_str, experiment=True, properties=dict(headers)
+            ).rewrite(dto.sql)
         except Exception as e:
             is_fallback_disable = bool(
                 headers.get(X_WREN_FALLBACK_DISABLE)
                 and safe_strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
             )
-            if is_fallback_disable:
+            # because the v2 API doesn't support row-level access control,
+            # we don't fallback to v2 if the header include row-level access control properties.
+            if is_fallback_disable or exist_wren_variables_header(headers):
                 raise e
 
             logger.warning(
@@ -213,14 +230,19 @@ async def dry_plan_for_data_source(
     ) as span:
         try:
             return await Rewriter(
-                dto.manifest_str, data_source=data_source, experiment=True
+                dto.manifest_str,
+                data_source=data_source,
+                experiment=True,
+                properties=dict(headers),
             ).rewrite(dto.sql)
         except Exception as e:
             is_fallback_disable = bool(
                 headers.get(X_WREN_FALLBACK_DISABLE)
                 and safe_strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
             )
-            if is_fallback_disable:
+            # because the v2 API doesn't support row-level access control,
+            # we don't fallback to v2 if the header include row-level access control properties.
+            if is_fallback_disable or exist_wren_variables_header(headers):
                 raise e
 
             logger.warning(
@@ -254,7 +276,12 @@ async def validate(
         try:
             validator = Validator(
                 Connector(data_source, dto.connection_info),
-                Rewriter(dto.manifest_str, data_source=data_source, experiment=True),
+                Rewriter(
+                    dto.manifest_str,
+                    data_source=data_source,
+                    experiment=True,
+                    properties=dict(headers),
+                ),
             )
             await validator.validate(rule_name, dto.parameters, dto.manifest_str)
             return Response(status_code=204)
@@ -263,7 +290,9 @@ async def validate(
                 headers.get(X_WREN_FALLBACK_DISABLE)
                 and safe_strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
             )
-            if is_fallback_disable:
+            # because the v2 API doesn't support row-level access control,
+            # we don't fallback to v2 if the header include row-level access control properties.
+            if is_fallback_disable or exist_wren_variables_header(headers):
                 raise e
 
             logger.warning(

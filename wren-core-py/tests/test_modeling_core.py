@@ -25,6 +25,18 @@ manifest = {
                 {"name": "c_name", "type": "varchar"},
                 {"name": "orders", "type": "orders", "relationship": "orders_customer"},
             ],
+            "rowLevelAccessControls": [
+                {
+                    "name": "customer_access",
+                    "requiredProperties": [
+                        {
+                            "name": "session_user",
+                            "required": False,
+                        }
+                    ],
+                    "condition": "c_name = @session_user",
+                },
+            ],
             "primaryKey": "c_custkey",
         },
         {
@@ -272,4 +284,17 @@ def test_limit_pushdown():
     assert (
         session_context.pushdown_limit(sql, 10)
         == "SELECT * FROM my_catalog.my_schema.customer LIMIT 10 OFFSET 5"
+    )
+
+
+def test_rlac():
+    headers = {
+        "session_user": "'test_user'",
+    }
+    session_context = SessionContext(manifest_str, None)
+    sql = "SELECT * FROM my_catalog.my_schema.customer"
+    rewritten_sql = session_context.transform_sql(sql, headers)
+    assert (
+        rewritten_sql
+        == "SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM main.customer AS __source) AS customer) AS customer WHERE customer.c_name = 'test_user'"
     )

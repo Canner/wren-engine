@@ -6,6 +6,7 @@ use crate::logical_plan::analyze::relation_chain::RelationChain::Start;
 use crate::logical_plan::utils::{
     create_schema, eliminate_ambiguous_columns, rebase_column,
 };
+use crate::mdl::context::SessionPropertiesRef;
 use crate::mdl::lineage::DatasetLink;
 use crate::mdl::manifest::JoinType;
 use crate::mdl::utils::{qualify_name_from_column_name, quoted};
@@ -63,6 +64,7 @@ impl RelationChain {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn with_chain(
         source: Self,
         mut start: NodeIndex,
@@ -71,6 +73,7 @@ impl RelationChain {
         model_required_fields: &HashMap<TableReference, BTreeSet<OrdExpr>>,
         analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
         session_state_ref: SessionStateRef,
+        properties: SessionPropertiesRef,
     ) -> Result<Self> {
         let mut relation_chain = source;
 
@@ -102,6 +105,7 @@ impl RelationChain {
                             None,
                             Arc::clone(&analyzed_wren_mdl),
                             Arc::clone(&session_state_ref),
+                            Arc::clone(&properties),
                         )?;
 
                         let df_schema =
@@ -196,7 +200,7 @@ impl RelationChain {
                                 .map(|field| {
                                     col(format!(
                                         "{}.{}",
-                                        quoted(&model_plan.plan_name),
+                                        quoted(model_plan.plan_name()),
                                         quoted(field.name()),
                                     ))
                                 })
@@ -246,7 +250,7 @@ impl RelationChain {
                                 .map(|field| {
                                     col(format!(
                                         "{}.{}",
-                                        quoted(&partial_model_plan.model_node.plan_name),
+                                        quoted(partial_model_plan.model_node.plan_name()),
                                         quoted(field.name()),
                                     ))
                                 })

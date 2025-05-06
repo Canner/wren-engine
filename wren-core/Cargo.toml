@@ -14,10 +14,10 @@ version = "0.1.0"
 
 [workspace.dependencies]
 async-trait = "0.1.88"
-# We require the latest sqlparser-rs to support the latest SQL syntax
 datafusion = { git = "https://github.com/Canner/datafusion.git", branch = "v46.0.1" }
 env_logger = "0.11.3"
 hashbrown = "0.15.2"
+insta = { version = "1.41.1" }
 log = { version = "0.4.14" }
 serde = { version = "1.0.201", features = ["derive", "rc"] }
 serde_json = { version = "1.0.117" }

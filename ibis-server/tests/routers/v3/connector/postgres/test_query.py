@@ -3,6 +3,7 @@ import base64
 import orjson
 import pytest
 
+from app.dependencies import X_WREN_VARIABLE_PREFIX
 from tests.routers.v3.connector.postgres.conftest import base_url
 
 manifest = {
@@ -76,6 +77,18 @@ manifest = {
                     "type": "double",
                     "isCalculated": True,
                     "expression": "sum(orders.o_totalprice_double)",
+                },
+            ],
+            "rowLevelAccessControls": [
+                {
+                    "name": "customer_access",
+                    "requiredProperties": [
+                        {
+                            "name": "session_user",
+                            "required": False,
+                        }
+                    ],
+                    "condition": "c_name = @session_user",
                 },
             ],
             "primaryKey": "c_custkey",
@@ -478,3 +491,37 @@ async def test_limit_pushdown(client, manifest_str, connection_info):
     assert response.status_code == 200
     result = response.json()
     assert len(result["data"]) == 10
+
+
+async def test_rlac_query(client, manifest_str, connection_info):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT c_name FROM customer",
+        },
+        headers={
+            X_WREN_VARIABLE_PREFIX + "session_user": "'Customer#000000001'",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 1
+    assert result["data"][0][0] == "Customer#000000001"
+
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT c_name FROM customer",
+        },
+        headers={
+            X_WREN_VARIABLE_PREFIX + "SESSION_USER": "'Customer#000000001'",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 1
+    assert result["data"][0][0] == "Customer#000000001"

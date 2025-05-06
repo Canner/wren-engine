@@ -9,7 +9,7 @@ use datafusion::arrow::datatypes::Field;
 use datafusion::common::{
     internal_err, plan_err, Column, DFSchema, DFSchemaRef, TableReference,
 };
-use datafusion::error::Result;
+use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::expr::WildcardOptions;
 use datafusion::logical_expr::utils::find_aggregate_exprs;
 use datafusion::logical_expr::{
@@ -22,6 +22,7 @@ use crate::logical_plan::analyze::RelationChain;
 use crate::logical_plan::analyze::RelationChain::Start;
 use crate::logical_plan::utils::{from_qualified_name, try_map_data_type};
 use crate::mdl;
+use crate::mdl::context::SessionPropertiesRef;
 use crate::mdl::lineage::DatasetLink;
 use crate::mdl::manifest::{JoinType, Model};
 use crate::mdl::utils::{
@@ -30,6 +31,8 @@ use crate::mdl::utils::{
 };
 use crate::mdl::Dataset;
 use crate::mdl::{AnalyzedWrenMDL, ColumnReference, SessionStateRef};
+
+use super::access_control::{collect_condition, validate_rule};
 
 #[derive(Debug)]
 pub(crate) enum WrenPlan {
@@ -55,7 +58,7 @@ impl WrenPlan {
 /// It only generates the top plan for the model, and the relation chain will generate the source plan.
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
 pub(crate) struct ModelPlanNode {
-    pub(crate) plan_name: String,
+    pub(crate) model: Arc<Model>,
     pub(crate) required_exprs: Vec<Expr>,
     pub(crate) relation_chain: Box<RelationChain>,
     schema_ref: DFSchemaRef,
@@ -69,8 +72,9 @@ impl ModelPlanNode {
         original_table_scan: Option<LogicalPlan>,
         analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
         session_state: SessionStateRef,
+        properties: SessionPropertiesRef,
     ) -> Result<Self> {
-        ModelPlanNodeBuilder::new(analyzed_wren_mdl, session_state).build(
+        ModelPlanNodeBuilder::new(analyzed_wren_mdl, session_state, properties).build(
             model,
             required_fields,
             original_table_scan,
@@ -78,7 +82,7 @@ impl ModelPlanNode {
     }
 
     pub fn plan_name(&self) -> &str {
-        &self.plan_name
+        self.model.name()
     }
 }
 
@@ -98,12 +102,14 @@ struct ModelPlanNodeBuilder {
     fields: VecDeque<(Option<TableReference>, Arc<Field>)>,
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
     session_state: SessionStateRef,
+    properties: SessionPropertiesRef,
 }
 
 impl ModelPlanNodeBuilder {
     fn new(
         analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
         session_state: SessionStateRef,
+        properties: SessionPropertiesRef,
     ) -> Self {
         Self {
             required_exprs_buffer: BTreeSet::new(),
@@ -113,6 +119,7 @@ impl ModelPlanNodeBuilder {
             fields: VecDeque::new(),
             analyzed_wren_mdl,
             session_state,
+            properties,
         }
     }
 
@@ -127,6 +134,9 @@ impl ModelPlanNodeBuilder {
             self.analyzed_wren_mdl.wren_mdl().schema(),
             model.name(),
         );
+
+        let required_fields =
+            self.add_required_columns_from_session_properties(&model, required_fields)?;
 
         let required_columns =
             model.get_physical_columns().into_iter().filter(|column| {
@@ -322,6 +332,7 @@ impl ModelPlanNodeBuilder {
             &self.model_required_fields.clone(),
             Arc::clone(&self.analyzed_wren_mdl),
             Arc::clone(&self.session_state),
+            Arc::clone(&self.properties),
         )?;
 
         for calculation_plan in calculate_iter {
@@ -349,7 +360,7 @@ impl ModelPlanNodeBuilder {
         }
 
         Ok(ModelPlanNode {
-            plan_name: model.name().to_string(),
+            model,
             required_exprs: self
                 .required_exprs_buffer
                 .iter()
@@ -360,6 +371,24 @@ impl ModelPlanNodeBuilder {
             schema_ref,
             original_table_scan,
         })
+    }
+
+    fn add_required_columns_from_session_properties(
+        &self,
+        model: &Model,
+        required_fields: Vec<Expr>,
+    ) -> Result<Vec<Expr>> {
+        let mut required_fields = required_fields;
+        model
+            .row_level_access_controls()
+            .iter()
+            .try_for_each(|rule| {
+                if validate_rule(&rule.required_properties, &self.properties)? {
+                    required_fields.extend(collect_condition(model, &rule.condition)?.0);
+                }
+                Ok::<_, DataFusionError>(())
+            })?;
+        Ok(required_fields)
     }
 
     fn is_to_many_calculation(&self, expr: Expr) -> bool {
@@ -448,6 +477,7 @@ impl ModelPlanNodeBuilder {
             &partial_model_required_fields,
             Arc::clone(&self.analyzed_wren_mdl),
             Arc::clone(&self.session_state),
+            Arc::clone(&self.properties),
         )?;
         let Some(column_rf) = self
             .analyzed_wren_mdl
@@ -701,7 +731,8 @@ impl UserDefinedLogicalNodeCore for ModelPlanNode {
         write!(
             f,
             "Model: name={}, schema={}",
-            self.plan_name, self.schema_ref
+            self.model.name(),
+            self.schema_ref
         )
     }
 
@@ -711,7 +742,7 @@ impl UserDefinedLogicalNodeCore for ModelPlanNode {
         _: Vec<LogicalPlan>,
     ) -> datafusion::common::Result<Self> {
         Ok(ModelPlanNode {
-            plan_name: self.plan_name.clone(),
+            model: self.model.clone(),
             required_exprs: self.required_exprs.clone(),
             relation_chain: self.relation_chain.clone(),
             schema_ref: self.schema_ref.clone(),
@@ -1019,7 +1050,7 @@ impl UserDefinedLogicalNodeCore for PartialModelPlanNode {
     }
 
     fn fmt_for_explain(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "PartialModel: name={}", self.model_node.plan_name)
+        write!(f, "PartialModel: name={}", self.model_node.model.name())
     }
 
     fn with_exprs_and_inputs(

@@ -142,6 +142,8 @@ pub fn model(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream
             pub cached: bool,
             #[serde(default)]
             pub refresh_time: Option<String>,
+            #[serde(default)]
+            pub row_level_access_controls: Vec<Arc<RowLevelAccessControl>>,
         }
     };
     proc_macro::TokenStream::from(expanded)
@@ -165,6 +167,7 @@ pub fn column(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStrea
         #[serde_as]
         #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
         #[serde(rename_all = "camelCase")]
+        #[allow(deprecated)]
         pub struct Column {
             pub name: String,
             pub r#type: String,
@@ -179,6 +182,7 @@ pub fn column(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStrea
             pub expression: Option<String>,
             #[serde(default, with = "bool_from_int")]
             pub is_hidden: bool,
+            #[deprecated]
             pub rls: Option<RowLevelSecurity>,
             pub cls: Option<ColumnLevelSecurity>,
         }
@@ -356,6 +360,57 @@ pub fn view(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream 
 }
 
 #[proc_macro]
+pub fn row_level_access_control(
+    python_binding: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    let input = parse_macro_input!(python_binding as LitBool);
+    let python_binding = if input.value {
+        quote! {
+            #[pyclass]
+        }
+    } else {
+        quote! {}
+    };
+    let expanded = quote! {
+        #python_binding
+        #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
+        #[serde(rename_all = "camelCase")]
+        pub struct RowLevelAccessControl {
+            pub name: String,
+            #[serde(default)]
+            pub required_properties: Vec<SessionProperty>,
+            /// A string expression that can be evaluated to a boolean value
+            pub condition: String,
+        }
+    };
+    proc_macro::TokenStream::from(expanded)
+}
+
+#[proc_macro]
+pub fn session_property(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = parse_macro_input!(python_binding as LitBool);
+    let python_binding = if input.value {
+        quote! {
+            #[pyclass]
+        }
+    } else {
+        quote! {}
+    };
+    let expanded = quote! {
+        #python_binding
+        #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
+        #[serde(rename_all = "camelCase")]
+        pub struct SessionProperty {
+            pub name: String,
+            pub required: bool,
+            pub default_expr: Option<String>,
+        }
+    };
+    proc_macro::TokenStream::from(expanded)
+}
+
+#[proc_macro]
+#[deprecated]
 pub fn row_level_security(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(python_binding as LitBool);
     let python_binding = if input.value {
@@ -368,8 +423,10 @@ pub fn row_level_security(python_binding: proc_macro::TokenStream) -> proc_macro
     let expanded = quote! {
         #python_binding
         #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
+        #[deprecated]
         pub struct RowLevelSecurity {
             pub name: String,
+            #[allow(deprecated)]
             pub operator: RowLevelOperator,
         }
     };
@@ -377,6 +434,7 @@ pub fn row_level_security(python_binding: proc_macro::TokenStream) -> proc_macro
 }
 
 #[proc_macro]
+#[deprecated]
 pub fn row_level_operator(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(python_binding as LitBool);
     let python_binding = if input.value {
@@ -388,6 +446,7 @@ pub fn row_level_operator(python_binding: proc_macro::TokenStream) -> proc_macro
     };
     let expanded = quote! {
         #python_binding
+        #[deprecated]
         #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone, Copy)]
         #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
         pub enum RowLevelOperator {
