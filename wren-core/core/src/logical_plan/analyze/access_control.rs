@@ -75,6 +75,40 @@ pub fn collect_condition(
     ))
 }
 
+/// Validate the definition of row level access control rules.
+/// Check if the syntax of the condition is valid.
+/// Check if the properties used in the condition are defined in the session properties.
+#[allow(dead_code)]
+pub fn validate_rlac_rule(rule: &RowLevelAccessControl, model: &Model) -> Result<()> {
+    let RowLevelAccessControl {
+        condition,
+        required_properties,
+        ..
+    } = rule;
+    let (_, session_properties) = collect_condition(model, condition)?;
+
+    let required_properties: Vec<_> = required_properties
+        .iter()
+        .map(|property| property.name.to_lowercase())
+        .collect();
+
+    let missed_properties: Vec<_> = session_properties
+        .iter()
+        .filter(|property| !required_properties.contains(property))
+        .collect();
+    if !missed_properties.is_empty() {
+        return plan_err!(
+            "The session property {} is used, but not found in the session properties",
+            missed_properties
+                .iter()
+                .map(|property| format!("@{}", property))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+    }
+    Ok(())
+}
+
 /// Build the filter expression for the row level access control rule.
 pub fn build_filter_expression(
     session_state: &SessionStateRef,
@@ -261,7 +295,7 @@ mod test {
         collect_condition, validate_rule,
     };
 
-    use super::build_filter_expression;
+    use super::{build_filter_expression, validate_rlac_rule};
 
     #[test]
     pub fn test_collect_condition() -> Result<()> {
@@ -650,6 +684,74 @@ mod test {
                 ),
             }
         }
+        Ok(())
+    }
+
+    #[test]
+    pub fn test_validate_rlac_rule() -> Result<()> {
+        let model = ModelBuilder::new("m1")
+            .column(ColumnBuilder::new("id", "int").build())
+            .column(ColumnBuilder::new("name", "varchar").build())
+            .build();
+
+        let rule = RowLevelAccessControl {
+            condition: "id = @session_id".to_string(),
+            required_properties: vec![SessionProperty::new_required("SESSION_ID")],
+            name: "test".to_string(),
+        };
+
+        validate_rlac_rule(&rule, &model)?;
+
+        let rule = RowLevelAccessControl {
+            condition: "id = @session_id AND name = @session_name".to_string(),
+            required_properties: vec![
+                SessionProperty::new_required("SESSION_ID"),
+                SessionProperty::new_required("SESSION_NAME"),
+            ],
+            name: "test".to_string(),
+        };
+
+        validate_rlac_rule(&rule, &model)?;
+
+        let rule = RowLevelAccessControl {
+            condition: "id = @session_id AND name = @session_name".to_string(),
+            required_properties: vec![SessionProperty::new_required("SESSION_ID")],
+            name: "test".to_string(),
+        };
+
+        match validate_rlac_rule(&rule, &model) {
+            Err(error) => {
+                assert_snapshot!(error.message(), @"The session property @session_name is used, but not found in the session properties");
+            }
+            _ => panic!("should be error"),
+        }
+
+        let rule = RowLevelAccessControl {
+            condition: ",invalid".to_string(),
+            required_properties: vec![],
+            name: "test".to_string(),
+        };
+
+        match validate_rlac_rule(&rule, &model) {
+            Err(error) => {
+                assert_snapshot!(error.message(), @r#"ParserError("Expected: an expression, found: , at Line: 1, Column: 1")"#);
+            }
+            _ => panic!("should be error"),
+        }
+
+        let rule = RowLevelAccessControl {
+            condition: "not_found = @SESSION_ID".to_string(),
+            required_properties: vec![SessionProperty::new_required("SESSION_ID")],
+            name: "test".to_string(),
+        };
+
+        match validate_rlac_rule(&rule, &model) {
+            Err(error) => {
+                assert_snapshot!(error.message(), @"The column not_found is not in the model m1");
+            }
+            _ => panic!("should be error"),
+        }
+
         Ok(())
     }
 }

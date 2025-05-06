@@ -19,7 +19,7 @@
 
 #[cfg(feature = "python-binding")]
 mod manifest_python_impl {
-    use crate::mdl::manifest::{Manifest, Model};
+    use crate::mdl::manifest::{Manifest, Model, RowLevelAccessControl, SessionProperty};
     use crate::mdl::DataSource;
     use pyo3::{pymethods, PyResult};
     use std::sync::Arc;
@@ -49,6 +49,16 @@ mod manifest_python_impl {
         fn data_source(&self) -> PyResult<Option<DataSource>> {
             Ok(self.data_source)
         }
+
+        fn get_model(&self, name: &str) -> PyResult<Option<Model>> {
+            let model = self
+                .models
+                .iter()
+                .find(|m| m.name == name)
+                .cloned()
+                .map(Arc::unwrap_or_clone);
+            Ok(model)
+        }
     }
 
     #[pymethods]
@@ -56,6 +66,32 @@ mod manifest_python_impl {
         #[getter]
         fn get_name(&self) -> PyResult<String> {
             Ok(self.name.clone())
+        }
+    }
+
+    #[pymethods]
+    impl SessionProperty {
+        #[new]
+        #[pyo3(signature = (name, required = false, default_expr = None))]
+        fn new(name: String, required: bool, default_expr: Option<String>) -> Self {
+            Self {
+                name,
+                required,
+                default_expr,
+            }
+        }
+    }
+
+    #[pymethods]
+    impl RowLevelAccessControl {
+        #[new]
+        #[pyo3(signature = (name, condition, required_properties = vec![]))]
+        fn new(name: String, condition: String, required_properties: Vec<SessionProperty>) -> Self {
+            Self {
+                name,
+                condition,
+                required_properties,
+            }
         }
     }
 }

@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+from wren_core import (
+    RowLevelAccessControl,
+    SessionProperty,
+    to_manifest,
+    validate_rlac_rule,
+)
+
 from app.mdl.rewriter import Rewriter
 from app.model import NotFoundError, UnprocessableEntityError
 from app.model.connector import Connector
 from app.util import base64_to_dict
 
-rules = ["column_is_valid", "relationship_is_valid"]
+rules = ["column_is_valid", "relationship_is_valid", "rlac_condition_syntax_is_valid"]
 
 
 class Validator:
@@ -13,7 +20,7 @@ class Validator:
         self.connector = connector
         self.rewriter = rewriter
 
-    async def validate(self, rule: str, parameters: dict[str, str], manifest_str: str):
+    async def validate(self, rule: str, parameters: dict, manifest_str: str):
         if rule not in rules:
             raise RuleNotFoundError(rule)
         try:
@@ -143,6 +150,45 @@ class Validator:
 
         except Exception as e:
             raise ValidationError(f"Exception: {type(e)}, message: {e!s}")
+
+    async def _validate_rlac_condition_syntax_is_valid(
+        self, parameters: dict, manifest_str: str
+    ):
+        if parameters.get("modelName") is None:
+            raise MissingRequiredParameterError("modelName")
+        if parameters.get("requiredProperties") is None:
+            raise MissingRequiredParameterError("requiredProperties")
+        if parameters.get("condition") is None:
+            raise MissingRequiredParameterError("condition")
+
+        model_name = parameters.get("modelName")
+        required_properties = parameters.get("requiredProperties")
+        condition = parameters.get("condition")
+
+        required_properties = [
+            SessionProperty(
+                name=prop["name"],
+                required=bool(prop["required"]),
+                default_expr=prop.get("defaultExpr", None),
+            )
+            for prop in required_properties
+        ]
+
+        rlac = RowLevelAccessControl(
+            name="rlac_validation",
+            required_properties=required_properties,
+            condition=condition,
+        )
+
+        manifest = to_manifest(manifest_str)
+        model = manifest.get_model(model_name)
+        if model is None:
+            raise ValueError(f"Model {model_name} not found in manifest")
+
+        try:
+            validate_rlac_rule(rlac, model)
+        except Exception as e:
+            raise ValidationError(e)
 
     def _get_model(self, manifest, model_name):
         models = list(filter(lambda m: m["name"] == model_name, manifest["models"]))

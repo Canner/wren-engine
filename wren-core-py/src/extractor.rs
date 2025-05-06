@@ -56,8 +56,8 @@ fn resolve_used_table_names(mdl: &WrenMDL, sql: &str) -> Result<Vec<String>, Cor
             tables
                 .iter()
                 .filter(|t| {
-                    t.catalog().map_or(true, |catalog| catalog == mdl.catalog())
-                        && t.schema().map_or(true, |schema| schema == mdl.schema())
+                    t.catalog().is_none_or(|catalog| catalog == mdl.catalog())
+                        && t.schema().is_none_or(|schema| schema == mdl.schema())
                 })
                 .map(|t| t.table().to_string())
                 .collect()

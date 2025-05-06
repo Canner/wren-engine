@@ -13,6 +13,7 @@ pub fn to_json_base64(mdl: Manifest) -> Result<String, CoreError> {
     Ok(mdl_base64)
 }
 
+#[pyfunction]
 /// Convert a base64 encoded JSON string to a manifest object.
 pub fn to_manifest(mdl_base64: &str) -> Result<Manifest, CoreError> {
     let decoded_bytes = BASE64_STANDARD.decode(mdl_base64)?;
