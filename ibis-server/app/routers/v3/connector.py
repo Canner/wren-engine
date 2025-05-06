@@ -110,7 +110,10 @@ async def query(
             else:
                 sql = pushdown_limit(dto.sql, limit)
                 rewritten_sql = await Rewriter(
-                    dto.manifest_str, data_source=data_source, experiment=True
+                    dto.manifest_str,
+                    data_source=data_source,
+                    experiment=True,
+                    properties=dict(headers),
                 ).rewrite(sql)
                 connector = Connector(data_source, dto.connection_info)
                 result = connector.query(rewritten_sql, limit=limit)
