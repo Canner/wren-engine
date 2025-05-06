@@ -14,7 +14,7 @@
 import base64
 import json
 import os
-from app.model import MySqlConnectionInfo
+from app.model import MySqlConnectionInfo, PostgresConnectionInfo
 import sqlglot
 import sys
 
@@ -30,7 +30,7 @@ if sys.stdin.isatty():
 sql = sys.stdin.read()
 
 
-load_dotenv()
+load_dotenv(override=True)
 manifest_json_path = os.getenv("WREN_MANIFEST_JSON_PATH")
 function_list_path = os.getenv("REMOTE_FUNCTION_LIST_PATH")
 connection_info_path = os.getenv("CONNECTION_INFO_PATH")
@@ -59,28 +59,28 @@ with open(connection_info_path) as file:
 
 print("### Starting the session context ###")
 print("#")
-session_context = SessionContext(encoded_str, function_list_path + f"{data_source}.csv")
+session_context = SessionContext(encoded_str, function_list_path + f"/{data_source}.csv")
 planned_sql = session_context.transform_sql(sql)
 print("# Planned SQL:\n", planned_sql)
 
 # Transpile the planned SQL
-dialect_sql = sqlglot.transpile(planned_sql, read="trino", write=data_source)[0]
+dialect_sql = sqlglot.transpile(planned_sql, read=None, write=data_source)[0]
 print("# Dialect SQL:\n", dialect_sql)
 print("#")
 
 if data_source == "bigquery":
     connection_info = BigQueryConnectionInfo.model_validate_json(json.dumps(connection_info))
     connection = DataSourceExtension.get_bigquery_connection(connection_info)
-    df = connection.sql(dialect_sql).limit(10).to_pandas()
-    print("### Result ###")
-    print("")
-    print(df)
 elif data_source == "mysql":
     connection_info = MySqlConnectionInfo.model_validate_json(json.dumps(connection_info))
     connection = DataSourceExtension.get_mysql_connection(connection_info)
-    df = connection.sql(dialect_sql).limit(10).to_pandas()
-    print("### Result ###")
-    print("")
-    print(df)
+elif data_source == "postgres":
+    connection_info = PostgresConnectionInfo.model_validate_json(json.dumps(connection_info))
+    connection = DataSourceExtension.get_postgres_connection(connection_info)
 else:
-    print("Unsupported data source:", data_source)
+    raise Exception("Unsupported data source:", data_source)
+
+df = connection.sql(dialect_sql).limit(10).to_pandas()
+print("### Result ###")
+print("")
+print(df)
