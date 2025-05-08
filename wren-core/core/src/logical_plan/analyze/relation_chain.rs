@@ -93,37 +93,24 @@ impl RelationChain {
             };
             match target {
                 Dataset::Model(target_model) => {
-                    let node = if fields.iter().any(|e| {
-                        e.column.is_some() && e.column.clone().unwrap().is_calculated
-                    }) {
-                        let schema = create_schema(
-                            fields.iter().filter_map(|e| e.column.clone()).collect(),
-                        )?;
-                        let plan = ModelPlanNode::new(
-                            Arc::clone(target_model),
-                            fields.iter().cloned().map(|c| c.expr).collect(),
-                            None,
-                            Arc::clone(&analyzed_wren_mdl),
-                            Arc::clone(&session_state_ref),
-                            Arc::clone(&properties),
-                        )?;
+                    let schema = create_schema(
+                        fields.iter().filter_map(|e| e.column.clone()).collect(),
+                    )?;
+                    let exprs = fields.iter().cloned().map(|c| c.expr).collect();
+                    let plan = ModelPlanNode::new(
+                        Arc::clone(target_model),
+                        exprs,
+                        None,
+                        Arc::clone(&analyzed_wren_mdl),
+                        Arc::clone(&session_state_ref),
+                        Arc::clone(&properties),
+                    )?;
 
-                        let df_schema =
-                            DFSchemaRef::from(DFSchema::try_from(schema).unwrap());
-                        LogicalPlan::Extension(Extension {
-                            node: Arc::new(PartialModelPlanNode::new(plan, df_schema)),
-                        })
-                    } else {
-                        LogicalPlan::Extension(Extension {
-                            node: Arc::new(ModelSourceNode::new(
-                                Arc::clone(target_model),
-                                fields.iter().cloned().map(|c| c.expr).collect(),
-                                Arc::clone(&analyzed_wren_mdl),
-                                Arc::clone(&session_state_ref),
-                                None,
-                            )?),
-                        })
-                    };
+                    let df_schema =
+                        DFSchemaRef::from(DFSchema::try_from(schema).unwrap());
+                    let node = LogicalPlan::Extension(Extension {
+                        node: Arc::new(PartialModelPlanNode::new(plan, df_schema)),
+                    });
                     relation_chain = RelationChain::Chain(
                         node,
                         link.join_type,

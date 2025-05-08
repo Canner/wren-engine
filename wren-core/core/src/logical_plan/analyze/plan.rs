@@ -198,21 +198,29 @@ impl ModelPlanNodeBuilder {
                 } else {
                     merge_graph(&mut self.directed_graph, column_graph)?;
                     if self.is_contain_calculation_source(&qualified_column) {
-                        collect_partial_model_plan(
+                        collect_partial_model_plan_for_calculation(
                             Arc::clone(&self.analyzed_wren_mdl),
                             Arc::clone(&self.session_state),
                             &qualified_column,
                             &mut self.model_required_fields,
                         )?;
                     }
-                    self.required_exprs_buffer
-                        .insert(OrdExpr::new(expr.clone()));
-                    let _ = collect_model_required_fields(
-                        &qualified_column,
+                    // Collect the column for building the partial model for the related model.
+                    collect_partial_model_required_fields(
                         Arc::clone(&self.analyzed_wren_mdl),
                         Arc::clone(&self.session_state),
+                        &qualified_column,
                         &mut self.model_required_fields,
-                    );
+                    )?;
+                    self.required_exprs_buffer
+                        .insert(OrdExpr::new(expr.clone()));
+                    // Collect the column for building the source model
+                    collect_model_required_fields(
+                        Arc::clone(&self.analyzed_wren_mdl),
+                        Arc::clone(&self.session_state),
+                        &qualified_column,
+                        &mut self.model_required_fields,
+                    )?;
                 }
             } else {
                 let expr_plan = get_remote_column_exp(
@@ -294,7 +302,6 @@ impl ModelPlanNodeBuilder {
             .get(&model_ref)
             .map(|c| c.iter().cloned().map(|c| c.expr).collect())
             .unwrap_or_default();
-
         let mut calculate_iter = self.required_calculation.iter();
         let source_chain =
             if !source_required_fields.is_empty() || required_fields.is_empty() {
@@ -438,7 +445,7 @@ impl ModelPlanNodeBuilder {
         let mut partial_model_required_fields = HashMap::new();
 
         if self.is_contain_calculation_source(qualified_column) {
-            collect_partial_model_plan(
+            collect_partial_model_plan_for_calculation(
                 Arc::clone(&self.analyzed_wren_mdl),
                 Arc::clone(&self.session_state),
                 qualified_column,
@@ -446,10 +453,10 @@ impl ModelPlanNodeBuilder {
             )?;
         }
 
-        collect_model_required_fields(
-            qualified_column,
+        collect_partial_model_required_fields(
             Arc::clone(&self.analyzed_wren_mdl),
             Arc::clone(&self.session_state),
+            qualified_column,
             &mut partial_model_required_fields,
         )?;
 
@@ -505,7 +512,9 @@ fn is_required_column(expr: &Expr, name: &str) -> bool {
     }
 }
 
-fn collect_partial_model_plan(
+/// Collect the fields for the calculation plan.
+/// It collects the only calculated fields for the calculation plan.
+fn collect_partial_model_plan_for_calculation(
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
     session_state_ref: SessionStateRef,
     qualified_column: &Column,
@@ -547,11 +556,54 @@ fn collect_partial_model_plan(
     Ok(())
 }
 
-fn collect_model_required_fields(
-    qualified_column: &Column,
+/// Collect the required fields for the partial model used by another model throguh the relationship.
+/// It collects the non-calculated fields for the he partial model used by another model.
+fn collect_partial_model_required_fields(
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
     session_state_ref: SessionStateRef,
-    model_required_fields: &mut HashMap<TableReference, BTreeSet<OrdExpr>>,
+    qualified_column: &Column,
+    required_fields: &mut HashMap<TableReference, BTreeSet<OrdExpr>>,
+) -> Result<()> {
+    let Some(set) = analyzed_wren_mdl
+        .lineage()
+        .required_fields_map
+        .get(qualified_column)
+    else {
+        return plan_err!("Required fields not found for {}", qualified_column);
+    };
+
+    for c in set {
+        let Some(relation_ref) = &c.relation else {
+            return plan_err!("Source dataset not found for {}", c);
+        };
+        let Some(ColumnReference { dataset, column }) =
+            analyzed_wren_mdl.wren_mdl().get_column_reference(c)
+        else {
+            return plan_err!("Column reference not found for {}", c);
+        };
+        if !column.is_calculated {
+            let expr = create_wren_expr_for_model(
+                &c.name,
+                dataset.try_as_model().unwrap(),
+                Arc::clone(&session_state_ref),
+            )?;
+            required_fields
+                .entry(relation_ref.clone())
+                .or_default()
+                .insert(OrdExpr::with_column(expr, Arc::clone(&column)));
+        }
+    }
+    Ok(())
+}
+
+/// Collect the required field for the model plan.
+/// It collect the calculated fields for building the calculation plan.
+/// It collects the non-calculated source column for building the model source plan.
+fn collect_model_required_fields(
+    analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+    session_state_ref: SessionStateRef,
+    qualified_column: &Column,
+    required_fields: &mut HashMap<TableReference, BTreeSet<OrdExpr>>,
 ) -> Result<()> {
     let Some(set) = analyzed_wren_mdl
         .lineage()
@@ -591,7 +643,7 @@ fn collect_model_required_fields(
                 }
                 .alias(column.name.clone());
                 debug!("Required Calculated field: {}", &expr_plan);
-                model_required_fields
+                required_fields
                     .entry(relation_ref.clone())
                     .or_default()
                     .insert(OrdExpr::with_column(expr_plan, column));
@@ -603,7 +655,7 @@ fn collect_model_required_fields(
                     Arc::clone(&session_state_ref),
                 )?;
                 debug!("Required field: {}", &expr_plan);
-                model_required_fields
+                required_fields
                     .entry(relation_ref.clone())
                     .or_default()
                     .insert(OrdExpr::with_column(expr_plan, column));
