@@ -61,7 +61,7 @@ jobs:
         with:
           rust-version: stable
       - name: Run tests (excluding doctests)
-        run: cargo test --lib --tests --bins
+        run: RUST_MIN_STACK=8388608 cargo test --lib --tests --bins
       - name: Verify Working Directory Clean
         run: git diff --exit-code
 
@@ -77,7 +77,7 @@ jobs:
       - name: Run tests (excluding doctests)
         shell: bash
         run: |
-          cargo test --lib --tests --bins
+          RUST_MIN_STACK=8388608 cargo test --lib --tests --bins
 
   macos:
     name: cargo test (macos)
@@ -90,7 +90,7 @@ jobs:
         uses: ./.github/actions/rust/setup-macos-builder
       - name: Run tests (excluding doctests)
         shell: bash
-        run: cargo test --lib --tests --bins
+        run: RUST_MIN_STACK=8388608 cargo test --lib --tests --bins
 
   macos-aarch64:
     name: cargo test (macos-aarch64)
@@ -103,7 +103,7 @@ jobs:
         uses: ./.github/actions/rust/setup-macos-aarch64-builder
       - name: Run tests (excluding doctests)
         shell: bash
-        run: cargo test --lib --tests --bins
+        run: RUST_MIN_STACK=8388608 cargo test --lib --tests --bins
 
   check-fmt:
     name: Check cargo fmt
