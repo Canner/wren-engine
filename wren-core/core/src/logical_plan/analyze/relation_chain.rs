@@ -14,10 +14,10 @@ use crate::mdl::Dataset;
 use crate::mdl::{AnalyzedWrenMDL, SessionStateRef};
 use crate::{mdl, DataFusionError};
 use datafusion::common::alias::AliasGenerator;
-use datafusion::common::TableReference;
 use datafusion::common::{
     internal_err, not_impl_err, plan_err, DFSchema, DFSchemaRef, Result,
 };
+use datafusion::common::{plan_datafusion_err, TableReference};
 use datafusion::logical_expr::{
     col, Expr, Extension, LogicalPlan, LogicalPlanBuilder, SubqueryAlias,
     UserDefinedLogicalNodeCore,
@@ -94,7 +94,17 @@ impl RelationChain {
             match target {
                 Dataset::Model(target_model) => {
                     let schema = create_schema(
-                        fields.iter().filter_map(|e| e.column.clone()).collect(),
+                        fields
+                            .iter()
+                            .map(|e| {
+                                e.column.clone().ok_or_else(|| {
+                                    plan_datafusion_err!(
+                                        "Required field {:?} has no physical column",
+                                        e.expr
+                                    )
+                                })
+                            })
+                            .collect::<Result<_>>()?,
                     )?;
                     let exprs = fields.iter().cloned().map(|c| c.expr).collect();
                     let plan = ModelPlanNode::new(
@@ -106,8 +116,7 @@ impl RelationChain {
                         Arc::clone(&properties),
                     )?;
 
-                    let df_schema =
-                        DFSchemaRef::from(DFSchema::try_from(schema).unwrap());
+                    let df_schema = DFSchemaRef::from(DFSchema::try_from(schema)?);
                     let node = LogicalPlan::Extension(Extension {
                         node: Arc::new(PartialModelPlanNode::new(plan, df_schema)),
                     });

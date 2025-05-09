@@ -7,7 +7,8 @@ use std::sync::Arc;
 
 use datafusion::arrow::datatypes::Field;
 use datafusion::common::{
-    internal_err, plan_err, Column, DFSchema, DFSchemaRef, TableReference,
+    internal_datafusion_err, internal_err, plan_err, Column, DFSchema, DFSchemaRef,
+    TableReference,
 };
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::expr::WildcardOptions;
@@ -584,7 +585,9 @@ fn collect_partial_model_required_fields(
         if !column.is_calculated {
             let expr = create_wren_expr_for_model(
                 &c.name,
-                dataset.try_as_model().unwrap(),
+                dataset.try_as_model().ok_or_else(|| {
+                    internal_datafusion_err!("Only support model as source dataset")
+                })?,
                 Arc::clone(&session_state_ref),
             )?;
             required_fields
