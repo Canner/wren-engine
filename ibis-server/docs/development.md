@@ -63,6 +63,20 @@ To start the server:
 ### Environment Variables
 
 - `WREN_ENGINE_ENDPOINT`: The endpoint of the Wren Java engine
+- `WREN_NUM_WORKERS`: The number of gunicoron workers
+
+### OpenTelemetry Envrionment Variables
+- `OTLP_ENABLED`: Enable the tracing for Ibis Server.
+- See more [OpenTelemetry environment variables](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/).
+- The minimize setting:
+  ```
+  OTLP_ENABLED=true
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://host.docker.internal:4317
+  OTEL_SERVICE_NAME=wren-engine
+  OTEL_TRACES_EXPORTER=otlp
+  OTEL_METRICS_EXPORTER=none
+  OTEL_LOGS_EXPORTER=none
+  ```
 
 ## How to add new data source
 
