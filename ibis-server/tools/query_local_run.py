@@ -22,6 +22,7 @@ from dotenv import load_dotenv
 from wren_core import SessionContext
 from app.model.data_source import BigQueryConnectionInfo
 from app.model.data_source import DataSourceExtension
+import wren_core
 
 if sys.stdin.isatty():
     print("please provide the SQL query via stdin, e.g. `python query_local_run.py < test.sql`", file=sys.stderr)
@@ -56,6 +57,14 @@ with open(manifest_json_path) as file:
 
 with open(connection_info_path) as file:
     connection_info = json.load(file)
+
+# Extract the requried tables from the SQL query
+extractor = wren_core.ManifestExtractor(encoded_str)
+tables = extractor.resolve_used_table_names(sql)
+print("# Tables used in the SQL query:", tables)
+# Extract the manifest for the required tables
+manifest = extractor.extract_by(tables)
+encoded_str = wren_core.to_json_base64(manifest)
 
 print("### Starting the session context ###")
 print("#")
