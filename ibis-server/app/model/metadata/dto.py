@@ -51,6 +51,11 @@ class RustWrenEngineColumnType(Enum):
     TIME = "TIME"
     NULL = "NULL"
 
+    # Extension types
+    ## PostGIS
+    GEOMETRY = "GEOMETRY"
+    GEOGRAPHY = "GEOGRAPHY"
+
 
 class Column(BaseModel):
     name: str
