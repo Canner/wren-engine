@@ -33,4 +33,4 @@ scalar,lax_string,text,,"any","Converts a value to text with relaxed type checki
 scalar,bool,boolean,,"any","Converts a JSON value to SQL boolean type."
 scalar,float64,float,,"any","Converts a JSON value to SQL float type."
 scalar,int64,int64,,"any","Converts a JSON value to SQL int type."
-scalar,string,text,,"any","Converts a JSON value to SQL text type."
+scalar,string,text,,"any","Converts a JSON value to SQL text type. changed"
