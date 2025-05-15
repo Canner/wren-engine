@@ -279,7 +279,7 @@ public class TestMetric
                         List.of(
                                 Column.column("name", WrenTypes.VARCHAR, null, true),
                                 Column.column("revenue", WrenTypes.INTEGER, null, true, "totalprice")),
-                        "name"))
+                                "name"))
                 .build();
         WrenMDL mdl = WrenMDL.fromManifest(
                 copyOf(manifest)

@@ -26,6 +26,7 @@ class PostgresMetadata(Metadata):
                 c.data_type,
                 c.is_nullable,
                 c.ordinal_position,
+                tc.constraint_type,
                 obj_description(cls.oid) AS table_comment,
                 col_description(cls.oid, a.attnum) AS column_comment
             FROM
@@ -44,13 +45,22 @@ class PostgresMetadata(Metadata):
                 pg_attribute a
                 ON a.attrelid = cls.oid
                 AND a.attname = c.column_name
+            LEFT JOIN information_schema.key_column_usage kcu
+                ON c.table_name = kcu.table_name
+                AND c.column_name = kcu.column_name
+                AND c.table_schema = kcu.table_schema
+            LEFT JOIN information_schema.table_constraints tc
+                ON kcu.constraint_name = tc.constraint_name
+                AND kcu.table_schema = tc.table_schema
             WHERE
                 t.table_type IN ('BASE TABLE', 'VIEW')
-                AND t.table_schema NOT IN ('information_schema', 'pg_catalog');
+                AND t.table_schema NOT IN ('information_schema', 'pg_catalog')
+                AND (tc.constraint_type = 'PRIMARY KEY' OR tc.constraint_type IS NULL);
             """
         response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
 
         unique_tables = {}
+        unique_tables_primary_key = {}
         for row in response:
             # generate unique table name
             schema_table = self._format_postgres_compact_table_name(
@@ -71,15 +81,38 @@ class PostgresMetadata(Metadata):
                 )
 
             # table exists, and add column to the table
-            unique_tables[schema_table].columns.append(
-                Column(
-                    name=row["column_name"],
-                    type=self._transform_postgres_column_type(row["data_type"]),
-                    notNull=row["is_nullable"].lower() == "no",
-                    description=row["column_comment"],
-                    properties=None,
-                )
+            column = Column(
+                name=row["column_name"],
+                type=self._transform_postgres_column_type(row["data_type"]),
+                notNull=row["is_nullable"].lower() == "no",
+                description=row["column_comment"],
+                properties=None,
             )
+            unique_tables[schema_table].columns.append(column)
+
+            if row["constraint_type"] == "PRIMARY KEY":
+                if schema_table in unique_tables_primary_key:
+                    unique_tables_primary_key[schema_table].append(column)
+                else:
+                    unique_tables_primary_key[schema_table] = [column]
+
+        for schema_table, columns in unique_tables_primary_key.items():
+            if len(columns) == 0:
+                continue
+            elif len(columns) == 1:
+                unique_tables[schema_table].primaryKey = columns[0].name
+            else:
+                composite_primary_key_column = Column(
+                    name="composed_primary_key",
+                    type="json",
+                    notNull=True,
+                    description=f"Composed primary key based on fields: {[col.name for col in columns]}",
+                    properties=None,
+                    nestedColumns=columns,
+                )
+                unique_tables[schema_table].columns.append(composite_primary_key_column)
+                unique_tables[schema_table].primaryKey = "composed_primary_key"
+
         return list(unique_tables.values())
 
     def get_constraints(self) -> list[Constraint]:
@@ -97,6 +130,7 @@ class PostgresMetadata(Metadata):
                 AND tc.table_schema = kcu.table_schema
             JOIN information_schema.constraint_column_usage AS ccu
                 ON ccu.constraint_name = tc.constraint_name
+                AND ccu.table_schema = tc.table_schema
             WHERE tc.constraint_type = 'FOREIGN KEY'
             """
         res = self.connection.sql(sql).to_pandas().to_dict(orient="records")
