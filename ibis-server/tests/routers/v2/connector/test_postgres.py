@@ -1,6 +1,7 @@
 import base64
 from urllib.parse import quote_plus, urlparse
 
+import geopandas as gpd
 import orjson
 import pandas as pd
 import psycopg
@@ -145,6 +146,19 @@ def postgres(request) -> PostgresContainer:
     with engine.begin() as conn:
         conn.execute(text("COMMENT ON TABLE orders IS 'This is a table comment'"))
         conn.execute(text("COMMENT ON COLUMN orders.o_comment IS 'This is a comment'"))
+    request.addfinalizer(pg.stop)
+    return pg
+
+
+@pytest.fixture(scope="module")
+def postgis(request) -> PostgresContainer:
+    pg = PostgresContainer("postgis/postgis:16-alpine").start()
+    engine = sqlalchemy.create_engine(pg.get_connection_url())
+    with engine.begin() as conn:
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis"))
+    gpd.read_parquet(
+        file_path("resource/tpch/data/cities_geometry.parquet")
+    ).to_postgis("cities_geometry", engine, index=False)
     request.addfinalizer(pg.stop)
     return pg
 
@@ -1048,6 +1062,25 @@ async def test_model_substitute_non_existent_column(
     )
     assert response.status_code == 422
     assert 'column "x" does not exist' in response.text
+
+
+async def test_postgis_geometry(client, manifest_str, postgis: PostgresContainer):
+    connection_info = _to_connection_info(postgis)
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": (
+                "SELECT ST_Distance(a.geometry, b.geometry) AS distance "
+                "FROM cities_geometry a, cities_geometry a "
+                "WHERE a.City = 'London' AND b.City = 'New York'"
+            ),
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    result["data"][0] == [74.66265347816136]
 
 
 def _to_connection_info(pg: PostgresContainer):
