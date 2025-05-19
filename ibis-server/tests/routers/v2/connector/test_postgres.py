@@ -1080,7 +1080,7 @@ async def test_postgis_geometry(client, manifest_str, postgis: PostgresContainer
     )
     assert response.status_code == 200
     result = response.json()
-    result["data"][0] == [74.66265347816136]
+    assert result["data"][0] == [74.66265347816136]
 
 
 def _to_connection_info(pg: PostgresContainer):
