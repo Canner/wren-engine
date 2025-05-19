@@ -73,14 +73,14 @@ class ExtensionHandler:
 
         # Update tables
         for row in response:
-            table_name = f"{row['f_table_schema']}.{row['f_table_name']}"  # ? Might want to use a global `_format_postgres_compact_table_name` function.
+            # TODO: Might want to use a global `_format_postgres_compact_table_name` function.
+            table_name = f"{row['f_table_schema']}.{row['f_table_name']}"
             table = tables[table_name]
             for column in table.columns:
-                if column.name == row["column_name"]:
-                    column.type = self._transform_postgres_column_type(
-                        row["column_type"]
-                    )
-                    break
+                column.type = str(
+                    self._transform_postgres_column_type(row["column_type"])
+                )
+                break
 
         return tables
 
