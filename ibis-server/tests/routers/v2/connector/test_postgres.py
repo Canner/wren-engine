@@ -152,7 +152,7 @@ def postgres(request) -> PostgresContainer:
 
 @pytest.fixture(scope="module")
 def postgis(request) -> PostgresContainer:
-    pg = PostgresContainer("postgis/postgis:16-alpine").start()
+    pg = PostgresContainer("postgis/postgis:16-3.5-alpine").start()
     engine = sqlalchemy.create_engine(pg.get_connection_url())
     with engine.begin() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis"))
@@ -1073,14 +1073,14 @@ async def test_postgis_geometry(client, manifest_str, postgis: PostgresContainer
             "manifestStr": manifest_str,
             "sql": (
                 "SELECT ST_Distance(a.geometry, b.geometry) AS distance "
-                "FROM cities_geometry a, cities_geometry a "
-                "WHERE a.City = 'London' AND b.City = 'New York'"
+                "FROM cities_geometry a, cities_geometry b "
+                "WHERE a.\"City\" = 'London' AND b.\"City\" = 'New York'"
             ),
         },
     )
     assert response.status_code == 200
     result = response.json()
-    assert result["data"][0] == [74.66265347816136]
+    assert result["data"][0] == ["74.6626535"]
 
 
 def _to_connection_info(pg: PostgresContainer):
