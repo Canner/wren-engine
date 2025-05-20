@@ -150,6 +150,9 @@ def postgres(request) -> PostgresContainer:
     return pg
 
 
+# PostGIS only provides the amd64 images. To run the PostGIS tests on ARM devices,
+# please manually download the image by using the command below.
+#   docker pull --platform linux/amd64 postgis/postgis:16-3.5-alpine
 @pytest.fixture(scope="module")
 def postgis(request) -> PostgresContainer:
     pg = PostgresContainer("postgis/postgis:16-3.5-alpine").start()
