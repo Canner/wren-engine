@@ -1,4 +1,5 @@
 use std::any::Any;
+use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::Arc;
 
@@ -41,10 +42,13 @@ use datafusion::prelude::SessionContext;
 use datafusion::sql::TableReference;
 use parking_lot::RwLock;
 
+pub type SessionPropertiesRef = Arc<HashMap<String, Option<String>>>;
+
 /// Apply Wren Rules to the context for sql generation.
 pub async fn create_ctx_with_mdl(
     ctx: &SessionContext,
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
+    properties: SessionPropertiesRef,
     is_local_runtime: bool,
 ) -> Result<SessionContext> {
     let config = ctx
@@ -64,10 +68,22 @@ pub async fn create_ctx_with_mdl(
         reset_default_catalog_schema.clone().read().deref().clone(),
     );
 
+    // ensure all the key in properties is lowercase
+    let properties = Arc::new(
+        properties
+            .iter()
+            .map(|(k, v)| {
+                let k = k.to_lowercase();
+                (k, v.clone())
+            })
+            .collect::<HashMap<_, _>>(),
+    );
+
     let new_state = if is_local_runtime {
         new_state.with_analyzer_rules(analyze_rule_for_local_runtime(
             Arc::clone(&analyzed_mdl),
             reset_default_catalog_schema.clone(),
+            properties,
         ))
         //  The plan will be executed locally, so apply the default optimizer rules
     } else {
@@ -75,6 +91,7 @@ pub async fn create_ctx_with_mdl(
             .with_analyzer_rules(analyze_rule_for_unparsing(
                 Arc::clone(&analyzed_mdl),
                 reset_default_catalog_schema.clone(),
+                Arc::clone(&properties),
             ))
             .with_optimizer_rules(optimize_rule_for_unparsing())
     };
@@ -89,6 +106,7 @@ pub async fn create_ctx_with_mdl(
 fn analyze_rule_for_local_runtime(
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
     session_state_ref: SessionStateRef,
+    properties: SessionPropertiesRef,
 ) -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     vec![
         // To align the lastest change in datafusion, apply this this rule first.
@@ -101,10 +119,12 @@ fn analyze_rule_for_local_runtime(
         Arc::new(ModelAnalyzeRule::new(
             Arc::clone(&analyzed_mdl),
             Arc::clone(&session_state_ref),
+            Arc::clone(&properties),
         )),
         Arc::new(ModelGenerationRule::new(
             Arc::clone(&analyzed_mdl),
             session_state_ref,
+            properties,
         )),
         Arc::new(InlineTableScan::new()),
         // Every rule that will generate [Expr::Wildcard] should be placed in front of [ExpandWildcardRule].
@@ -118,6 +138,7 @@ fn analyze_rule_for_local_runtime(
 fn analyze_rule_for_unparsing(
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
     session_state_ref: SessionStateRef,
+    properties: SessionPropertiesRef,
 ) -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     vec![
         // To align the lastest change in datafusion, apply this this rule first.
@@ -130,10 +151,12 @@ fn analyze_rule_for_unparsing(
         Arc::new(ModelAnalyzeRule::new(
             Arc::clone(&analyzed_mdl),
             Arc::clone(&session_state_ref),
+            Arc::clone(&properties),
         )),
         Arc::new(ModelGenerationRule::new(
             Arc::clone(&analyzed_mdl),
             session_state_ref,
+            properties,
         )),
         Arc::new(InlineTableScan::new()),
         // Every rule that will generate [Expr::Wildcard] should be placed in front of [ExpandWildcardRule].

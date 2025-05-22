@@ -5,8 +5,12 @@ from contextlib import nullcontext as does_not_raise
 import pytest
 from wren_core import (
     ManifestExtractor,
+    RowLevelAccessControl,
     SessionContext,
+    SessionProperty,
     to_json_base64,
+    to_manifest,
+    validate_rlac_rule,
 )
 
 manifest = {
@@ -24,6 +28,18 @@ manifest = {
                 {"name": "c_custkey", "type": "integer"},
                 {"name": "c_name", "type": "varchar"},
                 {"name": "orders", "type": "orders", "relationship": "orders_customer"},
+            ],
+            "rowLevelAccessControls": [
+                {
+                    "name": "customer_access",
+                    "requiredProperties": [
+                        {
+                            "name": "session_user",
+                            "required": False,
+                        }
+                    ],
+                    "condition": "c_name = @session_user",
+                },
             ],
             "primaryKey": "c_custkey",
         },
@@ -273,3 +289,48 @@ def test_limit_pushdown():
         session_context.pushdown_limit(sql, 10)
         == "SELECT * FROM my_catalog.my_schema.customer LIMIT 10 OFFSET 5"
     )
+
+
+def test_rlac():
+    headers = {
+        "session_user": "'test_user'",
+    }
+    session_context = SessionContext(manifest_str, None)
+    sql = "SELECT * FROM my_catalog.my_schema.customer"
+    rewritten_sql = session_context.transform_sql(sql, headers)
+    assert (
+        rewritten_sql
+        == "SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM main.customer AS __source) AS customer) AS customer WHERE customer.c_name = 'test_user'"
+    )
+
+
+def test_validate_rlac_rule():
+    manifest = to_manifest(manifest_str)
+    model = manifest.get_model("customer")
+    if model is None:
+        raise ValueError("Model customer not found in manifest")
+    rlac = RowLevelAccessControl(
+        name="test",
+        required_properties=[
+            SessionProperty(
+                name="session_user",
+                required=False,
+            )
+        ],
+        condition="c_name = @session_user",
+    )
+
+    validate_rlac_rule(rlac, model)
+
+    rlac = RowLevelAccessControl(
+        name="test",
+        required_properties=[],
+        condition="c_name = @session_user",
+    )
+
+    with pytest.raises(Exception) as e:
+        validate_rlac_rule(rlac, model)
+        assert (
+            str(e.value)
+            == "Exception: DataFusion error: Error during planning: The session property @session_user is used, but not found in the session properties"
+        )

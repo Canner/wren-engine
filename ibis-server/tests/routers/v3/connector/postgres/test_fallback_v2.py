@@ -3,6 +3,7 @@ import base64
 import orjson
 import pytest
 
+from app.dependencies import X_WREN_FALLBACK_DISABLE, X_WREN_VARIABLE_PREFIX
 from tests.routers.v3.connector.postgres.conftest import base_url
 
 # It's not a valid manifest for v3. We expect the query to fail and fallback to v2.
@@ -44,6 +45,19 @@ async def test_query(client, manifest_str, connection_info):
     assert len(result["columns"]) == 1
     assert len(result["data"]) == 1
 
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT orderkey FROM orders LIMIT 1",
+        },
+        headers={
+            X_WREN_FALLBACK_DISABLE: "true",
+        },
+    )
+    assert response.status_code == 422
+
 
 async def test_query_with_cache(client, manifest_str, connection_info):
     # First request - should miss cache
@@ -79,6 +93,24 @@ async def test_query_with_cache(client, manifest_str, connection_info):
     assert result1["columns"] == result2["columns"]
     assert result1["dtypes"] == result2["dtypes"]
 
+    # Even we disable the fallback, we should still hit the cache
+    response3 = await client.post(
+        url=f"{base_url}/query?cacheEnable=true",  # Enable cache
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT orderkey FROM orders LIMIT 1",
+        },
+        headers={
+            X_WREN_FALLBACK_DISABLE: "true",
+        },
+    )
+    assert response3.status_code == 200
+    result3 = response3.json()
+    assert result2["data"] == result3["data"]
+    assert result2["columns"] == result3["columns"]
+    assert result2["dtypes"] == result3["dtypes"]
+
 
 async def test_query_with_cache_override(client, manifest_str, connection_info):
     # First request - should miss cache then create cache
@@ -102,10 +134,29 @@ async def test_query_with_cache_override(client, manifest_str, connection_info):
         },
     )
     assert response2.status_code == 200
+    result2 = response2.json()
     assert response2.headers["X-Cache-Override"] == "true"
     assert int(response2.headers["X-Cache-Override-At"]) > int(
         response2.headers["X-Cache-Create-At"]
     )
+
+    # Even we disable the fallback, we should still hit the cache
+    response3 = await client.post(
+        url=f"{base_url}/query?cacheEnable=true",  # Enable cache
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT orderkey FROM orders LIMIT 1",
+        },
+        headers={
+            X_WREN_FALLBACK_DISABLE: "true",
+        },
+    )
+    assert response3.status_code == 200
+    result3 = response3.json()
+    assert result2["data"] == result3["data"]
+    assert result2["columns"] == result3["columns"]
+    assert result2["dtypes"] == result3["dtypes"]
 
 
 async def test_query_with_connection_url(client, manifest_str, connection_url):
@@ -118,6 +169,19 @@ async def test_query_with_connection_url(client, manifest_str, connection_url):
         },
     )
     assert response.status_code == 200
+
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": {"connectionUrl": connection_url},
+            "manifestStr": manifest_str,
+            "sql": "SELECT orderkey FROM orders LIMIT 1",
+        },
+        headers={
+            X_WREN_FALLBACK_DISABLE: "true",
+        },
+    )
+    assert response.status_code == 422
 
 
 async def test_query_with_connection_url_and_cache_enable(
@@ -153,6 +217,24 @@ async def test_query_with_connection_url_and_cache_enable(
     assert result1["columns"] == result2["columns"]
     assert result1["dtypes"] == result2["dtypes"]
 
+    # Even we disable the fallback, we should still hit the cache
+    response3 = await client.post(
+        url=f"{base_url}/query?cacheEnable=true",
+        json={
+            "connectionInfo": {"connectionUrl": connection_url},
+            "manifestStr": manifest_str,
+            "sql": "SELECT orderkey FROM orders LIMIT 1",
+        },
+        headers={
+            X_WREN_FALLBACK_DISABLE: "true",
+        },
+    )
+    assert response3.status_code == 200
+    result3 = response3.json()
+    assert result2["data"] == result3["data"]
+    assert result2["columns"] == result3["columns"]
+    assert result2["dtypes"] == result3["dtypes"]
+
 
 async def test_query_with_connection_url_and_cache_override(
     client, manifest_str, connection_url
@@ -178,10 +260,29 @@ async def test_query_with_connection_url_and_cache_override(
         },
     )
     assert response2.status_code == 200
+    result2 = response2.json()
     assert response2.headers["X-Cache-Override"] == "true"
     assert int(response2.headers["X-Cache-Override-At"]) > int(
         response2.headers["X-Cache-Create-At"]
     )
+
+    # Even we disable the fallback, we should still hit the cache
+    response3 = await client.post(
+        url=f"{base_url}/query?cacheEnable=true",
+        json={
+            "connectionInfo": {"connectionUrl": connection_url},
+            "manifestStr": manifest_str,
+            "sql": "SELECT orderkey FROM orders LIMIT 1",
+        },
+        headers={
+            X_WREN_FALLBACK_DISABLE: "true",
+        },
+    )
+    assert response3.status_code == 200
+    result3 = response3.json()
+    assert result2["data"] == result3["data"]
+    assert result2["columns"] == result3["columns"]
+    assert result2["dtypes"] == result3["dtypes"]
 
 
 async def test_dry_run(client, manifest_str, connection_info):
@@ -196,6 +297,20 @@ async def test_dry_run(client, manifest_str, connection_info):
     )
     assert response.status_code == 204
 
+    response = await client.post(
+        url=f"{base_url}/query",
+        params={"dryRun": True},
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT orderkey FROM orders LIMIT 1",
+        },
+        headers={
+            X_WREN_FALLBACK_DISABLE: "true",
+        },
+    )
+    assert response.status_code == 422
+
 
 async def test_dry_plan(client, manifest_str):
     response = await client.post(
@@ -207,6 +322,18 @@ async def test_dry_plan(client, manifest_str):
     )
     assert response.status_code == 200
     assert response.text is not None
+
+    response = await client.post(
+        url="/v3/connector/dry-plan",
+        json={
+            "manifestStr": manifest_str,
+            "sql": "SELECT orderkey FROM orders LIMIT 1",
+        },
+        headers={
+            X_WREN_FALLBACK_DISABLE: "true",
+        },
+    )
+    assert response.status_code == 422
 
 
 async def test_dry_plan_for_data_source(client, manifest_str):
@@ -220,6 +347,18 @@ async def test_dry_plan_for_data_source(client, manifest_str):
     assert response.status_code == 200
     assert response.text is not None
 
+    response = await client.post(
+        url=f"{base_url}/dry-plan",
+        json={
+            "manifestStr": manifest_str,
+            "sql": "SELECT orderkey FROM orders LIMIT 1",
+        },
+        headers={
+            X_WREN_FALLBACK_DISABLE: "true",
+        },
+    )
+    assert response.status_code == 422
+
 
 async def test_validate(client, manifest_str, connection_info):
     response = await client.post(
@@ -231,3 +370,29 @@ async def test_validate(client, manifest_str, connection_info):
         },
     )
     assert response.status_code == 204
+
+    response = await client.post(
+        url=f"{base_url}/validate/column_is_valid",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "parameters": {"modelName": "orders", "columnName": "orderkey"},
+        },
+        headers={
+            X_WREN_FALLBACK_DISABLE: "true",
+        },
+    )
+    assert response.status_code == 422
+
+
+async def test_query_rlac(client, manifest_str, connection_info):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT orderkey FROM orders LIMIT 1",
+        },
+        headers={X_WREN_VARIABLE_PREFIX + "session_user": "1"},
+    )
+    assert response.status_code == 422

@@ -7,7 +7,7 @@ This module is the API server of Wren Engine. It's built on top of [FastAPI](htt
 You can follow the steps below to run the Java engine and ibis.
 > Wren Engine is migrating to [wren-core](../wren-core/). However, we still recommend starting [the Java engine](../wren-core-legacy/) to enable the query fallback mechanism.
 
-Create `compose.yaml` file and add the following content, edit environment variables if needed (see [Environment Variables](docs/development#environment-variables))
+Create `compose.yaml` file and add the following content, edit environment variables if needed (see [Environment Variables](docs/development#environment-variables)).
 ```yaml
 services:
   ibis:
@@ -37,6 +37,9 @@ Run the docker compose
 ```bash
 docker compose up
 ```
+
+Set up [OpenTelemetry Envrionment Variables](docs/development#environment-variable) to enable tracing log.
+See [Tracing with Jaeger](#tracing-with-jaeger) to start up a Jaeger Server.
 
 ### Running on Local
 Requirements:
@@ -80,6 +83,28 @@ just run-trace-console
 OpenTelemetry zero-code instrumentation is highly configurable. You can set the necessary exporters to send traces to your tracing services.
 
 [Metrics we are tracing right now](./Metrics.md)
+
+### Tracing with Jaeger
+- Follow the [Jaeger official documentation](https://www.jaegertracing.io/docs/2.5/getting-started/#all-in-one) to start Jaeger in a container. Use the following command:
+```
+docker run --rm --name jaeger \
+  -p 16686:16686 \
+  -p 4317:4317 \
+  -p 4318:4318 \
+  -p 5778:5778 \
+  -p 9411:9411 \
+  jaegertracing/jaeger:2.5.0
+```
+- Install [OpenTelemetry Python zero-code instrumentation](https://opentelemetry.io/docs/zero-code/python/#setup)
+```
+pip install opentelemetry-distro opentelemetry-exporter-otlp
+opentelemetry-bootstrap -a install
+```
+- Use the following `just` command to start the `ibis-server` and export tracing logs to Jaeger:
+```
+just run-trace-otlp 
+```
+- Open the Jaeger UI at [http://localhost:16686](http://localhost:16686) to view the tracing logs for your requests.
 
 ## Contributing
 Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for more information.

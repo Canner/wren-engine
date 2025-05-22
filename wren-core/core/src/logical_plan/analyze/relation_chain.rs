@@ -6,6 +6,7 @@ use crate::logical_plan::analyze::relation_chain::RelationChain::Start;
 use crate::logical_plan::utils::{
     create_schema, eliminate_ambiguous_columns, rebase_column,
 };
+use crate::mdl::context::SessionPropertiesRef;
 use crate::mdl::lineage::DatasetLink;
 use crate::mdl::manifest::JoinType;
 use crate::mdl::utils::{qualify_name_from_column_name, quoted};
@@ -13,10 +14,10 @@ use crate::mdl::Dataset;
 use crate::mdl::{AnalyzedWrenMDL, SessionStateRef};
 use crate::{mdl, DataFusionError};
 use datafusion::common::alias::AliasGenerator;
-use datafusion::common::TableReference;
 use datafusion::common::{
     internal_err, not_impl_err, plan_err, DFSchema, DFSchemaRef, Result,
 };
+use datafusion::common::{plan_datafusion_err, TableReference};
 use datafusion::logical_expr::{
     col, Expr, Extension, LogicalPlan, LogicalPlanBuilder, SubqueryAlias,
     UserDefinedLogicalNodeCore,
@@ -63,6 +64,7 @@ impl RelationChain {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn with_chain(
         source: Self,
         mut start: NodeIndex,
@@ -71,6 +73,7 @@ impl RelationChain {
         model_required_fields: &HashMap<TableReference, BTreeSet<OrdExpr>>,
         analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
         session_state_ref: SessionStateRef,
+        properties: SessionPropertiesRef,
     ) -> Result<Self> {
         let mut relation_chain = source;
 
@@ -90,36 +93,33 @@ impl RelationChain {
             };
             match target {
                 Dataset::Model(target_model) => {
-                    let node = if fields.iter().any(|e| {
-                        e.column.is_some() && e.column.clone().unwrap().is_calculated
-                    }) {
-                        let schema = create_schema(
-                            fields.iter().filter_map(|e| e.column.clone()).collect(),
-                        )?;
-                        let plan = ModelPlanNode::new(
-                            Arc::clone(target_model),
-                            fields.iter().cloned().map(|c| c.expr).collect(),
-                            None,
-                            Arc::clone(&analyzed_wren_mdl),
-                            Arc::clone(&session_state_ref),
-                        )?;
+                    let schema = create_schema(
+                        fields
+                            .iter()
+                            .map(|e| {
+                                e.column.clone().ok_or_else(|| {
+                                    plan_datafusion_err!(
+                                        "Required field {:?} has no physical column",
+                                        e.expr
+                                    )
+                                })
+                            })
+                            .collect::<Result<_>>()?,
+                    )?;
+                    let exprs = fields.iter().cloned().map(|c| c.expr).collect();
+                    let plan = ModelPlanNode::new(
+                        Arc::clone(target_model),
+                        exprs,
+                        None,
+                        Arc::clone(&analyzed_wren_mdl),
+                        Arc::clone(&session_state_ref),
+                        Arc::clone(&properties),
+                    )?;
 
-                        let df_schema =
-                            DFSchemaRef::from(DFSchema::try_from(schema).unwrap());
-                        LogicalPlan::Extension(Extension {
-                            node: Arc::new(PartialModelPlanNode::new(plan, df_schema)),
-                        })
-                    } else {
-                        LogicalPlan::Extension(Extension {
-                            node: Arc::new(ModelSourceNode::new(
-                                Arc::clone(target_model),
-                                fields.iter().cloned().map(|c| c.expr).collect(),
-                                Arc::clone(&analyzed_wren_mdl),
-                                Arc::clone(&session_state_ref),
-                                None,
-                            )?),
-                        })
-                    };
+                    let df_schema = DFSchemaRef::from(DFSchema::try_from(schema)?);
+                    let node = LogicalPlan::Extension(Extension {
+                        node: Arc::new(PartialModelPlanNode::new(plan, df_schema)),
+                    });
                     relation_chain = RelationChain::Chain(
                         node,
                         link.join_type,
@@ -196,7 +196,7 @@ impl RelationChain {
                                 .map(|field| {
                                     col(format!(
                                         "{}.{}",
-                                        quoted(&model_plan.plan_name),
+                                        quoted(model_plan.plan_name()),
                                         quoted(field.name()),
                                     ))
                                 })
@@ -246,7 +246,7 @@ impl RelationChain {
                                 .map(|field| {
                                     col(format!(
                                         "{}.{}",
-                                        quoted(&partial_model_plan.model_node.plan_name),
+                                        quoted(partial_model_plan.model_node.plan_name()),
                                         quoted(field.name()),
                                     ))
                                 })

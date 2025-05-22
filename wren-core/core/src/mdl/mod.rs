@@ -1,7 +1,6 @@
 use crate::logical_plan::utils::{from_qualified_name_str, try_map_data_type};
 use crate::mdl::builder::ManifestBuilder;
 use crate::mdl::context::{create_ctx_with_mdl, WrenDataSource};
-use crate::mdl::dialect::WrenDialect;
 use crate::mdl::function::{
     ByPassAggregateUDF, ByPassScalarUDF, ByPassWindowFunction, FunctionType,
     RemoteFunction,
@@ -22,6 +21,7 @@ use datafusion::sql::sqlparser::dialect::dialect_from_str;
 use datafusion::sql::unparser::Unparser;
 use datafusion::sql::TableReference;
 pub use dataset::Dataset;
+use dialect::WrenDialect;
 use log::{debug, info};
 use manifest::Relationship;
 use parking_lot::RwLock;
@@ -331,6 +331,7 @@ impl WrenMDL {
 pub fn transform_sql(
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
     remote_functions: &[RemoteFunction],
+    properties: HashMap<String, Option<String>>,
     sql: &str,
 ) -> Result<String> {
     let runtime = tokio::runtime::Runtime::new().unwrap();
@@ -338,6 +339,7 @@ pub fn transform_sql(
         &SessionContext::new(),
         analyzed_mdl,
         remote_functions,
+        properties,
         sql,
     ))
 }
@@ -349,6 +351,7 @@ pub async fn transform_sql_with_ctx(
     ctx: &SessionContext,
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
     remote_functions: &[RemoteFunction],
+    properties: HashMap<String, Option<String>>,
     sql: &str,
 ) -> Result<String> {
     info!("wren-core received SQL: {}", sql);
@@ -357,7 +360,9 @@ pub async fn transform_sql_with_ctx(
         register_remote_function(ctx, remote_function)?;
         Ok::<_, DataFusionError>(())
     })?;
-    let ctx = create_ctx_with_mdl(ctx, Arc::clone(&analyzed_mdl), false).await?;
+    let properties_ref = Arc::new(properties);
+    let ctx = create_ctx_with_mdl(ctx, Arc::clone(&analyzed_mdl), properties_ref, false)
+        .await?;
     let plan = ctx.state().create_logical_plan(sql).await?;
     debug!("wren-core original plan:\n {plan}");
     let analyzed = ctx.state().optimize(&plan)?;
@@ -443,13 +448,17 @@ mod test {
     use datafusion::arrow::array::{
         ArrayRef, Int64Array, RecordBatch, StringArray, TimestampNanosecondArray,
     };
-    use datafusion::assert_batches_eq;
+    use datafusion::arrow::util::pretty::pretty_format_batches_with_options;
+    use datafusion::common::format::DEFAULT_FORMAT_OPTIONS;
     use datafusion::common::not_impl_err;
     use datafusion::common::Result;
     use datafusion::config::ConfigOptions;
     use datafusion::prelude::{SessionConfig, SessionContext};
     use datafusion::sql::unparser::plan_to_sql;
-    use wren_core_base::mdl::DataSource;
+    use insta::assert_snapshot;
+    use wren_core_base::mdl::{
+        DataSource, JoinType, RelationshipBuilder, SessionProperty,
+    };
 
     #[test]
     fn test_sync_transform() -> Result<()> {
@@ -466,6 +475,7 @@ mod test {
         let _ = mdl::transform_sql(
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             "select o_orderkey + o_orderkey from test.test.orders",
         )?;
         Ok(())
@@ -503,6 +513,7 @@ mod test {
                 &SessionContext::new(),
                 Arc::clone(&analyzed_mdl),
                 &[],
+                HashMap::new(),
                 sql,
             )
             .await?;
@@ -531,6 +542,7 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
@@ -558,37 +570,23 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
-        let expected = "SELECT \"profile\".totalcost FROM (SELECT totalcost.totalcost FROM \
-        (SELECT __relation__2.p_custkey AS p_custkey, sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost FROM \
-        (SELECT __relation__1.c_custkey, orders.o_custkey, orders.o_totalprice, __relation__1.p_custkey FROM \
-        (SELECT __source.o_custkey AS o_custkey, __source.o_totalprice AS o_totalprice FROM orders AS __source) AS orders RIGHT JOIN \
-        (SELECT customer.c_custkey, \"profile\".p_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer RIGHT JOIN \
-        (SELECT __source.p_custkey AS p_custkey FROM \"profile\" AS __source) AS \"profile\" ON customer.c_custkey = \"profile\".p_custkey) AS __relation__1 \
-        ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost) AS \"profile\"";
-        assert_eq!(result, expected);
+        assert_snapshot!(result, @r#"SELECT "profile".totalcost FROM (SELECT totalcost.totalcost FROM (SELECT __relation__2.p_custkey AS p_custkey, sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost FROM (SELECT __relation__1.c_custkey, orders.o_custkey, orders.o_totalprice, __relation__1.p_custkey FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey, __source.o_totalprice AS o_totalprice FROM orders AS __source) AS orders) AS orders) AS orders RIGHT JOIN (SELECT customer.c_custkey, "profile".p_custkey FROM (SELECT customer.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer) AS customer RIGHT JOIN (SELECT __source.p_custkey AS p_custkey FROM "profile" AS __source) AS "profile" ON customer.c_custkey = "profile".p_custkey) AS __relation__1 ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost) AS "profile""#);
 
         let sql = "select totalcost from profile where p_sex = 'M'";
         let result = transform_sql_with_ctx(
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
-        assert_eq!(result,
-          "SELECT \"profile\".totalcost FROM (SELECT __relation__1.p_sex, __relation__1.totalcost FROM \
-          (SELECT totalcost.p_custkey, \"profile\".p_sex, totalcost.totalcost FROM (SELECT __relation__2.p_custkey AS p_custkey, \
-          sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost FROM (SELECT __relation__1.c_custkey, orders.o_custkey, \
-          orders.o_totalprice, __relation__1.p_custkey FROM (SELECT __source.o_custkey AS o_custkey, __source.o_totalprice AS o_totalprice \
-          FROM orders AS __source) AS orders RIGHT JOIN (SELECT customer.c_custkey, \"profile\".p_custkey FROM \
-          (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer RIGHT JOIN \
-          (SELECT __source.p_custkey AS p_custkey FROM \"profile\" AS __source) AS \"profile\" ON customer.c_custkey = \"profile\".p_custkey) AS __relation__1 \
-          ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost RIGHT JOIN \
-          (SELECT __source.p_custkey AS p_custkey, __source.p_sex AS p_sex FROM \"profile\" AS __source) AS \"profile\" \
-          ON totalcost.p_custkey = \"profile\".p_custkey) AS __relation__1) AS \"profile\" WHERE \"profile\".p_sex = 'M'");
+        assert_snapshot!(result,
+          @r#"SELECT "profile".totalcost FROM (SELECT __relation__1.p_sex, __relation__1.totalcost FROM (SELECT totalcost.p_custkey, "profile".p_sex, totalcost.totalcost FROM (SELECT __relation__2.p_custkey AS p_custkey, sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost FROM (SELECT __relation__1.c_custkey, orders.o_custkey, orders.o_totalprice, __relation__1.p_custkey FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey, __source.o_totalprice AS o_totalprice FROM orders AS __source) AS orders) AS orders) AS orders RIGHT JOIN (SELECT customer.c_custkey, "profile".p_custkey FROM (SELECT customer.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer) AS customer RIGHT JOIN (SELECT __source.p_custkey AS p_custkey FROM "profile" AS __source) AS "profile" ON customer.c_custkey = "profile".p_custkey) AS __relation__1 ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost RIGHT JOIN (SELECT __source.p_custkey AS p_custkey, __source.p_sex AS p_sex FROM "profile" AS __source) AS "profile" ON totalcost.p_custkey = "profile".p_custkey) AS __relation__1) AS "profile" WHERE "profile".p_sex = 'M'"#);
         Ok(())
     }
 
@@ -613,11 +611,12 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
-        assert_eq!(actual,
-            "SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" FROM \
+        assert_snapshot!(actual,
+            @"SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" FROM \
             (SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" FROM \
             (SELECT __source.\"Custkey\" AS \"Custkey\", __source.\"Name\" AS \"Name\" FROM datafusion.\"public\".customer AS __source) AS \"Customer\") AS \"Customer\"");
         Ok(())
@@ -652,20 +651,22 @@ mod test {
             &ctx,
             Arc::clone(&analyzed_mdl),
             &functions,
+            HashMap::new(),
             r#"select add_two("Custkey") from "Customer""#,
         )
         .await?;
-        assert_eq!(actual, "SELECT add_two(\"Customer\".\"Custkey\") FROM (SELECT \"Customer\".\"Custkey\" \
+        assert_snapshot!(actual, @"SELECT add_two(\"Customer\".\"Custkey\") FROM (SELECT \"Customer\".\"Custkey\" \
         FROM (SELECT __source.\"Custkey\" AS \"Custkey\" FROM datafusion.\"public\".customer AS __source) AS \"Customer\") AS \"Customer\"");
 
         let actual = transform_sql_with_ctx(
             &ctx,
             Arc::clone(&analyzed_mdl),
             &functions,
+            HashMap::new(),
             r#"select median("Custkey") from "CTest"."STest"."Customer" group by "Name""#,
         )
         .await?;
-        assert_eq!(actual, "SELECT median(\"Customer\".\"Custkey\") FROM (SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" \
+        assert_snapshot!(actual, @"SELECT median(\"Customer\".\"Custkey\") FROM (SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" \
         FROM (SELECT __source.\"Custkey\" AS \"Custkey\", __source.\"Name\" AS \"Name\" FROM datafusion.\"public\".customer AS __source) AS \"Customer\") AS \"Customer\" \
         GROUP BY \"Customer\".\"Name\"");
 
@@ -721,14 +722,15 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
-        assert_eq!(actual,
-                   "SELECT artist.\"名字\", artist.name_append, artist.\"group\", artist.subscribe, artist.subscribe_plus FROM \
-                   (SELECT artist.\"group\", artist.name_append, artist.subscribe, artist.subscribe_plus, artist.\"名字\" FROM \
-                   (SELECT __source.\"名字\" AS \"名字\", __source.\"名字\" || __source.\"名字\" AS name_append, __source.\"組別\" AS \"group\", CAST(__source.\"訂閱數\" AS BIGINT) + 1 AS subscribe_plus, __source.\"訂閱數\" AS subscribe FROM artist AS __source) AS artist) AS artist"
-);
+        assert_snapshot!(actual,
+                           @"SELECT artist.\"名字\", artist.name_append, artist.\"group\", artist.subscribe, artist.subscribe_plus FROM \
+                           (SELECT artist.\"group\", artist.name_append, artist.subscribe, artist.subscribe_plus, artist.\"名字\" FROM \
+                           (SELECT __source.\"名字\" AS \"名字\", __source.\"名字\" || __source.\"名字\" AS name_append, __source.\"組別\" AS \"group\", CAST(__source.\"訂閱數\" AS BIGINT) + 1 AS subscribe_plus, __source.\"訂閱數\" AS subscribe FROM artist AS __source) AS artist) AS artist"
+        );
         ctx.sql(&actual).await?.show().await?;
 
         let sql = r#"select group from wren.test.artist"#;
@@ -736,11 +738,12 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
-        assert_eq!(actual,
-                   "SELECT artist.\"group\" FROM (SELECT artist.\"group\" FROM (SELECT __source.\"組別\" AS \"group\" FROM artist AS __source) AS artist) AS artist");
+        assert_snapshot!(actual,
+                   @"SELECT artist.\"group\" FROM (SELECT artist.\"group\" FROM (SELECT __source.\"組別\" AS \"group\" FROM artist AS __source) AS artist) AS artist");
         ctx.sql(&actual).await?.show().await?;
 
         let sql = r#"select subscribe_plus from wren.test.artist"#;
@@ -748,11 +751,12 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
-        assert_eq!(actual,
-                   "SELECT artist.subscribe_plus FROM (SELECT artist.subscribe_plus FROM (SELECT CAST(__source.\"訂閱數\" AS BIGINT) + 1 AS subscribe_plus FROM artist AS __source) AS artist) AS artist");
+        assert_snapshot!(actual,
+                   @"SELECT artist.subscribe_plus FROM (SELECT artist.subscribe_plus FROM (SELECT CAST(__source.\"訂閱數\" AS BIGINT) + 1 AS subscribe_plus FROM artist AS __source) AS artist) AS artist");
         ctx.sql(&actual).await?.show().await
     }
 
@@ -786,13 +790,14 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await
         .map_err(|e| {
-            assert_eq!(
+            assert_snapshot!(
                 e.to_string(),
-                "ModelAnalyzeRule\ncaused by\nSchema error: No field named \"名字\"."
+                @"ModelAnalyzeRule\ncaused by\nSchema error: No field named \"名字\"."
             )
         });
 
@@ -801,13 +806,14 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await
         .map_err(|e| {
-            assert_eq!(
+            assert_snapshot!(
                 e.to_string(),
-                "ModelAnalyzeRule\ncaused by\nSchema error: No field named \"名字\"."
+                @"ModelAnalyzeRule\ncaused by\nSchema error: No field named \"名字\"."
             )
         });
         Ok(())
@@ -839,33 +845,36 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
-        assert_eq!(actual,
-                   "SELECT artist.\"串接名字\" FROM (SELECT artist.\"串接名字\" FROM (SELECT __source.\"名字\" || __source.\"名字\" AS \"串接名字\" FROM artist AS __source) AS artist) AS artist");
+        assert_snapshot!(actual,
+                   @"SELECT artist.\"串接名字\" FROM (SELECT artist.\"串接名字\" FROM (SELECT __source.\"名字\" || __source.\"名字\" AS \"串接名字\" FROM artist AS __source) AS artist) AS artist");
         let sql = r#"select * from wren.test.artist"#;
         let actual = transform_sql_with_ctx(
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
-        assert_eq!(actual,
-                   "SELECT artist.\"串接名字\" FROM (SELECT artist.\"串接名字\" FROM (SELECT __source.\"名字\" || __source.\"名字\" AS \"串接名字\" FROM artist AS __source) AS artist) AS artist");
+        assert_snapshot!(actual,
+                   @"SELECT artist.\"串接名字\" FROM (SELECT artist.\"串接名字\" FROM (SELECT __source.\"名字\" || __source.\"名字\" AS \"串接名字\" FROM artist AS __source) AS artist) AS artist");
 
         let sql = r#"select "名字" from wren.test.artist"#;
         let _ = transform_sql_with_ctx(
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
             .await.map_err(|e| {
-                assert_eq!(
+                assert_snapshot!(
                     e.to_string(),
-                    "Schema error: No field named \"名字\". Valid fields are wren.test.artist.\"串接名字\"."
+                    @"Schema error: No field named \"名字\". Valid fields are wren.test.artist.\"串接名字\"."
                 )
             });
         Ok(())
@@ -878,10 +887,11 @@ mod test {
             &SessionContext::new(),
             Arc::new(AnalyzedWrenMDL::default()),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
-        assert_eq!(actual, "SELECT current_date()");
+        assert_snapshot!(actual, @"SELECT current_date()");
         Ok(())
     }
 
@@ -907,11 +917,12 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
-        assert_eq!(actual,
-                   "SELECT CAST(current_date() AS TIMESTAMP) > artist.\"出道時間\" FROM \
+        assert_snapshot!(actual,
+                   @"SELECT CAST(current_date() AS TIMESTAMP) > artist.\"出道時間\" FROM \
                    (SELECT artist.\"出道時間\" FROM (SELECT __source.\"出道時間\" AS \"出道時間\" FROM artist AS __source) AS artist) AS artist");
         Ok(())
     }
@@ -922,11 +933,17 @@ mod test {
 
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
         let sql = "select count(*) from (select 1)";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         // TODO: BigQuery doesn't support the alias include invalid characters (e.g. `*`, `()`).
         //      We should remove the invalid characters for the alias.
-        assert_eq!(actual, "SELECT count(1) AS \"count(*)\" FROM (SELECT 1)");
+        assert_snapshot!(actual, @"SELECT count(1) AS \"count(*)\" FROM (SELECT 1)");
         Ok(())
     }
 
@@ -956,21 +973,39 @@ mod test {
         let ctx = SessionContext::new();
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
         let sql = "select interval 1 day";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
-        assert_eq!(actual, "SELECT INTERVAL 1 DAY");
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
+        assert_snapshot!(actual, @"SELECT INTERVAL 1 DAY");
 
         let sql = "SELECT INTERVAL '1 YEAR 1 MONTH'";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
-        assert_eq!(actual, "SELECT INTERVAL 13 MONTH");
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
+        assert_snapshot!(actual, @"SELECT INTERVAL 13 MONTH");
 
         let sql = "SELECT INTERVAL '1' YEAR + INTERVAL '2' MONTH + INTERVAL '3' DAY";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
-        assert_eq!(
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
+        assert_snapshot!(
             actual,
-            "SELECT INTERVAL 12 MONTH + INTERVAL 2 MONTH + INTERVAL 3 DAY"
+            @"SELECT INTERVAL 12 MONTH + INTERVAL 2 MONTH + INTERVAL 3 DAY"
         );
         Ok(())
     }
@@ -981,16 +1016,18 @@ mod test {
         let manifest = ManifestBuilder::new().build();
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
         let sql = "select * from unnest([1, 2, 3])";
-        let actual = transform_sql_with_ctx(&ctx, analyzed_mdl, &[], sql).await?;
-        assert_eq!(actual, "SELECT \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\" FROM (SELECT UNNEST([1, 2, 3]) AS \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\")");
+        let actual =
+            transform_sql_with_ctx(&ctx, analyzed_mdl, &[], HashMap::new(), sql).await?;
+        assert_snapshot!(actual, @"SELECT \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\" FROM (SELECT UNNEST([1, 2, 3]) AS \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\")");
 
         let manifest = ManifestBuilder::new()
             .data_source(DataSource::BigQuery)
             .build();
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
         let sql = "select * from unnest([1, 2, 3])";
-        let actual = transform_sql_with_ctx(&ctx, analyzed_mdl, &[], sql).await?;
-        assert_eq!(actual, "SELECT \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\" FROM UNNEST([1, 2, 3])");
+        let actual =
+            transform_sql_with_ctx(&ctx, analyzed_mdl, &[], HashMap::new(), sql).await?;
+        assert_snapshot!(actual, @"SELECT \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\" FROM UNNEST([1, 2, 3])");
         Ok(())
     }
 
@@ -999,14 +1036,26 @@ mod test {
         let ctx = SessionContext::new();
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
         let sql = "select timestamp '2011-01-01 18:00:00 +08:00'";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
-        assert_eq!(actual, "SELECT CAST('2011-01-01 10:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00 +08:00\"\")\"");
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
+        assert_snapshot!(actual, @"SELECT CAST('2011-01-01 10:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00 +08:00\"\")\"");
 
         let sql = "select timestamp '2011-01-01 18:00:00 Asia/Taipei'";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
-        assert_eq!(actual, "SELECT CAST('2011-01-01 10:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00 Asia/Taipei\"\")\"");
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
+        assert_snapshot!(actual, @"SELECT CAST('2011-01-01 10:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00 Asia/Taipei\"\")\"");
         Ok(())
     }
 
@@ -1018,16 +1067,28 @@ mod test {
         let ctx = SessionContext::new_with_config(session_config);
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
         let sql = "select timestamp '2011-01-01 18:00:00'";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         // TIMESTAMP doesn't have timezone, so the timezone will be ignored
-        assert_eq!(actual, "SELECT CAST('2011-01-01 18:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00\"\")\"");
+        assert_snapshot!(actual, @"SELECT CAST('2011-01-01 18:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00\"\")\"");
 
         let sql = "select timestamp with time zone '2011-01-01 18:00:00'";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         // TIMESTAMP WITH TIME ZONE will be converted to the session timezone
-        assert_eq!(actual, "SELECT CAST('2011-01-01 10:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00\"\")\"");
+        assert_snapshot!(actual, @"SELECT CAST('2011-01-01 10:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00\"\")\"");
 
         let mut config = ConfigOptions::new();
         config.execution.time_zone = Some("America/New_York".to_string());
@@ -1036,15 +1097,27 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
         // TIMESTAMP WITH TIME ZONE will be converted to the session timezone with daylight saving (UTC -5)
         let sql = "select timestamp with time zone '2024-01-15 18:00:00'";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
-        assert_eq!(actual, "SELECT CAST('2024-01-15 23:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2024-01-15 18:00:00\"\")\"");
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
+        assert_snapshot!(actual, @"SELECT CAST('2024-01-15 23:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2024-01-15 18:00:00\"\")\"");
 
         // TIMESTAMP WITH TIME ZONE will be converted to the session timezone without daylight saving (UTC -4)
         let sql = "select timestamp with time zone '2024-07-15 18:00:00'";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
-        assert_eq!(actual, "SELECT CAST('2024-07-15 22:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2024-07-15 18:00:00\"\")\"");
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
+        assert_snapshot!(actual, @"SELECT CAST('2024-07-15 22:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2024-07-15 18:00:00\"\")\"");
         Ok(())
     }
 
@@ -1078,13 +1151,14 @@ mod test {
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
+            HashMap::new(),
             sql,
         )
         .await?;
-        assert_eq!(actual,
+        assert_snapshot!(actual,
                    // TODO: BigQuery doesn't support the alias include invalid characters (e.g. `*`, `()`).
                    //      We should remove the invalid characters for the alias.
-                   "SELECT count(1) AS \"count(*)\" FROM (SELECT artist.cast_timestamptz FROM \
+                   @"SELECT count(1) AS \"count(*)\" FROM (SELECT artist.cast_timestamptz FROM \
                    (SELECT CAST(__source.\"出道時間\" AS TIMESTAMP WITH TIME ZONE) AS cast_timestamptz \
                    FROM artist AS __source) AS artist) AS artist WHERE CAST(artist.cast_timestamptz AS TIMESTAMP) > CAST('2011-01-01 21:00:00' AS TIMESTAMP)");
         Ok(())
@@ -1121,17 +1195,19 @@ mod test {
 
         let analyzed_mdl =
             Arc::new(AnalyzedWrenMDL::analyze_with_tables(manifest, registers)?);
-        let ctx = create_ctx_with_mdl(&ctx, Arc::clone(&analyzed_mdl), true).await?;
+        let properties_ref = Arc::new(HashMap::new());
+        let ctx =
+            create_ctx_with_mdl(&ctx, Arc::clone(&analyzed_mdl), properties_ref, true)
+                .await?;
         let sql = r#"select arrow_typeof(timestamp_col), arrow_typeof(timestamptz_col) from wren.test.timestamp_table limit 1"#;
         let result = ctx.sql(sql).await?.collect().await?;
-        let expected = vec![
-            "+---------------------------------------------+-----------------------------------------------+",
-            "| arrow_typeof(timestamp_table.timestamp_col) | arrow_typeof(timestamp_table.timestamptz_col) |",
-            "+---------------------------------------------+-----------------------------------------------+",
-            "| Timestamp(Nanosecond, None)                 | Timestamp(Nanosecond, Some(\"UTC\"))            |",
-            "+---------------------------------------------+-----------------------------------------------+",
-        ];
-        assert_batches_eq!(&expected, &result);
+        assert_snapshot!(batches_to_string(&result), @r#"
+        +---------------------------------------------+-----------------------------------------------+
+        | arrow_typeof(timestamp_table.timestamp_col) | arrow_typeof(timestamp_table.timestamptz_col) |
+        +---------------------------------------------+-----------------------------------------------+
+        | Timestamp(Nanosecond, None)                 | Timestamp(Nanosecond, Some("UTC"))            |
+        +---------------------------------------------+-----------------------------------------------+
+        "#);
         Ok(())
     }
 
@@ -1163,6 +1239,7 @@ mod test {
                 &SessionContext::new(),
                 Arc::clone(&analyzed_mdl),
                 &[],
+                HashMap::new(),
                 sql,
             )
             .await?;
@@ -1177,6 +1254,7 @@ mod test {
                 &SessionContext::new(),
                 Arc::clone(&analyzed_mdl),
                 &[],
+                HashMap::new(),
                 sql,
             )
             .await?;
@@ -1190,6 +1268,7 @@ mod test {
                 &SessionContext::new(),
                 Arc::clone(&analyzed_mdl),
                 &[],
+                HashMap::new(),
                 sql,
             )
             .await?;
@@ -1204,6 +1283,7 @@ mod test {
                 &SessionContext::new(),
                 Arc::clone(&analyzed_mdl),
                 &[],
+                HashMap::new(),
                 sql,
             )
             .await?;
@@ -1231,9 +1311,15 @@ mod test {
             .build();
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
         let sql = "select list_col[1] from wren.test.list_table";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
-        assert_eq!(actual, "SELECT list_table.list_col[1] FROM (SELECT list_table.list_col FROM \
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
+        assert_snapshot!(actual, @"SELECT list_table.list_col[1] FROM (SELECT list_table.list_col FROM \
         (SELECT __source.list_col AS list_col FROM list_table AS __source) AS list_table) AS list_table");
         Ok(())
     }
@@ -1266,27 +1352,45 @@ mod test {
             .build();
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
         let sql = "select struct_col.float_field from wren.test.struct_table";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
-        assert_eq!(
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
+        assert_snapshot!(
             actual,
-            "SELECT struct_table.struct_col.float_field FROM \
+            @"SELECT struct_table.struct_col.float_field FROM \
         (SELECT struct_table.struct_col FROM (SELECT __source.struct_col AS struct_col \
         FROM struct_table AS __source) AS struct_table) AS struct_table"
         );
 
         let sql = "select struct_array_col[1].float_field from wren.test.struct_table";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
-        assert_eq!(actual, "SELECT struct_table.struct_array_col[1].float_field FROM \
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
+        assert_snapshot!(actual, @"SELECT struct_table.struct_array_col[1].float_field FROM \
         (SELECT struct_table.struct_array_col FROM (SELECT __source.struct_array_col AS struct_array_col \
         FROM struct_table AS __source) AS struct_table) AS struct_table");
 
         let sql =
             "select {float_field: 1.0, time_field: timestamp '2021-01-01 00:00:00'}";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
-        assert_eq!(actual, "SELECT {float_field: 1.0, time_field: CAST('2021-01-01 00:00:00' AS TIMESTAMP)}");
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
+        assert_snapshot!(actual, @"SELECT {float_field: 1.0, time_field: CAST('2021-01-01 00:00:00' AS TIMESTAMP)}");
 
         let manifest = ManifestBuilder::new()
             .catalog("wren")
@@ -1300,12 +1404,12 @@ mod test {
             .build();
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
         let sql = "select struct_col.float_field from wren.test.struct_table";
-        let _ = transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql)
+        let _ = transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], HashMap::new(), sql)
             .await
             .map_err(|e| {
-                assert_eq!(
+                assert_snapshot!(
                     e.to_string(),
-                    "Execution error: The expression to get an indexed field is only valid for `Struct`, `Map` or `Null` types, got Utf8"
+                    @"Execution error: The expression to get an indexed field is only valid for `Struct`, `Map` or `Null` types, got Utf8"
                 )
             });
         Ok(())
@@ -1317,10 +1421,15 @@ mod test {
         let sql =
             "SELECT CAST(TIMESTAMP '2021-01-01 00:00:00' as TIMESTAMP WITH TIME ZONE) = \
         CAST(TIMESTAMP '2021-01-01 00:00:00' as TIMESTAMP WITH TIME ZONE)";
-        let result =
-            transform_sql_with_ctx(&ctx, Arc::new(AnalyzedWrenMDL::default()), &[], sql)
-                .await?;
-        assert_eq!(result, "SELECT CAST(CAST('2021-01-01 00:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE) = \
+        let result = transform_sql_with_ctx(
+            &ctx,
+            Arc::new(AnalyzedWrenMDL::default()),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
+        assert_snapshot!(result, @"SELECT CAST(CAST('2021-01-01 00:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE) = \
         CAST(CAST('2021-01-01 00:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE)");
         Ok(())
     }
@@ -1332,12 +1441,17 @@ mod test {
     SELECT 1 x, 'b' y UNION ALL
     SELECT 2 x, 'a' y UNION ALL
     SELECT 2 x, 'c' y)"#;
-        let result =
-            transform_sql_with_ctx(&ctx, Arc::new(AnalyzedWrenMDL::default()), &[], sql)
-                .await?;
-        assert_eq!(
+        let result = transform_sql_with_ctx(
+            &ctx,
+            Arc::new(AnalyzedWrenMDL::default()),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
+        assert_snapshot!(
             result,
-            "SELECT x, y FROM (SELECT 1 AS x, 'a' AS y \
+            @"SELECT x, y FROM (SELECT 1 AS x, 'a' AS y \
         UNION ALL SELECT 1 AS x, 'b' AS y \
         UNION ALL SELECT 2 AS x, 'a' AS y \
         UNION ALL SELECT 2 AS x, 'c' AS y)"
@@ -1350,10 +1464,11 @@ mod test {
         let manifest = ManifestBuilder::default().data_source(MySQL).build();
         let mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
         let ctx = SessionContext::new();
-        let expected = "SELECT trim(' abc')";
+        let sql = "SELECT trim(' abc')";
         let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&mdl), &[], expected).await?;
-        assert_eq!(actual, expected);
+            transform_sql_with_ctx(&ctx, Arc::clone(&mdl), &[], HashMap::new(), sql)
+                .await?;
+        assert_snapshot!(actual, @"SELECT trim(' abc')");
         Ok(())
     }
 
@@ -1373,11 +1488,17 @@ mod test {
             .build();
         let sql = r#"SELECT c_custkey, count(distinct c_name) FROM customer GROUP BY c_custkey"#;
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
-        let result =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
-        assert_eq!(
+        let result = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
+        assert_snapshot!(
             result,
-            "SELECT customer.c_custkey, count(DISTINCT customer.c_name) FROM \
+            @"SELECT customer.c_custkey, count(DISTINCT customer.c_name) FROM \
             (SELECT customer.c_custkey, customer.c_name FROM \
             (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer \
             GROUP BY customer.c_custkey"
@@ -1401,11 +1522,17 @@ mod test {
             .build();
         let sql = r#"SELECT c_custkey, (SELECT c_name FROM customer WHERE c_custkey = 1) FROM customer"#;
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
-        let result =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
-        assert_eq!(
+        let result = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
+        assert_snapshot!(
             result,
-            "SELECT customer.c_custkey, (SELECT customer.c_name FROM (SELECT customer.c_custkey, customer.c_name \
+            @"SELECT customer.c_custkey, (SELECT customer.c_name FROM (SELECT customer.c_custkey, customer.c_name \
             FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer \
             WHERE customer.c_custkey = 1) FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer"
         );
@@ -1428,11 +1555,17 @@ mod test {
             .build();
         let sql = r#"SELECT * FROM customer WHERE c_custkey = 1"#;
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
-        let result =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
-        assert_eq!(
+        let result = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
+        assert_snapshot!(
             result,
-            "SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM \
+            @"SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM \
             (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer \
             WHERE customer.c_custkey = 1"
         );
@@ -1471,8 +1604,14 @@ mod test {
         let ctx = SessionContext::new();
         let sql = r#"SELECT * FROM customer WHERE c_custkey = 1"#;
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
-        let result =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let result = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         assert_eq!(
             result,
             "SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM \
@@ -1514,8 +1653,14 @@ mod test {
         let ctx = SessionContext::new();
         let sql = r#"SELECT * FROM customer WHERE c_custkey = 1"#;
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
-        let result =
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        let result = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await?;
         assert_eq!(
             result,
             "SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM \
@@ -1525,6 +1670,547 @@ mod test {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_rlac_with_requried_properties() -> Result<()> {
+        let ctx = SessionContext::new();
+
+        // test required property
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_nationkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .add_row_level_access_control(
+                        "nation",
+                        vec![SessionProperty::new_required("session_nation")],
+                        "c_nationkey = @session_nation",
+                    )
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let sql = "SELECT * FROM customer";
+        let headers =
+            build_headers(&[("session_nation".to_string(), Some("1".to_string()))]);
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1"
+        );
+
+        match transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            HashMap::new(),
+            sql,
+        )
+        .await
+        {
+            Err(e) => {
+                assert_snapshot!(
+                    e.to_string(),
+                    @r"
+                ModelAnalyzeRule
+                caused by
+                Error during planning: Row level access control property session_nation is required, but not found in headers
+                "
+                )
+            }
+            _ => panic!("Expected error"),
+        }
+
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_custkey", "int").build())
+                    .column(ColumnBuilder::new("c_nationkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .add_row_level_access_control(
+                        "nation",
+                        vec![SessionProperty::new_required("session_nation")],
+                        "c_nationkey = @session_nation",
+                    )
+                    .add_row_level_access_control(
+                        "name",
+                        vec![SessionProperty::new_required("session_user")],
+                        "c_name = @session_user",
+                    )
+                    .build(),
+            )
+            .model(
+                ModelBuilder::new("orders")
+                    .table_reference("orders")
+                    .column(ColumnBuilder::new("o_orderkey", "int").build())
+                    .column(ColumnBuilder::new("o_custkey", "int").build())
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let sql = "SELECT * FROM customer";
+        let headers = build_headers(&[
+            ("session_nation".to_string(), Some("1".to_string())),
+            ("session_user".to_string(), Some("'Gura'".to_string())),
+        ]);
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers.clone(), sql,).await?,
+            @"SELECT customer.c_custkey, customer.c_nationkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Gura'"
+        );
+
+        let sql = "SELECT * FROM customer WHERE c_custkey = 1";
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
+            @"SELECT customer.c_custkey, customer.c_nationkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_custkey = 1 AND customer.c_nationkey = 1 AND customer.c_name = 'Gura'"
+        );
+
+        // test other model won't be affected
+        let sql = "SELECT o_orderkey FROM orders";
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx,Arc::clone(&analyzed_mdl),&[],HashMap::new(),sql).await?,
+            @"SELECT orders.o_orderkey FROM (SELECT orders.o_orderkey FROM (SELECT __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders) AS orders"
+        );
+
+        let sql = "SELECT o_orderkey FROM customer JOIN orders ON customer.c_custkey = orders.o_custkey";
+        let headers = build_headers(&[
+            ("session_nation".to_string(), Some("1".to_string())),
+            ("session_user".to_string(), Some("'Gura'".to_string())),
+        ]);
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
+            @"SELECT orders.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer JOIN (SELECT orders.o_custkey, orders.o_orderkey FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders) AS orders ON customer.c_custkey = orders.o_custkey WHERE customer.c_nationkey = 1 AND customer.c_name = 'Gura'"
+        );
+
+        // test property is required
+        let headers =
+            build_headers(&[("session_nation".to_string(), Some("1".to_string()))]);
+        let sql = "SELECT * FROM customer";
+        match transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
+            .await
+        {
+            Err(e) => {
+                assert_snapshot!(
+                    e.to_string(),
+                    @r"
+                ModelAnalyzeRule
+                caused by
+                Error during planning: Row level access control property session_user is required, but not found in headers
+                "
+                )
+            }
+            _ => panic!("Expected error"),
+        }
+
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_nationkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .add_row_level_access_control(
+                        "nation",
+                        vec![
+                            SessionProperty::new_required("session_nation"),
+                            SessionProperty::new_optional("session_user", None),
+                        ],
+                        "c_nationkey = @session_nation AND c_name = @session_user",
+                    )
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let sql = "SELECT * FROM customer";
+
+        let headers = build_headers(&[
+            ("session_nation".to_string(), Some("1".to_string())),
+            ("session_user".to_string(), Some("'Peko'".to_string())),
+        ]);
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Peko'"
+        );
+
+        // expect ignore the rule because session_user is optional without default value
+        let headers =
+            build_headers(&[("session_nation".to_string(), Some("1".to_string()))]);
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer"
+        );
+        // expect error because session_user is required
+        let headers =
+            build_headers(&[("session_user".to_string(), Some("'Peko'".to_string()))]);
+        match transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
+            .await
+        {
+            Err(e) => {
+                assert_snapshot!(
+                    e.to_string(),
+                    @r"
+                ModelAnalyzeRule
+                caused by
+                Error during planning: Row level access control property session_nation is required, but not found in headers
+                "
+                )
+            }
+            _ => panic!("Expected error"),
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_rlac_with_optional_properties() -> Result<()> {
+        let ctx = SessionContext::new();
+
+        // test required property
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_nationkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .add_row_level_access_control(
+                        "nation",
+                        vec![SessionProperty::new_optional(
+                            "session_nation",
+                            Some("3".to_string()),
+                        )],
+                        "c_nationkey = @session_nation",
+                    )
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let sql = "SELECT * FROM customer";
+        let headers =
+            build_headers(&[("session_nation".to_string(), Some("1".to_string()))]);
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
+                .await?,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1"
+        );
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], HashMap::new(), sql)
+                .await?,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 3"
+        );
+
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_nationkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .add_row_level_access_control(
+                        "nation",
+                        vec![SessionProperty::new_optional("session_nation", None)],
+                        "c_nationkey = @session_nation",
+                    )
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let headers =
+            build_headers(&[("session_nation".to_string(), Some("1".to_string()))]);
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
+                .await?,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1"
+        );
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], HashMap::new(), sql)
+                .await?,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer"
+        );
+
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_nationkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .add_row_level_access_control(
+                        "nation",
+                        vec![
+                            SessionProperty::new_optional("session_nation", None),
+                            SessionProperty::new_optional(
+                                "session_user",
+                                Some("'Gura'".to_string()),
+                            ),
+                        ],
+                        "c_nationkey = @session_nation and c_name = @session_user",
+                    )
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let headers =
+            build_headers(&[("session_nation".to_string(), Some("1".to_string()))]);
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
+                .await?,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Gura'"
+        );
+        // the rule is expected to be skipped because the optional property is None without default value
+        let headers =
+            build_headers(&[("session_user".to_string(), Some("'Peko'".to_string()))]);
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
+                .await?,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer"
+        );
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], HashMap::new(), sql)
+                .await?,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer"
+        );
+
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_nationkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .add_row_level_access_control(
+                        "nation",
+                        vec![
+                            // if the default value is empty, it will be skipped
+                            SessionProperty::new_optional(
+                                "session_nation",
+                                Some("".to_string()),
+                            ),
+                            SessionProperty::new_optional(
+                                "session_user",
+                                Some("'Gura'".to_string()),
+                            ),
+                        ],
+                        "c_nationkey = @session_nation and c_name = @session_user",
+                    )
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let headers =
+            build_headers(&[("session_nation".to_string(), Some("1".to_string()))]);
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
+                .await?,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Gura'"
+        );
+        // the rule is expected to be skipped because the optional property is None without default value
+        let headers =
+            build_headers(&[("session_user".to_string(), Some("'Peko'".to_string()))]);
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
+                .await?,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer"
+        );
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], HashMap::new(), sql)
+                .await?,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_rlac_on_calculated_field() -> Result<()> {
+        let ctx = SessionContext::new();
+
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_custkey", "int").build())
+                    .column(ColumnBuilder::new("c_nationkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .primary_key("c_custkey")
+                    .build(),
+            )
+            .model(
+                ModelBuilder::new("orders")
+                    .table_reference("orders")
+                    .column(ColumnBuilder::new("o_orderkey", "int").build())
+                    .column(ColumnBuilder::new("o_custkey", "int").build())
+                    .column(
+                        ColumnBuilder::new("customer", "customer")
+                            .relationship("customer_orders")
+                            .build(),
+                    )
+                    .column(
+                        ColumnBuilder::new("customer_name", "string")
+                            .calculated(true)
+                            .expression("customer.c_name")
+                            .build(),
+                    )
+                    .primary_key("o_orderkey")
+                    .add_row_level_access_control(
+                        "customer name",
+                        vec![SessionProperty::new_required("session_user")],
+                        "customer_name = @session_user",
+                    )
+                    .build(),
+            )
+            .relationship(
+                RelationshipBuilder::new("customer_orders")
+                    .model("customer")
+                    .model("orders")
+                    .join_type(JoinType::OneToMany)
+                    .condition("customer.c_custkey = orders.o_custkey")
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let headers =
+            build_headers(&[("session_user".to_string(), Some("'Gura'".to_string()))]);
+        let sql = "SELECT * FROM orders";
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers.clone(), sql).await?,
+            @"SELECT orders.o_orderkey, orders.o_custkey, orders.customer_name FROM (SELECT __relation__1.c_name AS customer_name, __relation__1.o_custkey, __relation__1.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name, orders.o_custkey, orders.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer) AS customer RIGHT JOIN (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders ON customer.c_custkey = orders.o_custkey) AS __relation__1) AS orders WHERE orders.customer_name = 'Gura'"
+        );
+
+        let sql = "SELECT * FROM orders where o_orderkey > 10";
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
+            @"SELECT orders.o_orderkey, orders.o_custkey, orders.customer_name FROM (SELECT __relation__1.c_name AS customer_name, __relation__1.o_custkey, __relation__1.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name, orders.o_custkey, orders.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer) AS customer RIGHT JOIN (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders ON customer.c_custkey = orders.o_custkey) AS __relation__1) AS orders WHERE orders.o_orderkey > 10 AND orders.customer_name = 'Gura'"
+        );
+
+        // TODO: the rlac rule should be applied for the model used by the calculated field
+        // both to_one or to_many relationship should be supported
+        //
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_custkey", "int").build())
+                    .column(ColumnBuilder::new("c_nationkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .column(
+                        ColumnBuilder::new_relationship(
+                            "orders",
+                            "orders",
+                            "customer_orders",
+                        )
+                        .build(),
+                    )
+                    .column(
+                        ColumnBuilder::new_calculated("totalprice", "int")
+                            .expression("sum(orders.o_totalprice)")
+                            .build(),
+                    )
+                    .primary_key("c_custkey")
+                    .add_row_level_access_control(
+                        "nation rule",
+                        vec![SessionProperty::new_optional("session_nation", None)],
+                        "c_nationkey = @session_nation",
+                    )
+                    .build(),
+            )
+            .model(
+                ModelBuilder::new("orders")
+                    .table_reference("orders")
+                    .column(ColumnBuilder::new("o_orderkey", "int").build())
+                    .column(ColumnBuilder::new("o_custkey", "int").build())
+                    .column(ColumnBuilder::new("o_totalprice", "int").build())
+                    .column(
+                        ColumnBuilder::new_relationship(
+                            "customer",
+                            "customer",
+                            "customer_orders",
+                        )
+                        .build(),
+                    )
+                    .column(
+                        ColumnBuilder::new_calculated("customer_name", "string")
+                            .expression("customer.c_name")
+                            .build(),
+                    )
+                    .primary_key("o_orderkey")
+                    .add_row_level_access_control(
+                        "user rule",
+                        vec![SessionProperty::new_optional("session_user", None)],
+                        "o_custkey = @session_user",
+                    )
+                    .build(),
+            )
+            .relationship(
+                RelationshipBuilder::new("customer_orders")
+                    .model("customer")
+                    .model("orders")
+                    .join_type(JoinType::OneToMany)
+                    .condition("customer.c_custkey = orders.o_custkey")
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let headers =
+            build_headers(&[("session_nation".to_string(), Some("1".to_string()))]);
+        let sql = "SELECT customer_name FROM orders";
+        // test custoer model used by customer_name should be filtered by nation rule.
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
+            @"SELECT orders.customer_name FROM (SELECT __relation__1.c_name AS customer_name FROM (SELECT customer.c_custkey, customer.c_name, orders.o_custkey, orders.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1) AS customer RIGHT JOIN (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders ON customer.c_custkey = orders.o_custkey) AS __relation__1) AS orders"
+        );
+        let headers =
+            build_headers(&[("session_user".to_string(), Some("1".to_string()))]);
+        let sql = "SELECT totalprice FROM customer";
+        // test orders model used by totalprice should be filtered by user rule.
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
+            @"SELECT customer.totalprice FROM (SELECT totalprice.totalprice FROM (SELECT __relation__1.c_custkey AS c_custkey, sum(CAST(__relation__1.o_totalprice AS BIGINT)) AS totalprice FROM (SELECT customer.c_custkey, orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey, __source.o_totalprice AS o_totalprice FROM orders AS __source) AS orders) AS orders WHERE orders.o_custkey = 1) AS orders RIGHT JOIN (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer ON orders.o_custkey = customer.c_custkey) AS __relation__1 GROUP BY __relation__1.c_custkey) AS totalprice) AS customer",
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_rlac_case_insensitive() -> Result<()> {
+        let ctx = SessionContext::new();
+
+        // test required property
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_nationkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .add_row_level_access_control(
+                        "nation",
+                        vec![SessionProperty::new_required("session_nation")],
+                        "c_nationkey = @session_nation",
+                    )
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let sql = "SELECT * FROM customer";
+        let headers =
+            build_headers(&[("SESSION_NATION".to_string(), Some("1".to_string()))]);
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1"
+        );
+        Ok(())
+    }
     /// Return a RecordBatch with made up data about customer
     fn customer() -> RecordBatch {
         let custkey: ArrayRef = Arc::new(Int64Array::from(vec![1, 2, 3]));
@@ -1587,5 +2273,23 @@ mod test {
             ("timestamptz_col", timestamptz),
         ])
         .unwrap()
+    }
+
+    fn batches_to_string(batches: &[RecordBatch]) -> String {
+        let actual = pretty_format_batches_with_options(batches, &DEFAULT_FORMAT_OPTIONS)
+            .unwrap()
+            .to_string();
+
+        actual.trim().to_string()
+    }
+
+    fn build_headers(
+        field: &[(String, Option<String>)],
+    ) -> HashMap<String, Option<String>> {
+        let mut headers = HashMap::new();
+        for (key, value) in field {
+            headers.insert(key.clone(), value.clone());
+        }
+        headers
     }
 }
