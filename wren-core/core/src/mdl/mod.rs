@@ -7,9 +7,9 @@ use crate::mdl::function::{
 };
 use crate::mdl::manifest::{Column, Manifest, Metric, Model, View};
 use crate::mdl::utils::to_field;
-use crate::DataFusionError;
 use datafusion::arrow::datatypes::Field;
 use datafusion::common::internal_datafusion_err;
+use datafusion::common::DataFusionError;
 use datafusion::datasource::TableProvider;
 use datafusion::error::Result;
 use datafusion::execution::context::SessionState;
