@@ -4,6 +4,7 @@ use pyo3::{pyclass, pymethods};
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use wren_core::datafusion::prelude::SessionContext;
 use wren_core::mdl::manifest::{Model, Relationship, View};
 use wren_core::mdl::WrenMDL;
 use wren_core_base::mdl::Manifest;
@@ -43,7 +44,7 @@ impl PyManifestExtractor {
 }
 
 fn resolve_used_table_names(mdl: &WrenMDL, sql: &str) -> Result<Vec<String>, CoreError> {
-    let ctx_state = wren_core::SessionContext::new().state();
+    let ctx_state = SessionContext::new().state();
     ctx_state
         .sql_to_statement(sql, "generic")
         .map_err(CoreError::from)
