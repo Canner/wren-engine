@@ -135,6 +135,8 @@ class DataSourceExtension(Enum):
             database=info.database.get_secret_value(),
             user=info.user.get_secret_value(),
             password=(info.password and info.password.get_secret_value()),
+            secure = info.secure,
+            **info.kwargs if info.kwargs else dict(),
         )
 
     @classmethod
@@ -177,6 +179,7 @@ class DataSourceExtension(Enum):
             database=info.database.get_secret_value(),
             user=info.user.get_secret_value(),
             password=(info.password and info.password.get_secret_value()),
+            **info.kwargs if info.kwargs else dict(),
         )
 
     @staticmethod
@@ -197,6 +200,7 @@ class DataSourceExtension(Enum):
             account=info.account.get_secret_value(),
             database=info.database.get_secret_value(),
             schema=info.sf_schema.get_secret_value(),
+            **info.kwargs if info.kwargs else dict(),
         )
 
     @staticmethod
@@ -208,6 +212,7 @@ class DataSourceExtension(Enum):
             schema=info.trino_schema.get_secret_value(),
             user=(info.user and info.user.get_secret_value()),
             password=(info.password and info.password.get_secret_value()),
+            **info.kwargs if info.kwargs else dict(),
         )
 
     @staticmethod

@@ -131,6 +131,14 @@ class ClickHouseConnectionInfo(BaseConnectionInfo):
     password: SecretStr | None = Field(
         description="the password of your database", examples=["password"], default=None
     )
+    secure: bool = Field(
+        description="Whether or not to use an authenticated endpoint",
+        default=False,
+        examples=[True, False],
+    )
+    kwargs: dict[str, str] | None = Field(
+        description="Client specific keyword arguments", default=None
+    )
 
 
 class MSSqlConnectionInfo(BaseConnectionInfo):
@@ -200,6 +208,10 @@ class PostgresConnectionInfo(BaseConnectionInfo):
     password: SecretStr | None = Field(
         examples=["password"], description="the password of your database", default=None
     )
+    kwargs: dict[str, str] | None = Field(
+        description="Additional keyword arguments to pass to the backend client connection.",
+        default=None,
+    )
 
 
 class OracleConnectionInfo(BaseConnectionInfo):
@@ -236,6 +248,10 @@ class SnowflakeConnectionInfo(BaseConnectionInfo):
         description="the schema name of your database",
         examples=["myschema"],
     )  # Use `sf_schema` to avoid `schema` shadowing in BaseModel
+    kwargs: dict[str, str] | None = Field(
+        description="Additional arguments passed to the DBAPI connection call.",
+        default=None,
+    )
 
 
 class TrinoConnectionInfo(BaseConnectionInfo):
@@ -256,6 +272,10 @@ class TrinoConnectionInfo(BaseConnectionInfo):
     )
     password: SecretStr | None = Field(
         description="the password of your database", examples=["password"], default=None
+    )
+    kwargs: dict[str, str] | None = Field(
+        description="Additional keyword arguments passed directly to the trino.dbapi.connect API.",
+        default=None,
     )
 
 
