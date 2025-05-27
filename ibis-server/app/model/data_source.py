@@ -135,7 +135,7 @@ class DataSourceExtension(Enum):
             database=info.database.get_secret_value(),
             user=info.user.get_secret_value(),
             password=(info.password and info.password.get_secret_value()),
-            secure = info.secure,
+            secure=info.secure,
             **info.kwargs if info.kwargs else dict(),
         )
 
