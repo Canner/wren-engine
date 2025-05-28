@@ -5,6 +5,7 @@ use remote_functions::PyRemoteFunction;
 pub mod context;
 mod errors;
 mod extractor;
+pub mod fuzz_case_generator;
 mod manifest;
 pub mod remote_functions;
 mod validation;

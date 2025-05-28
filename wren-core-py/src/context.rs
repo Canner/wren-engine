@@ -16,6 +16,7 @@
 // under the License.
 
 use crate::errors::CoreError;
+use crate::fuzz_case_generator::FuzzCaseGenerator;
 use crate::manifest::to_manifest;
 use crate::remote_functions::PyRemoteFunction;
 use log::debug;
@@ -27,23 +28,25 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::vec;
 use tokio::runtime::Runtime;
-use wren_core::array::AsArray;
-use wren_core::ast::{visit_statements_mut, Expr, Statement, Value};
-use wren_core::dialect::GenericDialect;
+use wren_core::datafusion::arrow::array::AsArray;
+use wren_core::datafusion::logical_expr::{AggregateUDF, ScalarUDF, WindowUDF};
+use wren_core::datafusion::prelude::{SessionConfig, SessionContext};
+use wren_core::datafusion::sql::sqlparser::ast::{
+    visit_statements_mut, Expr, Statement, Value,
+};
+use wren_core::datafusion::sql::sqlparser::dialect::GenericDialect;
 use wren_core::mdl::context::create_ctx_with_mdl;
 use wren_core::mdl::function::{
     ByPassAggregateUDF, ByPassScalarUDF, ByPassWindowFunction, FunctionType,
     RemoteFunction,
 };
-use wren_core::{
-    mdl, AggregateUDF, AnalyzedWrenMDL, ScalarUDF, SessionConfig, WindowUDF,
-};
+use wren_core::{mdl, AnalyzedWrenMDL};
 
 /// The Python wrapper for the Wren Core session context.
 #[pyclass(name = "SessionContext")]
 #[derive(Clone)]
 pub struct PySessionContext {
-    ctx: wren_core::SessionContext,
+    ctx: SessionContext,
     mdl: Arc<AnalyzedWrenMDL>,
     runtime: Arc<Runtime>,
 }
@@ -57,7 +60,7 @@ impl Hash for PySessionContext {
 impl Default for PySessionContext {
     fn default() -> Self {
         Self {
-            ctx: wren_core::SessionContext::new(),
+            ctx: SessionContext::new(),
             mdl: Arc::new(AnalyzedWrenMDL::default()),
             runtime: Arc::new(Runtime::new().unwrap()),
         }
@@ -84,7 +87,7 @@ impl PySessionContext {
             .collect::<Vec<_>>();
 
         let config = SessionConfig::default().with_information_schema(true);
-        let ctx = wren_core::SessionContext::new_with_config(config);
+        let ctx = SessionContext::new_with_config(config);
         let runtime = Runtime::new().map_err(CoreError::from)?;
 
         let registered_functions = runtime
@@ -187,8 +190,11 @@ impl PySessionContext {
         }
         let pushdown = limit.unwrap();
         let mut statements =
-            wren_core::parser::Parser::parse_sql(&GenericDialect {}, sql)
-                .map_err(CoreError::from)?;
+            wren_core::datafusion::sql::sqlparser::parser::Parser::parse_sql(
+                &GenericDialect {},
+                sql,
+            )
+            .map_err(CoreError::from)?;
         if statements.len() != 1 {
             return Err(CoreError::new("Only one statement is allowed").into());
         }
@@ -212,11 +218,29 @@ impl PySessionContext {
         });
         Ok(statements[0].to_string())
     }
+
+    pub fn generate_scalar_function_fuzz_case(&self) -> PyResult<Vec<String>> {
+        let generator = FuzzCaseGenerator::new();
+        let state = self.ctx.state();
+        let functions = state
+            .scalar_functions()
+            .iter()
+            .map(|(_, value)| value)
+            .collect::<Vec<_>>();
+        let result = functions
+            .chunks(50)
+            .map(|chunk| {
+                let fs = chunk.iter().map(|f| Arc::clone(f)).collect::<Vec<_>>();
+                generator.generate_scalar(&fs).map_err(CoreError::from)
+            })
+            .collect::<Result<_, CoreError>>()?;
+        Ok(result)
+    }
 }
 
 impl PySessionContext {
     fn register_remote_function(
-        ctx: &wren_core::SessionContext,
+        ctx: &SessionContext,
         remote_function: RemoteFunction,
     ) -> PyResult<()> {
         match &remote_function.function_type {
@@ -258,7 +282,7 @@ impl PySessionContext {
     /// The `function_type` is the type of the function. (e.g. scalar, aggregate, window)
     /// The `description` is the description of the function.
     async fn get_regietered_functions(
-        ctx: &wren_core::SessionContext,
+        ctx: &SessionContext,
     ) -> PyResult<Vec<RemoteFunctionDto>> {
         let sql = r#"
             SELECT DISTINCT

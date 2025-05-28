@@ -4,6 +4,7 @@ use pyo3::PyErr;
 use std::num::ParseIntError;
 use std::string::FromUtf8Error;
 use thiserror::Error;
+use wren_core::datafusion::sql::sqlparser;
 
 #[derive(Error, Debug, PartialEq)]
 #[error("{message}")]
@@ -49,14 +50,14 @@ impl From<serde_json::Error> for CoreError {
     }
 }
 
-impl From<wren_core::DataFusionError> for CoreError {
-    fn from(err: wren_core::DataFusionError) -> Self {
-        CoreError::new(err.to_string().as_str())
+impl From<wren_core::datafusion::common::DataFusionError> for CoreError {
+    fn from(err: wren_core::datafusion::common::DataFusionError) -> Self {
+        CoreError::new(&format!("DataFusion error: {}", err))
     }
 }
 
-impl From<wren_core::parser::ParserError> for CoreError {
-    fn from(err: wren_core::parser::ParserError) -> Self {
+impl From<sqlparser::parser::ParserError> for CoreError {
+    fn from(err: sqlparser::parser::ParserError) -> Self {
         CoreError::new(&format!("Parser error: {}", err))
     }
 }
