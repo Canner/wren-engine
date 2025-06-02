@@ -186,11 +186,6 @@ pub fn map_data_type(data_type: &str) -> Result<DataType> {
     Ok(result)
 }
 
-pub fn create_table_source(model: &Model) -> Result<Arc<dyn TableSource>> {
-    let schema = create_schema(model.get_physical_columns())?;
-    Ok(Arc::new(LogicalTableSource::new(schema)))
-}
-
 pub fn create_schema(columns: Vec<Arc<Column>>) -> Result<SchemaRef> {
     let fields: Vec<Field> = columns
         .iter()
