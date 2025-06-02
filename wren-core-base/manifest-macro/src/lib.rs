@@ -505,6 +505,7 @@ pub fn column_level_access_control(
     let expanded = quote! {
         #python_binding
         #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
+        #[serde(rename_all = "camelCase")]
         pub struct ColumnLevelAccessControl {
             pub name: String,
             pub required_properties: Vec<SessionProperty>,

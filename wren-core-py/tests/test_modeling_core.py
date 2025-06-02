@@ -26,7 +26,21 @@ manifest = {
             },
             "columns": [
                 {"name": "c_custkey", "type": "integer"},
-                {"name": "c_name", "type": "varchar"},
+                {
+                    "name": "c_name",
+                    "type": "varchar",
+                    "columnLevelAccessControl": {
+                        "name": "c_name_access",
+                        "requiredProperties": [
+                            {
+                                "name": "session_level",
+                                "required": False,
+                            }
+                        ],
+                        "operator": "EQUALS",
+                        "threshold": "1",
+                    },
+                },
                 {"name": "orders", "type": "orders", "relationship": "orders_customer"},
             ],
             "rowLevelAccessControls": [
@@ -334,3 +348,16 @@ def test_validate_rlac_rule():
             str(e.value)
             == "Exception: DataFusion error: Error during planning: The session property @session_user is used, but not found in the session properties"
         )
+
+
+def test_clac():
+    headers = {
+        "session_level": "2",
+    }
+    session_context = SessionContext(manifest_str, None, headers)
+    sql = "SELECT * FROM my_catalog.my_schema.customer"
+    rewritten_sql = session_context.transform_sql(sql, headers)
+    assert (
+        rewritten_sql
+        == "SELECT customer.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM main.customer AS __source) AS customer) AS customer"
+    )

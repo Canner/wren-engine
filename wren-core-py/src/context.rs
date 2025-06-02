@@ -71,10 +71,11 @@ impl PySessionContext {
     /// if `mdl_base64` is provided, the session context will be created with the given MDL. Otherwise, an empty MDL will be created.
     /// if `remote_functions_path` is provided, the session context will be created with the remote functions defined in the CSV file.
     #[new]
-    #[pyo3(signature = (mdl_base64=None, remote_functions_path=None))]
+    #[pyo3(signature = (mdl_base64=None, remote_functions_path=None, properties=None))]
     pub fn new(
         mdl_base64: Option<&str>,
         remote_functions_path: Option<&str>,
+        properties: Option<HashMap<String, Option<String>>>,
     ) -> PyResult<Self> {
         let remote_functions = Self::read_remote_function_list(remote_functions_path)
             .map_err(CoreError::from)?;
@@ -117,8 +118,9 @@ impl PySessionContext {
         };
 
         let manifest = to_manifest(mdl_base64)?;
-
-        let Ok(analyzed_mdl) = AnalyzedWrenMDL::analyze(manifest) else {
+        let Ok(analyzed_mdl) =
+            AnalyzedWrenMDL::analyze(manifest, properties.unwrap_or_default().into())
+        else {
             return Err(CoreError::new("Failed to analyze manifest").into());
         };
 
@@ -158,7 +160,7 @@ impl PySessionContext {
                 // the ctx has been initialized when PySessionContext is created
                 // so we can pass the empty array here
                 &[],
-                properties.unwrap_or_default(),
+                Arc::new(properties.unwrap_or_default()),
                 sql,
             ))
             .map_err(|e| PyErr::from(CoreError::from(e)))
@@ -192,7 +194,7 @@ impl PySessionContext {
         if statements.len() != 1 {
             return Err(CoreError::new("Only one statement is allowed").into());
         }
-        visit_statements_mut(&mut statements, |stmt| {
+        let _ = visit_statements_mut(&mut statements, |stmt| {
             if let Statement::Query(q) = stmt {
                 if let Some(limit) = &q.limit {
                     if let Expr::Value(Value::Number(n, is)) = limit {
