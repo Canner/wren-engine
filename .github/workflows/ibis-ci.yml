@@ -94,7 +94,7 @@ jobs:
         if: contains(github.event.pull_request.labels.*.name, 'athena')
         env:
           WREN_ENGINE_ENDPOINT: http://localhost:8080
-          TEST_ATHENA_S3_STAGING_DIR: ${{ secrets.TEST_ATHENA_S3_STAGING_DIR }}
+          TEST_ATHENA_S3_STAGING_DIR: s3://wren-ibis-athena-dev/results/
           TEST_ATHENA_AWS_ACCESS_KEY_ID: ${{ secrets.TEST_ATHENA_AWS_ACCESS_KEY_ID }}
           TEST_ATHENA_AWS_SECRET_ACCESS_KEY: ${{ secrets.TEST_ATHENA_AWS_SECRET_ACCESS_KEY }}
         run: just test athena
