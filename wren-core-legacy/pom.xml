@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>262</version>
+        <version>263</version>
     </parent>
 
     <groupId>io.wren</groupId>
@@ -67,7 +67,7 @@
         <dep.airlift.version>269</dep.airlift.version>
         <dep.packaging.version>${dep.airlift.version}</dep.packaging.version>
         <dep.drift.version>1.23</dep.drift.version>
-        <dep.testcontainers.version>1.21.0</dep.testcontainers.version>
+        <dep.testcontainers.version>1.21.1</dep.testcontainers.version>
         <dep.errorprone.version>2.38.0</dep.errorprone.version>
         <dep.plugin.failsafe.version>${dep.plugin.surefire.version}</dep.plugin.failsafe.version>
         <netty.version>4.1.45.Final</netty.version>
@@ -156,7 +156,7 @@
             <dependency>
                 <groupId>com.google.protobuf</groupId>
                 <artifactId>protobuf-java</artifactId>
-                <version>4.31.0</version>
+                <version>4.31.1</version>
             </dependency>
 
             <dependency>
@@ -373,7 +373,7 @@
             <dependency>
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
-                <version>42.7.5</version>
+                <version>42.7.6</version>
             </dependency>
 
             <dependency>
@@ -436,7 +436,7 @@
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>exec-maven-plugin</artifactId>
-                    <version>3.5.0</version>
+                    <version>3.5.1</version>
                 </plugin>
 
                 <plugin>
