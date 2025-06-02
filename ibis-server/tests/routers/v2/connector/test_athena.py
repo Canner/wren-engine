@@ -20,6 +20,7 @@ connection_info = {
 manifest = {
     "catalog": "my_catalog",
     "schema": "my_schema",
+    "dataSource": "athena",
     "models": [
         {
             "name": "Orders",
