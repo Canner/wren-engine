@@ -12,7 +12,10 @@ use wren_core::mdl::{transform_sql_with_ctx, AnalyzedWrenMDL};
 #[tokio::main]
 async fn main() -> datafusion::common::Result<()> {
     let manifest = init_manifest();
-    let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+    let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+        manifest,
+        Arc::new(HashMap::default()),
+    )?);
 
     let sql = "select * from wrenai.public.customers_view";
     println!("Original SQL: \n{}", sql);
@@ -20,7 +23,7 @@ async fn main() -> datafusion::common::Result<()> {
         &SessionContext::new(),
         analyzed_mdl,
         &[],
-        HashMap::new(),
+        HashMap::new().into(),
         sql,
     )
     .await?;

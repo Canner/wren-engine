@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::Arc;
 
+use crate::logical_plan::analyze::access_control::validate_clac_rule;
 use crate::logical_plan::analyze::expand_view::ExpandWrenViewRule;
 use crate::logical_plan::analyze::model_anlayze::ModelAnalyzeRule;
 use crate::logical_plan::analyze::model_generation::ModelGenerationRule;
@@ -83,7 +84,7 @@ pub async fn create_ctx_with_mdl(
         new_state.with_analyzer_rules(analyze_rule_for_local_runtime(
             Arc::clone(&analyzed_mdl),
             reset_default_catalog_schema.clone(),
-            properties,
+            Arc::clone(&properties),
         ))
         //  The plan will be executed locally, so apply the default optimizer rules
     } else {
@@ -98,7 +99,7 @@ pub async fn create_ctx_with_mdl(
 
     let new_state = new_state.with_config(config).build();
     let ctx = SessionContext::new_with_state(new_state);
-    register_table_with_mdl(&ctx, analyzed_mdl.wren_mdl()).await?;
+    register_table_with_mdl(&ctx, analyzed_mdl.wren_mdl(), properties).await?;
     Ok(ctx)
 }
 
@@ -221,6 +222,7 @@ fn optimize_rule_for_unparsing() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
 pub async fn register_table_with_mdl(
     ctx: &SessionContext,
     wren_mdl: Arc<WrenMDL>,
+    properties: SessionPropertiesRef,
 ) -> Result<()> {
     let catalog = MemoryCatalogProvider::new();
     let schema = MemorySchemaProvider::new();
@@ -229,7 +231,7 @@ pub async fn register_table_with_mdl(
     ctx.register_catalog(&wren_mdl.manifest.catalog, Arc::new(catalog));
 
     for model in wren_mdl.manifest.models.iter() {
-        let table = WrenDataSource::new(Arc::clone(model))?;
+        let table = WrenDataSource::new(Arc::clone(model), &properties)?;
         ctx.register_table(
             TableReference::full(wren_mdl.catalog(), wren_mdl.schema(), model.name()),
             Arc::new(table),
@@ -252,8 +254,22 @@ pub struct WrenDataSource {
 }
 
 impl WrenDataSource {
-    pub fn new(model: Arc<Model>) -> Result<Self> {
-        let schema = create_schema(model.get_physical_columns().clone())?;
+    pub fn new(model: Arc<Model>, properties: &SessionPropertiesRef) -> Result<Self> {
+        let available_columns = model
+            .get_physical_columns()
+            .iter()
+            .map(|column| {
+                if validate_clac_rule(column, properties)? {
+                    Ok(Some(Arc::clone(column)))
+                } else {
+                    Ok(None)
+                }
+            })
+            .collect::<Result<Vec<_>>>()?
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>();
+        let schema = create_schema(available_columns)?;
         Ok(Self { schema })
     }
 

@@ -43,7 +43,7 @@ pub fn collect_identifiers(expr: &str) -> Result<BTreeSet<Column>> {
     let statement = parsed[0].clone();
     let mut visited: BTreeSet<Column> = BTreeSet::new();
 
-    visit_expressions(&statement, |expr| {
+    let _ = visit_expressions(&statement, |expr| {
         match expr {
             Identifier(id) => {
                 visited.insert(Column::from(quoted(&id.value)));
@@ -114,7 +114,7 @@ pub fn create_wren_calculated_field_expr(
         &expr,
         session_state.config_options().sql_parser.dialect.as_str(),
     )?;
-    visit_expressions_mut(&mut expr, |e| {
+    let _ = visit_expressions_mut(&mut expr, |e| {
         if let CompoundIdentifier(ids) = e {
             let name_size = ids.len();
             if name_size > 2 {
@@ -181,7 +181,7 @@ fn qualified_expr(
         expr,
         session_state.config_options().sql_parser.dialect.as_str(),
     )?;
-    visit_expressions_mut(&mut expr, |e| {
+    let _ = visit_expressions_mut(&mut expr, |e| {
         if let Identifier(id) = e {
             if let Ok((Some(qualifier), _)) =
                 schema.qualified_field_with_unqualified_name(&id.value)
@@ -245,7 +245,7 @@ pub fn to_remote_field(
 
 fn collect_columns(expr: datafusion::logical_expr::sqlparser::ast::Expr) -> Vec<Ident> {
     let mut visited = vec![];
-    visit_expressions(&expr, |e| {
+    let _ = visit_expressions(&expr, |e| {
         if let CompoundIdentifier(ids) = e {
             ids.iter().cloned().for_each(|id| visited.push(id));
         } else if let Identifier(id) = e {
@@ -258,6 +258,7 @@ fn collect_columns(expr: datafusion::logical_expr::sqlparser::ast::Expr) -> Vec<
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
     use std::fs;
     use std::path::PathBuf;
     use std::sync::Arc;
@@ -277,7 +278,8 @@ mod tests {
                 .collect();
         let mdl_json = fs::read_to_string(test_data.as_path()).unwrap();
         let mdl = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
-        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl)?);
+        let analyzed_mdl =
+            Arc::new(AnalyzedWrenMDL::analyze(mdl, Arc::new(HashMap::default()))?);
         let ctx = SessionContext::new();
         let column_rf = analyzed_mdl
             .wren_mdl
@@ -305,7 +307,8 @@ mod tests {
                 .collect();
         let mdl_json = fs::read_to_string(test_data.as_path()).unwrap();
         let mdl = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
-        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl)?);
+        let analyzed_mdl =
+            Arc::new(AnalyzedWrenMDL::analyze(mdl, Arc::new(HashMap::default()))?);
         let ctx = SessionContext::new();
         let column_rf = analyzed_mdl
             .wren_mdl
@@ -354,7 +357,8 @@ mod tests {
                 .collect();
         let mdl_json = fs::read_to_string(test_data.as_path()).unwrap();
         let mdl = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
-        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl)?);
+        let analyzed_mdl =
+            Arc::new(AnalyzedWrenMDL::analyze(mdl, Arc::new(HashMap::default()))?);
         let ctx = SessionContext::new();
         let model = analyzed_mdl.wren_mdl().get_model("customer").unwrap();
         let expr = super::create_wren_expr_for_model(
@@ -374,7 +378,8 @@ mod tests {
                 .collect();
         let mdl_json = fs::read_to_string(test_data.as_path()).unwrap();
         let mdl = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
-        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl)?);
+        let analyzed_mdl =
+            Arc::new(AnalyzedWrenMDL::analyze(mdl, Arc::new(HashMap::default()))?);
         let ctx = SessionContext::new();
         let model = analyzed_mdl.wren_mdl().get_model("customer").unwrap();
         let expr = super::create_remote_expr_for_model(
