@@ -36,6 +36,10 @@ class QueryBigQueryDTO(QueryDTO):
     connection_info: BigQueryConnectionInfo = connection_info_field
 
 
+class QueryAthenaDTO(QueryDTO):
+    connection_info: AthenaConnectionInfo = connection_info_field
+
+
 class QueryCannerDTO(QueryDTO):
     connection_info: ConnectionUrl | CannerConnectionInfo = connection_info_field
 
@@ -95,6 +99,27 @@ class BigQueryConnectionInfo(BaseConnectionInfo):
     )
     credentials: SecretStr = Field(
         description="Base64 encode `credentials.json`", examples=["eyJ..."]
+    )
+
+
+class AthenaConnectionInfo(BaseConnectionInfo):
+    s3_staging_dir: SecretStr = Field(
+        description="S3 staging directory for Athena queries",
+        examples=["s3://my-bucket/athena-staging/"],
+    )
+    aws_access_key_id: SecretStr = Field(
+        description="AWS access key ID", examples=["AKIA..."]
+    )
+    aws_secret_access_key: SecretStr = Field(
+        description="AWS secret access key", examples=["my-secret-key"]
+    )
+    region_name: SecretStr = Field(
+        description="AWS region for Athena", examples=["us-west-2", "us-east-1"]
+    )
+    schema_name: SecretStr = Field(
+        alias="schema_name",
+        description="The database name in Athena",
+        examples=["default"],
     )
 
 
@@ -339,7 +364,8 @@ class GcsFileConnectionInfo(BaseConnectionInfo):
 
 
 ConnectionInfo = (
-    BigQueryConnectionInfo
+    AthenaConnectionInfo
+    | BigQueryConnectionInfo
     | CannerConnectionInfo
     | ConnectionUrl
     | MSSqlConnectionInfo
