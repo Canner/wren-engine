@@ -25,10 +25,10 @@ mod manifest_impl {
     use crate::mdl::manifest::bool_from_int;
     use crate::mdl::manifest::table_reference;
     use manifest_macro::{
-        column, column_level_operator, column_level_security, data_source, join_type, manifest,
-        metric, model, normalized_expr, normalized_expr_type, relationship,
-        row_level_access_control, row_level_operator, row_level_security, session_property,
-        time_grain, time_unit, view,
+        column, column_level_access_control, column_level_operator, column_level_security,
+        data_source, join_type, manifest, metric, model, normalized_expr, normalized_expr_type,
+        relationship, row_level_access_control, row_level_operator, row_level_security,
+        session_property, time_grain, time_unit, view,
     };
     use serde::{Deserialize, Serialize};
     use serde_with::serde_as;
@@ -47,6 +47,7 @@ mod manifest_impl {
     time_grain!(false);
     time_unit!(false);
     row_level_access_control!(false);
+    column_level_access_control!(false);
     session_property!(false);
     row_level_security!(false);
     row_level_operator!(false);
@@ -62,10 +63,10 @@ mod manifest_impl {
     use crate::mdl::manifest::bool_from_int;
     use crate::mdl::manifest::table_reference;
     use manifest_macro::{
-        column, column_level_operator, column_level_security, data_source, join_type, manifest,
-        metric, model, normalized_expr, normalized_expr_type, relationship,
-        row_level_access_control, row_level_operator, row_level_security, session_property,
-        time_grain, time_unit, view,
+        column, column_level_access_control, column_level_operator, column_level_security,
+        data_source, join_type, manifest, metric, model, normalized_expr, normalized_expr_type,
+        relationship, row_level_access_control, row_level_operator, row_level_security,
+        session_property, time_grain, time_unit, view,
     };
     use pyo3::pyclass;
     use serde::{Deserialize, Serialize};
@@ -86,6 +87,7 @@ mod manifest_impl {
     time_unit!(true);
     manifest!(true);
     row_level_access_control!(true);
+    column_level_access_control!(true);
     session_property!(true);
     row_level_security!(true);
     row_level_operator!(true);
@@ -293,6 +295,14 @@ impl Column {
     /// Return the expression of the column
     pub fn expression(&self) -> Option<&str> {
         self.expression.as_deref()
+    }
+
+    pub fn column_level_access_control(&self) -> Option<Arc<ColumnLevelAccessControl>> {
+        if let Some(ref cla) = &self.column_level_access_control {
+            Some(Arc::clone(cla))
+        } else {
+            None
+        }
     }
 }
 
