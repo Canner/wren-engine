@@ -1815,7 +1815,7 @@ mod test {
                     @r"
                 ModelAnalyzeRule
                 caused by
-                Error during planning: Row level access control property session_nation is required, but not found in headers
+                Error during planning: session property session_nation is required, but not found in headers
                 "
                 )
             }
@@ -1903,7 +1903,7 @@ mod test {
                     @r"
                 ModelAnalyzeRule
                 caused by
-                Error during planning: Row level access control property session_user is required, but not found in headers
+                Error during planning: session property session_user is required, but not found in headers
                 "
                 )
             }
@@ -1967,7 +1967,7 @@ mod test {
                     @r"
                 ModelAnalyzeRule
                 caused by
-                Error during planning: Row level access control property session_nation is required, but not found in headers
+                Error during planning: session property session_nation is required, but not found in headers
                 "
                 )
             }
