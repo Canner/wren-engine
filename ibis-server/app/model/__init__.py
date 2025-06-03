@@ -223,6 +223,18 @@ class OracleConnectionInfo(BaseConnectionInfo):
     password: SecretStr | None = Field(
         examples=["password"], description="the password of your database", default=None
     )
+    sid: SecretStr | None = Field(
+        default=None,
+        description="Unique name of an Oracle Instance, used to construct a DSN if provided.",
+    )
+    service_name: SecretStr | None = Field(
+        default=None,
+        description="Oracle service name, used to construct a DSN if provided. Only one of database and service_name should be provided.",
+    )
+    dsn: SecretStr | None = Field(
+        default=None,
+        description="An Oracle Data Source Name. If provided, overrides all other connection arguments except username and password.",
+    )
 
 
 class SnowflakeConnectionInfo(BaseConnectionInfo):

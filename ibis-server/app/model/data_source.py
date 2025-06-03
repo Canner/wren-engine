@@ -189,6 +189,11 @@ class DataSourceExtension(Enum):
             database=info.database.get_secret_value(),
             user=info.user.get_secret_value(),
             password=(info.password and info.password.get_secret_value()),
+            sid=info.sid.get_secret_value() if info.sid else None,
+            service_name=info.service_name.get_secret_value()
+            if info.service_name
+            else None,
+            dsn=info.dsn.get_secret_value() if info.dsn else None,
         )
 
     @staticmethod
