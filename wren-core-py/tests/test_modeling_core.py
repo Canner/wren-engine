@@ -309,9 +309,10 @@ def test_rlac():
     headers = {
         "session_user": "'test_user'",
     }
-    session_context = SessionContext(manifest_str, None)
+    properties_hashable = frozenset(headers.items()) if headers else None
+    session_context = SessionContext(manifest_str, None, properties_hashable)
     sql = "SELECT * FROM my_catalog.my_schema.customer"
-    rewritten_sql = session_context.transform_sql(sql, headers)
+    rewritten_sql = session_context.transform_sql(sql)
     assert (
         rewritten_sql
         == "SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM main.customer AS __source) AS customer) AS customer WHERE customer.c_name = 'test_user'"
@@ -354,9 +355,11 @@ def test_clac():
     headers = {
         "session_level": "2",
     }
-    session_context = SessionContext(manifest_str, None, headers)
+    properties_hashable = frozenset(headers.items()) if headers else None
+
+    session_context = SessionContext(manifest_str, None, properties_hashable)
     sql = "SELECT * FROM my_catalog.my_schema.customer"
-    rewritten_sql = session_context.transform_sql(sql, headers)
+    rewritten_sql = session_context.transform_sql(sql)
     assert (
         rewritten_sql
         == "SELECT customer.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM main.customer AS __source) AS customer) AS customer"

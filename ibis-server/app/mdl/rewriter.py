@@ -122,26 +122,30 @@ class EmbeddedEngineRewriter:
         self, manifest_str: str, sql: str, properties: dict | None = None
     ) -> str:
         try:
-            session_context = get_session_context(manifest_str, self.function_path)
+            processed_properties = self.get_session_properties(properties)
+            session_context = get_session_context(
+                manifest_str, self.function_path, processed_properties
+            )
             return await to_thread.run_sync(
                 session_context.transform_sql,
                 sql,
-                self.get_session_properties(properties),
             )
         except Exception as e:
             raise RewriteError(str(e))
 
-    def get_session_properties(self, properties: dict) -> dict | None:
+    def get_session_properties(self, properties: dict) -> frozenset | None:
         if properties is None:
             return None
         # filter the properties which name starts with "x-wren-variable-"
         # and remove the prefix "x-wren-variable-"
 
-        return {
+        processed_properties = {
             k.replace(X_WREN_VARIABLE_PREFIX, ""): v
             for k, v in properties.items()
             if k.startswith(X_WREN_VARIABLE_PREFIX)
         }
+
+        return frozenset(processed_properties.items())
 
     @staticmethod
     def handle_extract_exception(e: Exception):
