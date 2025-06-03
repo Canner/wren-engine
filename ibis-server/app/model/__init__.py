@@ -211,11 +211,17 @@ class PostgresConnectionInfo(BaseConnectionInfo):
 
 class OracleConnectionInfo(BaseConnectionInfo):
     host: SecretStr = Field(
-        examples=["localhost"], description="the hostname of your database"
+        examples=["localhost"],
+        description="the hostname of your database",
+        default="default",
     )
-    port: SecretStr = Field(examples=[1521], description="the port of your database")
+    port: SecretStr = Field(
+        examples=[1521], description="the port of your database", default="1521"
+    )
     database: SecretStr = Field(
-        examples=["orcl"], description="the database name of your database"
+        examples=["orcl"],
+        description="the database name of your database",
+        default="orcl",
     )
     user: SecretStr = Field(
         examples=["admin"], description="the username of your database"
@@ -223,17 +229,10 @@ class OracleConnectionInfo(BaseConnectionInfo):
     password: SecretStr | None = Field(
         examples=["password"], description="the password of your database", default=None
     )
-    sid: SecretStr | None = Field(
-        default=None,
-        description="Unique name of an Oracle Instance, used to construct a DSN if provided.",
-    )
-    service_name: SecretStr | None = Field(
-        default=None,
-        description="Oracle service name, used to construct a DSN if provided. Only one of database and service_name should be provided.",
-    )
     dsn: SecretStr | None = Field(
         default=None,
         description="An Oracle Data Source Name. If provided, overrides all other connection arguments except username and password.",
+        examples=["localhost:1521/orcl"],
     )
 
 

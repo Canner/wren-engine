@@ -183,17 +183,20 @@ class DataSourceExtension(Enum):
 
     @staticmethod
     def get_oracle_connection(info: OracleConnectionInfo) -> BaseBackend:
+        # if dsn is provided, use it to connect
+        # otherwise, use host, port, database, user, password, and sid
+        if hasattr(info, "dsn") and info.dsn:
+            return ibis.oracle.connect(
+                dsn=info.dsn.get_secret_value(),
+                user=info.user.get_secret_value(),
+                password=(info.password and info.password.get_secret_value()),
+            )
         return ibis.oracle.connect(
             host=info.host.get_secret_value(),
             port=int(info.port.get_secret_value()),
             database=info.database.get_secret_value(),
             user=info.user.get_secret_value(),
             password=(info.password and info.password.get_secret_value()),
-            sid=info.sid.get_secret_value() if info.sid else None,
-            service_name=info.service_name.get_secret_value()
-            if info.service_name
-            else None,
-            dsn=info.dsn.get_secret_value() if info.dsn else None,
         )
 
     @staticmethod
