@@ -2532,7 +2532,9 @@ mod test {
         let analyzed_mdl =
             Arc::new(AnalyzedWrenMDL::analyze(manifest.clone(), headers.clone())?);
 
-        match transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await {
+        match transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
+            .await
+        {
             Err(e) => {
                 assert_snapshot!(
                     e.to_string(),
