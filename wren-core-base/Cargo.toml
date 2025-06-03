@@ -8,7 +8,7 @@ python-binding = ["dep:pyo3"]
 default = []
 
 [dependencies]
-pyo3 = { version = "0.24.1", features = ["extension-module"], optional = true }
+pyo3 = { version = "0.25.0", features = ["extension-module"], optional = true }
 serde = { version = "1.0.201", features = ["derive", "rc"] }
 wren-manifest-macro = { path = "manifest-macro" }
 serde_json = { version = "1.0.117" }
