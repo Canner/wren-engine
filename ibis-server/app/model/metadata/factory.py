@@ -1,4 +1,5 @@
 from app.model.data_source import DataSource
+from app.model.metadata.athena import AthenaMetadata
 from app.model.metadata.bigquery import BigQueryMetadata
 from app.model.metadata.canner import CannerMetadata
 from app.model.metadata.clickhouse import ClickHouseMetadata
@@ -17,6 +18,7 @@ from app.model.metadata.snowflake import SnowflakeMetadata
 from app.model.metadata.trino import TrinoMetadata
 
 mapping = {
+    DataSource.athena: AthenaMetadata,
     DataSource.bigquery: BigQueryMetadata,
     DataSource.canner: CannerMetadata,
     DataSource.clickhouse: ClickHouseMetadata,

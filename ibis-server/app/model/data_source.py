@@ -11,6 +11,7 @@ from google.oauth2 import service_account
 from ibis import BaseBackend
 
 from app.model import (
+    AthenaConnectionInfo,
     BigQueryConnectionInfo,
     CannerConnectionInfo,
     ClickHouseConnectionInfo,
@@ -19,6 +20,7 @@ from app.model import (
     MySqlConnectionInfo,
     OracleConnectionInfo,
     PostgresConnectionInfo,
+    QueryAthenaDTO,
     QueryBigQueryDTO,
     QueryCannerDTO,
     QueryClickHouseDTO,
@@ -40,6 +42,7 @@ from app.model import (
 
 
 class DataSource(StrEnum):
+    athena = auto()
     bigquery = auto()
     canner = auto()
     clickhouse = auto()
@@ -68,6 +71,7 @@ class DataSource(StrEnum):
 
 
 class DataSourceExtension(Enum):
+    athena = QueryAthenaDTO
     bigquery = QueryBigQueryDTO
     canner = QueryCannerDTO
     clickhouse = QueryClickHouseDTO
@@ -96,6 +100,16 @@ class DataSourceExtension(Enum):
             return getattr(self, f"get_{self.name}_connection")(info)
         except KeyError:
             raise NotImplementedError(f"Unsupported data source: {self}")
+
+    @staticmethod
+    def get_athena_connection(info: AthenaConnectionInfo) -> BaseBackend:
+        return ibis.athena.connect(
+            s3_staging_dir=info.s3_staging_dir.get_secret_value(),
+            aws_access_key_id=info.aws_access_key_id.get_secret_value(),
+            aws_secret_access_key=info.aws_secret_access_key.get_secret_value(),
+            region_name=info.region_name.get_secret_value(),
+            schema_name=info.schema_name.get_secret_value(),
+        )
 
     @staticmethod
     def get_bigquery_connection(info: BigQueryConnectionInfo) -> BaseBackend:

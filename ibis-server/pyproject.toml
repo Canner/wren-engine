@@ -11,6 +11,7 @@ python = ">=3.11,<3.12"
 fastapi = { version = "0.115.12", extras = ["standard"] }
 pydantic = "2.10.6"
 ibis-framework = { version = "10.3.1", extras = [
+  "athena",
   "bigquery",
   "clickhouse",
   "mssql",
@@ -66,6 +67,7 @@ asgi-lifespan = "2.1.0"
 [tool.pytest.ini_options]
 addopts = ["--strict-markers"]
 markers = [
+  "athena: mark a test as an athena test",
   "bigquery: mark a test as a bigquery test",
   "canner: mark a test as a canner test",
   "clickhouse: mark a test as a clickhouse test",

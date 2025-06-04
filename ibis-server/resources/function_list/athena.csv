@@ -1,0 +1,10 @@
+function_type,name,return_type,param_names,param_types,description
+scalar,from_base64,varbinary,,varchar,Converts base64 to binary
+scalar,is_finite,boolean,,double or decimal,Tests if value is finite
+scalar,is_infinite,boolean,,double or decimal,Tests if value is infinite
+scalar,is_nan,boolean,,double or decimal,Tests if value is NaN
+scalar,to_base64,varchar,,varbinary,Converts binary to base64
+scalar,try,same_as_input,,any,Returns null if evaluation fails
+scalar,url_decode,varchar,,varchar,Decodes URL encoded string
+scalar,url_encode,varchar,,varchar,URL encodes string
+scalar,word_stem,varchar,,varchar,Returns word stem (English only)
