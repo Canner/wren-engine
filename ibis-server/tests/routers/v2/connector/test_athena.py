@@ -17,6 +17,16 @@ connection_info = {
     "region_name": os.getenv("TEST_ATHENA_REGION_NAME", "ap-northeast-1"),
     "schema_name": "test",
 }
+
+# Manifest for the database create from glue
+glue_connection_info = {
+    "s3_staging_dir": os.getenv("TEST_ATHENA_S3_STAGING_DIR"),
+    "aws_access_key_id": os.getenv("TEST_ATHENA_AWS_ACCESS_KEY_ID"),
+    "aws_secret_access_key": os.getenv("TEST_ATHENA_AWS_SECRET_ACCESS_KEY"),
+    "region_name": os.getenv("TEST_ATHENA_REGION_NAME", "ap-northeast-1"),
+    "schema_name": "wren-engine-glue-test",
+}
+
 manifest = {
     "catalog": "my_catalog",
     "schema": "my_schema",
@@ -80,6 +90,46 @@ async def test_query(client, manifest_str):
         url=f"{base_url}/query",
         json={
             "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT * FROM "Orders" ORDER BY orderkey LIMIT 1',
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["columns"]) == len(manifest["models"][0]["columns"])
+    assert len(result["data"]) == 1
+
+    assert result["data"][0] == [
+        1,
+        36901,
+        "O",
+        "173665.47",
+        "1996-01-02 00:00:00.000000",
+        "1_36901",
+        "2024-01-01 23:59:59.000000",
+        "2024-01-01 23:59:59.000000",
+        None,
+        "616263",
+    ]
+    assert result["dtypes"] == {
+        "orderkey": "int64",
+        "custkey": "int64",
+        "orderstatus": "object",
+        "totalprice": "object",  ### fixme this should be float64
+        "orderdate": "object",
+        "order_cust_key": "object",
+        "timestamp": "object",
+        "timestamptz": "object",
+        "test_null_time": "datetime64[ns]",
+        "bytea_column": "object",
+    }
+
+
+async def test_query_glue_database(client, manifest_str):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": glue_connection_info,  # Use the Glue connection info
             "manifestStr": manifest_str,
             "sql": 'SELECT * FROM "Orders" ORDER BY orderkey LIMIT 1',
         },
