@@ -112,7 +112,6 @@ class AthenaMetadata(Metadata):
             "longtext": RustWrenEngineColumnType.TEXT,
             "enum": RustWrenEngineColumnType.VARCHAR,
             "set": RustWrenEngineColumnType.VARCHAR,
-            # Numeric Types(https://dev.mysql.com/doc/refman/8.4/en/numeric-types.html)
             "bit": RustWrenEngineColumnType.TINYINT,
             "tinyint": RustWrenEngineColumnType.TINYINT,
             "smallint": RustWrenEngineColumnType.SMALLINT,
@@ -128,7 +127,6 @@ class AthenaMetadata(Metadata):
             "double": RustWrenEngineColumnType.DOUBLE,
             "decimal": RustWrenEngineColumnType.DECIMAL,
             "numeric": RustWrenEngineColumnType.NUMERIC,
-            # Date and Time Types(https://dev.mysql.com/doc/refman/8.4/en/date-and-time-types.html)
             "date": RustWrenEngineColumnType.DATE,
             "datetime": RustWrenEngineColumnType.TIMESTAMP,
             "timestamp": RustWrenEngineColumnType.TIMESTAMPTZ,
