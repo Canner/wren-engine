@@ -1,4 +1,5 @@
 import re
+from contextlib import closing
 
 import pandas as pd
 
@@ -44,10 +45,10 @@ class AthenaMetadata(Metadata):
 
         # We need to use raw_sql here because using the sql method causes Ibis to *create  view* first,
         # which does not work with information_schema queries.
-        cursor = self.connection.raw_sql(sql)
-        response = pd.DataFrame(
-            cursor.fetchall(), columns=[col[0] for col in cursor.description]
-        ).to_dict(orient="records")
+        with closing(self.connection.raw_sql(sql)) as cursor:
+            response = pd.DataFrame(
+                cursor.fetchall(), columns=[col[0] for col in cursor.description]
+            ).to_dict(orient="records")
 
         def get_column(row) -> Column:
             return Column(
