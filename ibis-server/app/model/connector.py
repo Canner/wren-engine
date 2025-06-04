@@ -1,5 +1,6 @@
 import base64
 import importlib
+from contextlib import closing
 from functools import cache
 from json import loads
 from typing import Any
@@ -97,7 +98,7 @@ class MSSqlConnector(SimpleConnector):
     def _describe_sql_for_error_message(self, sql: str) -> str:
         tsql = sge.convert(sql).sql("mssql")
         describe_sql = f"SELECT error_message FROM sys.dm_exec_describe_first_result_set({tsql}, NULL, 0)"
-        with self.connection.raw_sql(describe_sql) as cur:
+        with closing(self.connection.raw_sql(describe_sql)) as cur:
             rows = cur.fetchall()
             if rows is None or len(rows) == 0:
                 return "Unknown reason"
@@ -214,8 +215,8 @@ class DuckDBConnector:
 
 @cache
 def _get_pg_type_names(connection: BaseBackend) -> dict[int, str]:
-    cur = connection.raw_sql("SELECT oid, typname FROM pg_type")
-    return dict(cur.fetchall())
+    with closing(connection.raw_sql("SELECT oid, typname FROM pg_type")) as cur:
+        return dict(cur.fetchall())
 
 
 class QueryDryRunError(UnprocessableEntityError):
