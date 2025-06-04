@@ -135,6 +135,7 @@ class DataSourceExtension(Enum):
             database=info.database.get_secret_value(),
             user=info.user.get_secret_value(),
             password=(info.password and info.password.get_secret_value()),
+            **info.kwargs if info.kwargs else dict(),
         )
 
     @classmethod
@@ -177,10 +178,19 @@ class DataSourceExtension(Enum):
             database=info.database.get_secret_value(),
             user=info.user.get_secret_value(),
             password=(info.password and info.password.get_secret_value()),
+            **info.kwargs if info.kwargs else dict(),
         )
 
     @staticmethod
     def get_oracle_connection(info: OracleConnectionInfo) -> BaseBackend:
+        # if dsn is provided, use it to connect
+        # otherwise, use host, port, database, user, password, and sid
+        if hasattr(info, "dsn") and info.dsn:
+            return ibis.oracle.connect(
+                dsn=info.dsn.get_secret_value(),
+                user=info.user.get_secret_value(),
+                password=(info.password and info.password.get_secret_value()),
+            )
         return ibis.oracle.connect(
             host=info.host.get_secret_value(),
             port=int(info.port.get_secret_value()),
@@ -197,6 +207,7 @@ class DataSourceExtension(Enum):
             account=info.account.get_secret_value(),
             database=info.database.get_secret_value(),
             schema=info.sf_schema.get_secret_value(),
+            **info.kwargs if info.kwargs else dict(),
         )
 
     @staticmethod
@@ -208,6 +219,7 @@ class DataSourceExtension(Enum):
             schema=info.trino_schema.get_secret_value(),
             user=(info.user and info.user.get_secret_value()),
             password=(info.password and info.password.get_secret_value()),
+            **info.kwargs if info.kwargs else dict(),
         )
 
     @staticmethod

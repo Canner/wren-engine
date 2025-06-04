@@ -132,3 +132,29 @@ async def test_query_with_connection_url(client, manifest_str, connection_url):
     assert len(result["data"]) == 1
     assert result["data"][0][0] == 1
     assert result["dtypes"] is not None
+
+
+async def test_query_with_dsn(client, manifest_str, connection_info):
+    dsn = f"{connection_info['host']}:{connection_info['port']}/{connection_info['database']}"
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": {
+                "dsn": dsn,
+                "user": connection_info["user"],
+                "password": connection_info["password"],
+            },
+            "manifestStr": manifest_str,
+            "sql": 'SELECT * FROM "Orders" LIMIT 1',
+        },
+        headers={
+            X_WREN_FALLBACK_DISABLE: "true",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    # include one hidden column
+    assert len(result["columns"]) == len(manifest["models"][0]["columns"]) - 1
+    assert len(result["data"]) == 1
+    assert result["data"][0][0] == 1
+    assert result["dtypes"] is not None

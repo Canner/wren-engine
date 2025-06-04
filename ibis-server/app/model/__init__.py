@@ -131,6 +131,9 @@ class ClickHouseConnectionInfo(BaseConnectionInfo):
     password: SecretStr | None = Field(
         description="the password of your database", examples=["password"], default=None
     )
+    kwargs: dict[str, str] | None = Field(
+        description="Client specific keyword arguments", default=None
+    )
 
 
 class MSSqlConnectionInfo(BaseConnectionInfo):
@@ -200,21 +203,36 @@ class PostgresConnectionInfo(BaseConnectionInfo):
     password: SecretStr | None = Field(
         examples=["password"], description="the password of your database", default=None
     )
+    kwargs: dict[str, str] | None = Field(
+        description="Additional keyword arguments to pass to the backend client connection.",
+        default=None,
+    )
 
 
 class OracleConnectionInfo(BaseConnectionInfo):
     host: SecretStr = Field(
-        examples=["localhost"], description="the hostname of your database"
+        examples=["localhost"],
+        description="the hostname of your database",
+        default="localhost",
     )
-    port: SecretStr = Field(examples=[1521], description="the port of your database")
+    port: SecretStr = Field(
+        examples=[1521], description="the port of your database", default="1521"
+    )
     database: SecretStr = Field(
-        examples=["orcl"], description="the database name of your database"
+        examples=["orcl"],
+        description="the database name of your database",
+        default="orcl",
     )
     user: SecretStr = Field(
         examples=["admin"], description="the username of your database"
     )
     password: SecretStr | None = Field(
         examples=["password"], description="the password of your database", default=None
+    )
+    dsn: SecretStr | None = Field(
+        default=None,
+        description="An Oracle Data Source Name. If provided, overrides all other connection arguments except username and password.",
+        examples=["localhost:1521/orcl"],
     )
 
 
@@ -236,6 +254,10 @@ class SnowflakeConnectionInfo(BaseConnectionInfo):
         description="the schema name of your database",
         examples=["myschema"],
     )  # Use `sf_schema` to avoid `schema` shadowing in BaseModel
+    kwargs: dict[str, str] | None = Field(
+        description="Additional arguments passed to the DBAPI connection call.",
+        default=None,
+    )
 
 
 class TrinoConnectionInfo(BaseConnectionInfo):
@@ -256,6 +278,10 @@ class TrinoConnectionInfo(BaseConnectionInfo):
     )
     password: SecretStr | None = Field(
         description="the password of your database", examples=["password"], default=None
+    )
+    kwargs: dict[str, str] | None = Field(
+        description="Additional keyword arguments passed directly to the trino.dbapi.connect API.",
+        default=None,
     )
 
 
