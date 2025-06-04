@@ -213,7 +213,7 @@ class OracleConnectionInfo(BaseConnectionInfo):
     host: SecretStr = Field(
         examples=["localhost"],
         description="the hostname of your database",
-        default="default",
+        default="localhost",
     )
     port: SecretStr = Field(
         examples=[1521], description="the port of your database", default="1521"
