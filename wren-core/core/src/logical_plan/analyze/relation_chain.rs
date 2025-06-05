@@ -6,16 +6,16 @@ use crate::logical_plan::analyze::relation_chain::RelationChain::Start;
 use crate::logical_plan::utils::{
     create_schema, eliminate_ambiguous_columns, rebase_column,
 };
+use crate::mdl;
 use crate::mdl::context::SessionPropertiesRef;
 use crate::mdl::lineage::DatasetLink;
 use crate::mdl::manifest::JoinType;
 use crate::mdl::utils::{qualify_name_from_column_name, quoted};
 use crate::mdl::Dataset;
 use crate::mdl::{AnalyzedWrenMDL, SessionStateRef};
-use crate::{mdl, DataFusionError};
 use datafusion::common::alias::AliasGenerator;
 use datafusion::common::{
-    internal_err, not_impl_err, plan_err, DFSchema, DFSchemaRef, Result,
+    internal_err, not_impl_err, plan_err, DFSchema, DFSchemaRef, DataFusionError, Result,
 };
 use datafusion::common::{plan_datafusion_err, TableReference};
 use datafusion::logical_expr::{
