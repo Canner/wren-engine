@@ -16,13 +16,31 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-use crate::mdl::manifest::{ColumnLevelSecurity, NormalizedExpr, NormalizedExprType};
+use crate::mdl::manifest::{
+    ColumnLevelAccessControl, ColumnLevelSecurity, NormalizedExpr, NormalizedExprType,
+};
 use crate::mdl::ColumnLevelOperator;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 impl ColumnLevelSecurity {
     /// Evaluate the input against the column level security.
+    /// If the type of the input is different from the type of the value, the result is always false except for NOT_EQUALS.
+    pub fn eval(&self, input: &str) -> bool {
+        let input_expr = NormalizedExpr::new(input);
+        match self.operator {
+            ColumnLevelOperator::Equals => input_expr.eq(&self.threshold),
+            ColumnLevelOperator::NotEquals => input_expr.neq(&self.threshold),
+            ColumnLevelOperator::GreaterThan => input_expr.gt(&self.threshold),
+            ColumnLevelOperator::LessThan => input_expr.lt(&self.threshold),
+            ColumnLevelOperator::GreaterThanOrEquals => input_expr.gte(&self.threshold),
+            ColumnLevelOperator::LessThanOrEquals => input_expr.lte(&self.threshold),
+        }
+    }
+}
+
+impl ColumnLevelAccessControl {
+    /// Evaluate the input against the column level access control.
     /// If the type of the input is different from the type of the value, the result is always false except for NOT_EQUALS.
     pub fn eval(&self, input: &str) -> bool {
         let input_expr = NormalizedExpr::new(input);

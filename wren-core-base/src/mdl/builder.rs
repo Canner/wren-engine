@@ -29,6 +29,8 @@ use crate::mdl::{
 };
 use std::sync::Arc;
 
+use super::ColumnLevelAccessControl;
+
 /// A builder for creating a Manifest
 pub struct ManifestBuilder {
     pub manifest: Manifest,
@@ -205,6 +207,7 @@ impl ColumnBuilder {
                 expression: None,
                 rls: None,
                 cls: None,
+                column_level_access_control: None,
             },
         }
     }
@@ -264,6 +267,23 @@ impl ColumnBuilder {
         });
         self
     }
+
+    pub fn column_level_access_control(
+        mut self,
+        name: &str,
+        required_properties: Vec<SessionProperty>,
+        operator: ColumnLevelOperator,
+        threshold: &str,
+    ) -> Self {
+        self.column.column_level_access_control = Some(Arc::new(ColumnLevelAccessControl {
+            name: name.to_string(),
+            required_properties,
+            operator,
+            threshold: NormalizedExpr::new(threshold),
+        }));
+        self
+    }
+
     pub fn build(self) -> Arc<Column> {
         Arc::new(self.column)
     }
@@ -437,6 +457,12 @@ mod test {
             .expression("test")
             .row_level_security("SESSION_STATUS", RowLevelOperator::Equals)
             .column_level_security("SESSION_LEVEL", ColumnLevelOperator::Equals, "'NORMAL'")
+            .column_level_access_control(
+                "rlac",
+                vec![SessionProperty::new_required("session_id")],
+                ColumnLevelOperator::Equals,
+                "'NORMAL'",
+            )
             .build();
 
         let json_str = serde_json::to_string(&expected).unwrap();

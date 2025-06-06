@@ -111,7 +111,8 @@ async fn main() -> datafusion::common::Result<()> {
     );
 
     let sql = "select * from wren.test.documents";
-    let sql = transform_sql_with_ctx(&ctx, analyzed_mdl, &[], properties, sql).await?;
+    let sql =
+        transform_sql_with_ctx(&ctx, analyzed_mdl, &[], properties.into(), sql).await?;
     let df = match ctx.sql(&sql).await {
         Ok(df) => df,
         Err(e) => {

@@ -21,7 +21,7 @@ use datafusion::{
     },
 };
 use wren_core_base::mdl::RowLevelAccessControl;
-use wren_core_base::mdl::{Model, SessionProperty};
+use wren_core_base::mdl::{Column, Model, SessionProperty};
 
 use crate::mdl::{context::SessionPropertiesRef, Dataset, SessionStateRef};
 
@@ -38,7 +38,7 @@ pub fn collect_condition(
         .with_dialect(&dialect)
         .build()?;
     let expr = parser.parse_expr()?;
-    visit_expressions(&expr, |expr| {
+    let _ = visit_expressions(&expr, |expr| {
         // TODO: consider CompoundIdentifier and CompoundFieldAccess
         if let ast::Expr::Identifier(ast::Ident { value, .. }) = expr {
             if !value.starts_with("@") {
@@ -128,7 +128,7 @@ pub fn build_filter_expression(
         .build()?;
     let mut expr = parser.parse_expr()?;
 
-    visit_expressions_mut(&mut expr, |expr| {
+    let _ = visit_expressions_mut(&mut expr, |expr| {
         if let ast::Expr::Identifier(ast::Ident { value, .. }) = expr {
             if value.starts_with("@") {
                 let property_name =
@@ -240,26 +240,68 @@ pub fn validate_rule(
     required_properties: &[SessionProperty],
     headers: &HashMap<String, Option<String>>,
 ) -> Result<bool> {
-    let exists = required_properties.iter().map(|property| {
-        if property.required {
-            if !is_property_present(headers, &property.name) {
-                return plan_err!(
-                    "Row level access control property {} is required, but not found in headers",
-                    property.name
-                );
-            }
-            Ok(true)
-        } else {
-            let exist = is_property_present(headers, &property.name);
-            if exist || property.default_expr.as_ref().is_some_and(|expr| !expr.is_empty()) {
+    let exists = required_properties
+        .iter()
+        .map(|property| {
+            if property.required {
+                if !is_property_present(headers, &property.name) {
+                    return plan_err!(
+                        "session property {} is required, but not found in headers",
+                        property.name
+                    );
+                }
                 Ok(true)
             } else {
-                Ok(false)
+                let exist = is_property_present(headers, &property.name);
+                if exist
+                    || property
+                        .default_expr
+                        .as_ref()
+                        .is_some_and(|expr| !expr.is_empty())
+                {
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
             }
-        }
-    }).collect::<Result<Vec<_>>>()?;
+        })
+        .collect::<Result<Vec<_>>>()?;
 
     Ok(exists.iter().all(|x| *x))
+}
+
+pub(crate) fn validate_clac_rule(
+    column: &Column,
+    properties: &SessionPropertiesRef,
+) -> Result<bool> {
+    let Some(clac) = column.column_level_access_control() else {
+        return Ok(true);
+    };
+
+    if !validate_rule(&clac.required_properties, properties)? {
+        return Ok(true);
+    }
+
+    if clac.required_properties.len() > 1 {
+        return plan_err!(
+            "Only support one required property for column access-control level rule: {}",
+            clac.name
+        );
+    }
+
+    let property = &clac.required_properties[0];
+    let value_opt = properties.get(&property.name);
+
+    match value_opt {
+        Some(Some(value)) => Ok(clac.eval(value)),
+        Some(None) | None => {
+            if let Some(default) = &property.default_expr {
+                Ok(clac.eval(default))
+            } else {
+                Ok(true)
+            }
+        }
+    }
 }
 
 /// Check if the property is present in the headers and not empty
@@ -352,7 +394,7 @@ mod test {
             &build_headers(&[("session_id".to_string(), None)]),
         ) {
             Err(error) => {
-                assert_snapshot!(error.message(), @"Row level access control property session_id is required, but not found in headers");
+                assert_snapshot!(error.message(), @"session property session_id is required, but not found in headers");
             }
             _ => panic!("should be error"),
         }
@@ -362,7 +404,7 @@ mod test {
             &build_headers(&[("session_id".to_string(), Some("".to_string()))]),
         ) {
             Err(error) => {
-                assert_snapshot!(error.message(), @"Row level access control property session_id is required, but not found in headers");
+                assert_snapshot!(error.message(), @"session property session_id is required, but not found in headers");
             }
             _ => panic!("should be error"),
         }
@@ -372,7 +414,7 @@ mod test {
             &build_headers(&[]),
         ) {
             Err(error) => {
-                assert_snapshot!(error.message(), @"Row level access control property session_id is required, but not found in headers");
+                assert_snapshot!(error.message(), @"session property session_id is required, but not found in headers");
             }
             _ => panic!("should be error"),
         }
@@ -487,7 +529,7 @@ mod test {
             ]),
         ) {
             Err(error) => {
-                assert_snapshot!(error.message(), @"Row level access control property session_id is required, but not found in headers");
+                assert_snapshot!(error.message(), @"session property session_id is required, but not found in headers");
             }
             _ => panic!("should be error"),
         }

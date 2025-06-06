@@ -50,7 +50,10 @@ impl RunOpt {
 
     async fn benchmark_query(&self, query_id: usize) -> Result<Vec<QueryResult>> {
         let ctx = SessionContext::new();
-        let mdl = Arc::new(AnalyzedWrenMDL::analyze(tpch_manifest())?);
+        let mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            tpch_manifest(),
+            Arc::new(HashMap::default()),
+        )?);
         let mut millis = vec![];
         // run benchmark
         let mut query_results = vec![];
@@ -62,7 +65,7 @@ impl RunOpt {
                     &ctx,
                     Arc::clone(&mdl),
                     &[],
-                    HashMap::new(),
+                    HashMap::new().into(),
                     query,
                 )
                 .await?;

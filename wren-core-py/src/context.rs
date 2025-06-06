@@ -19,6 +19,8 @@ use crate::errors::CoreError;
 use crate::manifest::to_manifest;
 use crate::remote_functions::PyRemoteFunction;
 use log::debug;
+use pyo3::types::{PyAnyMethods, PyFrozenSet, PyFrozenSetMethods, PyTuple};
+use pyo3::{PyObject, Python};
 use pyo3::{pyclass, pymethods, PyErr, PyResult};
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -45,6 +47,7 @@ use wren_core::{
 pub struct PySessionContext {
     ctx: wren_core::SessionContext,
     mdl: Arc<AnalyzedWrenMDL>,
+    properties: Arc<HashMap<String, Option<String>>>,
     runtime: Arc<Runtime>,
 }
 
@@ -59,6 +62,7 @@ impl Default for PySessionContext {
         Self {
             ctx: wren_core::SessionContext::new(),
             mdl: Arc::new(AnalyzedWrenMDL::default()),
+            properties: Arc::new(HashMap::new()),
             runtime: Arc::new(Runtime::new().unwrap()),
         }
     }
@@ -71,10 +75,11 @@ impl PySessionContext {
     /// if `mdl_base64` is provided, the session context will be created with the given MDL. Otherwise, an empty MDL will be created.
     /// if `remote_functions_path` is provided, the session context will be created with the remote functions defined in the CSV file.
     #[new]
-    #[pyo3(signature = (mdl_base64=None, remote_functions_path=None))]
+    #[pyo3(signature = (mdl_base64=None, remote_functions_path=None, properties=None))]
     pub fn new(
         mdl_base64: Option<&str>,
         remote_functions_path: Option<&str>,
+        properties: Option<PyObject>,
     ) -> PyResult<Self> {
         let remote_functions = Self::read_remote_function_list(remote_functions_path)
             .map_err(CoreError::from)?;
@@ -112,42 +117,81 @@ impl PySessionContext {
             return Ok(Self {
                 ctx,
                 mdl: Arc::new(AnalyzedWrenMDL::default()),
+                properties: Arc::new(HashMap::new()),
                 runtime: Arc::new(runtime),
             });
         };
 
-        let manifest = to_manifest(mdl_base64)?;
+        Python::with_gil(|py| {
+            let properties_map = if let Some(obj) = properties {
+                let obj = obj.as_ref();
+                if obj.is_none(py) {
+                    HashMap::new()
+                } else {
+                    let frozenset = obj.downcast_bound::<PyFrozenSet>(py)?;
+                    let mut map = HashMap::new();
+                    for item in frozenset.iter() {
+                        match item.as_any().clone().downcast_into::<PyTuple>() {
+                            Ok(tuple) => {
+                                if tuple.len()? != 2 {
+                                    return Err(CoreError::new(
+                                        "Properties must be a tuple of (key, value)",
+                                    )
+                                    .into());
+                                }
+                                let key = tuple.get_item(0)?.to_string();
+                                let value = tuple.get_item(1)?.to_string();
+                                map.insert(key, Some(value));
+                            }
+                            Err(_) => {
+                                return Err(CoreError::new(
+                                    "Properties must be a tuple of (key, value)",
+                                )
+                                .into());
+                            }
+                        }
+                    }
+                    map
+                }
+            } else {
+                HashMap::new()
+            };
+            let manifest = to_manifest(mdl_base64)?;
+            let properties_ref = Arc::new(properties_map);
+            let Ok(analyzed_mdl) =
+                AnalyzedWrenMDL::analyze(manifest, Arc::clone(&properties_ref))
+            else {
+                return Err(CoreError::new("Failed to analyze manifest").into());
+            };
 
-        let Ok(analyzed_mdl) = AnalyzedWrenMDL::analyze(manifest) else {
-            return Err(CoreError::new("Failed to analyze manifest").into());
-        };
+            let analyzed_mdl = Arc::new(analyzed_mdl);
 
-        let analyzed_mdl = Arc::new(analyzed_mdl);
+            // the headers won't be used in the context. Provide an empty map.
+            let ctx = runtime
+                .block_on(create_ctx_with_mdl(
+                    &ctx,
+                    Arc::clone(&analyzed_mdl),
+                    Arc::new(HashMap::new()),
+                    false,
+                ))
+                .map_err(CoreError::from)?;
 
-        // the headers won't be used in the context. Provide an empty map.
-        let ctx = runtime
-            .block_on(create_ctx_with_mdl(
-                &ctx,
-                Arc::clone(&analyzed_mdl),
-                Arc::new(HashMap::new()),
-                false,
-            ))
-            .map_err(CoreError::from)?;
-
-        Ok(Self {
-            ctx,
-            mdl: analyzed_mdl,
-            runtime: Arc::new(runtime),
+            Ok(Self {
+                ctx,
+                mdl: analyzed_mdl,
+                runtime: Arc::new(runtime),
+                properties: properties_ref,
+            })
         })
     }
 
     /// Transform the given Wren SQL to the equivalent Planned SQL.
-    #[pyo3(signature = (sql=None, properties=None))]
+    #[pyo3(signature = (sql=None))]
     pub fn transform_sql(
         &self,
         sql: Option<&str>,
-        properties: Option<HashMap<String, Option<String>>>,
     ) -> PyResult<String> {
+        env_logger::try_init().ok();
         let Some(sql) = sql else {
             return Err(CoreError::new("SQL is required").into());
         };
@@ -158,7 +202,7 @@ impl PySessionContext {
                 // the ctx has been initialized when PySessionContext is created
                 // so we can pass the empty array here
                 &[],
-                properties.unwrap_or_default(),
+                Arc::clone(&self.properties),
                 sql,
             ))
             .map_err(|e| PyErr::from(CoreError::from(e)))
@@ -192,7 +236,7 @@ impl PySessionContext {
         if statements.len() != 1 {
             return Err(CoreError::new("Only one statement is allowed").into());
         }
-        visit_statements_mut(&mut statements, |stmt| {
+        let _ = visit_statements_mut(&mut statements, |stmt| {
             if let Statement::Query(q) = stmt {
                 if let Some(limit) = &q.limit {
                     if let Expr::Value(Value::Number(n, is)) = limit {

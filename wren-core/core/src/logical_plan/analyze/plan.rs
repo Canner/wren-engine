@@ -7,8 +7,8 @@ use std::sync::Arc;
 
 use datafusion::arrow::datatypes::Field;
 use datafusion::common::{
-    internal_datafusion_err, internal_err, plan_err, Column, DFSchema, DFSchemaRef,
-    TableReference,
+    internal_datafusion_err, internal_err, plan_err, Column as DFColumn, DFSchema,
+    DFSchemaRef, TableReference,
 };
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::expr::WildcardOptions;
@@ -234,7 +234,7 @@ impl ModelPlanNodeBuilder {
                     .entry(model_ref.clone())
                     .or_default()
                     .insert(OrdExpr::new(expr_plan.clone()));
-                let expr_plan = Expr::Column(Column::from_qualified_name(format!(
+                let expr_plan = Expr::Column(DFColumn::from_qualified_name(format!(
                     "{}.{}",
                     quoted(model_ref.table()),
                     quoted(column.name()),
@@ -293,7 +293,7 @@ impl ModelPlanNodeBuilder {
             self.model_required_fields
                 .entry(model.clone())
                 .or_default()
-                .insert(OrdExpr::new(Expr::Column(Column::from_qualified_name(
+                .insert(OrdExpr::new(Expr::Column(DFColumn::from_qualified_name(
                     format!("{}.{}", quoted(model.table()), quoted(pk_column.name()),),
                 ))));
         }
@@ -403,7 +403,7 @@ impl ModelPlanNodeBuilder {
         !find_aggregate_exprs(&[expr]).is_empty()
     }
 
-    fn is_contain_calculation_source(&self, qualified_column: &Column) -> bool {
+    fn is_contain_calculation_source(&self, qualified_column: &DFColumn) -> bool {
         self.analyzed_wren_mdl
             .lineage()
             .required_fields_map
@@ -424,7 +424,7 @@ impl ModelPlanNodeBuilder {
         &mut self,
         model_ref: TableReference,
         column: Arc<mdl::manifest::Column>,
-        qualified_column: &Column,
+        qualified_column: &DFColumn,
         col_expr: Expr,
     ) -> Result<WrenPlan> {
         let Some(column_graph) = self
@@ -518,7 +518,7 @@ fn is_required_column(expr: &Expr, name: &str) -> bool {
 fn collect_partial_model_plan_for_calculation(
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
     session_state_ref: SessionStateRef,
-    qualified_column: &Column,
+    qualified_column: &DFColumn,
     required_fields: &mut HashMap<TableReference, BTreeSet<OrdExpr>>,
 ) -> Result<()> {
     let Some(set) = analyzed_wren_mdl
@@ -562,7 +562,7 @@ fn collect_partial_model_plan_for_calculation(
 fn collect_partial_model_required_fields(
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
     session_state_ref: SessionStateRef,
-    qualified_column: &Column,
+    qualified_column: &DFColumn,
     required_fields: &mut HashMap<TableReference, BTreeSet<OrdExpr>>,
 ) -> Result<()> {
     let Some(set) = analyzed_wren_mdl
@@ -605,7 +605,7 @@ fn collect_partial_model_required_fields(
 fn collect_model_required_fields(
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
     session_state_ref: SessionStateRef,
-    qualified_column: &Column,
+    qualified_column: &DFColumn,
     required_fields: &mut HashMap<TableReference, BTreeSet<OrdExpr>>,
 ) -> Result<()> {
     let Some(set) = analyzed_wren_mdl
