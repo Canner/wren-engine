@@ -48,6 +48,18 @@ def oracle(request) -> OracleDbContainer:
         # Add table and column comments
         conn.execute(text("COMMENT ON TABLE orders IS 'This is a table comment'"))
         conn.execute(text("COMMENT ON COLUMN orders.o_comment IS 'This is a comment'"))
+
+        # Create a table with NUMBER types
+        conn.execute(
+            text(
+                "CREATE TABLE test_number (id NUMBER, id_p NUMBER(10), id_p_s NUMBER(10, 2))"
+            )
+        )
+        conn.execute(
+            text(
+                "INSERT INTO test_number (id, id_p, id_p_s) VALUES (1, 1234567890, 12345678.12)"
+            )
+        )
     request.addfinalizer(oracle.stop)
     return oracle
 
