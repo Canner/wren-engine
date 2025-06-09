@@ -158,3 +158,50 @@ async def test_query_with_dsn(client, manifest_str, connection_info):
     assert len(result["data"]) == 1
     assert result["data"][0][0] == 1
     assert result["dtypes"] is not None
+
+
+async def test_query_number_scale(client, connection_info):
+    manifest_str = {
+        "catalog": "my_catalog",
+        "schema": "my_schema",
+        "dataSource": "oracle",
+        "models": [
+            {
+                "name": "TestNumber",
+                "tableReference": {
+                    "schema": "SYSTEM",
+                    "table": "TEST_NUMBER",
+                },
+                "columns": [
+                    {"name": "id", "expression": '"ID"', "type": "number"},
+                    {"name": "id_p", "expression": '"ID_P"', "type": "number"},
+                    {"name": "id_p_s", "expression": '"ID_P_S"', "type": "number"},
+                ],
+                "primaryKey": "id",
+            }
+        ],
+    }
+
+    manifest_str_base64 = base64.b64encode(orjson.dumps(manifest_str)).decode("utf-8")
+
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str_base64,
+            "sql": 'SELECT * FROM "TestNumber" LIMIT 1',
+        },
+        headers={
+            X_WREN_FALLBACK_DISABLE: "true",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["columns"]) == len(manifest_str["models"][0]["columns"])
+    assert len(result["data"]) == 1
+    assert result["data"][0] == [1, 1234567890, "12345678.12"]
+    assert result["dtypes"] == {
+        "id": "int64",
+        "id_p": "int64",
+        "id_p_s": "object",
+    }
