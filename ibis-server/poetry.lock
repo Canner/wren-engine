@@ -1819,7 +1819,7 @@ visualization = ["graphviz (>=0.16)"]
 
 [package.source]
 type = "git"
-url = "git@github.com:Canner/ibis.git"
+url = "https://github.com/Canner/ibis.git"
 reference = "canner/10.5.1"
 resolved_reference = "ade48746718885f3c57d689f3f6a2a2cf7a2632f"
 
@@ -5036,4 +5036,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "945022eb3532a1aaf2fe2e53996f73d2f732019d895cb8b9784ce6bca0cafeb8"
+content-hash = "77005a0d3f6a0f98f0926644dac03f2e960bb9567ec4769320111c7223d4619c"
