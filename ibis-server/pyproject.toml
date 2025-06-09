@@ -10,8 +10,7 @@ packages = [{ include = "app" }]
 python = ">=3.11,<3.12"
 fastapi = { version = "0.115.12", extras = ["standard"] }
 pydantic = "2.10.6"
-ibis-framework = { version = "10.3.1", extras = [
-  "athena",
+ibis-framework = { git = "git@github.com:Canner/ibis.git", branch = "canner/10.5.1", extras = [
   "bigquery",
   "clickhouse",
   "mssql",
