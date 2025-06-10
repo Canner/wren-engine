@@ -15,8 +15,10 @@ import base64
 import json
 import os
 from app.model import MySqlConnectionInfo, PostgresConnectionInfo
+from app.util import to_json
 import sqlglot
 import sys
+import pandas as pd
 
 from dotenv import load_dotenv
 from wren_core import SessionContext
@@ -89,7 +91,12 @@ elif data_source == "postgres":
 else:
     raise Exception("Unsupported data source:", data_source)
 
-df = connection.sql(dialect_sql).limit(10).to_pandas()
+df = connection.sql(dialect_sql).limit(10).to_pyarrow().to_pandas(types_mapper=pd.ArrowDtype)
 print("### Result ###")
 print("")
 print(df)
+
+json_str = to_json(df)
+print("### Result JSON ###")
+print("")
+print(json_str)

@@ -76,7 +76,12 @@ class SimpleConnector:
 
     @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
     def query(self, sql: str, limit: int) -> pd.DataFrame:
-        return self.connection.sql(sql).limit(limit).to_pandas()
+        return (
+            self.connection.sql(sql)
+            .limit(limit)
+            .to_pyarrow()
+            .to_pandas(types_mapper=pd.ArrowDtype)
+        )
 
     @tracer.start_as_current_span("connector_dry_run", kind=trace.SpanKind.CLIENT)
     def dry_run(self, sql: str) -> None:
@@ -118,7 +123,12 @@ class CannerConnector:
     def query(self, sql: str, limit: int) -> pd.DataFrame:
         # Canner enterprise does not support `CREATE TEMPORARY VIEW` for getting schema
         schema = self._get_schema(sql)
-        return self.connection.sql(sql, schema=schema).limit(limit).to_pandas()
+        return (
+            self.connection.sql(sql, schema=schema)
+            .limit(limit)
+            .to_pyarrow()
+            .to_pandas(types_mapper=pd.ArrowDtype)
+        )
 
     @tracer.start_as_current_span("connector_dry_run", kind=trace.SpanKind.CLIENT)
     def dry_run(self, sql: str) -> Any:

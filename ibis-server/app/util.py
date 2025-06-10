@@ -4,6 +4,7 @@ import decimal
 
 import orjson
 import pandas as pd
+import pyarrow as pa
 import wren_core
 from fastapi import Header
 from opentelemetry import trace
@@ -35,9 +36,17 @@ def base64_to_dict(base64_str: str) -> dict:
 @tracer.start_as_current_span("to_json", kind=trace.SpanKind.INTERNAL)
 def to_json(df: pd.DataFrame) -> dict:
     for column in df.columns:
-        if is_datetime64_any_dtype(df[column].dtype):
+        if _is_arrow_datetime(df[column]) and is_datetime64_any_dtype(df[column].dtype):
             df[column] = _to_datetime_and_format(df[column])
     return _to_json_obj(df)
+
+
+def _is_arrow_datetime(series: pd.Series) -> bool:
+    dtype = series.dtype
+    if hasattr(dtype, "pyarrow_dtype"):
+        pa_type = dtype.pyarrow_dtype
+        return pa.types.is_timestamp(pa_type)
+    return False
 
 
 def _to_datetime_and_format(series: pd.Series) -> pd.Series:
@@ -87,7 +96,9 @@ def _to_json_obj(df: pd.DataFrame) -> dict:
             default=default,
         )
     )
-    json_obj["dtypes"] = df.dtypes.astype(str).to_dict()
+    json_obj["dtypes"] = df.dtypes.map(
+        lambda x: str(x.pyarrow_dtype) if hasattr(x, "pyarrow_dtype") else str(x)
+    ).to_dict()
     return json_obj
 
 
