@@ -35,10 +35,15 @@ def base64_to_dict(base64_str: str) -> dict:
 
 @tracer.start_as_current_span("to_json", kind=trace.SpanKind.INTERNAL)
 def to_json(df: pd.DataFrame) -> dict:
+    original_dtype = df.dtypes.map(
+        lambda x: str(x.pyarrow_dtype) if hasattr(x, "pyarrow_dtype") else str(x)
+    ).to_dict()
     for column in df.columns:
         if _is_arrow_datetime(df[column]) and is_datetime64_any_dtype(df[column].dtype):
             df[column] = _to_datetime_and_format(df[column])
-    return _to_json_obj(df)
+    json_obj = _to_json_obj(df)
+    json_obj["dtypes"] = original_dtype
+    return json_obj
 
 
 def _is_arrow_datetime(series: pd.Series) -> bool:
@@ -61,7 +66,10 @@ def _to_datetime_and_format(series: pd.Series) -> pd.Series:
 
 def _to_json_obj(df: pd.DataFrame) -> dict:
     def format_value(x):
-        if isinstance(x, float):
+        # Need to handle NaN first, as it can be a float or pd.NA
+        if pd.isna(x):
+            return None
+        elif isinstance(x, float):
             return f"{x:.9g}"
         elif isinstance(x, decimal.Decimal):
             if x == 0:
@@ -96,9 +104,6 @@ def _to_json_obj(df: pd.DataFrame) -> dict:
             default=default,
         )
     )
-    json_obj["dtypes"] = df.dtypes.map(
-        lambda x: str(x.pyarrow_dtype) if hasattr(x, "pyarrow_dtype") else str(x)
-    ).to_dict()
     return json_obj
 
 
@@ -168,3 +173,16 @@ def get_fallback_message(
 
 def safe_strtobool(val: str) -> bool:
     return val.lower() in {"1", "true", "yes", "y"}
+
+
+def pd_to_arrow_schema(df: pd.DataFrame) -> pa.Schema:
+    fields = []
+    for column in df.columns:
+        dtype = df[column].dtype
+        if hasattr(dtype, "pyarrow_dtype"):
+            pa_type = dtype.pyarrow_dtype
+        else:
+            # Fallback to string type for unsupported dtypes
+            pa_type = pa.string()
+        fields.append(pa.field(column, pa_type))
+    return pa.schema(fields)

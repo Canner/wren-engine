@@ -4,6 +4,8 @@ from typing import Any, Optional
 
 import ibis
 import opendal
+import pandas as pd
+import pyarrow as pa
 from loguru import logger
 from opentelemetry import trace
 
@@ -24,10 +26,13 @@ class QueryCacheManager:
         # Check if cache file exists
         if op.exists(cache_file_name):
             try:
-                logger.info(f"\nReading query cache {cache_file_name}\n")
-                cache = ibis.read_parquet(full_path)
-                df = cache.execute()
-                logger.info("\nquery cache to dataframe\n")
+                logger.info(f"Reading query cache {cache_file_name}")
+                df = (
+                    ibis.read_parquet(full_path)
+                    .to_pyarrow()
+                    .to_pandas(types_mapper=pd.ArrowDtype)
+                )
+                logger.info("query cache to dataframe")
                 return df
             except Exception as e:
                 logger.debug(f"Failed to read query cache {e}")
@@ -36,19 +41,30 @@ class QueryCacheManager:
         return None
 
     @tracer.start_as_current_span("set_cache", kind=trace.SpanKind.INTERNAL)
-    def set(self, data_source: str, sql: str, result: Any, info) -> None:
+    def set(
+        self,
+        data_source: str,
+        sql: str,
+        result: pd.DataFrame,
+        info,
+        result_schema: pa.Schema,
+    ) -> None:
         cache_key = self._generate_cache_key(data_source, sql, info)
         cache_file_name = self._set_cache_file_name(cache_key)
         op = self._get_dal_operator()
         full_path = self._get_full_path(cache_file_name)
-
         try:
             # Create cache directory if it doesn't exist
             with op.open(cache_file_name, mode="wb") as file:
-                cache = ibis.memtable(result)
-                logger.info(f"\nWriting query cache to {cache_file_name}\n")
+                cache = pa.Table.from_pandas(
+                    result,
+                    preserve_index=False,
+                    schema=result_schema,
+                )
+                df = cache.to_pandas(types_mapper=pd.ArrowDtype)
+                logger.info(f"Writing query cache to {cache_file_name}")
                 if file.writable():
-                    cache.to_parquet(full_path)
+                    df.to_parquet(full_path)
         except Exception as e:
             logger.debug(f"Failed to write query cache: {e}")
             return

@@ -25,6 +25,7 @@ from app.query_cache import QueryCacheManager
 from app.util import (
     build_context,
     get_fallback_message,
+    pd_to_arrow_schema,
     pushdown_limit,
     set_attribute,
     to_json,
@@ -126,6 +127,9 @@ async def query(
             ).rewrite(sql)
             connector = Connector(data_source, dto.connection_info)
             result = connector.query(rewritten_sql, limit=limit)
+            # the shcmea of the result would be changed after to_json
+            # so we need to keep the original schema for cache first
+            result_schema = pd_to_arrow_schema(result)
             response = ORJSONResponse(to_json(result))
 
             # headers for all non-hit cases
@@ -140,7 +144,11 @@ async def query(
                         )
                     )
                     query_cache_manager.set(
-                        data_source, dto.sql, result, dto.connection_info
+                        data_source,
+                        dto.sql,
+                        result,
+                        dto.connection_info,
+                        result_schema,
                     )
 
                     response.headers["X-Cache-Override"] = "true"
@@ -153,7 +161,11 @@ async def query(
                 # no matter the cache override or not, we need to create cache
                 case (True, False, _):
                     query_cache_manager.set(
-                        data_source, dto.sql, result, dto.connection_info
+                        data_source,
+                        dto.sql,
+                        result,
+                        dto.connection_info,
+                        result_schema,
                     )
                 # case 5~8 Other cases (cache is not enabled)
                 case (False, _, _):
