@@ -4,8 +4,8 @@ from typing import Any, Optional
 
 import ibis
 import opendal
-import pandas as pd
 import pyarrow as pa
+from duckdb import DuckDBPyConnection, connect
 from loguru import logger
 from opentelemetry import trace
 
@@ -27,11 +27,7 @@ class QueryCacheManager:
         if op.exists(cache_file_name):
             try:
                 logger.info(f"Reading query cache {cache_file_name}")
-                df = (
-                    ibis.read_parquet(full_path)
-                    .to_pyarrow()
-                    .to_pandas(types_mapper=pd.ArrowDtype)
-                )
+                df = ibis.read_parquet(full_path).to_pyarrow()
                 logger.info("query cache to dataframe")
                 return df
             except Exception as e:
@@ -45,9 +41,8 @@ class QueryCacheManager:
         self,
         data_source: str,
         sql: str,
-        result: pd.DataFrame,
+        result: pa.Table,
         info,
-        result_schema: pa.Schema,
     ) -> None:
         cache_key = self._generate_cache_key(data_source, sql, info)
         cache_file_name = self._set_cache_file_name(cache_key)
@@ -56,15 +51,10 @@ class QueryCacheManager:
         try:
             # Create cache directory if it doesn't exist
             with op.open(cache_file_name, mode="wb") as file:
-                cache = pa.Table.from_pandas(
-                    result,
-                    preserve_index=False,
-                    schema=result_schema,
-                )
-                df = cache.to_pandas(types_mapper=pd.ArrowDtype)
-                logger.info(f"Writing query cache to {cache_file_name}")
+                con = self._get_duckdb_connection()
+                arrow_table = con.from_arrow(result)
                 if file.writable():
-                    df.to_parquet(full_path)
+                    arrow_table.write_parquet(full_path)
         except Exception as e:
             logger.debug(f"Failed to write query cache: {e}")
             return
@@ -119,3 +109,6 @@ class QueryCacheManager:
     def _get_dal_operator(self) -> Any:
         # Default implementation using local filesystem
         return opendal.Operator("fs", root=self.root)
+
+    def _get_duckdb_connection(self) -> DuckDBPyConnection:
+        return connect()

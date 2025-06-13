@@ -6,6 +6,11 @@ from app.model.data_source import DataSource
 
 X_WREN_FALLBACK_DISABLE = "x-wren-fallback_disable"
 X_WREN_VARIABLE_PREFIX = "x-wren-variable-"
+X_WREN_TIMEZONE = "x-wren-timezone"
+X_CACHE_HIT = "X-Cache-Hit"
+X_CACHE_CREATE_AT = "X-Cache-Create-At"
+X_CACHE_OVERRIDE = "X-Cache-Override"
+X_CACHE_OVERRIDE_AT = "X-Cache-Override-At"
 
 
 # Rebuild model to validate the dto is correct via validation of the pydantic
