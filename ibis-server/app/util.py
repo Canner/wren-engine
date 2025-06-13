@@ -55,6 +55,7 @@ def to_json(df: pa.Table, headers: dict) -> dict:
 
     result = formatted_df.to_dict(orient="split")
     result["dtypes"] = dtypes
+    result.pop("index", None)  # Remove index field from the DuckDB result
     return result
 
 
