@@ -201,9 +201,9 @@ class DuckDBConnector:
             init_duckdb_gcs(self.connection, connection_info)
 
     @tracer.start_as_current_span("duckdb_query", kind=trace.SpanKind.INTERNAL)
-    def query(self, sql: str, limit: int) -> pd.DataFrame:
+    def query(self, sql: str, limit: int) -> pa.Table:
         try:
-            return self.connection.execute(sql).fetch_df().head(limit)
+            return self.connection.execute(sql).fetch_arrow_table().slice(length=limit)
         except IOException as e:
             raise UnprocessableEntityError(f"Failed to execute query: {e!s}")
         except HTTPException as e:
