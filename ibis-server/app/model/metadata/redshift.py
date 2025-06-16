@@ -115,11 +115,11 @@ class RedshiftMetadata(Metadata):
                         row["foreign_table_name"],
                         row["foreign_column_name"],
                     ),
-                    constraintTable=self._format_postgres_compact_table_name(
+                    constraintTable=self._format_redshift_compact_table_name(
                         row["table_schema"], row["table_name"]
                     ),
                     constraintColumn=row["column_name"],
-                    constraintedTable=self._format_postgres_compact_table_name(
+                    constraintedTable=self._format_redshift_compact_table_name(
                         row["foreign_table_schema"], row["foreign_table_name"]
                     ),
                     constraintedColumn=row["foreign_column_name"],
@@ -133,6 +133,11 @@ class RedshiftMetadata(Metadata):
 
     def _format_redshift_compact_table_name(self, schema: str, table: str):
         return f"{schema}.{table}"
+
+    def _format_constraint_name(
+        self, table_name, column_name, foreign_table_name, foreign_column_name
+    ):
+        return f"{table_name}_{column_name}_{foreign_table_name}_{foreign_column_name}"
 
     def _transform_redshift_column_type(self, data_type):
         data_type = data_type.lower()
