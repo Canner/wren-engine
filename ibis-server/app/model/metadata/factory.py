@@ -14,6 +14,7 @@ from app.model.metadata.object_storage import (
 )
 from app.model.metadata.oracle import OracleMetadata
 from app.model.metadata.postgres import PostgresMetadata
+from app.model.metadata.redshift import RedshiftMetadata
 from app.model.metadata.snowflake import SnowflakeMetadata
 from app.model.metadata.trino import TrinoMetadata
 
@@ -26,6 +27,7 @@ mapping = {
     DataSource.mysql: MySQLMetadata,
     DataSource.oracle: OracleMetadata,
     DataSource.postgres: PostgresMetadata,
+    DataSource.redshift: RedshiftMetadata,
     DataSource.trino: TrinoMetadata,
     DataSource.snowflake: SnowflakeMetadata,
     DataSource.local_file: LocalFileMetadata,

@@ -64,6 +64,10 @@ class QueryPostgresDTO(QueryDTO):
     connection_info: ConnectionUrl | PostgresConnectionInfo = connection_info_field
 
 
+class QueryRedshiftDTO(QueryDTO):
+    connection_info: RedshiftConnectionInfo = connection_info_field
+
+
 class QuerySnowflakeDTO(QueryDTO):
     connection_info: SnowflakeConnectionInfo = connection_info_field
 
@@ -261,6 +265,22 @@ class OracleConnectionInfo(BaseConnectionInfo):
     )
 
 
+class RedshiftConnectionInfo(BaseConnectionInfo):
+    host: SecretStr = Field(
+        description="the hostname of your database", examples=["localhost"]
+    )
+    port: SecretStr = Field(description="the port of your database", examples=["5439"])
+    database: SecretStr = Field(
+        description="the database name of your database", examples=["dev"]
+    )
+    user: SecretStr = Field(
+        description="the username of your database", examples=["awsuser"]
+    )
+    password: SecretStr = Field(
+        description="the password of your database", examples=["password"]
+    )
+
+
 class SnowflakeConnectionInfo(BaseConnectionInfo):
     user: SecretStr = Field(
         description="the username of your database", examples=["admin"]
@@ -398,6 +418,7 @@ ConnectionInfo = (
     | MySqlConnectionInfo
     | OracleConnectionInfo
     | PostgresConnectionInfo
+    | RedshiftConnectionInfo
     | SnowflakeConnectionInfo
     | TrinoConnectionInfo
     | LocalFileConnectionInfo

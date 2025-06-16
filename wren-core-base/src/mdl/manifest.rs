@@ -118,6 +118,7 @@ impl Display for DataSource {
             DataSource::MinioFile => write!(f, "MINIO_FILE"),
             DataSource::Oracle => write!(f, "ORACLE"),
             DataSource::Athena => write!(f, "ATHENA"),
+            DataSource::Redshift => write!(f, "REDSHIFT"),
         }
     }
 }

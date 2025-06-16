@@ -1,0 +1,13 @@
+function_type,name,return_type,param_names,param_types,description
+aggregate,every,boolean,,boolean,Equivalent to bool_and
+aggregate,json_object_agg,json,,"text,any",Aggregates pairs into JSON object
+scalar,age,interval,,"timestamp,timestamp",Difference between timestamps
+scalar,extract,numeric,,"text,timestamp",Get subfield from date/time
+scalar,isfinite,boolean,,timestamp,Test for finite date/timestamp/interval
+scalar,mod,numeric,,"numeric,numeric",Modulo (remainder)
+scalar,quote_ident,text,,text,Quote identifier
+scalar,quote_literal,text,,any,Quote literal
+scalar,quote_nullable,text,,any,Quote nullable
+scalar,sign,numeric,,numeric,Sign of number
+scalar,to_json,json,,boolean,Convert to JSON
+scalar,to_number,numeric,,"text,text",Convert string to number

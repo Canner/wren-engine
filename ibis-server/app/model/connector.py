@@ -51,6 +51,8 @@ class Connector:
             DataSource.gcs_file,
         }:
             self._connector = DuckDBConnector(connection_info)
+        elif data_source == DataSource.redshift:
+            self._connector = RedshiftConnector(connection_info)
         else:
             self._connector = SimpleConnector(data_source, connection_info)
 
@@ -211,6 +213,32 @@ class DuckDBConnector:
             raise QueryDryRunError(f"Failed to execute query: {e!s}")
         except HTTPException as e:
             raise QueryDryRunError(f"Failed to execute query: {e!s}")
+
+
+class RedshiftConnector:
+    def __init__(self, connection_info: ConnectionInfo):
+        import redshift_connector
+
+        self.connection = redshift_connector.connect(
+            host=connection_info.host.get_secret_value(),
+            port=connection_info.port.get_secret_value(),
+            database=connection_info.database.get_secret_value(),
+            user=connection_info.user.get_secret_value(),
+            password=connection_info.password.get_secret_value(),
+        )
+
+    @tracer.start_as_current_span("redshift_query", kind=trace.SpanKind.CLIENT)
+    def query(self, sql: str, limit: int) -> pd.DataFrame:
+        with closing(self.connection.cursor()) as cursor:
+            cursor.execute(f"{sql}")
+            cols = [desc[0] for desc in cursor.description]
+            rows = cursor.fetchall()
+            return pd.DataFrame(rows, columns=cols).head(limit)
+
+    @tracer.start_as_current_span("redshift_dry_run", kind=trace.SpanKind.CLIENT)
+    def dry_run(self, sql: str) -> None:
+        with closing(self.connection.cursor()) as cursor:
+            cursor.execute(f"SELECT * FROM ({sql}) AS sub LIMIT 0")
 
 
 @cache
