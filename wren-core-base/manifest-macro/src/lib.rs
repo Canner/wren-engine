@@ -106,6 +106,8 @@ pub fn data_source(python_binding: proc_macro::TokenStream) -> proc_macro::Token
             Oracle,
             #[serde(alias = "athena")]
             Athena,
+            #[serde(alias = "redshift")]
+            Redshift,
         }
     };
     proc_macro::TokenStream::from(expanded)

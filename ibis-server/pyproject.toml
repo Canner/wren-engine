@@ -45,6 +45,7 @@ uvicorn = "^0.34.0"
 gunicorn = "^23.0.0"
 uvicorn-worker = "^0.3.0"
 jinja2 = ">=3.1.6"
+redshift_connector = "2.1.7"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "8.3.5"
@@ -76,6 +77,7 @@ markers = [
   "mysql: mark a test as a mysql test",
   "oracle: mark a test  as a oracle test",
   "postgres: mark a test as a postgres test",
+  "redshift: mark a test as a redshift test",
   "snowflake: mark a test as a snowflake test",
   "trino: mark a test as a trino test",
   "local_file: mark a test as a local file test",
