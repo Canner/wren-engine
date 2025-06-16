@@ -167,21 +167,29 @@ def update_response_headers(response, required_headers: dict):
 
 
 def _formater(field: pa.Field) -> str:
+    column_name = _quote_identifier(field.name)
     if pa.types.is_decimal(field.type) or pa.types.is_floating(field.type):
         return f"""
-        case when {field.name} = 0 then '0'
-        when length(CAST({field.name} AS VARCHAR)) > 15 then format('{{:.9g}}', {field.name})
-        else RTRIM(RTRIM(format('{{:.8f}}', {field.name}), '0'), '.')
-        end as {field.name}"""
+        case when {column_name} = 0 then '0'
+        when length(CAST({column_name} AS VARCHAR)) > 15 then format('{{:.9g}}', {column_name})
+        else RTRIM(RTRIM(format('{{:.8f}}', {column_name}), '0'), '.')
+        end as {column_name}"""
     elif pa.types.is_date(field.type):
-        return f"strftime({field.name}, '%Y-%m-%d') as {field.name}"
+        return f"strftime({column_name}, '%Y-%m-%d') as {column_name}"
     elif pa.types.is_timestamp(field.type):
         if field.type.tz is None:
-            return f"strftime({field.name}, '%Y-%m-%d %H:%M:%S.%f') as {field.name}"
+            return f"strftime({column_name}, '%Y-%m-%d %H:%M:%S.%f') as {column_name}"
         else:
-            return f"strftime({field.name}, '%Y-%m-%d %H:%M:%S.%f %Z') as {field.name}"
+            return (
+                f"strftime({column_name}, '%Y-%m-%d %H:%M:%S.%f %Z') as {column_name}"
+            )
     elif pa.types.is_binary(field.type):
-        return f"to_hex({field.name}) as {field.name}"
+        return f"to_hex({column_name}) as {column_name}"
     elif pa.types.is_interval(field.type):
-        return f"cast({field.name} as varchar) as {field.name}"
-    return field.name
+        return f"cast({column_name} as varchar) as {column_name}"
+    return column_name
+
+
+def _quote_identifier(identifier: str) -> str:
+    identifier = identifier.replace('"', '""')  # Escape double quotes
+    return f'"{identifier}"' if identifier else identifier
