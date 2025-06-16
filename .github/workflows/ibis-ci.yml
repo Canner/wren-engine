@@ -74,7 +74,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
           AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-        run: poetry run pytest -m "not bigquery and not snowflake and not canner and not s3_file and not gcs_file and not athena"
+        run: poetry run pytest -m "not bigquery and not snowflake and not canner and not s3_file and not gcs_file and not athena and not redshift"
       - name: Test bigquery if need
         if: contains(github.event.pull_request.labels.*.name, 'bigquery')
         env:
