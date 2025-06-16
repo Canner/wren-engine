@@ -5,12 +5,12 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>263</version>
+        <version>266</version>
     </parent>
 
     <groupId>io.wren</groupId>
     <artifactId>wren-root</artifactId>
-    <version>0.16.2-SNAPSHOT</version>
+    <version>0.16.3-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>WrenEngine</name>
@@ -349,7 +349,7 @@
             <dependency>
                 <groupId>org.checkerframework</groupId>
                 <artifactId>checker-qual</artifactId>
-                <version>3.49.3</version>
+                <version>3.49.4</version>
             </dependency>
 
             <dependency>
@@ -373,7 +373,7 @@
             <dependency>
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
-                <version>42.7.6</version>
+                <version>42.7.7</version>
             </dependency>
 
             <dependency>
