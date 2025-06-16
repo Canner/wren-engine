@@ -3,6 +3,7 @@ from app.model.connector import Connector
 from app.model.metadata.dto import (
     Column,
     Constraint,
+    ConstraintType,
     RustWrenEngineColumnType,
     Table,
     TableProperties,
@@ -47,7 +48,10 @@ class RedshiftMetadata(Metadata):
             t.table_type IN ('BASE TABLE', 'VIEW')
             AND t.table_schema NOT IN ('information_schema', 'pg_catalog');
         """
-        response = self.connector.query(sql, limit=10000).to_dict(orient="records")
+        # we reuse the connector.query method to execute the SQL
+        # so we have to give a limit to avoid too many rows
+        # the default limit for tables metadata is 500, i think it's a sensible limit
+        response = self.connector.query(sql, limit=500).to_dict(orient="records")
 
         unique_tables = {}
         for row in response:
@@ -81,8 +85,48 @@ class RedshiftMetadata(Metadata):
         return list(unique_tables.values())
 
     def get_constraints(self) -> list[Constraint]:
-        # fixme
-        return []
+        sql = """
+            SELECT
+                tc.table_schema,
+                tc.table_name,
+                kcu.column_name,
+                ccu.table_schema AS foreign_table_schema,
+                ccu.table_name AS foreign_table_name,
+                ccu.column_name AS foreign_column_name
+            FROM information_schema.table_constraints AS tc
+            JOIN information_schema.key_column_usage AS kcu
+                ON tc.constraint_name = kcu.constraint_name
+                AND tc.table_schema = kcu.table_schema
+            JOIN information_schema.constraint_column_usage AS ccu
+                ON ccu.constraint_name = tc.constraint_name
+            WHERE tc.constraint_type = 'FOREIGN KEY'
+            """
+        # we reuse the connector.query method to execute the SQL
+        # so we have to give a limit to avoid too many rows
+        # the default limit for constraints metadata is 500, i think it's a sensible limit
+        response = self.connector.query(sql, limit=500).to_dict(orient="records")
+        constraints = []
+        for row in response:
+            constraints.append(
+                Constraint(
+                    constraintName=self._format_constraint_name(
+                        row["table_name"],
+                        row["column_name"],
+                        row["foreign_table_name"],
+                        row["foreign_column_name"],
+                    ),
+                    constraintTable=self._format_postgres_compact_table_name(
+                        row["table_schema"], row["table_name"]
+                    ),
+                    constraintColumn=row["column_name"],
+                    constraintedTable=self._format_postgres_compact_table_name(
+                        row["foreign_table_schema"], row["foreign_table_name"]
+                    ),
+                    constraintedColumn=row["foreign_column_name"],
+                    constraintType=ConstraintType.FOREIGN_KEY,
+                )
+            )
+        return constraints
 
     def get_version(self) -> str:
         return "AWS Redshift - Follow AWS service versioning"

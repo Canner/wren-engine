@@ -10,6 +10,7 @@ pytestmark = pytest.mark.redshift
 
 base_url = "/v2/connector/redshift"
 
+# The testing database "tpch" only has "orders" table.
 connection_info = {
     "host": os.getenv("TEST_REDSHIFT_HOST"),
     "port": "5439",
@@ -335,10 +336,6 @@ async def test_metadata_list_constraints(client):
         json={"connectionInfo": connection_info},
     )
     assert response.status_code == 200
-
-    result = response.json()
-    # fixme Redshift does support constraints
-    assert len(result) == 0
 
 
 async def test_metadata_db_version(client):

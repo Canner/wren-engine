@@ -227,15 +227,15 @@ class RedshiftConnector:
             password=connection_info.password.get_secret_value(),
         )
 
-    @tracer.start_as_current_span("redshift_query", kind=trace.SpanKind.CLIENT)
+    @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
     def query(self, sql: str, limit: int) -> pd.DataFrame:
         with closing(self.connection.cursor()) as cursor:
-            cursor.execute(f"{sql}")
+            cursor.execute(sql)
             cols = [desc[0] for desc in cursor.description]
             rows = cursor.fetchall()
             return pd.DataFrame(rows, columns=cols).head(limit)
 
-    @tracer.start_as_current_span("redshift_dry_run", kind=trace.SpanKind.CLIENT)
+    @tracer.start_as_current_span("connector_dry_run", kind=trace.SpanKind.CLIENT)
     def dry_run(self, sql: str) -> None:
         with closing(self.connection.cursor()) as cursor:
             cursor.execute(f"SELECT * FROM ({sql}) AS sub LIMIT 0")
