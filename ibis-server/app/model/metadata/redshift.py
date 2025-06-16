@@ -1,0 +1,127 @@
+from app.model import RedshiftConnectionInfo
+from app.model.connector import Connector
+from app.model.metadata.dto import (
+    Column,
+    Constraint,
+    RustWrenEngineColumnType,
+    Table,
+    TableProperties,
+)
+from app.model.metadata.metadata import Metadata
+
+
+class RedshiftMetadata(Metadata):
+    def __init__(self, connection_info: RedshiftConnectionInfo):
+        super().__init__(connection_info)
+        self.connector = Connector("redshift", connection_info)
+
+    def get_table_list(self) -> list[Table]:
+        sql = """
+        SELECT
+            t.table_catalog,
+            t.table_schema,
+            t.table_name,
+            c.column_name,
+            c.data_type,
+            c.is_nullable,
+            c.ordinal_position,
+            obj_description(cls.oid) AS table_comment,
+            col_description(cls.oid, a.attnum) AS column_comment
+        FROM
+            information_schema.tables t
+        JOIN
+            information_schema.columns c
+            ON t.table_schema = c.table_schema
+            AND t.table_name = c.table_name
+        LEFT JOIN
+            pg_class cls
+            ON cls.relname = t.table_name
+            AND cls.relnamespace = (
+                SELECT oid FROM pg_namespace WHERE nspname = t.table_schema
+            )
+        LEFT JOIN
+            pg_attribute a
+            ON a.attrelid = cls.oid
+            AND a.attname = c.column_name
+        WHERE
+            t.table_type IN ('BASE TABLE', 'VIEW')
+            AND t.table_schema NOT IN ('information_schema', 'pg_catalog');
+        """
+        response = self.connector.query(sql, limit=10000).to_dict(orient="records")
+
+        unique_tables = {}
+        for row in response:
+            schema_table = self._format_redshift_compact_table_name(
+                row["table_schema"], row["table_name"]
+            )
+
+            if schema_table not in unique_tables:
+                unique_tables[schema_table] = Table(
+                    name=schema_table,
+                    description=row["table_comment"],
+                    columns=[],
+                    properties=TableProperties(
+                        schema=row["table_schema"],
+                        catalog=row["table_catalog"],
+                        table=row["table_name"],
+                    ),
+                    primaryKey="",
+                )
+
+            unique_tables[schema_table].columns.append(
+                Column(
+                    name=row["column_name"],
+                    type=self._transform_redshift_column_type(row["data_type"]),
+                    notNull=row["is_nullable"].lower() == "no",
+                    description=row["column_comment"],
+                    properties=None,
+                )
+            )
+
+        return list(unique_tables.values())
+
+    def get_constraints(self) -> list[Constraint]:
+        # fixme
+        return []
+
+    def get_version(self) -> str:
+        return "AWS Redshift - Follow AWS service versioning"
+
+    def _format_redshift_compact_table_name(self, schema: str, table: str):
+        return f"{schema}.{table}"
+
+    def _transform_redshift_column_type(self, data_type):
+        data_type = data_type.lower()
+
+        # Redshift doc
+        # https://docs.aws.amazon.com/redshift/latest/dg/c_Supported_data_types.html
+
+        switcher = {
+            "text": RustWrenEngineColumnType.TEXT,
+            "char": RustWrenEngineColumnType.CHAR,
+            "character": RustWrenEngineColumnType.CHAR,
+            "bpchar": RustWrenEngineColumnType.CHAR,
+            "name": RustWrenEngineColumnType.CHAR,
+            "character varying": RustWrenEngineColumnType.VARCHAR,
+            "bigint": RustWrenEngineColumnType.BIGINT,
+            "int": RustWrenEngineColumnType.INTEGER,
+            "integer": RustWrenEngineColumnType.INTEGER,
+            "smallint": RustWrenEngineColumnType.SMALLINT,
+            "real": RustWrenEngineColumnType.REAL,
+            "double precision": RustWrenEngineColumnType.DOUBLE,
+            "numeric": RustWrenEngineColumnType.DECIMAL,
+            "decimal": RustWrenEngineColumnType.DECIMAL,
+            "boolean": RustWrenEngineColumnType.BOOL,
+            "timestamp": RustWrenEngineColumnType.TIMESTAMP,
+            "timestamp without time zone": RustWrenEngineColumnType.TIMESTAMP,
+            "timestamp with time zone": RustWrenEngineColumnType.TIMESTAMPTZ,
+            "date": RustWrenEngineColumnType.DATE,
+            "interval": RustWrenEngineColumnType.INTERVAL,
+            "json": RustWrenEngineColumnType.JSON,
+            "bytea": RustWrenEngineColumnType.BYTEA,
+            "uuid": RustWrenEngineColumnType.UUID,
+            "inet": RustWrenEngineColumnType.INET,
+            "oid": RustWrenEngineColumnType.OID,
+        }
+
+        return switcher.get(data_type, RustWrenEngineColumnType.UNKNOWN)

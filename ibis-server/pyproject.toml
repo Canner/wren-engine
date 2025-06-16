@@ -76,6 +76,7 @@ markers = [
   "mysql: mark a test as a mysql test",
   "oracle: mark a test  as a oracle test",
   "postgres: mark a test as a postgres test",
+  "redshift: mark a test as a redshift test",
   "snowflake: mark a test as a snowflake test",
   "trino: mark a test as a trino test",
   "local_file: mark a test as a local file test",
