@@ -253,7 +253,7 @@ class GcsFileMetadata(ObjectStorageMetadata):
     def _get_connection(self):
         conn = duckdb.connect()
         init_duckdb_gcs(conn, self.connection_info)
-        logger.debug("Initialized duckdb minio")
+        logger.debug("Initialized duckdb gcs")
         return conn
 
     def _get_dal_operator(self):
