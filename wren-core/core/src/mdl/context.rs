@@ -195,7 +195,7 @@ fn optimize_rule_for_unparsing() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
         Arc::new(EliminateCrossJoin::new()),
         // Disable CommonSubexprEliminate to avoid generate invalid projection plan
         // Arc::new(CommonSubexprEliminate::new()),
-        Arc::new(EliminateLimit::new()),
+        // Arc::new(EliminateLimit::new()),
         Arc::new(PropagateEmptyRelation::new()),
         // Must be after PropagateEmptyRelation
         Arc::new(EliminateOneUnion::new()),
