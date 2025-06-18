@@ -250,7 +250,8 @@ class RedshiftConnector:
             cursor.execute(sql)
             cols = [desc[0] for desc in cursor.description]
             rows = cursor.fetchall()
-            return pd.DataFrame(rows, columns=cols).head(limit)
+            df = pd.DataFrame(rows, columns=cols).head(limit)
+            return pa.Table.from_pandas(df)
 
     @tracer.start_as_current_span("connector_dry_run", kind=trace.SpanKind.CLIENT)
     def dry_run(self, sql: str) -> None:
