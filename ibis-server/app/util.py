@@ -43,7 +43,11 @@ def base64_to_dict(base64_str: str) -> dict:
 def to_json(df: pa.Table, headers: dict) -> dict:
     dtypes = {field.name: str(field.type) for field in df.schema}
     if df.num_rows == 0:
-        return {"columns": [field.name for field in df.schema], "data": [], "dtypes": dtypes}
+        return {
+            "columns": [field.name for field in df.schema],
+            "data": [],
+            "dtypes": dtypes,
+        }
 
     formatted_sql = (
         "SELECT " + ", ".join([_formater(field) for field in df.schema]) + " FROM df"
