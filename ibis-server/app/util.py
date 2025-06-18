@@ -79,13 +79,10 @@ def get_timezone_from_offset(offset: str) -> str:
     if offset.startswith("+"):
         offset = offset[1:]  # Remove the leading '+' sign
 
-    sql = f"""
-        SELECT name, utc_offset
-        FROM pg_timezone_names()
-        WHERE utc_offset = '{offset}'
-    """
-
-    first = duckdb.execute(sql).fetchone()
+    first = duckdb.execute(
+        "SELECT name, utc_offset FROM pg_timezone_names() WHERE utc_offset = ?",
+        [offset],
+    ).fetchone()
     if first is None:
         raise ValueError(f"Invalid timezone offset: {offset}")
     return first[0]  # Return the timezone name
