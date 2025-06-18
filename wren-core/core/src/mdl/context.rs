@@ -29,7 +29,6 @@ use datafusion::optimizer::eliminate_duplicated_expr::EliminateDuplicatedExpr;
 use datafusion::optimizer::eliminate_filter::EliminateFilter;
 use datafusion::optimizer::eliminate_group_by_constant::EliminateGroupByConstant;
 use datafusion::optimizer::eliminate_join::EliminateJoin;
-use datafusion::optimizer::eliminate_limit::EliminateLimit;
 use datafusion::optimizer::eliminate_one_union::EliminateOneUnion;
 use datafusion::optimizer::eliminate_outer_join::EliminateOuterJoin;
 use datafusion::optimizer::extract_equijoin_predicate::ExtractEquijoinPredicate;
