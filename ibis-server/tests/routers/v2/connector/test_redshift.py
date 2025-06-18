@@ -19,6 +19,15 @@ connection_info = {
     "password": os.getenv("TEST_REDSHIFT_PASSWORD"),
 }
 
+aws_iam_connection_info = {
+    "cluster_identifier": os.getenv("TEST_REDSHIFT_CLUSTER_ID"),
+    "database": "tpch",
+    "user": os.getenv("TEST_REDSHIFT_USER", "awsuser"),
+    "region": os.getenv("TEST_REDSHIFT_REGION"),
+    "access_key_id": os.getenv("TEST_REDSHIFT_ACCESS_KEY_ID"),
+    "access_key_secret": os.getenv("TEST_REDSHIFT_SECRET_ACCESS_KEY"),
+}
+
 manifest = {
     "catalog": "my_catalog",
     "schema": "my_schema",
@@ -82,6 +91,46 @@ async def test_query(client, manifest_str):
         url=f"{base_url}/query",
         json={
             "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT * FROM "Orders" ORDER BY orderkey LIMIT 1',
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["columns"]) == len(manifest["models"][0]["columns"])
+    assert len(result["data"]) == 1
+
+    assert result["data"][0] == [
+        1,
+        655,
+        "O",
+        "347.61",
+        "2023-05-21",
+        "1_655",
+        "2024-01-01 23:59:59.000000",
+        "2024-01-01 23:59:59.000000 UTC",
+        None,
+        "abc",
+    ]
+    assert result["dtypes"] == {
+        "orderkey": "int64",
+        "custkey": "int64",
+        "orderstatus": "object",
+        "totalprice": "object",
+        "orderdate": "object",
+        "order_cust_key": "object",
+        "timestamp": "object",
+        "timestamptz": "object",
+        "test_null_time": "object",
+        "bytea_column": "object",
+    }
+
+
+async def test_query_with_aws_iam_credential(client, manifest_str):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": aws_iam_connection_info,
             "manifestStr": manifest_str,
             "sql": 'SELECT * FROM "Orders" ORDER BY orderkey LIMIT 1',
         },
