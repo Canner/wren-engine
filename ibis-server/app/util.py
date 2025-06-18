@@ -43,8 +43,7 @@ def base64_to_dict(base64_str: str) -> dict:
 def to_json(df: pa.Table, headers: dict) -> dict:
     dtypes = {field.name: str(field.type) for field in df.schema}
     if df.num_rows == 0:
-        columns = {field.name: [] for field in df.schema}
-        return {"columns": columns, "data": [], "dtypes": dtypes}
+        return {"columns": [field.name for field in df.schema], "data": [], "dtypes": dtypes}
 
     formatted_sql = (
         "SELECT " + ", ".join([_formater(field) for field in df.schema]) + " FROM df"
@@ -67,7 +66,7 @@ def get_duckdb_conn(headers: dict) -> duckdb.DuckDBPyConnection:
         if timezone.startwith("+") or timezone.startswith("-"):
             # If the timezone is an offset, convert it to a named timezone
             timezone = get_timezone_from_offset(timezone)
-        conn.execute(f"SET TimeZone = '{timezone}'")
+        conn.execute("SET TimeZone = ?", [timezone])
     else:
         # Default to UTC if no timezone is provided
         conn.execute("SET TimeZone = 'UTC'")
