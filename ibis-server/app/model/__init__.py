@@ -267,7 +267,7 @@ class OracleConnectionInfo(BaseConnectionInfo):
 
 
 class RedshiftConnectionInfo(BaseConnectionInfo):
-    type: Literal["redshift"] = "redshift"
+    redshift_type: Literal["redshift"] = "redshift"
     host: SecretStr = Field(
         description="the hostname of your database", examples=["localhost"]
     )
@@ -286,7 +286,7 @@ class RedshiftConnectionInfo(BaseConnectionInfo):
 # AWS Redshift IAM Connection Info
 # This class is used to connect to AWS Redshift using IAM authentication.
 class RedshiftIAMConnectionInfo(BaseConnectionInfo):
-    type: Literal["redshift_iam"] = "redshift_iam"
+    redshift_type: Literal["redshift_iam"] = "redshift_iam"
     cluster_identifier: SecretStr = Field(
         description="the hostname of your database", examples=["localhost"]
     )
@@ -309,7 +309,7 @@ class RedshiftIAMConnectionInfo(BaseConnectionInfo):
 
 RedshiftConnectionUnion = Annotated[
     Union[RedshiftConnectionInfo, RedshiftIAMConnectionInfo],
-    Field(discriminator="type"),
+    Field(discriminator="redshift_type"),
 ]
 
 

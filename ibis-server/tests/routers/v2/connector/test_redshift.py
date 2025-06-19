@@ -12,6 +12,7 @@ base_url = "/v2/connector/redshift"
 
 # The testing database "tpch" only has "orders" table.
 connection_info = {
+    "redshift_type": "redshift",
     "host": os.getenv("TEST_REDSHIFT_HOST"),
     "port": "5439",
     "database": "tpch",
@@ -20,6 +21,7 @@ connection_info = {
 }
 
 aws_iam_connection_info = {
+    "redshift_type": "redshift_iam",
     "cluster_identifier": os.getenv("TEST_REDSHIFT_CLUSTER_ID"),
     "database": "tpch",
     "user": os.getenv("TEST_REDSHIFT_USER", "awsuser"),

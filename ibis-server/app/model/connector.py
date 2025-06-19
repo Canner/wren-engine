@@ -23,6 +23,7 @@ from app.model import (
     GcsFileConnectionInfo,
     MinioFileConnectionInfo,
     RedshiftConnectionInfo,
+    RedshiftConnectionUnion,
     RedshiftIAMConnectionInfo,
     S3FileConnectionInfo,
     UnknownIbisError,
@@ -218,7 +219,7 @@ class DuckDBConnector:
 
 
 class RedshiftConnector:
-    def __init__(self, connection_info: ConnectionInfo):
+    def __init__(self, connection_info: RedshiftConnectionUnion):
         import redshift_connector
 
         if isinstance(connection_info, RedshiftIAMConnectionInfo):
