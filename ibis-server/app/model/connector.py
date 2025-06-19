@@ -22,6 +22,9 @@ from app.model import (
     ConnectionInfo,
     GcsFileConnectionInfo,
     MinioFileConnectionInfo,
+    RedshiftConnectionInfo,
+    RedshiftConnectionUnion,
+    RedshiftIAMConnectionInfo,
     S3FileConnectionInfo,
     UnknownIbisError,
     UnprocessableEntityError,
@@ -216,16 +219,29 @@ class DuckDBConnector:
 
 
 class RedshiftConnector:
-    def __init__(self, connection_info: ConnectionInfo):
+    def __init__(self, connection_info: RedshiftConnectionUnion):
         import redshift_connector
 
-        self.connection = redshift_connector.connect(
-            host=connection_info.host.get_secret_value(),
-            port=connection_info.port.get_secret_value(),
-            database=connection_info.database.get_secret_value(),
-            user=connection_info.user.get_secret_value(),
-            password=connection_info.password.get_secret_value(),
-        )
+        if isinstance(connection_info, RedshiftIAMConnectionInfo):
+            self.connection = redshift_connector.connect(
+                iam=True,
+                cluster_identifier=connection_info.cluster_identifier.get_secret_value(),
+                database=connection_info.database.get_secret_value(),
+                db_user=connection_info.user.get_secret_value(),
+                access_key_id=connection_info.access_key_id.get_secret_value(),
+                secret_access_key=connection_info.access_key_secret.get_secret_value(),
+                region=connection_info.region.get_secret_value(),
+            )
+        elif isinstance(connection_info, RedshiftConnectionInfo):
+            self.connection = redshift_connector.connect(
+                host=connection_info.host.get_secret_value(),
+                port=connection_info.port.get_secret_value(),
+                database=connection_info.database.get_secret_value(),
+                user=connection_info.user.get_secret_value(),
+                password=connection_info.password.get_secret_value(),
+            )
+        else:
+            raise ValueError("Invalid Redshift connection_info type")
 
     @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
     def query(self, sql: str, limit: int) -> pd.DataFrame:

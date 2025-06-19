@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from abc import ABC
 from enum import Enum
+from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, Field, SecretStr
 from starlette.status import (
@@ -65,7 +66,7 @@ class QueryPostgresDTO(QueryDTO):
 
 
 class QueryRedshiftDTO(QueryDTO):
-    connection_info: RedshiftConnectionInfo = connection_info_field
+    connection_info: RedshiftConnectionUnion = connection_info_field
 
 
 class QuerySnowflakeDTO(QueryDTO):
@@ -266,6 +267,7 @@ class OracleConnectionInfo(BaseConnectionInfo):
 
 
 class RedshiftConnectionInfo(BaseConnectionInfo):
+    redshift_type: Literal["redshift"] = "redshift"
     host: SecretStr = Field(
         description="the hostname of your database", examples=["localhost"]
     )
@@ -279,6 +281,37 @@ class RedshiftConnectionInfo(BaseConnectionInfo):
     password: SecretStr = Field(
         description="the password of your database", examples=["password"]
     )
+
+
+# AWS Redshift IAM Connection Info
+# This class is used to connect to AWS Redshift using IAM authentication.
+class RedshiftIAMConnectionInfo(BaseConnectionInfo):
+    redshift_type: Literal["redshift_iam"] = "redshift_iam"
+    cluster_identifier: SecretStr = Field(
+        description="the cluster identifier of your Redshift cluster",
+        examples=["my-redshift-cluster"],
+    )
+    database: SecretStr = Field(
+        description="the database name of your database", examples=["dev"]
+    )
+    user: SecretStr = Field(
+        description="the username of your database", examples=["awsuser"]
+    )
+    region: SecretStr = Field(
+        description="the region of your database", examples=["us-west-2"]
+    )
+    access_key_id: SecretStr = Field(
+        description="the access key id of your database", examples=["AKIA..."]
+    )
+    access_key_secret: SecretStr = Field(
+        description="the secret access key of your database", examples=["my-secret-key"]
+    )
+
+
+RedshiftConnectionUnion = Annotated[
+    Union[RedshiftConnectionInfo, RedshiftIAMConnectionInfo],
+    Field(discriminator="redshift_type"),
+]
 
 
 class SnowflakeConnectionInfo(BaseConnectionInfo):
@@ -419,6 +452,7 @@ ConnectionInfo = (
     | OracleConnectionInfo
     | PostgresConnectionInfo
     | RedshiftConnectionInfo
+    | RedshiftIAMConnectionInfo
     | SnowflakeConnectionInfo
     | TrinoConnectionInfo
     | LocalFileConnectionInfo

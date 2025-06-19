@@ -23,6 +23,7 @@ def pytest_collection_modifyitems(items):
 @pytest.fixture(scope="session")
 def connection_info():
     return {
+        "redshift_type": "redshift",
         "host": os.getenv("TEST_REDSHIFT_HOST"),
         "port": "5439",
         "database": "tpch",
