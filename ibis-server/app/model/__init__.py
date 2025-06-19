@@ -288,7 +288,8 @@ class RedshiftConnectionInfo(BaseConnectionInfo):
 class RedshiftIAMConnectionInfo(BaseConnectionInfo):
     redshift_type: Literal["redshift_iam"] = "redshift_iam"
     cluster_identifier: SecretStr = Field(
-        description="the hostname of your database", examples=["localhost"]
+        description="the cluster identifier of your Redshift cluster",
+        examples=["my-redshift-cluster"],
     )
     database: SecretStr = Field(
         description="the database name of your database", examples=["dev"]
