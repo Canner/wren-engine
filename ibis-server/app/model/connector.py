@@ -245,7 +245,7 @@ class RedshiftConnector:
             raise ValueError("Invalid Redshift connection_info type")
 
     @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
-    def query(self, sql: str, limit: int) -> pd.DataFrame:
+    def query(self, sql: str, limit: int) -> pa.Table:
         with closing(self.connection.cursor()) as cursor:
             cursor.execute(sql)
             cols = [desc[0] for desc in cursor.description]
