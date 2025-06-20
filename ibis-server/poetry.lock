@@ -1926,10 +1926,8 @@ description = "The portable Python dataframe library"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
-files = [
-    {file = "ibis_framework-10.6.0-py3-none-any.whl", hash = "sha256:f33b73075710425548f474c60489ac33adee499fa71736a4583f77b21b6f7ab8"},
-    {file = "ibis_framework-10.6.0.tar.gz", hash = "sha256:58dae8c926f4cef611e90e289ce8ff3ff00a06c1be32ecae4d9bede68f806f8a"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 atpublic = ">=2.3"
@@ -1986,6 +1984,12 @@ snowflake = ["numpy (>=1.23.2,<3)", "pandas (>=1.5.3,<3)", "pyarrow (>=10.0.1)",
 sqlite = ["numpy (>=1.23.2,<3)", "pandas (>=1.5.3,<3)", "pyarrow (>=10.0.1)", "pyarrow-hotfix (>=0.4)", "regex (>=2021.7.6)", "rich (>=12.4.4)"]
 trino = ["numpy (>=1.23.2,<3)", "pandas (>=1.5.3,<3)", "pyarrow (>=10.0.1)", "pyarrow-hotfix (>=0.4)", "rich (>=12.4.4)", "trino (>=0.321)"]
 visualization = ["graphviz (>=0.16)"]
+
+[package.source]
+type = "git"
+url = "https://github.com/Canner/ibis.git"
+reference = "canner/10.6.1"
+resolved_reference = "0a73105444f206ab92d35b3b8523faf0f0c60051"
 
 [[package]]
 name = "identify"
@@ -5568,4 +5572,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "4db2887ccc9749740cb32856011fbba5d8f38a2f96c889f632585fc457b9ca4e"
+content-hash = "510f68190b37a75fdda435c780f810f35f981dc7c906634e969a818d28c4f3fa"
