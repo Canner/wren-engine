@@ -6,7 +6,14 @@ from loguru import logger
 from opentelemetry import trace
 from starlette.datastructures import Headers
 
-from app.dependencies import get_wren_headers, verify_query_dto
+from app.dependencies import (
+    X_CACHE_CREATE_AT,
+    X_CACHE_HIT,
+    X_CACHE_OVERRIDE,
+    X_CACHE_OVERRIDE_AT,
+    get_wren_headers,
+    verify_query_dto,
+)
 from app.mdl.java_engine import JavaEngineConnector
 from app.mdl.rewriter import Rewriter
 from app.mdl.substitute import ModelSubstitute
@@ -28,6 +35,7 @@ from app.util import (
     pushdown_limit,
     set_attribute,
     to_json,
+    update_response_headers,
 )
 
 router = APIRouter(prefix="/connector", tags=["connector"])
@@ -107,12 +115,13 @@ async def query(
             )
             cache_hit = cached_result is not None
 
+        cache_headers = {}
         # case 1: cache hit read
         if cache_enable and cache_hit and not override_cache:
             span.add_event("cache hit")
-            response = ORJSONResponse(to_json(cached_result))
-            response.headers["X-Cache-Hit"] = "true"
-            response.headers["X-Cache-Create-At"] = str(
+            result = cached_result
+            cache_headers[X_CACHE_HIT] = "true"
+            cache_headers[X_CACHE_CREATE_AT] = str(
                 query_cache_manager.get_cache_file_timestamp(
                     data_source, dto.sql, dto.connection_info
                 )
@@ -126,25 +135,27 @@ async def query(
             ).rewrite(sql)
             connector = Connector(data_source, dto.connection_info)
             result = connector.query(rewritten_sql, limit=limit)
-            response = ORJSONResponse(to_json(result))
 
             # headers for all non-hit cases
-            response.headers["X-Cache-Hit"] = "false"
+            cache_headers[X_CACHE_HIT] = "false"
 
             match (cache_enable, cache_hit, override_cache):
                 # case 2 cache hit but override cache
                 case (True, True, True):
-                    response.headers["X-Cache-Create-At"] = str(
+                    cache_headers[X_CACHE_CREATE_AT] = str(
                         query_cache_manager.get_cache_file_timestamp(
                             data_source, dto.sql, dto.connection_info
                         )
                     )
                     query_cache_manager.set(
-                        data_source, dto.sql, result, dto.connection_info
+                        data_source,
+                        dto.sql,
+                        result,
+                        dto.connection_info,
                     )
 
-                    response.headers["X-Cache-Override"] = "true"
-                    response.headers["X-Cache-Override-At"] = str(
+                    cache_headers[X_CACHE_OVERRIDE] = "true"
+                    cache_headers[X_CACHE_OVERRIDE_AT] = str(
                         query_cache_manager.get_cache_file_timestamp(
                             data_source, dto.sql, dto.connection_info
                         )
@@ -153,11 +164,16 @@ async def query(
                 # no matter the cache override or not, we need to create cache
                 case (True, False, _):
                     query_cache_manager.set(
-                        data_source, dto.sql, result, dto.connection_info
+                        data_source,
+                        dto.sql,
+                        result,
+                        dto.connection_info,
                     )
                 # case 5~8 Other cases (cache is not enabled)
                 case (False, _, _):
                     pass
+        response = ORJSONResponse(to_json(result, headers))
+        update_response_headers(response, cache_headers)
 
         if is_fallback:
             get_fallback_message(

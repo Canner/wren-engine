@@ -160,7 +160,7 @@ async def test_query(client, manifest_str, mysql: MySqlContainer):
         370,
         "O",
         "172799.49",
-        "1996-01-02 00:00:00.000000",
+        "1996-01-02",
         "1_370",
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000",
@@ -170,14 +170,14 @@ async def test_query(client, manifest_str, mysql: MySqlContainer):
     assert result["dtypes"] == {
         "orderkey": "int32",
         "custkey": "int32",
-        "orderstatus": "object",
-        "totalprice": "object",
-        "orderdate": "object",
-        "order_cust_key": "object",
-        "timestamp": "object",
-        "timestamptz": "object",
-        "test_null_time": "datetime64[ns]",
-        "bytea_column": "object",
+        "orderstatus": "string",
+        "totalprice": "string",
+        "orderdate": "date32[day]",
+        "order_cust_key": "string",
+        "timestamp": "timestamp[us]",
+        "timestamptz": "timestamp[us]",
+        "test_null_time": "timestamp[us]",
+        "bytea_column": "binary",
     }
 
 

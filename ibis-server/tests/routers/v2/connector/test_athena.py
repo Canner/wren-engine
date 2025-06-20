@@ -104,7 +104,7 @@ async def test_query(client, manifest_str):
         36901,
         "O",
         "173665.47",
-        "1996-01-02 00:00:00.000000",
+        "1996-01-02",
         "1_36901",
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000",
@@ -114,14 +114,14 @@ async def test_query(client, manifest_str):
     assert result["dtypes"] == {
         "orderkey": "int64",
         "custkey": "int64",
-        "orderstatus": "object",
-        "totalprice": "object",  ### fixme this should be float64
-        "orderdate": "object",
-        "order_cust_key": "object",
-        "timestamp": "object",
-        "timestamptz": "object",
-        "test_null_time": "datetime64[ns]",
-        "bytea_column": "object",
+        "orderstatus": "string",
+        "totalprice": "decimal128(15, 2)",
+        "orderdate": "date32[day]",
+        "order_cust_key": "string",
+        "timestamp": "timestamp[us]",
+        "timestamptz": "timestamp[us]",
+        "test_null_time": "timestamp[us]",
+        "bytea_column": "binary",
     }
 
 
@@ -144,7 +144,7 @@ async def test_query_glue_database(client, manifest_str):
         36901,
         "O",
         "173665.47",
-        "1996-01-02 00:00:00.000000",
+        "1996-01-02",
         "1_36901",
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000",
@@ -154,14 +154,14 @@ async def test_query_glue_database(client, manifest_str):
     assert result["dtypes"] == {
         "orderkey": "int64",
         "custkey": "int64",
-        "orderstatus": "object",
-        "totalprice": "object",  ### fixme this should be float64
-        "orderdate": "object",
-        "order_cust_key": "object",
-        "timestamp": "object",
-        "timestamptz": "object",
-        "test_null_time": "datetime64[ns]",
-        "bytea_column": "object",
+        "orderstatus": "string",
+        "totalprice": "decimal128(15, 2)",
+        "orderdate": "date32[day]",
+        "order_cust_key": "string",
+        "timestamp": "timestamp[us]",
+        "timestamptz": "timestamp[us]",
+        "test_null_time": "timestamp[us]",
+        "bytea_column": "binary",
     }
 
 

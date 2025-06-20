@@ -112,7 +112,7 @@ async def test_query(client, manifest_str, trino: TrinoContainer):
         370,
         "O",
         "172799.49",
-        "1996-01-02 00:00:00.000000",
+        "1996-01-02",
         "1_370",
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000",
@@ -122,14 +122,14 @@ async def test_query(client, manifest_str, trino: TrinoContainer):
     assert result["dtypes"] == {
         "orderkey": "int64",
         "custkey": "int64",
-        "orderstatus": "object",
-        "totalprice": "float64",
-        "orderdate": "object",
-        "order_cust_key": "object",
-        "timestamp": "object",
-        "timestamptz": "object",
-        "test_null_time": "datetime64[ns]",
-        "bytea_column": "object",
+        "orderstatus": "string",
+        "totalprice": "double",
+        "orderdate": "date32[day]",
+        "order_cust_key": "string",
+        "timestamp": "timestamp[ms]",
+        "timestamptz": "timestamp[ms]",
+        "test_null_time": "timestamp[ms]",
+        "bytea_column": "binary",
     }
 
 

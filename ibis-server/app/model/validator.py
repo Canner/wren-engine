@@ -142,7 +142,7 @@ class Validator:
         )
         try:
             rewritten_sql = await self.rewriter.rewrite(sql)
-            result = self.connector.query(rewritten_sql, limit=1)
+            result = self.connector.query(rewritten_sql, limit=1).to_pandas()
             if not result.get("result").get(0):
                 raise ValidationError(
                     f"Relationship {relationship_name} is not valid: {format_result(result)}"

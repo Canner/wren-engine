@@ -1,5 +1,6 @@
 import base64
 import os
+import time
 
 import orjson
 import pytest
@@ -91,7 +92,7 @@ async def test_query(client, manifest_str):
         370,
         "O",
         "172799.49",
-        "1996-01-02 00:00:00.000000",
+        "1996-01-02",
         "1_370",
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000 UTC",
@@ -101,24 +102,27 @@ async def test_query(client, manifest_str):
     assert result["dtypes"] == {
         "orderkey": "int64",
         "custkey": "int64",
-        "orderstatus": "object",
-        "totalprice": "float64",
-        "orderdate": "object",
-        "order_cust_key": "object",
-        "timestamp": "object",
-        "timestamptz": "object",
-        "test_null_time": "datetime64[ns]",
-        "bytea_column": "object",
+        "orderstatus": "string",
+        "totalprice": "double",
+        "orderdate": "date32[day]",
+        "order_cust_key": "string",
+        "timestamp": "timestamp[us]",
+        "timestamptz": "timestamp[us, tz=UTC]",
+        "test_null_time": "timestamp[us]",
+        "bytea_column": "binary",
     }
 
 
 async def test_query_with_cache(client, manifest_str):
+    # add random timestamp to the query to ensure cache is not hit
+    now = int(time.time())
+    sql = f'SELECT *, {now} FROM "Orders" ORDER BY orderkey LIMIT 1'
     response1 = await client.post(
         url=f"{base_url}/query?cacheEnable=true",
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "Orders" ORDER BY orderkey LIMIT 1',
+            "sql": sql,
         },
     )
 
@@ -131,7 +135,7 @@ async def test_query_with_cache(client, manifest_str):
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "Orders" ORDER BY orderkey LIMIT 1',
+            "sql": sql,
         },
     )
 
@@ -283,7 +287,7 @@ async def test_query_empty_json(client, manifest_str):
     assert response.status_code == 200
     result = response.json()
     assert len(result["data"]) == 0
-    assert result["dtypes"] == {"f0_": "object"}
+    assert result["dtypes"] == {"f0_": "string"}
 
     """Test only the json column is null."""
     response = await client.post(
@@ -299,7 +303,7 @@ async def test_query_empty_json(client, manifest_str):
     assert len(result["data"]) == 1
     assert result["data"][0][0] is None
     assert result["data"][0][1] == 1
-    assert result["dtypes"] == {"f0_": "object", "f1_": "int64"}
+    assert result["dtypes"] == {"f0_": "string", "f1_": "int64"}
 
 
 async def test_interval(client, manifest_str):
@@ -313,8 +317,8 @@ async def test_interval(client, manifest_str):
     )
     assert response.status_code == 200
     result = response.json()
-    assert result["data"][0] == ["112 months 100 days 3600000000 microseconds"]
-    assert result["dtypes"] == {"col": "object"}
+    assert result["data"][0] == ["9 years 4 months 100 days 01:00:00"]
+    assert result["dtypes"] == {"col": "month_day_nano_interval"}
 
 
 async def test_avg_interval(client, manifest_str):
@@ -328,8 +332,8 @@ async def test_avg_interval(client, manifest_str):
     )
     assert response.status_code == 200
     result = response.json()
-    assert result["data"][0] == ["10484 days 32054400000 microseconds"]
-    assert result["dtypes"] == {"col": "object"}
+    assert result["data"][0] == ["10484 days 08:54:14.4"]
+    assert result["dtypes"] == {"col": "month_day_nano_interval"}
 
 
 async def test_custom_datatypes_no_overrides(client, manifest_str):
@@ -345,7 +349,7 @@ async def test_custom_datatypes_no_overrides(client, manifest_str):
     assert response.status_code == 200
     result = response.json()
     assert len(result["data"]) == 0
-    assert result["dtypes"] == {"f0_": "object"}
+    assert result["dtypes"] == {"f0_": "string"}
 
     # Should use back the custom BigQueryType
     response = await client.post(
@@ -358,8 +362,8 @@ async def test_custom_datatypes_no_overrides(client, manifest_str):
     )
     assert response.status_code == 200
     result = response.json()
-    assert result["data"][0] == ["112 months 100 days 3600000000 microseconds"]
-    assert result["dtypes"] == {"col": "object"}
+    assert result["data"][0] == ["9 years 4 months 100 days 01:00:00"]
+    assert result["dtypes"] == {"col": "month_day_nano_interval"}
 
 
 async def test_validate_with_unknown_rule(client, manifest_str):

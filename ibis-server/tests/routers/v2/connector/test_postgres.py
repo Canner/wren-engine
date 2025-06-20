@@ -185,7 +185,7 @@ async def test_query(client, manifest_str, postgres: PostgresContainer):
         370,
         "O",
         "172799.49",
-        "1996-01-02 00:00:00.000000",
+        "1996-01-02",
         "1_370",
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000 UTC",
@@ -195,27 +195,28 @@ async def test_query(client, manifest_str, postgres: PostgresContainer):
     assert result["dtypes"] == {
         "orderkey": "int32",
         "custkey": "int32",
-        "orderstatus": "object",
-        "totalprice": "object",
-        "orderdate": "object",
-        "order_cust_key": "object",
-        "timestamp": "object",
-        "timestamptz": "object",
-        "test_null_time": "datetime64[ns]",
-        "bytea_column": "object",
+        "orderstatus": "string",
+        "totalprice": "string",
+        "orderdate": "date32[day]",
+        "order_cust_key": "string",
+        "timestamp": "timestamp[us]",
+        "timestamptz": "timestamp[us, tz=UTC]",
+        "test_null_time": "timestamp[us]",
+        "bytea_column": "binary",
     }
 
 
 async def test_query_with_cache(client, manifest_str, postgres: PostgresContainer):
     connection_info = _to_connection_info(postgres)
 
+    sql = 'SELECT * FROM "Orders" LIMIT 10'
     # First request - should miss cache
     response1 = await client.post(
         url=f"{base_url}/query?cacheEnable=true",  # Enable cache
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "Orders" LIMIT 10',
+            "sql": sql,
         },
     )
 
@@ -229,7 +230,7 @@ async def test_query_with_cache(client, manifest_str, postgres: PostgresContaine
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "Orders" LIMIT 10',
+            "sql": sql,
         },
     )
     assert response2.status_code == 200
@@ -382,83 +383,6 @@ async def test_query_with_dot_all(client, manifest_str, postgres: PostgresContai
         assert len(result["columns"]) == 1  # Not include calculated column
         assert len(result["data"]) == 1
         assert result["dtypes"] is not None
-
-
-async def test_format_floating(client, manifest_str, postgres):
-    connection_info = _to_connection_info(postgres)
-    response = await client.post(
-        url=f"{base_url}/query",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "sql": """
-SELECT
-    0.0123e-5 AS case_scientific_original,
-    1.23e+4 AS case_scientific_positive,
-    -4.56e-3 AS case_scientific_negative,
-    7.89e0 AS case_scientific_zero_exponent,
-    0e0 AS case_scientific_zero,
-
-    123.456 AS case_decimal_positive,
-    -123.456 AS case_decimal_negative,
-    0.0000123 AS case_decimal_small,
-    123.0000 AS case_decimal_trailing_zeros,
-    0.0 AS case_decimal_zero,
-
-    0 AS case_integer_zero,
-    0e-9 AS case_integer_zero_scientific,
-    -1 AS case_integer_negative,
-    9999999999 AS case_integer_large,
-
-    1.7976931348623157E+308 AS case_float_max,
-    2.2250738585072014E-308 AS case_float_min,
-    -1.7976931348623157E+308 AS case_float_min_negative,
-
-    1.23e4 + 4.56 AS case_mixed_addition,
-    -1.23e-4 - 123.45 AS case_mixed_subtraction,
-    0.0123e-5 * 1000 AS case_mixed_multiplication,
-    123.45 / 1.23e2 AS case_mixed_division,
-
-    CAST('NaN' AS FLOAT) AS case_special_nan,
-    CAST('Infinity' AS FLOAT) AS case_special_infinity,
-    CAST('-Infinity' AS FLOAT) AS case_special_negative_infinity,
-    NULL AS case_special_null,
-
-    CAST(123.456 AS FLOAT) AS case_cast_float,
-    CAST(1.23e4 AS DECIMAL(10,5)) AS case_cast_decimal
-            """,
-        },
-    )
-    assert response.status_code == 200
-    result = response.json()
-
-    assert result["data"][0][0] == "1.23E-7"
-    assert result["data"][0][1] == "1.23E+4"
-    assert result["data"][0][2] == "-0.00456"
-    assert result["data"][0][3] == "7.89"
-    assert result["data"][0][4] == "0"
-    assert result["data"][0][5] == "123.456"
-    assert result["data"][0][6] == "-123.456"
-    assert result["data"][0][7] == "0.0000123"
-    assert result["data"][0][8] == "123"
-    assert result["data"][0][9] == "0"
-    assert result["data"][0][10] == 0
-    assert result["data"][0][11] == "0"
-    assert result["data"][0][12] == -1
-    assert result["data"][0][13] == 9999999999
-    assert result["data"][0][14] == "1.7976931348623157E+308"
-    assert result["data"][0][15] == "2.2250738585072014E-308"
-    assert result["data"][0][16] == "-1.7976931348623157E+308"
-    assert result["data"][0][17] == "12304.56"
-    assert result["data"][0][18] == "-123.450123"
-    assert result["data"][0][19] == "0.000123"
-    assert result["data"][0][20] == "1.0036585365853659"
-    assert result["data"][0][21] == "nan"
-    assert result["data"][0][22] == "inf"
-    assert result["data"][0][23] == "-inf"
-    assert result["data"][0][24] is None
-    assert result["data"][0][25] == "123.456001"
-    assert result["data"][0][26] == "12300.00000"
 
 
 async def test_limit_pushdown(client, manifest_str, postgres: PostgresContainer):

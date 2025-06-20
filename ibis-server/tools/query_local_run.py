@@ -14,9 +14,11 @@
 import base64
 import json
 import os
-from app.model import MySqlConnectionInfo, PostgresConnectionInfo
+from app.model import MySqlConnectionInfo, OracleConnectionInfo, PostgresConnectionInfo
+from app.util import to_json
 import sqlglot
 import sys
+import pandas as pd
 
 from dotenv import load_dotenv
 from wren_core import SessionContext
@@ -86,10 +88,17 @@ elif data_source == "mysql":
 elif data_source == "postgres":
     connection_info = PostgresConnectionInfo.model_validate_json(json.dumps(connection_info))
     connection = DataSourceExtension.get_postgres_connection(connection_info)
+elif data_source == "oracle":
+    connection_info = OracleConnectionInfo.model_validate_json(json.dumps(connection_info))
+    connection = DataSourceExtension.get_oracle_connection(connection_info)
 else:
     raise Exception("Unsupported data source:", data_source)
 
-df = connection.sql(dialect_sql).limit(10).to_pandas()
+df = connection.sql(dialect_sql).limit(10).to_pyarrow()
 print("### Result ###")
 print("")
 print(df)
+json_str = to_json(df, dict())
+print("### Result JSON ###")
+print("")
+print(json_str)

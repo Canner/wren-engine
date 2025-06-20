@@ -180,7 +180,7 @@ async def test_query(client, manifest_str, clickhouse: ClickHouseContainer):
         370,
         "O",
         "172799.49",
-        "1996-01-02 00:00:00.000000",
+        "1996-01-02",
         "1_370",
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000 UTC",
@@ -190,14 +190,14 @@ async def test_query(client, manifest_str, clickhouse: ClickHouseContainer):
     assert result["dtypes"] == {
         "orderkey": "int32",
         "custkey": "int32",
-        "orderstatus": "object",
-        "totalprice": "object",
-        "orderdate": "object",
-        "order_cust_key": "object",
-        "timestamp": "object",
-        "timestamptz": "object",
-        "test_null_time": "object",
-        "bytea_column": "object",
+        "orderstatus": "string",
+        "totalprice": "decimal128(15, 2)",
+        "orderdate": "date32[day]",
+        "order_cust_key": "string",
+        "timestamp": "timestamp[ns]",
+        "timestamptz": "timestamp[ns, tz=UTC]",
+        "test_null_time": "string",
+        "bytea_column": "string",
     }
 
 
@@ -266,7 +266,7 @@ async def test_query_join(client, manifest_str, clickhouse: ClickHouseContainer)
     assert len(result["data"]) == 1
     assert result["data"][0] == ["Customer#000000370"]
     assert result["dtypes"] == {
-        "customer_name": "object",
+        "customer_name": "string",
     }
 
 
@@ -288,7 +288,7 @@ async def test_query_to_one_relationship(
     assert len(result["data"]) == 1
     assert result["data"][0] == ["Customer#000000370"]
     assert result["dtypes"] == {
-        "customer_name": "object",
+        "customer_name": "string",
     }
 
 
@@ -310,7 +310,7 @@ async def test_query_to_many_relationship(
     assert len(result["data"]) == 1
     assert result["data"][0] == ["2860895.79"]
     assert result["dtypes"] == {
-        "totalprice": "object",
+        "totalprice": "decimal128(38, 2)",
     }
 
 
