@@ -66,12 +66,11 @@ manifest = {
                     "expression": "CAST(NULL AS TIMESTAMP)",
                     "type": "timestamp",
                 },
-                # TODO: ibis to pyarrow conversion does not support CLOBs yet
-                # {
-                #     "name": "blob_column",
-                #     "expression": "UTL_RAW.CAST_TO_RAW('abc')",
-                #     "type": "blob",
-                # },
+                {
+                    "name": "blob_column",
+                    "expression": "UTL_RAW.CAST_TO_RAW('abc')",
+                    "type": "blob",
+                },
             ],
             "primaryKey": "orderkey",
         }
@@ -126,40 +125,45 @@ def oracle(request) -> OracleDbContainer:
     orders_schema = {
         "o_orderkey": sqlalchemy.Integer(),
         "o_custkey": sqlalchemy.Integer(),
-        "o_orderstatus": sqlalchemy.String(255),
+        "o_orderstatus": sqlalchemy.Text(),
         "o_totalprice": sqlalchemy.DECIMAL(precision=38, scale=2),
         "o_orderdate": sqlalchemy.Date(),
-        "o_orderpriority": sqlalchemy.String(255),
-        "o_clerk": sqlalchemy.String(255),
+        "o_orderpriority": sqlalchemy.Text(),
+        "o_clerk": sqlalchemy.Text(),
         "o_shippriority": sqlalchemy.Integer(),
-        "o_comment": sqlalchemy.String(255),
+        "o_comment": sqlalchemy.Text(),
     }
     customer_schema = {
         "c_custkey": sqlalchemy.Integer(),
-        "c_name": sqlalchemy.String(255),
-        "c_address": sqlalchemy.String(255),
+        "c_name": sqlalchemy.Text(),
+        "c_address": sqlalchemy.Text(),
         "c_nationkey": sqlalchemy.Integer(),
-        "c_phone": sqlalchemy.String(255),
+        "c_phone": sqlalchemy.Text(),
         "c_acctbal": sqlalchemy.DECIMAL(precision=38, scale=2),
-        "c_mktsegment": sqlalchemy.String(255),
-        "c_comment": sqlalchemy.String(255),
+        "c_mktsegment": sqlalchemy.Text(),
+        "c_comment": sqlalchemy.Text(),
     }
     with engine.begin() as conn:
         # assign dtype to avoid to create CLOB column for text columns
         pd.read_parquet(file_path("resource/tpch/data/orders.parquet")).to_sql(
-            "orders", engine, index=False, dtype=orders_schema
+            "orders",
+            engine,
+            index=False,
+            dtype=orders_schema,
         )
         pd.read_parquet(file_path("resource/tpch/data/customer.parquet")).to_sql(
-            "customer", engine, index=False, dtype=customer_schema
+            "customer",
+            engine,
+            index=False,
+            dtype=customer_schema,
         )
 
-        # TODO: ibis to pyarrow conversion does not support CLOBs yet
         # Create a table with a large CLOB column
-        # large_text = "x" * (1024 * 1024 * 2)  # 2MB
-        # conn.execute(text("CREATE TABLE test_lob (id NUMBER, content CLOB)"))
-        # conn.execute(
-        #     text("INSERT INTO test_lob VALUES (1, :content)"), {"content": large_text}
-        # )
+        large_text = "x" * (1024 * 1024 * 2)  # 2MB
+        conn.execute(text("CREATE TABLE test_lob (id NUMBER, content CLOB)"))
+        conn.execute(
+            text("INSERT INTO test_lob VALUES (1, :content)"), {"content": large_text}
+        )
 
         # Add table and column comments
         conn.execute(text("COMMENT ON TABLE orders IS 'This is a table comment'"))
@@ -192,6 +196,7 @@ async def test_query(client, manifest_str, oracle: OracleDbContainer):
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000 UTC",
         None,
+        "616263",
     ]
     assert result["dtypes"] == {
         "orderkey": "int64",
@@ -203,6 +208,7 @@ async def test_query(client, manifest_str, oracle: OracleDbContainer):
         "timestamp": "timestamp[ns]",
         "timestamptz": "timestamp[ns, tz=UTC]",
         "test_null_time": "timestamp[us]",
+        "blob_column": "binary",
     }
 
 
@@ -427,7 +433,7 @@ async def test_metadata_list_tables(client, oracle: OracleDbContainer):
     assert result["columns"][8] == {
         "name": "O_COMMENT",
         "nestedColumns": None,
-        "type": "VARCHAR",
+        "type": "TEXT",
         "notNull": False,
         "description": "This is a comment",
         "properties": None,

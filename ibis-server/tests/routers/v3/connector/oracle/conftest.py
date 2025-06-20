@@ -32,23 +32,23 @@ def oracle(request) -> OracleDbContainer:
     orders_schema = {
         "o_orderkey": sqlalchemy.Integer(),
         "o_custkey": sqlalchemy.Integer(),
-        "o_orderstatus": sqlalchemy.String(255),
+        "o_orderstatus": sqlalchemy.Text(),
         "o_totalprice": sqlalchemy.DECIMAL(precision=38, scale=2),
         "o_orderdate": sqlalchemy.Date(),
-        "o_orderpriority": sqlalchemy.String(255),
-        "o_clerk": sqlalchemy.String(255),
+        "o_orderpriority": sqlalchemy.Text(),
+        "o_clerk": sqlalchemy.Text(),
         "o_shippriority": sqlalchemy.Integer(),
-        "o_comment": sqlalchemy.String(255),
+        "o_comment": sqlalchemy.Text(),
     }
     customer_schema = {
         "c_custkey": sqlalchemy.Integer(),
-        "c_name": sqlalchemy.String(255),
-        "c_address": sqlalchemy.String(255),
+        "c_name": sqlalchemy.Text(),
+        "c_address": sqlalchemy.Text(),
         "c_nationkey": sqlalchemy.Integer(),
-        "c_phone": sqlalchemy.String(255),
+        "c_phone": sqlalchemy.Text(),
         "c_acctbal": sqlalchemy.DECIMAL(precision=38, scale=2),
-        "c_mktsegment": sqlalchemy.String(255),
-        "c_comment": sqlalchemy.String(255),
+        "c_mktsegment": sqlalchemy.Text(),
+        "c_comment": sqlalchemy.Text(),
     }
     engine = sqlalchemy.create_engine(oracle.get_connection_url())
     with engine.begin() as conn:
