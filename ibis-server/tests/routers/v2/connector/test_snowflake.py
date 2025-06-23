@@ -98,15 +98,15 @@ async def test_query(client, manifest_str):
         None,
     ]
     assert result["dtypes"] == {
-        "orderkey": "int32",
-        "custkey": "int32",
+        "orderkey": "int64",
+        "custkey": "int64",
         "orderstatus": "string",
-        "totalprice": "string",
+        "totalprice": "decimal128(12, 2)",
         "orderdate": "date32[day]",
         "order_cust_key": "string",
-        "timestamp": "timestamp[us]",
-        "timestamptz": "timestamp[us, tz=UTC]",
-        "test_null_time": "timestamp[us]",
+        "timestamp": "timestamp[ns]",
+        "timestamptz": "timestamp[ns, tz=UTC]",
+        "test_null_time": "timestamp[ns]",
     }
 
 
