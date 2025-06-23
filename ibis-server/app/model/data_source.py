@@ -224,9 +224,8 @@ class DataSourceExtension(Enum):
             database=info.database.get_secret_value(),
             schema=info.sf_schema.get_secret_value(),
             warehouse=info.warehouse.get_secret_value(),
-            private_key=info.private_key.get_secret_value() ** info.kwargs
-            if info.kwargs
-            else dict(),
+            private_key=info.private_key.get_secret_value(),
+            **info.kwargs if info.kwargs else dict(),
         )
 
     @staticmethod
