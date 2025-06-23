@@ -318,9 +318,6 @@ class SnowflakeConnectionInfo(BaseConnectionInfo):
     user: SecretStr = Field(
         description="the username of your database", examples=["admin"]
     )
-    password: SecretStr = Field(
-        description="the password of your database", examples=["password"]
-    )
     account: SecretStr = Field(
         description="the account name of your database", examples=["myaccount"]
     )
@@ -332,6 +329,14 @@ class SnowflakeConnectionInfo(BaseConnectionInfo):
         description="the schema name of your database",
         examples=["myschema"],
     )  # Use `sf_schema` to avoid `schema` shadowing in BaseModel
+    warehouse: SecretStr = Field(
+        description="the warehouse name of your database", examples=["COMPUTE_WH"]
+    )
+    private_key: SecretStr | None = Field(
+        description="the private key for key pair authentication",
+        examples=["private_key_content"],
+        default=None,
+    )
     kwargs: dict[str, str] | None = Field(
         description="Additional arguments passed to the DBAPI connection call.",
         default=None,
