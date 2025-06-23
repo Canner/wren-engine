@@ -162,6 +162,34 @@ async def test_query(client, manifest_str, connection_info):
         "dst_utc_minus_4": "timestamp[us, tz=UTC]",
     }
 
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT * FROM wren.public.orders LIMIT 0",
+        },
+        headers={
+            X_WREN_FALLBACK_DISABLE: "true",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["columns"]) == 10
+    assert len(result["data"]) == 0
+    assert result["dtypes"] == {
+        "o_orderkey": "int32",
+        "o_custkey": "int32",
+        "o_orderstatus": "object",
+        "o_totalprice_double": "float64",
+        "o_orderdate": "datetime64[s]",
+        "order_cust_key": "object",
+        "timestamp": "datetime64[ns]",
+        "timestamptz": "datetime64[ns, UTC]",
+        "dst_utc_minus_5": "datetime64[ns, UTC]",
+        "dst_utc_minus_4": "datetime64[ns, UTC]",
+    }
+
 
 async def test_query_with_cache(client, manifest_str, connection_info):
     # First request - should miss cache
