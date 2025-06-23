@@ -1,4 +1,5 @@
 import base64
+import time
 
 import orjson
 import pytest
@@ -82,7 +83,7 @@ async def test_query(client, manifest_str, connection_info):
         1202,
         "F",
         "356711.63",
-        "1992-06-06 00:00:00.000000",
+        "1992-06-06",
         "36485_1202",
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000 UTC",
@@ -92,24 +93,27 @@ async def test_query(client, manifest_str, connection_info):
     assert result["dtypes"] == {
         "o_orderkey": "int64",
         "o_custkey": "int64",
-        "o_orderstatus": "object",
-        "o_totalprice": "float64",
-        "o_orderdate": "object",
-        "order_cust_key": "object",
-        "timestamp": "object",
-        "timestamptz": "object",
-        "dst_utc_minus_5": "object",
-        "dst_utc_minus_4": "object",
+        "o_orderstatus": "string",
+        "o_totalprice": "double",
+        "o_orderdate": "date32[day]",
+        "order_cust_key": "string",
+        "timestamp": "timestamp[us]",
+        "timestamptz": "timestamp[us, tz=UTC]",
+        "dst_utc_minus_5": "timestamp[us, tz=UTC]",
+        "dst_utc_minus_4": "timestamp[us, tz=UTC]",
     }
 
 
 async def test_query_with_cache(client, manifest_str, connection_info):
+    # add random timestamp to the query to ensure cache is not hit
+    now = int(time.time())
+    sql = f"SELECT *, {now} FROM orders ORDER BY o_orderkey LIMIT 1"
     response1 = await client.post(
         url=f"{base_url}/query?cacheEnable=true",
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": "SELECT * FROM wren.public.orders LIMIT 1",
+            "sql": sql,
         },
     )
     assert response1.status_code == 200
@@ -121,7 +125,7 @@ async def test_query_with_cache(client, manifest_str, connection_info):
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": "SELECT * FROM wren.public.orders LIMIT 1",
+            "sql": sql,
         },
     )
 
@@ -294,9 +298,9 @@ async def test_timestamp_func(client, manifest_str, connection_info):
         "1970-01-12 13:46:40.000000 UTC",
     ]
     assert result["dtypes"] == {
-        "millis": "object",
-        "micros": "object",
-        "seconds": "object",
+        "millis": "timestamp[us, tz=UTC]",
+        "micros": "timestamp[us, tz=UTC]",
+        "seconds": "timestamp[us, tz=UTC]",
     }
 
     response = await client.post(

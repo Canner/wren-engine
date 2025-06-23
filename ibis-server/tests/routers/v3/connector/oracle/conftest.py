@@ -29,13 +29,41 @@ def oracle(request) -> OracleDbContainer:
     oracle = OracleDbContainer(
         "gvenzl/oracle-free:23.6-slim-faststart", oracle_password=f"{oracle_password}"
     ).start()
+    orders_schema = {
+        "o_orderkey": sqlalchemy.Integer(),
+        "o_custkey": sqlalchemy.Integer(),
+        "o_orderstatus": sqlalchemy.Text(),
+        "o_totalprice": sqlalchemy.DECIMAL(precision=38, scale=2),
+        "o_orderdate": sqlalchemy.Date(),
+        "o_orderpriority": sqlalchemy.Text(),
+        "o_clerk": sqlalchemy.Text(),
+        "o_shippriority": sqlalchemy.Integer(),
+        "o_comment": sqlalchemy.Text(),
+    }
+    customer_schema = {
+        "c_custkey": sqlalchemy.Integer(),
+        "c_name": sqlalchemy.Text(),
+        "c_address": sqlalchemy.Text(),
+        "c_nationkey": sqlalchemy.Integer(),
+        "c_phone": sqlalchemy.Text(),
+        "c_acctbal": sqlalchemy.DECIMAL(precision=38, scale=2),
+        "c_mktsegment": sqlalchemy.Text(),
+        "c_comment": sqlalchemy.Text(),
+    }
     engine = sqlalchemy.create_engine(oracle.get_connection_url())
     with engine.begin() as conn:
+        # assign dtype to avoid to create CLOB column for text columns
         pd.read_parquet(file_path("resource/tpch/data/orders.parquet")).to_sql(
-            "orders", engine, index=False
+            "orders",
+            engine,
+            index=False,
+            dtype=orders_schema,
         )
         pd.read_parquet(file_path("resource/tpch/data/customer.parquet")).to_sql(
-            "customer", engine, index=False
+            "customer",
+            engine,
+            index=False,
+            dtype=customer_schema,
         )
 
         # Create a table with a large CLOB column

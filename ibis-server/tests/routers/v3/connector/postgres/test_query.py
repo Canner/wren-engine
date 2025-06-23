@@ -3,7 +3,7 @@ import base64
 import orjson
 import pytest
 
-from app.dependencies import X_WREN_VARIABLE_PREFIX
+from app.dependencies import X_WREN_FALLBACK_DISABLE, X_WREN_VARIABLE_PREFIX
 from tests.routers.v3.connector.postgres.conftest import base_url
 
 manifest = {
@@ -142,7 +142,7 @@ async def test_query(client, manifest_str, connection_info):
         370,
         "O",
         "172799.49",
-        "1996-01-02 00:00:00.000000",
+        "1996-01-02",
         "1_370",
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000 UTC",
@@ -152,14 +152,14 @@ async def test_query(client, manifest_str, connection_info):
     assert result["dtypes"] == {
         "o_orderkey": "int32",
         "o_custkey": "int32",
-        "o_orderstatus": "object",
-        "o_totalprice_double": "float64",
-        "o_orderdate": "object",
-        "order_cust_key": "object",
-        "timestamp": "object",
-        "timestamptz": "object",
-        "dst_utc_minus_5": "object",
-        "dst_utc_minus_4": "object",
+        "o_orderstatus": "string",
+        "o_totalprice_double": "double",
+        "o_orderdate": "date32[day]",
+        "order_cust_key": "string",
+        "timestamp": "timestamp[us]",
+        "timestamptz": "timestamp[us, tz=UTC]",
+        "dst_utc_minus_5": "timestamp[us, tz=UTC]",
+        "dst_utc_minus_4": "timestamp[us, tz=UTC]",
     }
 
 
@@ -433,7 +433,7 @@ async def test_query_to_many_calculation(client, manifest_str, connection_info):
     result = response.json()
     assert len(result["columns"]) == 1
     assert len(result["data"]) == 1
-    assert result["dtypes"] == {"sum_totalprice": "float64"}
+    assert result["dtypes"] == {"sum_totalprice": "double"}
 
     response = await client.post(
         url=f"{base_url}/query",
@@ -447,7 +447,7 @@ async def test_query_to_many_calculation(client, manifest_str, connection_info):
     result = response.json()
     assert len(result["columns"]) == 1
     assert len(result["data"]) == 1
-    assert result["dtypes"] == {"sum_totalprice": "float64"}
+    assert result["dtypes"] == {"sum_totalprice": "double"}
 
     response = await client.post(
         url=f"{base_url}/query",
@@ -461,7 +461,7 @@ async def test_query_to_many_calculation(client, manifest_str, connection_info):
     result = response.json()
     assert len(result["columns"]) == 2
     assert len(result["data"]) == 1
-    assert result["dtypes"] == {"c_name": "object", "sum_totalprice": "float64"}
+    assert result["dtypes"] == {"c_name": "string", "sum_totalprice": "double"}
 
     response = await client.post(
         url=f"{base_url}/query",
@@ -475,7 +475,7 @@ async def test_query_to_many_calculation(client, manifest_str, connection_info):
     result = response.json()
     assert len(result["columns"]) == 2
     assert len(result["data"]) == 1
-    assert result["dtypes"] == {"c_custkey": "int32", "sum_totalprice": "float64"}
+    assert result["dtypes"] == {"c_custkey": "int32", "sum_totalprice": "double"}
 
 
 @pytest.mark.skip(reason="Datafusion does not implement filter yet")
@@ -586,3 +586,82 @@ async def test_clac_query(client, manifest_str, connection_info):
     result = response.json()
     assert len(result["data"]) == 1
     assert len(result["data"][0]) == 2
+
+
+async def test_format_floating(client, manifest_str, connection_info):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": """
+SELECT
+    0.0123e-5 AS case_scientific_original,
+    1.23e+4 AS case_scientific_positive,
+    -4.56e-3 AS case_scientific_negative,
+    7.89e0 AS case_scientific_zero_exponent,
+    0e0 AS case_scientific_zero,
+
+    123.456 AS case_decimal_positive,
+    -123.456 AS case_decimal_negative,
+    0.0000123 AS case_decimal_small,
+    123.0000 AS case_decimal_trailing_zeros,
+    0.0 AS case_decimal_zero,
+
+    0 AS case_integer_zero,
+    0e-9 AS case_integer_zero_scientific,
+    -1 AS case_integer_negative,
+    9999999999 AS case_integer_large,
+
+    1.23e4 + 4.56 AS case_mixed_addition,
+    -1.23e-4 - 123.45 AS case_mixed_subtraction,
+    0.0123e-5 * 1000 AS case_mixed_multiplication,
+    123.45 / 1.23e2 AS case_mixed_division,
+
+    CAST('NaN' AS FLOAT) AS case_special_nan,
+    CAST('Infinity' AS FLOAT) AS case_special_infinity,
+    CAST('-Infinity' AS FLOAT) AS case_special_negative_infinity,
+    NULL AS case_special_null,
+
+    CAST(123.456 AS FLOAT) AS case_cast_float,
+    CAST(1.23e4 AS DECIMAL(10,5)) AS case_cast_decimal,
+    CAST(1.234e+14 AS DECIMAL(20,0)) AS show_float,
+    CAST(1.234e+15 AS DECIMAL(20,0)) AS show_exponent,
+    CAST(1.123456789 AS DECIMAL(20,9)) AS round_to_9_decimal_places,
+    CAST(0.123456789123456789 AS DECIMAL(20,18)) AS round_to_18_decimal_places
+            """,
+        },
+        headers={
+            X_WREN_FALLBACK_DISABLE: "true",  # Disable fallback to DuckDB
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert result["data"][0][0] == "0.00000012"
+    assert result["data"][0][1] == "12300"
+    assert result["data"][0][2] == "-0.00456"
+    assert result["data"][0][3] == "7.89"
+    assert result["data"][0][4] == "0"
+    assert result["data"][0][5] == "123.456"
+    assert result["data"][0][6] == "-123.456"
+    assert result["data"][0][7] == "0.0000123"
+    assert result["data"][0][8] == "123"
+    assert result["data"][0][9] == "0"
+    assert result["data"][0][10] == 0
+    assert result["data"][0][11] == "0"
+    assert result["data"][0][12] == -1
+    assert result["data"][0][13] == 9999999999
+    assert result["data"][0][14] == "12304.56"
+    assert result["data"][0][15] == "-123.450123"
+    assert result["data"][0][16] == "0.000123"
+    assert result["data"][0][17] == "1.00365854"
+    assert result["data"][0][18] is None
+    assert result["data"][0][19] == "inf"
+    assert result["data"][0][20] == "-inf"
+    assert result["data"][0][21] is None
+    assert result["data"][0][22] == "123.45600128"
+    assert result["data"][0][23] == "12300"
+    assert result["data"][0][24] == "123400000000000"
+    assert result["data"][0][25] == "1.234e+15"
+    assert result["data"][0][26] == "1.12345679"
+    assert result["data"][0][27] == "0.123456789"

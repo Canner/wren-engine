@@ -1,11 +1,12 @@
 import base64
-import datetime
-import decimal
 
+import duckdb
 import orjson
 import pandas as pd
+import pyarrow as pa
 import wren_core
 from fastapi import Header
+from loguru import logger
 from opentelemetry import trace
 from opentelemetry.baggage.propagation import W3CBaggagePropagator
 from opentelemetry.context import Context
@@ -15,9 +16,15 @@ from opentelemetry.trace import (
     set_span_in_context,
 )
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
-from pandas.core.dtypes.common import is_datetime64_any_dtype
 from starlette.datastructures import Headers
 
+from app.dependencies import (
+    X_CACHE_CREATE_AT,
+    X_CACHE_HIT,
+    X_CACHE_OVERRIDE,
+    X_CACHE_OVERRIDE_AT,
+    X_WREN_TIMEZONE,
+)
 from app.model.data_source import DataSource
 
 tracer = trace.get_tracer(__name__)
@@ -33,79 +40,55 @@ def base64_to_dict(base64_str: str) -> dict:
 
 
 @tracer.start_as_current_span("to_json", kind=trace.SpanKind.INTERNAL)
-def to_json(df: pd.DataFrame) -> dict:
-    for column in df.columns:
-        if is_datetime64_any_dtype(df[column].dtype):
-            df[column] = _to_datetime_and_format(df[column])
-    return _to_json_obj(df)
+def to_json(df: pa.Table, headers: dict) -> dict:
+    dtypes = {field.name: str(field.type) for field in df.schema}
+    if df.num_rows == 0:
+        return {
+            "columns": [field.name for field in df.schema],
+            "data": [],
+            "dtypes": dtypes,
+        }
 
-
-def _to_datetime_and_format(series: pd.Series) -> pd.Series:
-    return series.apply(
-        lambda d: d.strftime(
-            "%Y-%m-%d %H:%M:%S.%f" + (" %Z" if series.dt.tz is not None else "")
-        )
-        if not pd.isnull(d)
-        else d
+    formatted_sql = (
+        "SELECT " + ", ".join([_formater(field) for field in df.schema]) + " FROM df"
     )
+    logger.debug(f"formmated_sql: {formatted_sql}")
+    conn = get_duckdb_conn(headers)
+    formatted_df = conn.execute(formatted_sql).fetch_df()
+
+    result = formatted_df.to_dict(orient="split")
+    result["dtypes"] = dtypes
+    result.pop("index", None)  # Remove index field from the DuckDB result
+    return result
 
 
-def _to_json_obj(df: pd.DataFrame) -> dict:
-    def format_value(x):
-        if isinstance(x, float):
-            return f"{x:.9g}"
-        elif isinstance(x, decimal.Decimal):
-            if x == 0:
-                return "0"
-            else:
-                return x
-        else:
-            return x
+def get_duckdb_conn(headers: dict) -> duckdb.DuckDBPyConnection:
+    """Get a DuckDB connection with the provided headers."""
+    conn = duckdb.connect()
+    if X_WREN_TIMEZONE in headers:
+        timezone = headers[X_WREN_TIMEZONE]
+        if timezone.startwith("+") or timezone.startswith("-"):
+            # If the timezone is an offset, convert it to a named timezone
+            timezone = get_timezone_from_offset(timezone)
+        conn.execute("SET TimeZone = ?", [timezone])
+    else:
+        # Default to UTC if no timezone is provided
+        conn.execute("SET TimeZone = 'UTC'")
 
-    data = df.map(format_value).to_dict(orient="split", index=False)
-
-    def default(obj):
-        if pd.isna(obj):
-            return None
-        if isinstance(obj, decimal.Decimal):
-            return str(obj)
-        if isinstance(obj, (bytes, bytearray)):
-            return obj.hex()
-        if isinstance(obj, pd.tseries.offsets.DateOffset):
-            return _date_offset_to_str(obj)
-        if isinstance(obj, datetime.timedelta):
-            return str(obj)
-        # Add handling for any remaining LOB objects
-        if hasattr(obj, "read"):  # Check if object is LOB-like
-            return str(obj)
-        raise TypeError
-
-    json_obj = orjson.loads(
-        orjson.dumps(
-            data,
-            option=orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_SERIALIZE_UUID,
-            default=default,
-        )
-    )
-    json_obj["dtypes"] = df.dtypes.astype(str).to_dict()
-    return json_obj
+    return conn
 
 
-def _date_offset_to_str(offset: pd.tseries.offsets.DateOffset) -> str:
-    parts = []
-    units = [
-        "months",
-        "days",
-        "microseconds",
-        "nanoseconds",
-    ]
+def get_timezone_from_offset(offset: str) -> str:
+    if offset.startswith("+"):
+        offset = offset[1:]  # Remove the leading '+' sign
 
-    for unit in units:
-        value = getattr(offset, unit, 0)
-        if value:
-            parts.append(f"{value} {unit if value > 1 else unit.rstrip('s')}")
-
-    return " ".join(parts)
+    first = duckdb.execute(
+        "SELECT name, utc_offset FROM pg_timezone_names() WHERE utc_offset = ?",
+        [offset],
+    ).fetchone()
+    if first is None:
+        raise ValueError(f"Invalid timezone offset: {offset}")
+    return first[0]  # Return the timezone name
 
 
 def build_context(headers: Header) -> Context:
@@ -157,3 +140,56 @@ def get_fallback_message(
 
 def safe_strtobool(val: str) -> bool:
     return val.lower() in {"1", "true", "yes", "y"}
+
+
+def pd_to_arrow_schema(df: pd.DataFrame) -> pa.Schema:
+    fields = []
+    for column in df.columns:
+        dtype = df[column].dtype
+        if hasattr(dtype, "pyarrow_dtype"):
+            pa_type = dtype.pyarrow_dtype
+        else:
+            # Fallback to string type for unsupported dtypes
+            pa_type = pa.string()
+        fields.append(pa.field(column, pa_type))
+    return pa.schema(fields)
+
+
+def update_response_headers(response, required_headers: dict):
+    if X_CACHE_HIT in required_headers:
+        response.headers[X_CACHE_HIT] = required_headers[X_CACHE_HIT]
+    if X_CACHE_CREATE_AT in required_headers:
+        response.headers[X_CACHE_CREATE_AT] = required_headers[X_CACHE_CREATE_AT]
+    if X_CACHE_OVERRIDE in required_headers:
+        response.headers[X_CACHE_OVERRIDE] = required_headers[X_CACHE_OVERRIDE]
+    if X_CACHE_OVERRIDE_AT in required_headers:
+        response.headers[X_CACHE_OVERRIDE_AT] = required_headers[X_CACHE_OVERRIDE_AT]
+
+
+def _formater(field: pa.Field) -> str:
+    column_name = _quote_identifier(field.name)
+    if pa.types.is_decimal(field.type) or pa.types.is_floating(field.type):
+        return f"""
+        case when {column_name} = 0 then '0'
+        when length(CAST({column_name} AS VARCHAR)) > 15 then format('{{:.9g}}', {column_name})
+        else RTRIM(RTRIM(format('{{:.8f}}', {column_name}), '0'), '.')
+        end as {column_name}"""
+    elif pa.types.is_date(field.type):
+        return f"strftime({column_name}, '%Y-%m-%d') as {column_name}"
+    elif pa.types.is_timestamp(field.type):
+        if field.type.tz is None:
+            return f"strftime({column_name}, '%Y-%m-%d %H:%M:%S.%f') as {column_name}"
+        else:
+            return (
+                f"strftime({column_name}, '%Y-%m-%d %H:%M:%S.%f %Z') as {column_name}"
+            )
+    elif pa.types.is_binary(field.type):
+        return f"to_hex({column_name}) as {column_name}"
+    elif pa.types.is_interval(field.type):
+        return f"cast({column_name} as varchar) as {column_name}"
+    return column_name
+
+
+def _quote_identifier(identifier: str) -> str:
+    identifier = identifier.replace('"', '""')  # Escape double quotes
+    return f'"{identifier}"' if identifier else identifier

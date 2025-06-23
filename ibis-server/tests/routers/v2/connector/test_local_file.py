@@ -107,16 +107,16 @@ async def test_query(client, manifest_str, connection_info):
         370,
         "O",
         "172799.49",
-        "1996-01-02 00:00:00.000000",
+        "1996-01-02",
         "1_370",
     ]
     assert result["dtypes"] == {
         "orderkey": "int32",
         "custkey": "int32",
-        "orderstatus": "object",
-        "totalprice": "float64",
-        "orderdate": "object",
-        "order_cust_key": "object",
+        "orderstatus": "string",
+        "totalprice": "decimal128(15, 2)",
+        "orderdate": "date32[day]",
+        "order_cust_key": "string",
     }
 
 
@@ -154,7 +154,7 @@ async def test_query_calculated_field(client, manifest_str, connection_info):
     ]
     assert result["dtypes"] == {
         "custkey": "int32",
-        "sum_totalprice": "float64",
+        "sum_totalprice": "decimal128(38, 2)",
     }
 
 

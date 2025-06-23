@@ -10,6 +10,7 @@ import ibis.expr.datatypes as dt
 import ibis.expr.schema as sch
 import ibis.formats
 import pandas as pd
+import pyarrow as pa
 import sqlglot.expressions as sge
 from duckdb import HTTPException, IOException
 from google.cloud import bigquery
@@ -59,7 +60,7 @@ class Connector:
         else:
             self._connector = SimpleConnector(data_source, connection_info)
 
-    def query(self, sql: str, limit: int) -> pd.DataFrame:
+    def query(self, sql: str, limit: int) -> pa.Table:
         return self._connector.query(sql, limit)
 
     def dry_run(self, sql: str) -> None:
@@ -75,8 +76,8 @@ class SimpleConnector:
         self.connection = self.data_source.get_connection(connection_info)
 
     @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
-    def query(self, sql: str, limit: int) -> pd.DataFrame:
-        return self.connection.sql(sql).limit(limit).to_pandas()
+    def query(self, sql: str, limit: int) -> pa.Table:
+        return self.connection.sql(sql).limit(limit).to_pyarrow()
 
     @tracer.start_as_current_span("connector_dry_run", kind=trace.SpanKind.CLIENT)
     def dry_run(self, sql: str) -> None:
@@ -118,7 +119,7 @@ class CannerConnector:
     def query(self, sql: str, limit: int) -> pd.DataFrame:
         # Canner enterprise does not support `CREATE TEMPORARY VIEW` for getting schema
         schema = self._get_schema(sql)
-        return self.connection.sql(sql, schema=schema).limit(limit).to_pandas()
+        return self.connection.sql(sql, schema=schema).limit(limit).to_pyarrow()
 
     @tracer.start_as_current_span("connector_dry_run", kind=trace.SpanKind.CLIENT)
     def dry_run(self, sql: str) -> Any:
@@ -146,7 +147,7 @@ class BigQueryConnector(SimpleConnector):
         super().__init__(DataSource.bigquery, connection_info)
         self.connection_info = connection_info
 
-    def query(self, sql: str, limit: int) -> pd.DataFrame:
+    def query(self, sql: str, limit: int) -> pa.Table:
         try:
             return super().query(sql, limit)
         except ValueError as e:
@@ -200,9 +201,9 @@ class DuckDBConnector:
             init_duckdb_gcs(self.connection, connection_info)
 
     @tracer.start_as_current_span("duckdb_query", kind=trace.SpanKind.INTERNAL)
-    def query(self, sql: str, limit: int) -> pd.DataFrame:
+    def query(self, sql: str, limit: int) -> pa.Table:
         try:
-            return self.connection.execute(sql).fetch_df().head(limit)
+            return self.connection.execute(sql).fetch_arrow_table().slice(length=limit)
         except IOException as e:
             raise UnprocessableEntityError(f"Failed to execute query: {e!s}")
         except HTTPException as e:
@@ -244,12 +245,13 @@ class RedshiftConnector:
             raise ValueError("Invalid Redshift connection_info type")
 
     @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
-    def query(self, sql: str, limit: int) -> pd.DataFrame:
+    def query(self, sql: str, limit: int) -> pa.Table:
         with closing(self.connection.cursor()) as cursor:
             cursor.execute(sql)
             cols = [desc[0] for desc in cursor.description]
             rows = cursor.fetchall()
-            return pd.DataFrame(rows, columns=cols).head(limit)
+            df = pd.DataFrame(rows, columns=cols).head(limit)
+            return pa.Table.from_pandas(df)
 
     @tracer.start_as_current_span("connector_dry_run", kind=trace.SpanKind.CLIENT)
     def dry_run(self, sql: str) -> None:

@@ -51,7 +51,7 @@ class RedshiftMetadata(Metadata):
         # we reuse the connector.query method to execute the SQL
         # so we have to give a limit to avoid too many rows
         # the default limit for tables metadata is 500, i think it's a sensible limit
-        response = self.connector.query(sql, limit=500).to_dict(orient="records")
+        response = self.connector.query(sql, limit=500).to_pylist()
 
         unique_tables = {}
         for row in response:
@@ -104,7 +104,7 @@ class RedshiftMetadata(Metadata):
         # we reuse the connector.query method to execute the SQL
         # so we have to give a limit to avoid too many rows
         # the default limit for constraints metadata is 500, i think it's a sensible limit
-        response = self.connector.query(sql, limit=500).to_dict(orient="records")
+        response = self.connector.query(sql, limit=500).to_pylist()
         constraints = []
         for row in response:
             constraints.append(
