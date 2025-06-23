@@ -220,11 +220,13 @@ class DataSourceExtension(Enum):
     def get_snowflake_connection(info: SnowflakeConnectionInfo) -> BaseBackend:
         return ibis.snowflake.connect(
             user=info.user.get_secret_value(),
-            password=info.password.get_secret_value(),
             account=info.account.get_secret_value(),
             database=info.database.get_secret_value(),
             schema=info.sf_schema.get_secret_value(),
-            **info.kwargs if info.kwargs else dict(),
+            warehouse=info.warehouse.get_secret_value(),
+            private_key=info.private_key.get_secret_value() ** info.kwargs
+            if info.kwargs
+            else dict(),
         )
 
     @staticmethod

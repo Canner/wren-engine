@@ -19,8 +19,9 @@ def pytest_collection_modifyitems(items):
 def connection_info() -> dict[str, str]:
     return {
         "user": os.getenv("SNOWFLAKE_USER"),
-        "password": os.getenv("SNOWFLAKE_PASSWORD"),
         "account": os.getenv("SNOWFLAKE_ACCOUNT"),
         "database": "SNOWFLAKE_SAMPLE_DATA",
         "schema": "TPCH_SF1",
+        "warehouse": "COMPUTE_WH",
+        "private_key": os.getenv("SNOWFLAKE_PRIVATE_KEY"),
     }
