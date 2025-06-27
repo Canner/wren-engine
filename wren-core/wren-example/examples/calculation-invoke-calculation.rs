@@ -92,7 +92,7 @@ async fn main() -> Result<()> {
             return Ok(());
         }
     };
-    println!("Transformed SQL: {}", transformed);
+    println!("Transformed SQL: {transformed}");
     let df = match ctx.sql(&transformed).await {
         Ok(df) => df,
         Err(e) => {
@@ -118,7 +118,7 @@ async fn main() -> Result<()> {
             return Ok(());
         }
     };
-    println!("Transformed SQL: {}", transformed);
+    println!("Transformed SQL: {transformed}");
     let df = match ctx.sql(&transformed).await {
         Ok(df) => df,
         Err(e) => {
