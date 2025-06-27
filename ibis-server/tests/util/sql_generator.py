@@ -1,6 +1,5 @@
 import re
 from abc import ABC
-from typing import Optional
 
 from tests.model import Function
 
@@ -10,7 +9,7 @@ class SqlTestGenerator:
         self.dialect = dialect
         self._generator = self._get_generator()
 
-    def generate_sql(self, function: Function) -> Optional[str]:
+    def generate_sql(self, function: Function) -> str | None:
         if function.function_type == "aggregate":
             return self._generator.generate_aggregate_sql(function)
         if function.function_type == "scalar":
