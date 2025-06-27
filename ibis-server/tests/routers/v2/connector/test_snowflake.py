@@ -122,7 +122,7 @@ async def test_query_with_password_connection_info(client, manifest_str):
     response = await client.post(
         url=f"{base_url}/query",
         json={
-            "connectionInfo": connection_info,
+            "connectionInfo": password_connection_info,
             "manifestStr": manifest_str,
             "sql": 'SELECT * FROM "Orders" ORDER BY "orderkey" LIMIT 1',
         },
