@@ -82,13 +82,13 @@ async def test_query(client, manifest_str, connection_info):
         36485,
         1202,
         "F",
-        "356711.63",
+        356711.63,
         "1992-06-06",
         "36485_1202",
         "2024-01-01 23:59:59.000000",
-        "2024-01-01 23:59:59.000000 UTC",
-        "2024-01-16 04:00:00.000000 UTC",  # utc-5
-        "2024-07-16 03:00:00.000000 UTC",  # utc-4
+        "2024-01-01 23:59:59.000000 +00:00",
+        "2024-01-16 04:00:00.000000 +00:00",  # utc-5
+        "2024-07-16 03:00:00.000000 +00:00",  # utc-4
     ]
     assert result["dtypes"] == {
         "o_orderkey": "int64",
@@ -293,9 +293,9 @@ async def test_timestamp_func(client, manifest_str, connection_info):
     assert len(result["columns"]) == 3
     assert len(result["data"]) == 1
     assert result["data"][0] == [
-        "1970-01-01 00:16:40.000000 UTC",
-        "1970-01-01 00:00:01.000000 UTC",
-        "1970-01-12 13:46:40.000000 UTC",
+        "1970-01-01 00:16:40.000000 +00:00",
+        "1970-01-01 00:00:01.000000 +00:00",
+        "1970-01-12 13:46:40.000000 +00:00",
     ]
     assert result["dtypes"] == {
         "millis": "timestamp[us, tz=UTC]",
