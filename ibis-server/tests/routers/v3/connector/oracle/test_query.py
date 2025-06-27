@@ -97,7 +97,7 @@ async def test_query(client, manifest_str, connection_info):
         "1996-01-02",
         "1_370",
         "2024-01-01 23:59:59.000000",
-        "2024-01-01 23:59:59.000000 UTC",
+        "2024-01-01 23:59:59.000000 +00:00",
         None,
     ]
     assert result["dtypes"] == {
