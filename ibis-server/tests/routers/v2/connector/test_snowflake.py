@@ -19,6 +19,14 @@ connection_info = {
     "private_key": os.getenv("SNOWFLAKE_PRIVATE_KEY"),
 }
 
+password_connection_info = {
+    "user": os.getenv("SNOWFLAKE_USER"),
+    "password": os.getenv("SNOWFLAKE_PASSWORD"),
+    "account": os.getenv("SNOWFLAKE_ACCOUNT"),
+    "database": "SNOWFLAKE_SAMPLE_DATA",
+    "schema": "TPCH_SF1",
+}
+
 manifest = {
     "catalog": "my_catalog",
     "schema": "my_schema",
@@ -74,6 +82,43 @@ def manifest_str():
 
 
 async def test_query(client, manifest_str):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT * FROM "Orders" ORDER BY "orderkey" LIMIT 1',
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["columns"]) == len(manifest["models"][0]["columns"])
+    assert len(result["data"]) == 1
+    assert result["data"][0] == [
+        1,
+        36901,
+        "O",
+        "173665.47",
+        "1996-01-02",
+        "1_36901",
+        "2024-01-01 23:59:59.000000",
+        "2024-01-01 23:59:59.000000 UTC",
+        None,
+    ]
+    assert result["dtypes"] == {
+        "orderkey": "int64",
+        "custkey": "int64",
+        "orderstatus": "string",
+        "totalprice": "decimal128(12, 2)",
+        "orderdate": "date32[day]",
+        "order_cust_key": "string",
+        "timestamp": "timestamp[ns]",
+        "timestamptz": "timestamp[ns, tz=UTC]",
+        "test_null_time": "timestamp[ns]",
+    }
+
+
+async def test_query_with_password_connection_info(client, manifest_str):
     response = await client.post(
         url=f"{base_url}/query",
         json={
