@@ -122,7 +122,7 @@ async def test_query_with_password_connection_info(client, manifest_str):
     response = await client.post(
         url=f"{base_url}/query",
         json={
-            "connectionInfo": password_connection_info,
+            "connectionInfo": connection_info,
             "manifestStr": manifest_str,
             "sql": 'SELECT * FROM "Orders" ORDER BY "orderkey" LIMIT 1',
         },
@@ -136,7 +136,7 @@ async def test_query_with_password_connection_info(client, manifest_str):
         36901,
         "O",
         "173665.47",
-        "1996-01-02 00:00:00.000000",
+        "1996-01-02",
         "1_36901",
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000 UTC",
@@ -145,13 +145,13 @@ async def test_query_with_password_connection_info(client, manifest_str):
     assert result["dtypes"] == {
         "orderkey": "int64",
         "custkey": "int64",
-        "orderstatus": "object",
-        "totalprice": "object",
-        "orderdate": "object",
-        "order_cust_key": "object",
-        "timestamp": "object",
-        "timestamptz": "object",
-        "test_null_time": "datetime64[ns]",
+        "orderstatus": "string",
+        "totalprice": "decimal128(12, 2)",
+        "orderdate": "date32[day]",
+        "order_cust_key": "string",
+        "timestamp": "timestamp[ns]",
+        "timestamptz": "timestamp[ns, tz=UTC]",
+        "test_null_time": "timestamp[ns]",
     }
 
 
