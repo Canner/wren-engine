@@ -374,9 +374,9 @@ pub async fn transform_sql_with_ctx(
     properties: SessionPropertiesRef,
     sql: &str,
 ) -> Result<String> {
-    info!("wren-core received SQL: {}", sql);
+    info!("wren-core received SQL: {sql}");
     remote_functions.iter().try_for_each(|remote_function| {
-        debug!("Registering remote function: {:?}", remote_function);
+        debug!("Registering remote function: {remote_function:?}");
         register_remote_function(ctx, remote_function)?;
         Ok::<_, DataFusionError>(())
     })?;
@@ -397,7 +397,7 @@ pub async fn transform_sql_with_ctx(
             let replaced = sql
                 .to_string()
                 .replace(analyzed_mdl.wren_mdl().catalog_schema_prefix(), "");
-            info!("wren-core planned SQL: {}", replaced);
+            info!("wren-core planned SQL: {replaced}");
             Ok(replaced)
         }
         Err(e) => Err(e),
@@ -528,7 +528,7 @@ mod test {
         ];
 
         for sql in tests {
-            println!("Original: {}", sql);
+            println!("Original: {sql}");
             let actual = mdl::transform_sql_with_ctx(
                 &SessionContext::new(),
                 Arc::clone(&analyzed_mdl),
@@ -537,7 +537,7 @@ mod test {
                 sql,
             )
             .await?;
-            println!("After transform: {}", actual);
+            println!("After transform: {actual}");
             assert_sql_valid_executable(&actual).await?;
         }
 
@@ -553,12 +553,12 @@ mod test {
         let mdl_json = fs::read_to_string(test_data.as_path())?;
         let mdl = match serde_json::from_str::<Manifest>(&mdl_json) {
             Ok(mdl) => mdl,
-            Err(e) => return not_impl_err!("Failed to parse mdl json: {}", e),
+            Err(e) => return not_impl_err!("Failed to parse mdl json: {e}"),
         };
         let analyzed_mdl =
             Arc::new(AnalyzedWrenMDL::analyze(mdl, Arc::new(HashMap::default()))?);
         let sql = "select * from test.test.customer_view";
-        println!("Original: {}", sql);
+        println!("Original: {sql}");
         let _ = transform_sql_with_ctx(
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
@@ -583,7 +583,7 @@ mod test {
         let mdl_json = fs::read_to_string(test_data.as_path())?;
         let mdl = match serde_json::from_str::<Manifest>(&mdl_json) {
             Ok(mdl) => mdl,
-            Err(e) => return not_impl_err!("Failed to parse mdl json: {}", e),
+            Err(e) => return not_impl_err!("Failed to parse mdl json: {e}"),
         };
         let analyzed_mdl =
             Arc::new(AnalyzedWrenMDL::analyze(mdl, Arc::new(HashMap::default()))?);
@@ -998,7 +998,7 @@ mod test {
         let df = ctx.sql(sql).await?;
         let plan = df.into_optimized_plan()?;
         let after_roundtrip = plan_to_sql(&plan).map(|sql| sql.to_string())?;
-        println!("After roundtrip: {}", after_roundtrip);
+        println!("After roundtrip: {after_roundtrip}");
         match ctx.sql(sql).await?.collect().await {
             Ok(_) => Ok(()),
             Err(e) => {
