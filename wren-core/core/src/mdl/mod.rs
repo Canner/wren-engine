@@ -1146,7 +1146,7 @@ mod test {
         )
         .await?;
         // TIMESTAMP WITH TIME ZONE will be converted to the session timezone
-        assert_snapshot!(actual, @"SELECT CAST('2011-01-01 10:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00\"\")\"");
+        assert_snapshot!(actual, @"SELECT CAST('2011-01-01 18:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00\"\")\"");
 
         let ctx = SessionContext::new();
         let mut headers = HashMap::new();
@@ -1166,7 +1166,7 @@ mod test {
             sql,
         )
         .await?;
-        assert_snapshot!(actual, @"SELECT CAST('2024-01-15 23:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2024-01-15 18:00:00\"\")\"");
+        assert_snapshot!(actual, @"SELECT CAST('2024-01-15 18:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2024-01-15 18:00:00\"\")\"");
 
         // TIMESTAMP WITH TIME ZONE will be converted to the session timezone without daylight saving (UTC -4)
         let sql = "select timestamp with time zone '2024-07-15 18:00:00'";
@@ -1178,7 +1178,7 @@ mod test {
             sql,
         )
         .await?;
-        assert_snapshot!(actual, @"SELECT CAST('2024-07-15 22:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2024-07-15 18:00:00\"\")\"");
+        assert_snapshot!(actual, @"SELECT CAST('2024-07-15 18:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2024-07-15 18:00:00\"\")\"");
         Ok(())
     }
 
@@ -1327,7 +1327,7 @@ mod test {
             .await?;
             // assert the simplified literal will be casted to the timestamp tz
             assert_eq!(actual,
-              "SELECT timestamp_table.timestamptz_col > CAST(CAST('2011-01-01 18:00:00' AS TIMESTAMP WITH TIME ZONE) AS TIMESTAMP WITH TIME ZONE) FROM (SELECT timestamp_table.timestamptz_col FROM (SELECT __source.timestamptz_col AS timestamptz_col FROM datafusion.\"public\".timestamp_table AS __source) AS timestamp_table) AS timestamp_table"
+              "SELECT timestamp_table.timestamptz_col > CAST(CAST('2011-01-01 18:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE) FROM (SELECT timestamp_table.timestamptz_col FROM (SELECT __source.timestamptz_col AS timestamptz_col FROM datafusion.\"public\".timestamp_table AS __source) AS timestamp_table) AS timestamp_table"
 );
 
             let sql = r#"select timestamptz_col > '2011-01-01 18:00:00' from wren.test.timestamp_table"#;
@@ -1356,7 +1356,7 @@ mod test {
             .await?;
             // assert the simplified literal won't be casted to the timestamp tz
             assert_eq!(actual,
-                "SELECT CAST(timestamp_table.timestamp_col AS TIMESTAMP WITH TIME ZONE) > CAST('2011-01-01 18:00:00' AS TIMESTAMP WITH TIME ZONE) \
+                "SELECT timestamp_table.timestamp_col > CAST('2011-01-01 18:00:00' AS TIMESTAMP) \
                 FROM (SELECT timestamp_table.timestamp_col FROM (SELECT __source.timestamp_col AS timestamp_col \
                 FROM datafusion.\"public\".timestamp_table AS __source) AS timestamp_table) AS timestamp_table");
         }
