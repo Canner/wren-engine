@@ -471,7 +471,8 @@ mod test {
     use datafusion::common::format::DEFAULT_FORMAT_OPTIONS;
     use datafusion::common::not_impl_err;
     use datafusion::common::Result;
-    use datafusion::prelude::SessionContext;
+    use datafusion::config::ConfigOptions;
+    use datafusion::prelude::{SessionConfig, SessionContext};
     use datafusion::sql::unparser::plan_to_sql;
     use insta::assert_snapshot;
     use wren_core_base::mdl::{
@@ -1117,44 +1118,40 @@ mod test {
         Ok(())
     }
 
-    #[tokio::test]
+        #[tokio::test]
     async fn test_eval_timestamp_with_session_timezone() -> Result<()> {
-        let mut headers = HashMap::new();
-        headers.insert("x-wren-timezone".to_string(), Some("+08:00".to_string()));
-        let headers_ref = Arc::new(headers);
-        let ctx = SessionContext::new();
+        let mut config = ConfigOptions::new();
+        config.execution.time_zone = Some("+08:00".to_string());
+        let session_config = SessionConfig::from(config);
+        let ctx = SessionContext::new_with_config(session_config);
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
         let sql = "select timestamp '2011-01-01 18:00:00'";
         let actual = transform_sql_with_ctx(
             &ctx,
             Arc::clone(&analyzed_mdl),
             &[],
-            Arc::clone(&headers_ref),
+            Arc::new(HashMap::new()),
             sql,
         )
         .await?;
         // TIMESTAMP doesn't have timezone, so the timezone will be ignored
         assert_snapshot!(actual, @"SELECT CAST('2011-01-01 18:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00\"\")\"");
-
         let sql = "select timestamp with time zone '2011-01-01 18:00:00'";
         let actual = transform_sql_with_ctx(
             &ctx,
             Arc::clone(&analyzed_mdl),
             &[],
-            Arc::clone(&headers_ref),
+            Arc::new(HashMap::new()),
             sql,
         )
         .await?;
         // TIMESTAMP WITH TIME ZONE will be converted to the session timezone
-        assert_snapshot!(actual, @"SELECT CAST('2011-01-01 18:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00\"\")\"");
+        assert_snapshot!(actual, @"SELECT CAST('2011-01-01 10:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00\"\")\"");
 
-        let ctx = SessionContext::new();
-        let mut headers = HashMap::new();
-        headers.insert(
-            "x-wren-timezone".to_string(),
-            Some("America/New_York".to_string()),
-        );
-        let headers_ref = Arc::new(headers);
+        let mut config = ConfigOptions::new();
+        config.execution.time_zone = Some("America/New_York".to_string());
+        let session_config = SessionConfig::from(config);
+        let ctx = SessionContext::new_with_config(session_config);
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
         // TIMESTAMP WITH TIME ZONE will be converted to the session timezone with daylight saving (UTC -5)
         let sql = "select timestamp with time zone '2024-01-15 18:00:00'";
@@ -1162,11 +1159,11 @@ mod test {
             &ctx,
             Arc::clone(&analyzed_mdl),
             &[],
-            Arc::clone(&headers_ref),
+            Arc::new(HashMap::new()),
             sql,
         )
         .await?;
-        assert_snapshot!(actual, @"SELECT CAST('2024-01-15 18:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2024-01-15 18:00:00\"\")\"");
+        assert_snapshot!(actual, @"SELECT CAST('2024-01-15 23:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2024-01-15 18:00:00\"\")\"");
 
         // TIMESTAMP WITH TIME ZONE will be converted to the session timezone without daylight saving (UTC -4)
         let sql = "select timestamp with time zone '2024-07-15 18:00:00'";
@@ -1174,11 +1171,11 @@ mod test {
             &ctx,
             Arc::clone(&analyzed_mdl),
             &[],
-            Arc::clone(&headers_ref),
+            Arc::new(HashMap::new()),
             sql,
         )
         .await?;
-        assert_snapshot!(actual, @"SELECT CAST('2024-07-15 18:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2024-07-15 18:00:00\"\")\"");
+        assert_snapshot!(actual, @"SELECT CAST('2024-07-15 22:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2024-07-15 18:00:00\"\")\"");
         Ok(())
     }
 
