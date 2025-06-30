@@ -634,9 +634,7 @@ fn collect_model_required_fields(
                         Arc::clone(&session_state_ref),
                     ) else {
                         // skip the semantic expression (e.g. calculated field or relationship column)
-                        debug!(
-                            "Error creating expression for calculated field: {expression}"
-                        );
+                        debug!("Error creating expression for calculated field: {expression}");
                         continue;
                     };
                     expr

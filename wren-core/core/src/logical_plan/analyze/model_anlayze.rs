@@ -1,5 +1,5 @@
 use crate::logical_plan::analyze::plan::ModelPlanNode;
-use crate::logical_plan::analyze::scope::{Scope, ScopeId, ScopeManager};
+use crate::logical_plan::analyze::scope::{ScopeId, ScopeManager};
 use crate::logical_plan::utils::{belong_to_mdl, expr_to_columns};
 use crate::mdl::context::SessionPropertiesRef;
 use crate::mdl::utils::quoted;

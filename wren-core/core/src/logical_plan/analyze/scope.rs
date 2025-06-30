@@ -1,5 +1,4 @@
 use crate::mdl::Dataset;
-use datafusion::common::plan_err;
 use datafusion::error::Result;
 use datafusion::prelude::Expr;
 use datafusion::sql::TableReference;
@@ -26,6 +25,8 @@ impl Display for ScopeId {
 #[derive(Clone, Debug)]
 pub struct Scope {
     /// The unique identifier for the scope
+    /// keep it for debugging purposes
+    #[allow(dead_code)]
     pub id: ScopeId,
     /// The columns required by the dataset
     pub required_columns: HashMap<TableReference, HashSet<Expr>>,
@@ -114,16 +115,8 @@ impl ScopeManager {
         Ok(id)
     }
 
-    pub fn get_scope(&self, id: ScopeId) -> Option<&Scope> {
-        self.scopes.get(&id)
-    }
-
     pub fn get_scope_mut(&mut self, id: ScopeId) -> Option<&mut Scope> {
         self.scopes.get_mut(&id)
-    }
-
-    pub fn get_root_id(&self) -> Option<ScopeId> {
-        self.root_id
     }
 
     /// Adds a required column to the current scope or its parent scopes.
