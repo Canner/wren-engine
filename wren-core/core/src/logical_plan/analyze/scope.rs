@@ -3,7 +3,7 @@ use datafusion::common::plan_err;
 use datafusion::error::Result;
 use datafusion::prelude::Expr;
 use datafusion::sql::TableReference;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::{Debug, Display};
 
 /// ScopeId is a unique identifier for a scope.
@@ -36,7 +36,7 @@ pub struct Scope {
     /// The parent scope id
     pub parent_id: Option<ScopeId>,
     /// The child scope ids
-    pub child_ids: Vec<ScopeId>,
+    pub child_ids: VecDeque<ScopeId>,
 }
 
 impl Scope {
@@ -47,7 +47,7 @@ impl Scope {
             visited_dataset: HashMap::new(),
             visited_tables: HashSet::new(),
             parent_id: None,
-            child_ids: Vec::new(),
+            child_ids: VecDeque::new(),
         }
     }
 
@@ -58,12 +58,8 @@ impl Scope {
             visited_dataset: HashMap::new(),
             visited_tables: HashSet::new(),
             parent_id: Some(parent_id),
-            child_ids: Vec::new(),
+            child_ids: VecDeque::new(),
         }
-    }
-
-    pub fn add_child_id(&mut self, child_id: ScopeId) {
-        self.child_ids.push(child_id);
     }
 
     pub fn add_visited_dataset(&mut self, table_ref: TableReference, dataset: Dataset) {
@@ -73,6 +69,14 @@ impl Scope {
     pub fn add_visited_table(&mut self, table_ref: TableReference) {
         self.visited_tables.insert(table_ref);
     }
+
+    pub fn push_child_scope(&mut self, scope_id: ScopeId) {
+        self.child_ids.push_back(scope_id);
+    }
+
+    pub fn pop_child_scope(&mut self) -> Option<ScopeId> {
+        self.child_ids.pop_front()
+    }
 }
 
 #[derive(Debug)]
@@ -80,7 +84,6 @@ pub struct ScopeManager {
     scopes: HashMap<ScopeId, Scope>,
     next_id: usize,
     root_id: Option<ScopeId>,
-    child_scope_queue: Vec<ScopeId>,
 }
 
 impl ScopeManager {
@@ -89,7 +92,6 @@ impl ScopeManager {
             scopes: HashMap::new(),
             next_id: 0,
             root_id: None,
-            child_scope_queue: Vec::new(),
         }
     }
 
@@ -109,14 +111,6 @@ impl ScopeManager {
 
         let scope = Scope::new_child_with_id(id, parent_id);
         self.scopes.insert(id, scope);
-
-        // update the parent scope to include this child scope
-        if let Some(parent) = self.scopes.get_mut(&parent_id) {
-            parent.add_child_id(id);
-        } else {
-            return plan_err!("Parent scope {:?} not found", parent_id);
-        }
-
         Ok(id)
     }
 
@@ -130,14 +124,6 @@ impl ScopeManager {
 
     pub fn get_root_id(&self) -> Option<ScopeId> {
         self.root_id
-    }
-
-    pub fn push_child_scope(&mut self, scope_id: ScopeId) {
-        self.child_scope_queue.push(scope_id);
-    }
-
-    pub fn pop_child_scope(&mut self) -> Option<ScopeId> {
-        self.child_scope_queue.pop()
     }
 
     /// Adds a required column to the current scope or its parent scopes.

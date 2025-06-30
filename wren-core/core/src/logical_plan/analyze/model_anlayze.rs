@@ -120,7 +120,14 @@ impl ModelAnalyzeRule {
                         scope_manager,
                         child_scope,
                     )?;
-                    scope_manager.push_child_scope(child_scope);
+                    let Some(root_scope) = scope_manager.get_scope_mut(current_scope_id)
+                    else {
+                        return internal_err!(
+                            "Root scope with id {} not found",
+                            current_scope_id
+                        );
+                    };
+                    root_scope.push_child_scope(child_scope);
                 }
                 Ok(Transformed::no(plan))
             })
@@ -338,14 +345,21 @@ impl ModelAnalyzeRule {
             // If the plan contains subquery, we should analyze the subquery recursively
             plan.map_subqueries(|plan| {
                 if let LogicalPlan::Subquery(subquery) = &plan {
-                    let Some(child_scope) = scope_manager.pop_child_scope() else {
+                    let Some(root_scope) = scope_manager.get_scope_mut(current_scope_id)
+                    else {
+                        return internal_err!(
+                            "Root scope with id {} not found",
+                            current_scope_id
+                        );
+                    };
+                    let Some(child_scope_id) = root_scope.pop_child_scope() else {
                         return internal_err!("No child scope found for subquery");
                     };
                     let transformed = self
                         .analyze_model(
                             Arc::unwrap_or_clone(Arc::clone(&subquery.subquery)),
                             scope_manager,
-                            child_scope,
+                            child_scope_id,
                         )?
                         .data;
                     return Ok(Transformed::yes(LogicalPlan::Subquery(
