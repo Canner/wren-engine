@@ -120,14 +120,6 @@ impl ModelAnalyzeRule {
                         scope_manager,
                         child_scope,
                     )?;
-                    let Some(root_scope) = scope_manager.get_scope_mut(current_scope_id)
-                    else {
-                        return internal_err!(
-                            "Root scope with id {} not found",
-                            current_scope_id
-                        );
-                    };
-                    root_scope.push_child_scope(child_scope);
                 }
                 Ok(Transformed::no(plan))
             })
@@ -141,9 +133,7 @@ impl ModelAnalyzeRule {
         scope_manager: &mut ScopeManager,
         current_scope_id: ScopeId,
     ) -> Result<Transformed<LogicalPlan>> {
-        let Some(scope_mut) = scope_manager.get_scope_mut(current_scope_id) else {
-            return internal_err!("Scope with id {} not found", current_scope_id);
-        };
+        let scope_mut = scope_manager.get_scope_mut(current_scope_id)?;
         match &plan {
             LogicalPlan::TableScan(table_scan) => {
                 if belong_to_mdl(
@@ -345,13 +335,7 @@ impl ModelAnalyzeRule {
             // If the plan contains subquery, we should analyze the subquery recursively
             plan.map_subqueries(|plan| {
                 if let LogicalPlan::Subquery(subquery) = &plan {
-                    let Some(root_scope) = scope_manager.get_scope_mut(current_scope_id)
-                    else {
-                        return internal_err!(
-                            "Root scope with id {} not found",
-                            current_scope_id
-                        );
-                    };
+                    let root_scope = scope_manager.get_scope_mut(current_scope_id)?;
                     let Some(child_scope_id) = root_scope.pop_child_scope() else {
                         return internal_err!("No child scope found for subquery");
                     };

@@ -53,9 +53,12 @@ impl RunOpt {
     async fn benchmark_query(&self, query_id: usize) -> Result<Vec<QueryResult>> {
         let ctx = SessionContext::new();
 
-        let mut millis = vec![];
         // run benchmark
         let mut query_results = vec![];
+        let iterations = self.iterations();
+        if iterations == 0 {
+            return Ok(vec![]);
+        }
         for i in 0..self.iterations() {
             let mdl = Arc::new(AnalyzedWrenMDL::analyze(
                 get_manifest(query_id)?,
@@ -76,12 +79,15 @@ impl RunOpt {
 
             let elapsed = start.elapsed(); //.as_secs_f64() * 1000.0;
             let ms = elapsed.as_secs_f64() * 1000.0;
-            millis.push(ms);
             println!("Query {query_id} iteration {i} took {ms:.1} ms");
             query_results.push(QueryResult { elapsed });
         }
 
-        let avg = millis.iter().sum::<f64>() / millis.len() as f64;
+        let avg = query_results
+            .iter()
+            .map(|r| r.elapsed.as_secs_f64() * 1000.0)
+            .sum::<f64>()
+            / query_results.len() as f64;
         println!("Query {query_id} avg time: {avg:.2} ms");
 
         Ok(query_results)

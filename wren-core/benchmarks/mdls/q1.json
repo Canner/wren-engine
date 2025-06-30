@@ -58,9 +58,7 @@
                 "catalog": "pg",
                 "schema": "public",
                 "table": "challenges_table"
-            },
-            "cached": false,
-            "primaryKey": ""
+            }
         },
         {
             "name": "public_users_table",
@@ -78,9 +76,7 @@
                 "catalog": "pg",
                 "schema": "public",
                 "table": "users_table"
-            },
-            "cached": false,
-            "primaryKey": ""
+            }
         }
     ]
 }

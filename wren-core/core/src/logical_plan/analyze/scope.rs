@@ -1,4 +1,5 @@
 use crate::mdl::Dataset;
+use datafusion::common::internal_err;
 use datafusion::error::Result;
 use datafusion::prelude::Expr;
 use datafusion::sql::TableReference;
@@ -16,7 +17,7 @@ impl Display for ScopeId {
 }
 
 /// [Scope] is used to collect the required columns for models and visited tables in a query scope.
-/// A query scope means is a full query body contain projection, relation. e.g.
+/// A query scope means a full query body containing projection, relation. e.g.
 ///    SELECT a, b, c FROM table
 ///
 /// To avoid the table name be ambiguous, the relation name should be unique in the scope.
@@ -112,11 +113,20 @@ impl ScopeManager {
 
         let scope = Scope::new_child_with_id(id, parent_id);
         self.scopes.insert(id, scope);
+        if let Some(parent_scope) = self.scopes.get_mut(&parent_id) {
+            parent_scope.push_child_scope(id);
+        } else {
+            return internal_err!("Parent scope with id {} not found", parent_id);
+        }
         Ok(id)
     }
 
-    pub fn get_scope_mut(&mut self, id: ScopeId) -> Option<&mut Scope> {
-        self.scopes.get_mut(&id)
+    pub fn get_scope_mut(&mut self, id: ScopeId) -> Result<&mut Scope> {
+        if let Some(scope) = self.scopes.get_mut(&id) {
+            Ok(scope)
+        } else {
+            internal_err!("Scope with id {} not found", id)
+        }
     }
 
     /// Adds a required column to the current scope or its parent scopes.
