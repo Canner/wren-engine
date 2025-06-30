@@ -19,7 +19,8 @@ class OracleMetadata(Metadata):
         self.connection = DataSource.oracle.get_connection(connection_info)
 
     def get_table_list(self) -> list[Table]:
-        sql = """
+        user = self.connection_info.user.get_secret_value()
+        sql = f"""
             SELECT
                 t.owner AS TABLE_CATALOG,
                 t.owner AS TABLE_SCHEMA,
@@ -46,7 +47,7 @@ class OracleMetadata(Metadata):
                 AND cc.table_name = c.table_name
                 AND cc.column_name = c.column_name
             WHERE
-                t.owner = 'SYSTEM'
+                t.owner = '{user}'
             ORDER BY
                 t.table_name, c.column_id;
         """

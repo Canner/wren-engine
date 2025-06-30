@@ -180,14 +180,14 @@ async def test_query(client, manifest_str, connection_info):
     assert result["dtypes"] == {
         "o_orderkey": "int32",
         "o_custkey": "int32",
-        "o_orderstatus": "object",
-        "o_totalprice_double": "float64",
-        "o_orderdate": "datetime64[s]",
-        "order_cust_key": "object",
-        "timestamp": "datetime64[ns]",
-        "timestamptz": "datetime64[ns, UTC]",
-        "dst_utc_minus_5": "datetime64[ns, UTC]",
-        "dst_utc_minus_4": "datetime64[ns, UTC]",
+        "o_orderstatus": "string",
+        "o_totalprice_double": "double",
+        "o_orderdate": "date32[day]",
+        "order_cust_key": "string",
+        "timestamp": "timestamp[us]",
+        "timestamptz": "timestamp[us, tz=UTC]",
+        "dst_utc_minus_5": "timestamp[us, tz=UTC]",
+        "dst_utc_minus_4": "timestamp[us, tz=UTC]",
     }
 
 
