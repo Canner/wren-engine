@@ -1118,7 +1118,7 @@ mod test {
         Ok(())
     }
 
-        #[tokio::test]
+    #[tokio::test]
     async fn test_eval_timestamp_with_session_timezone() -> Result<()> {
         let mut config = ConfigOptions::new();
         config.execution.time_zone = Some("+08:00".to_string());
