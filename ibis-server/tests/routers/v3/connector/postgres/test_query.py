@@ -141,13 +141,13 @@ async def test_query(client, manifest_str, connection_info):
         1,
         370,
         "O",
-        "172799.49",
+        172799.49,
         "1996-01-02",
         "1_370",
         "2024-01-01 23:59:59.000000",
-        "2024-01-01 23:59:59.000000 UTC",
-        "2024-01-16 04:00:00.000000 UTC",  # utc-5
-        "2024-07-16 03:00:00.000000 UTC",  # utc-4
+        "2024-01-01 23:59:59.000000 +00:00",
+        "2024-01-16 04:00:00.000000 +00:00",  # utc-5
+        "2024-07-16 03:00:00.000000 +00:00",  # utc-4
     ]
     assert result["dtypes"] == {
         "o_orderkey": "int32",
@@ -180,14 +180,14 @@ async def test_query(client, manifest_str, connection_info):
     assert result["dtypes"] == {
         "o_orderkey": "int32",
         "o_custkey": "int32",
-        "o_orderstatus": "object",
-        "o_totalprice_double": "float64",
-        "o_orderdate": "datetime64[s]",
-        "order_cust_key": "object",
-        "timestamp": "datetime64[ns]",
-        "timestamptz": "datetime64[ns, UTC]",
-        "dst_utc_minus_5": "datetime64[ns, UTC]",
-        "dst_utc_minus_4": "datetime64[ns, UTC]",
+        "o_orderstatus": "string",
+        "o_totalprice_double": "double",
+        "o_orderdate": "date32[day]",
+        "order_cust_key": "string",
+        "timestamp": "timestamp[us]",
+        "timestamptz": "timestamp[us, tz=UTC]",
+        "dst_utc_minus_5": "timestamp[us, tz=UTC]",
+        "dst_utc_minus_4": "timestamp[us, tz=UTC]",
     }
 
 
@@ -624,7 +624,7 @@ async def test_format_floating(client, manifest_str, connection_info):
             "manifestStr": manifest_str,
             "sql": """
 SELECT
-    0.0123e-5 AS case_scientific_original,
+    0.0123e-3 AS case_scientific_original,
     1.23e+4 AS case_scientific_positive,
     -4.56e-3 AS case_scientific_negative,
     7.89e0 AS case_scientific_zero_exponent,
@@ -632,7 +632,7 @@ SELECT
 
     123.456 AS case_decimal_positive,
     -123.456 AS case_decimal_negative,
-    0.0000123 AS case_decimal_small,
+    0.00000123 AS show_exponent_decimal,
     123.0000 AS case_decimal_trailing_zeros,
     0.0 AS case_decimal_zero,
 
@@ -665,31 +665,35 @@ SELECT
     )
     assert response.status_code == 200
     result = response.json()
-    assert result["data"][0][0] == "0.00000012"
-    assert result["data"][0][1] == "12300"
-    assert result["data"][0][2] == "-0.00456"
-    assert result["data"][0][3] == "7.89"
-    assert result["data"][0][4] == "0"
-    assert result["data"][0][5] == "123.456"
-    assert result["data"][0][6] == "-123.456"
-    assert result["data"][0][7] == "0.0000123"
-    assert result["data"][0][8] == "123"
-    assert result["data"][0][9] == "0"
-    assert result["data"][0][10] == 0
-    assert result["data"][0][11] == "0"
-    assert result["data"][0][12] == -1
-    assert result["data"][0][13] == 9999999999
-    assert result["data"][0][14] == "12304.56"
-    assert result["data"][0][15] == "-123.450123"
-    assert result["data"][0][16] == "0.000123"
-    assert result["data"][0][17] == "1.00365854"
-    assert result["data"][0][18] is None
-    assert result["data"][0][19] == "inf"
-    assert result["data"][0][20] == "-inf"
-    assert result["data"][0][21] is None
-    assert result["data"][0][22] == "123.45600128"
-    assert result["data"][0][23] == "12300"
-    assert result["data"][0][24] == "123400000000000"
-    assert result["data"][0][25] == "1.234e+15"
-    assert result["data"][0][26] == "1.12345679"
-    assert result["data"][0][27] == "0.123456789"
+    assert result["data"][0] == [
+        "0.0000123",
+        "12300.0",
+        "-0.00456",
+        "7.89",
+        "0",
+        "123.456",
+        "-123.456",
+        "1.23e-6",
+        "123.0",
+        "0",
+        0,
+        "0",
+        -1,
+        9999999999,
+        "12304.56",
+        "-123.450123",
+        0.000123,
+        1.0036585365853659,
+        None,  # NaN
+        None,  # Infinity
+        None,  # Negative Infinity
+        None,  # NULL
+        123.45600128173828,  # case_cast_float
+        "12300.0",  # case_cast_decimal
+        "123400000000000.0",  # show_float
+        # TODO: it's better to show exponent in scientific notation but currently
+        # DataFusion does not support it, so we show the full number
+        "1234000000000000.0",  # show_exponent
+        "1.123456789",  # round_to_9_decimal_places
+        "0.12345678912345678",  # round_to_18_decimal_places
+    ]

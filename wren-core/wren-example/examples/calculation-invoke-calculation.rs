@@ -88,15 +88,15 @@ async fn main() -> Result<()> {
     {
         Ok(sql) => sql,
         Err(e) => {
-            eprintln!("Error transforming SQL: {}", e);
+            eprintln!("Error transforming SQL: {e}");
             return Ok(());
         }
     };
-    println!("Transformed SQL: {}", transformed);
+    println!("Transformed SQL: {transformed}");
     let df = match ctx.sql(&transformed).await {
         Ok(df) => df,
         Err(e) => {
-            eprintln!("Error executing SQL: {}", e);
+            eprintln!("Error executing SQL: {e}");
             return Ok(());
         }
     };
@@ -114,15 +114,15 @@ async fn main() -> Result<()> {
     {
         Ok(sql) => sql,
         Err(e) => {
-            eprintln!("Error transforming SQL: {}", e);
+            eprintln!("Error transforming SQL: {e}");
             return Ok(());
         }
     };
-    println!("Transformed SQL: {}", transformed);
+    println!("Transformed SQL: {transformed}");
     let df = match ctx.sql(&transformed).await {
         Ok(df) => df,
         Err(e) => {
-            eprintln!("Error executing SQL: {}", e);
+            eprintln!("Error executing SQL: {e}");
             return Ok(());
         }
     };

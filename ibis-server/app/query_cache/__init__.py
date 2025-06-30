@@ -1,6 +1,6 @@
 import hashlib
 import time
-from typing import Any, Optional
+from typing import Any
 
 import ibis
 import opendal
@@ -17,7 +17,7 @@ class QueryCacheManager:
         self.root = root
 
     @tracer.start_as_current_span("get_cache", kind=trace.SpanKind.INTERNAL)
-    def get(self, data_source: str, sql: str, info) -> Optional[Any]:
+    def get(self, data_source: str, sql: str, info) -> Any | None:
         cache_key = self._generate_cache_key(data_source, sql, info)
         cache_file_name = self._get_cache_file_name(cache_key)
         op = self._get_dal_operator()

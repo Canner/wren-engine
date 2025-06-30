@@ -287,7 +287,7 @@ impl ModelPlanNodeBuilder {
                 .get_model(model.table())
                 .and_then(|m| m.primary_key().and_then(|pk| m.get_column(pk)))
             else {
-                debug!("Primary key not found for model {}", model);
+                debug!("Primary key not found for model {model}");
                 continue;
             };
             self.model_required_fields
@@ -615,15 +615,15 @@ fn collect_model_required_fields(
     else {
         return plan_err!("Required fields not found for {}", qualified_column);
     };
-    debug!("Required fields: {:?}", set);
+    debug!("Required fields: {set:?}");
     for c in set {
         let Some(relation_ref) = &c.relation else {
-            return plan_err!("Source dataset not found for {}", c);
+            return plan_err!("Source dataset not found for {c}");
         };
         let Some(ColumnReference { dataset, column }) =
             analyzed_wren_mdl.wren_mdl().get_column_reference(c)
         else {
-            return plan_err!("Column reference not found for {}", c);
+            return plan_err!("Column reference not found for {c}");
         };
         if let Dataset::Model(m) = dataset {
             if column.is_calculated {
@@ -635,8 +635,7 @@ fn collect_model_required_fields(
                     ) else {
                         // skip the semantic expression (e.g. calculated field or relationship column)
                         debug!(
-                            "Error creating expression for calculated field: {}",
-                            expression
+                            "Error creating expression for calculated field: {expression}"
                         );
                         continue;
                     };

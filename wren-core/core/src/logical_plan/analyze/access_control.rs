@@ -101,7 +101,7 @@ pub fn validate_rlac_rule(rule: &RowLevelAccessControl, model: &Model) -> Result
             "The session property {} is used, but not found in the session properties",
             missed_properties
                 .iter()
-                .map(|property| format!("@{}", property))
+                .map(|property| format!("@{property}"))
                 .collect::<Vec<_>>()
                 .join(", ")
         );
@@ -364,7 +364,7 @@ mod test {
             let all_match = name.iter().all(|n| expected.contains(n.as_str()));
 
             if !all_match {
-                panic!("should be all match, but got: {:?}", name);
+                panic!("should be all match, but got: {name:?}");
             }
             assert_eq!(session_properties.len(), 1);
             assert_eq!(session_properties[0], "session_id");

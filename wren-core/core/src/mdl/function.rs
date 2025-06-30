@@ -69,7 +69,7 @@ impl Display for FunctionType {
             FunctionType::Aggregate => "aggregate".to_string(),
             FunctionType::Window => "window".to_string(),
         };
-        write!(f, "{}", str)
+        write!(f, "{str}")
     }
 }
 
@@ -81,7 +81,7 @@ impl FromStr for FunctionType {
             "scalar" => Ok(FunctionType::Scalar),
             "aggregate" => Ok(FunctionType::Aggregate),
             "window" => Ok(FunctionType::Window),
-            _ => Err(format!("Unknown function type: {}", s)),
+            _ => Err(format!("Unknown function type: {s}")),
         }
     }
 }
@@ -105,7 +105,7 @@ pub enum ReturnType {
 impl Display for ReturnType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ReturnType::Specific(data_type) => write!(f, "{}", data_type),
+            ReturnType::Specific(data_type) => write!(f, "{data_type}"),
             ReturnType::SameAsInput => write!(f, "same_as_input"),
             ReturnType::SameAsInputFirstArrayElement => {
                 write!(f, "same_as_input_first_array_element")

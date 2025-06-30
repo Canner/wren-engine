@@ -80,18 +80,18 @@ async fn main() -> Result<()> {
     let sql = "select * from wrenai.public.order_items";
     let sql = transform_sql_with_ctx(&ctx, analyzed_mdl, &[], HashMap::new().into(), sql)
         .await?;
-    println!("Wren engine generated SQL: \n{}", sql);
+    println!("Wren engine generated SQL: \n{sql}");
     // create a plan to run a SQL query
     let df = match ctx.sql(&sql).await {
         Ok(df) => df,
         Err(e) => {
-            eprintln!("Error: {}", e);
+            eprintln!("Error: {e}");
             return Err(e);
         }
     };
     match df.show().await {
         Ok(_) => {}
-        Err(e) => eprintln!("Error: {}", e),
+        Err(e) => eprintln!("Error: {e}"),
     }
     Ok(())
 }

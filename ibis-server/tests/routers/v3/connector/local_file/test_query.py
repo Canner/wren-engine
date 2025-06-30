@@ -141,7 +141,7 @@ async def test_query_calculated_field(client, manifest_str):
     assert len(result["data"]) == 1
     assert result["data"][0] == [
         370,
-        "2860895.79",
+        2860895.79,
     ]
     assert result["dtypes"] == {
         "custkey": "int32",

@@ -4,7 +4,6 @@ import base64
 import ssl
 from enum import Enum, StrEnum, auto
 from json import loads
-from typing import Optional
 
 import ibis
 from google.oauth2 import service_account
@@ -251,7 +250,7 @@ class DataSourceExtension(Enum):
         )
 
     @staticmethod
-    def _create_ssl_context(info: ConnectionInfo) -> Optional[ssl.SSLContext]:
+    def _create_ssl_context(info: ConnectionInfo) -> ssl.SSLContext | None:
         ssl_mode = (
             info.ssl_mode.get_secret_value()
             if hasattr(info, "ssl_mode") and info.ssl_mode

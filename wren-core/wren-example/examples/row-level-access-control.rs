@@ -67,7 +67,7 @@ async fn main() -> datafusion::common::Result<()> {
     ]);
 
     let json_str = serde_json::to_string(&manifest).unwrap();
-    println!("Manifest JSON: \n{}", json_str);
+    println!("Manifest JSON: \n{json_str}");
 
     let analyzed_mdl =
         Arc::new(AnalyzedWrenMDL::analyze_with_tables(manifest, register)?);
@@ -116,17 +116,17 @@ async fn main() -> datafusion::common::Result<()> {
     let df = match ctx.sql(&sql).await {
         Ok(df) => df,
         Err(e) => {
-            eprintln!("Error: {}", e);
+            eprintln!("Error: {e}");
             return Err(e);
         }
     };
     match df.show().await {
         Ok(_) => {}
-        Err(e) => eprintln!("Error: {}", e),
+        Err(e) => eprintln!("Error: {e}"),
     }
 
     println!("#####################");
-    println!("Wren engine generated SQL: \n{}", sql);
+    println!("Wren engine generated SQL: \n{sql}");
 
     Ok(())
 }

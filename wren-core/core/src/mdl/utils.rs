@@ -35,7 +35,7 @@ where
 ///
 /// For example, a [CompoundIdentifier] with 3 elements: `orders.customer.name` would be represented as `"orders.customer.name"`.
 pub fn collect_identifiers(expr: &str) -> Result<BTreeSet<Column>> {
-    let wrapped = format!("select {}", expr);
+    let wrapped = format!("select {expr}");
     let parsed = match Parser::parse_sql(&GenericDialect {}, &wrapped) {
         Ok(v) => v,
         Err(e) => return plan_err!("Error parsing SQL: {}", e),
@@ -207,7 +207,7 @@ pub fn quoted_ident(s: &str) -> Ident {
 
 #[inline]
 pub fn quoted(s: &str) -> String {
-    format!("\"{}\"", s)
+    format!("\"{s}\"")
 }
 
 /// Transform the column to a datafusion field
