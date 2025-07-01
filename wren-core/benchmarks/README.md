@@ -1,52 +1,55 @@
-# Wren core benchmarks
+# Wren Core Benchmarks
 
-This crate contains the benchmarks for the Wren core library based on some open source benchmarks, to help
-with performance improvements of Wren core.
+This crate contains benchmarks for the Wren core library, based on industry-standard open source benchmarks, designed to help measure and improve the performance of Wren core.
 
 # Supported Benchmarks
 
-## TPCH
+## TPC-H
 
-Run the tpch benchmark.
+The TPC-H benchmark measures query performance using standard decision support queries.
 
-This benchmarks is derived from the [TPC-H][1] version
-[2.17.1]. The data and answers are generated using `tpch-gen` from
-[2].
+This benchmark is derived from the [TPC-H][1] version [2.17.1]. The data and reference answers are generated using `tpch-gen` from [2].
 
 [1]: http://www.tpc.org/tpch/
-[2]: https://github.com/databricks/tpch-dbgen.git,
+[2]: https://github.com/databricks/tpch-dbgen.git
 [2.17.1]: https://www.tpc.org/tpc_documents_current_versions/pdf/tpc-h_v2.17.1.pdf
 
+## Wren
 
-# Running the benchmarks
+This benchmark is used to collect complex SQL test cases for Wren AI performance evaluation.
 
-## `bench.sh`
+- **`q1`**: A complex SQL query featuring multiple CTEs (Common Table Expressions) and subqueries, designed to test complex query planning and optimization.
+- **`q2`**: Similar to `q1` but includes an additional `UNION` clause to test query rewriting and optimization with set operations.
 
-The easiest way to run benchmarks is the [bench.sh](bench.sh)
-script. Usage instructions can be found with:
+# Running the Benchmarks
+
+## Quick Start with `bench.sh`
+
+The easiest way to run benchmarks is using the [bench.sh](bench.sh) script. To see all available options and usage instructions:
 
 ```shell
-# show usage
+# Show usage information
 ./bench.sh
 ```
 
-## Comparing performance of main and a branch
+## Performance Comparison Between Branches
+
+To compare the performance between the main branch and a feature branch:
 
 ```shell
+# Switch to main branch and gather baseline data
 git checkout main
-
-# Gather baseline data for tpch benchmark
 ./benchmarks/bench.sh run tpch
 
-# Switch to the branch the branch name is mybranch and gather data
+# Switch to your feature branch and gather comparison data
 git checkout mybranch
 ./benchmarks/bench.sh run tpch
 
-# Compare results in the two branches:
+# Compare results between the two branches
 ./bench.sh compare main mybranch
 ```
 
-This produces results like:
+The comparison will produce a detailed performance report like this:
 
 ```shell
 Comparing main and mybranch
@@ -92,10 +95,39 @@ Benchmark tpch.json
 └────────────────────────┴──────────┘
 ```
 
-### Running Benchmarks Manually
+## Running Benchmarks Manually
 
-The `tpch` benchmark can be run with a command like this
+For more control over benchmark execution, you can run individual benchmarks directly using Cargo:
 
 ```bash
+# Run TPC-H benchmark for query 1 with 10 iterations, output to JSON
 cargo run --release --bin tpch -- benchmark --query 1 -i 10 -o result.json
+
+# Run all TPC-H queries
+cargo run --release --bin tpch -- benchmark --all-queries -i 5
+
+# Run Wren-specific benchmarks
+cargo run --release --bin wren -- benchmark --query 1 -i 10
 ```
+
+### Command Line Options
+
+- `--query <number>`: Run a specific query (TPC-H: 1-22, Wren: 1-2)
+- `-i, --iterations <number>`: Number of iterations to run (default: 1)
+- `-o, --output <file>`: Output results to JSON file
+- `--all-queries`: Run all available queries in the benchmark suite
+
+
+## Project Structure
+
+```
+benchmarks/
+├── bench.sh              # Main benchmark runner script
+├── data/                 # Generated benchmark data
+├── results/              # Benchmark results and comparisons
+├── src/
+│   ├── tpch/            # TPC-H benchmark implementation
+│   └── wren/            # Wren-specific benchmark queries
+└── Cargo.toml           # Dependencies and build configuration
+```
+

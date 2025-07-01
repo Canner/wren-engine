@@ -117,8 +117,12 @@ main() {
             RESULTS_NAME=${RESULTS_NAME:-"${BRANCH_NAME}"}
             RESULTS_DIR=${RESULTS_DIR:-"$SCRIPT_DIR/results/$RESULTS_NAME"}
 
+            # Optional query filter to run specific query
+            QUERY=${ARG3}
+            QUERY_ARG=$([ -n "$QUERY" ] && echo "--query ${QUERY}" || echo "")
+
             echo "***************************"
-            echo "DataFusion Benchmark Script"
+            echo "Wren Benchmark Script"
             echo "COMMAND: ${COMMAND}"
             echo "BENCHMARK: ${BENCHMARK}"
             echo "WREN_DIR: ${WREN_DIR}"
@@ -133,9 +137,13 @@ main() {
             case "$BENCHMARK" in
                 all)
                     run_tpch "1"
+                    run_wren
                     ;;
                 tpch)
                     run_tpch "1"
+                    ;;
+                wren)
+                    run_wren
                     ;;
                 *)
                     echo "Error: unknown benchmark '$BENCHMARK' for run"
@@ -167,7 +175,15 @@ run_tpch() {
     RESULTS_FILE="${RESULTS_DIR}/tpch.json"
     echo "RESULTS_FILE: ${RESULTS_FILE}"
     echo "Running tpch benchmark..."
-    $CARGO_COMMAND --bin tpch -- benchmark -i 10 -o "${RESULTS_FILE}"
+    $CARGO_COMMAND --bin tpch -- benchmark -i 10 -o "${RESULTS_FILE}" ${QUERY_ARG}
+}
+
+# Runs wren benchmark
+run_wren() {
+    RESULTS_FILE="${RESULTS_DIR}/wren.json"
+    echo "RESULTS_FILE: ${RESULTS_FILE}"
+    echo "Running wren benchmark..."
+    $CARGO_COMMAND --bin wren -- benchmark -i 10 -o "${RESULTS_FILE}" ${QUERY_ARG}
 }
 
 

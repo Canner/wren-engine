@@ -1356,9 +1356,7 @@ mod test {
             .await?;
             // assert the simplified literal won't be casted to the timestamp tz
             assert_eq!(actual,
-                "SELECT CAST(timestamp_table.timestamp_col AS TIMESTAMP WITH TIME ZONE) > CAST('2011-01-01 18:00:00' AS TIMESTAMP WITH TIME ZONE) \
-                FROM (SELECT timestamp_table.timestamp_col FROM (SELECT __source.timestamp_col AS timestamp_col \
-                FROM datafusion.\"public\".timestamp_table AS __source) AS timestamp_table) AS timestamp_table");
+                "SELECT CAST(timestamp_table.timestamp_col AS TIMESTAMP WITH TIME ZONE) > CAST('2011-01-01 18:00:00' AS TIMESTAMP WITH TIME ZONE) FROM (SELECT timestamp_table.timestamp_col FROM (SELECT __source.timestamp_col AS timestamp_col FROM datafusion.\"public\".timestamp_table AS __source) AS timestamp_table) AS timestamp_table");
         }
         Ok(())
     }
