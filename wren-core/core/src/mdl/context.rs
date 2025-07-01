@@ -39,6 +39,7 @@ use datafusion::optimizer::unwrap_cast_in_comparison::UnwrapCastInComparison;
 use datafusion::optimizer::{AnalyzerRule, OptimizerRule};
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::SessionContext;
+use datafusion::scalar::ScalarValue;
 use datafusion::sql::TableReference;
 use parking_lot::RwLock;
 
@@ -51,8 +52,16 @@ pub async fn create_ctx_with_mdl(
     properties: SessionPropertiesRef,
     is_local_runtime: bool,
 ) -> Result<SessionContext> {
+    let session_timezone = properties
+        .get("x-wren-timezone")
+        .map(|v| v.as_ref().map(|s| s.as_str()).unwrap_or("UTC").to_string());
+
     let config = ctx
         .copied_config()
+        .set(
+            "datafusion.execution.time_zone",
+            &ScalarValue::Utf8(session_timezone),
+        )
         .with_create_default_catalog_and_schema(false)
         .with_default_catalog_and_schema(
             analyzed_mdl.wren_mdl.catalog(),

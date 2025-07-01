@@ -1,6 +1,6 @@
 import base64
 
-import duckdb
+import datafusion
 import orjson
 import pandas as pd
 import pyarrow as pa
@@ -40,7 +40,8 @@ def base64_to_dict(base64_str: str) -> dict:
 
 
 @tracer.start_as_current_span("to_json", kind=trace.SpanKind.INTERNAL)
-def to_json(df: pa.Table, headers: dict) -> dict:
+def to_json(df: pa.Table, headers: dict, data_source: DataSource = None) -> dict:
+    df = _with_session_timezone(df, headers, data_source)
     dtypes = {field.name: str(field.type) for field in df.schema}
     if df.num_rows == 0:
         return {
@@ -49,12 +50,16 @@ def to_json(df: pa.Table, headers: dict) -> dict:
             "dtypes": dtypes,
         }
 
+    ctx = get_datafusion_context(headers)
+    ctx.register_record_batches(name="arrow_table", partitions=[df.to_batches()])
+
     formatted_sql = (
-        "SELECT " + ", ".join([_formater(field) for field in df.schema]) + " FROM df"
+        "SELECT "
+        + ", ".join([_formater(field) for field in df.schema])
+        + " FROM arrow_table"
     )
     logger.debug(f"formmated_sql: {formatted_sql}")
-    conn = get_duckdb_conn(headers)
-    formatted_df = conn.execute(formatted_sql).fetch_df()
+    formatted_df = ctx.sql(formatted_sql).to_pandas()
 
     result = formatted_df.to_dict(orient="split")
     result["dtypes"] = dtypes
@@ -62,33 +67,59 @@ def to_json(df: pa.Table, headers: dict) -> dict:
     return result
 
 
-def get_duckdb_conn(headers: dict) -> duckdb.DuckDBPyConnection:
-    """Get a DuckDB connection with the provided headers."""
-    conn = duckdb.connect()
+def _with_session_timezone(
+    df: pa.Table, headers: dict, data_source: DataSource
+) -> pa.Table:
+    fields = []
+
+    for field in df.schema:
+        if pa.types.is_timestamp(field.type):
+            if field.type.tz is not None and X_WREN_TIMEZONE in headers:
+                # change the timezone to the seesion timezone
+                fields.append(
+                    pa.field(
+                        field.name,
+                        pa.timestamp(field.type.unit, tz=headers[X_WREN_TIMEZONE]),
+                        nullable=True,
+                    )
+                )
+                continue
+            if data_source == DataSource.mysql:
+                timezone = headers.get(X_WREN_TIMEZONE, "UTC")
+                # TODO: ibis mysql loss the timezone information
+                # we cast timestamp to timestamp with session timezone for mysql
+                fields.append(
+                    pa.field(
+                        field.name,
+                        pa.timestamp(field.type.unit, tz=timezone),
+                        nullable=True,
+                    )
+                )
+                continue
+
+        # TODO: the field's nullable should be Ture if the value contains null but
+        # the arrow table produced by the ibis clickhouse connector always set nullable to False
+        # so we set nullable to True here to avoid the casting error
+        fields.append(
+            pa.field(
+                field.name,
+                field.type,
+                nullable=True,
+            )
+        )
+    return df.cast(pa.schema(fields))
+
+
+def get_datafusion_context(headers: dict) -> datafusion.SessionContext:
+    config = datafusion.SessionConfig()
     if X_WREN_TIMEZONE in headers:
-        timezone = headers[X_WREN_TIMEZONE]
-        if timezone.startwith("+") or timezone.startswith("-"):
-            # If the timezone is an offset, convert it to a named timezone
-            timezone = get_timezone_from_offset(timezone)
-        conn.execute("SET TimeZone = ?", [timezone])
+        config.set("datafusion.execution.time_zone", headers[X_WREN_TIMEZONE])
     else:
         # Default to UTC if no timezone is provided
-        conn.execute("SET TimeZone = 'UTC'")
+        config.set("datafusion.execution.time_zone", "UTC")
 
-    return conn
-
-
-def get_timezone_from_offset(offset: str) -> str:
-    if offset.startswith("+"):
-        offset = offset[1:]  # Remove the leading '+' sign
-
-    first = duckdb.execute(
-        "SELECT name, utc_offset FROM pg_timezone_names() WHERE utc_offset = ?",
-        [offset],
-    ).fetchone()
-    if first is None:
-        raise ValueError(f"Invalid timezone offset: {offset}")
-    return first[0]  # Return the timezone name
+    ctx = datafusion.SessionContext(config=config)
+    return ctx
 
 
 def build_context(headers: Header) -> Context:
@@ -166,30 +197,29 @@ def update_response_headers(response, required_headers: dict):
         response.headers[X_CACHE_OVERRIDE_AT] = required_headers[X_CACHE_OVERRIDE_AT]
 
 
-def _formater(field: pa.Field) -> str:
-    column_name = _quote_identifier(field.name)
-    if pa.types.is_decimal(field.type) or pa.types.is_floating(field.type):
-        return f"""
-        case when {column_name} = 0 then '0'
-        when length(CAST({column_name} AS VARCHAR)) > 15 then format('{{:.9g}}', {column_name})
-        else RTRIM(RTRIM(format('{{:.8f}}', {column_name}), '0'), '.')
-        end as {column_name}"""
-    elif pa.types.is_date(field.type):
-        return f"strftime({column_name}, '%Y-%m-%d') as {column_name}"
-    elif pa.types.is_timestamp(field.type):
-        if field.type.tz is None:
-            return f"strftime({column_name}, '%Y-%m-%d %H:%M:%S.%f') as {column_name}"
-        else:
-            return (
-                f"strftime({column_name}, '%Y-%m-%d %H:%M:%S.%f %Z') as {column_name}"
-            )
-    elif pa.types.is_binary(field.type):
-        return f"to_hex({column_name}) as {column_name}"
-    elif pa.types.is_interval(field.type):
-        return f"cast({column_name} as varchar) as {column_name}"
-    return column_name
-
-
 def _quote_identifier(identifier: str) -> str:
     identifier = identifier.replace('"', '""')  # Escape double quotes
     return f'"{identifier}"' if identifier else identifier
+
+
+def _formater(field: pa.Field) -> str:
+    column_name = _quote_identifier(field.name)
+    if pa.types.is_decimal(field.type):
+        # TODO: maybe implement a to_char udf to fomrat decimal would be better
+        # Currently, if the nubmer is less than 1, it will show with exponential notation if the lenth of float digits is great than 7
+        # e.g. 0.0000123 will be shown without exponential notation but 0.0000123 will be shown with exponential notation 1.23e-6
+        return f"case when {column_name} = 0 then '0' else cast({column_name} as double) end as {column_name}"
+    elif pa.types.is_date(field.type):
+        return f"to_char({column_name}, '%Y-%m-%d') as {column_name}"
+    elif pa.types.is_timestamp(field.type):
+        if field.type.tz is None:
+            return f"to_char({column_name}, '%Y-%m-%d %H:%M:%S%.6f') as {column_name}"
+        else:
+            return (
+                f"to_char({column_name}, '%Y-%m-%d %H:%M:%S%.6f %Z') as {column_name}"
+            )
+    elif pa.types.is_binary(field.type):
+        return f"encode({column_name}, 'hex') as {column_name}"
+    elif pa.types.is_interval(field.type):
+        return f"cast({column_name} as varchar) as {column_name}"
+    return column_name

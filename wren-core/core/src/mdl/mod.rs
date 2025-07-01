@@ -374,9 +374,9 @@ pub async fn transform_sql_with_ctx(
     properties: SessionPropertiesRef,
     sql: &str,
 ) -> Result<String> {
-    info!("wren-core received SQL: {}", sql);
+    info!("wren-core received SQL: {sql}");
     remote_functions.iter().try_for_each(|remote_function| {
-        debug!("Registering remote function: {:?}", remote_function);
+        debug!("Registering remote function: {remote_function:?}");
         register_remote_function(ctx, remote_function)?;
         Ok::<_, DataFusionError>(())
     })?;
@@ -397,7 +397,7 @@ pub async fn transform_sql_with_ctx(
             let replaced = sql
                 .to_string()
                 .replace(analyzed_mdl.wren_mdl().catalog_schema_prefix(), "");
-            info!("wren-core planned SQL: {}", replaced);
+            info!("wren-core planned SQL: {replaced}");
             Ok(replaced)
         }
         Err(e) => Err(e),
@@ -471,8 +471,7 @@ mod test {
     use datafusion::common::format::DEFAULT_FORMAT_OPTIONS;
     use datafusion::common::not_impl_err;
     use datafusion::common::Result;
-    use datafusion::config::ConfigOptions;
-    use datafusion::prelude::{SessionConfig, SessionContext};
+    use datafusion::prelude::SessionContext;
     use datafusion::sql::unparser::plan_to_sql;
     use insta::assert_snapshot;
     use wren_core_base::mdl::{
@@ -529,7 +528,7 @@ mod test {
         ];
 
         for sql in tests {
-            println!("Original: {}", sql);
+            println!("Original: {sql}");
             let actual = mdl::transform_sql_with_ctx(
                 &SessionContext::new(),
                 Arc::clone(&analyzed_mdl),
@@ -538,7 +537,7 @@ mod test {
                 sql,
             )
             .await?;
-            println!("After transform: {}", actual);
+            println!("After transform: {actual}");
             assert_sql_valid_executable(&actual).await?;
         }
 
@@ -554,12 +553,12 @@ mod test {
         let mdl_json = fs::read_to_string(test_data.as_path())?;
         let mdl = match serde_json::from_str::<Manifest>(&mdl_json) {
             Ok(mdl) => mdl,
-            Err(e) => return not_impl_err!("Failed to parse mdl json: {}", e),
+            Err(e) => return not_impl_err!("Failed to parse mdl json: {e}"),
         };
         let analyzed_mdl =
             Arc::new(AnalyzedWrenMDL::analyze(mdl, Arc::new(HashMap::default()))?);
         let sql = "select * from test.test.customer_view";
-        println!("Original: {}", sql);
+        println!("Original: {sql}");
         let _ = transform_sql_with_ctx(
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
@@ -584,7 +583,7 @@ mod test {
         let mdl_json = fs::read_to_string(test_data.as_path())?;
         let mdl = match serde_json::from_str::<Manifest>(&mdl_json) {
             Ok(mdl) => mdl,
-            Err(e) => return not_impl_err!("Failed to parse mdl json: {}", e),
+            Err(e) => return not_impl_err!("Failed to parse mdl json: {e}"),
         };
         let analyzed_mdl =
             Arc::new(AnalyzedWrenMDL::analyze(mdl, Arc::new(HashMap::default()))?);
@@ -999,7 +998,7 @@ mod test {
         let df = ctx.sql(sql).await?;
         let plan = df.into_optimized_plan()?;
         let after_roundtrip = plan_to_sql(&plan).map(|sql| sql.to_string())?;
-        println!("After roundtrip: {}", after_roundtrip);
+        println!("After roundtrip: {after_roundtrip}");
         match ctx.sql(sql).await?.collect().await {
             Ok(_) => Ok(()),
             Err(e) => {
@@ -1120,17 +1119,17 @@ mod test {
 
     #[tokio::test]
     async fn test_eval_timestamp_with_session_timezone() -> Result<()> {
-        let mut config = ConfigOptions::new();
-        config.execution.time_zone = Some("+08:00".to_string());
-        let session_config = SessionConfig::from(config);
-        let ctx = SessionContext::new_with_config(session_config);
+        let mut headers = HashMap::new();
+        headers.insert("x-wren-timezone".to_string(), Some("+08:00".to_string()));
+        let headers_ref = Arc::new(headers);
+        let ctx = SessionContext::new();
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
         let sql = "select timestamp '2011-01-01 18:00:00'";
         let actual = transform_sql_with_ctx(
             &ctx,
             Arc::clone(&analyzed_mdl),
             &[],
-            Arc::new(HashMap::new()),
+            Arc::clone(&headers_ref),
             sql,
         )
         .await?;
@@ -1142,17 +1141,20 @@ mod test {
             &ctx,
             Arc::clone(&analyzed_mdl),
             &[],
-            Arc::new(HashMap::new()),
+            Arc::clone(&headers_ref),
             sql,
         )
         .await?;
         // TIMESTAMP WITH TIME ZONE will be converted to the session timezone
         assert_snapshot!(actual, @"SELECT CAST('2011-01-01 10:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00\"\")\"");
 
-        let mut config = ConfigOptions::new();
-        config.execution.time_zone = Some("America/New_York".to_string());
-        let session_config = SessionConfig::from(config);
-        let ctx = SessionContext::new_with_config(session_config);
+        let ctx = SessionContext::new();
+        let mut headers = HashMap::new();
+        headers.insert(
+            "x-wren-timezone".to_string(),
+            Some("America/New_York".to_string()),
+        );
+        let headers_ref = Arc::new(headers);
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
         // TIMESTAMP WITH TIME ZONE will be converted to the session timezone with daylight saving (UTC -5)
         let sql = "select timestamp with time zone '2024-01-15 18:00:00'";
@@ -1160,7 +1162,7 @@ mod test {
             &ctx,
             Arc::clone(&analyzed_mdl),
             &[],
-            Arc::new(HashMap::new()),
+            Arc::clone(&headers_ref),
             sql,
         )
         .await?;
@@ -1172,7 +1174,7 @@ mod test {
             &ctx,
             Arc::clone(&analyzed_mdl),
             &[],
-            Arc::new(HashMap::new()),
+            Arc::clone(&headers_ref),
             sql,
         )
         .await?;
@@ -1325,7 +1327,7 @@ mod test {
             .await?;
             // assert the simplified literal will be casted to the timestamp tz
             assert_eq!(actual,
-              "SELECT timestamp_table.timestamptz_col > CAST(CAST('2011-01-01 18:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE) FROM (SELECT timestamp_table.timestamptz_col FROM (SELECT __source.timestamptz_col AS timestamptz_col FROM datafusion.\"public\".timestamp_table AS __source) AS timestamp_table) AS timestamp_table"
+              "SELECT timestamp_table.timestamptz_col > CAST(CAST('2011-01-01 18:00:00' AS TIMESTAMP WITH TIME ZONE) AS TIMESTAMP WITH TIME ZONE) FROM (SELECT timestamp_table.timestamptz_col FROM (SELECT __source.timestamptz_col AS timestamptz_col FROM datafusion.\"public\".timestamp_table AS __source) AS timestamp_table) AS timestamp_table"
 );
 
             let sql = r#"select timestamptz_col > '2011-01-01 18:00:00' from wren.test.timestamp_table"#;
@@ -1354,7 +1356,7 @@ mod test {
             .await?;
             // assert the simplified literal won't be casted to the timestamp tz
             assert_eq!(actual,
-                "SELECT timestamp_table.timestamp_col > CAST('2011-01-01 18:00:00' AS TIMESTAMP) \
+                "SELECT CAST(timestamp_table.timestamp_col AS TIMESTAMP WITH TIME ZONE) > CAST('2011-01-01 18:00:00' AS TIMESTAMP WITH TIME ZONE) \
                 FROM (SELECT timestamp_table.timestamp_col FROM (SELECT __source.timestamp_col AS timestamp_col \
                 FROM datafusion.\"public\".timestamp_table AS __source) AS timestamp_table) AS timestamp_table");
         }

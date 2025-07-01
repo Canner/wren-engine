@@ -91,11 +91,11 @@ async def test_query(client, manifest_str):
         1,
         370,
         "O",
-        "172799.49",
+        172799.49,
         "1996-01-02",
         "1_370",
         "2024-01-01 23:59:59.000000",
-        "2024-01-01 23:59:59.000000 UTC",
+        "2024-01-01 23:59:59.000000 +00:00",
         None,
         "616263",
     ]
@@ -317,7 +317,7 @@ async def test_interval(client, manifest_str):
     )
     assert response.status_code == 200
     result = response.json()
-    assert result["data"][0] == ["9 years 4 months 100 days 01:00:00"]
+    assert result["data"][0] == ["112 mons 100 days 1 hours"]
     assert result["dtypes"] == {"col": "month_day_nano_interval"}
 
 
@@ -332,7 +332,7 @@ async def test_avg_interval(client, manifest_str):
     )
     assert response.status_code == 200
     result = response.json()
-    assert result["data"][0] == ["10484 days 08:54:14.4"]
+    assert result["data"][0] == ["10484 days 8 hours 54 mins 14.400000000 secs"]
     assert result["dtypes"] == {"col": "month_day_nano_interval"}
 
 
@@ -362,7 +362,7 @@ async def test_custom_datatypes_no_overrides(client, manifest_str):
     )
     assert response.status_code == 200
     result = response.json()
-    assert result["data"][0] == ["9 years 4 months 100 days 01:00:00"]
+    assert result["data"][0] == ["112 mons 100 days 1 hours"]
     assert result["dtypes"] == {"col": "month_day_nano_interval"}
 
 

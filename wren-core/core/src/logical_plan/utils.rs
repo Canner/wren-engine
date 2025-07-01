@@ -69,7 +69,7 @@ fn create_struct_type(struct_type: &str) -> Result<DataType> {
                     field
                         .field_name
                         .map(|f| f.to_string())
-                        .unwrap_or_else(|| format!("c{}", counter)),
+                        .unwrap_or_else(|| format!("c{counter}")),
                     data_type,
                     true,
                 );
@@ -96,7 +96,7 @@ fn parse_type(struct_type: &str) -> Result<ast::DataType> {
 /// If the data type is not supported, it will return Utf8
 pub fn try_map_data_type(data_type: &str) -> Result<DataType> {
     Ok(map_data_type(data_type).ok().unwrap_or_else(|| {
-        debug!("can't parse data type {}, return Utf8", data_type);
+        debug!("can't parse data type {data_type}, return Utf8");
         DataType::Utf8
     }))
 }
@@ -178,7 +178,7 @@ pub fn map_data_type(data_type: &str) -> Result<DataType> {
         "bit" => DataType::Boolean, // we don't have a BIT type, so we map it to Boolean
         "timestamp_ns" => DataType::Timestamp(TimeUnit::Nanosecond, None),
         _ => {
-            debug!("try parse by arrow {}", lower_data_type);
+            debug!("try parse by arrow {lower_data_type}");
             // the from_str is case sensitive, so we need to use the original string
             DataType::from_str(data_type)?
         }
@@ -254,7 +254,7 @@ pub fn from_qualified_name_str(
 /// Use to print the graph for debugging purposes
 pub fn print_graph(graph: &Graph<Dataset, DatasetLink>) {
     let dot = Dot::with_config(graph, &[Config::EdgeNoLabel]);
-    println!("graph: {:?}", dot);
+    println!("graph: {dot:?}");
 }
 
 /// Check if the table reference belongs to the mdl

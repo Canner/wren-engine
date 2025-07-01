@@ -152,7 +152,7 @@ class BigQueryConnector(SimpleConnector):
             return super().query(sql, limit)
         except ValueError as e:
             # Import here to avoid override the custom datatypes
-            import ibis.backends.bigquery
+            import ibis.backends.bigquery  # noqa: PLC0415
 
             # Try to match the error message from the google cloud bigquery library matching Arrow type error.
             # If the error message matches, requries to get the schema from the result and generate a empty pandas dataframe with the mapped schema
@@ -190,7 +190,7 @@ class BigQueryConnector(SimpleConnector):
 
 class DuckDBConnector:
     def __init__(self, connection_info: ConnectionInfo):
-        import duckdb
+        import duckdb  # noqa: PLC0415
 
         self.connection = duckdb.connect()
         if isinstance(connection_info, S3FileConnectionInfo):
@@ -221,7 +221,7 @@ class DuckDBConnector:
 
 class RedshiftConnector:
     def __init__(self, connection_info: RedshiftConnectionUnion):
-        import redshift_connector
+        import redshift_connector  # noqa: PLC0415
 
         if isinstance(connection_info, RedshiftIAMConnectionInfo):
             self.connection = redshift_connector.connect(

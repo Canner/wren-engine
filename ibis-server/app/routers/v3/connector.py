@@ -158,7 +158,7 @@ async def query(
                     case (False, _, _):
                         pass
 
-            response = ORJSONResponse(to_json(result, headers))
+            response = ORJSONResponse(to_json(result, headers, data_source=data_source))
             update_response_headers(response, cache_headers)
             return response
         except Exception as e:
