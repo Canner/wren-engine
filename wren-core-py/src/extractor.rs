@@ -2,7 +2,7 @@ use crate::errors::CoreError;
 use crate::manifest::to_manifest;
 use pyo3::{pyclass, pymethods};
 use std::collections::hash_map::Entry;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::Arc;
 use wren_core::mdl::manifest::{Model, Relationship, View};
 use wren_core::mdl::WrenMDL;
@@ -70,7 +70,12 @@ fn extract_manifest(
 ) -> Result<Manifest, CoreError> {
     let extracted_models = extract_models(mdl, used_datasets);
     let (used_views, models_of_views) = extract_views(mdl, used_datasets);
-    let used_models = [extracted_models, models_of_views].concat();
+    let used_models = [extracted_models, models_of_views]
+        .concat()
+        .into_iter()
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
     let used_relationships = extract_relationships(mdl, &used_models);
     Ok(Manifest {
         catalog: mdl.catalog().to_string(),
@@ -203,15 +208,24 @@ mod tests {
         let c_view = ViewBuilder::new("customer_view")
             .statement("SELECT * FROM my_catalog.my_schema.customer")
             .build();
+        let part = ModelBuilder::new("part")
+            .table_reference("main.part")
+            .column(ColumnBuilder::new("p_partkey", "integer").build())
+            .build();
+        let p_view = ViewBuilder::new("part_view")
+            .statement("SELECT * FROM my_catalog.my_schema.part")
+            .build();
         let manifest = ManifestBuilder::new()
             .catalog("my_catalog")
             .schema("my_schema")
             .model(customer)
             .model(orders)
             .model(lineitem)
+            .model(part)
             .relationship(c_o_relationship)
             .relationship(o_l_relationship)
             .view(c_view)
+            .view(p_view)
             .data_source(DataSource::BigQuery)
             .build();
         to_json_base64(manifest).unwrap()
@@ -265,10 +279,11 @@ mod tests {
     }
 
     #[rstest]
-    #[case(&["customer"], &["customer", "orders", "lineitem"])]
-    #[case(&["customer_view"], &["customer", "orders", "lineitem"])]
-    #[case(&["orders"], &["orders", "lineitem"])]
+    #[case(&["customer"], &["customer", "lineitem", "orders"])]
+    #[case(&["customer_view"], &["customer", "lineitem", "orders"])]
+    #[case(&["orders"], &["lineitem", "orders"])]
     #[case(&["lineitem"], &["lineitem"])]
+    #[case(&["part_view", "part"], &["part"])]
     fn test_extract_manifest_for_models(
         extractor: PyManifestExtractor,
         #[case] dataset: &[&str],

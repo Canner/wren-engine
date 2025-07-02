@@ -288,6 +288,18 @@ impl Model {
     }
 }
 
+impl PartialOrd for Model {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Model {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.name.cmp(&other.name)
+    }
+}
+
 impl Column {
     /// Return the name of the column
     pub fn name(&self) -> &str {
