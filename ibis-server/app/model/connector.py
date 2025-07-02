@@ -8,7 +8,6 @@ from typing import Any
 import ibis
 import ibis.expr.datatypes as dt
 import ibis.expr.schema as sch
-import ibis.formats
 import pandas as pd
 import pyarrow as pa
 import sqlglot.expressions as sge
@@ -32,6 +31,7 @@ from app.model import (
 )
 from app.model.data_source import DataSource
 from app.model.utils import init_duckdb_gcs, init_duckdb_minio, init_duckdb_s3
+from app.util import round_decimal_columns
 
 # Override datatypes of ibis
 importlib.import_module("app.custom_ibis.backends.sql.datatypes")
@@ -77,7 +77,9 @@ class SimpleConnector:
 
     @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
     def query(self, sql: str, limit: int) -> pa.Table:
-        return self.connection.sql(sql).limit(limit).to_pyarrow()
+        ibis_table = self.connection.sql(sql).limit(limit)
+        ibis_table = round_decimal_columns(ibis_table)
+        return ibis_table.to_pyarrow()
 
     @tracer.start_as_current_span("connector_dry_run", kind=trace.SpanKind.CLIENT)
     def dry_run(self, sql: str) -> None:
@@ -116,10 +118,12 @@ class CannerConnector:
         self.connection = DataSource.canner.get_connection(connection_info)
 
     @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
-    def query(self, sql: str, limit: int) -> pd.DataFrame:
+    def query(self, sql: str, limit: int) -> pa.Table:
         # Canner enterprise does not support `CREATE TEMPORARY VIEW` for getting schema
         schema = self._get_schema(sql)
-        return self.connection.sql(sql, schema=schema).limit(limit).to_pyarrow()
+        ibis_table = self.connection.sql(sql, schema=schema).limit(limit)
+        ibis_table = round_decimal_columns(ibis_table)
+        return ibis_table.to_pyarrow()
 
     @tracer.start_as_current_span("connector_dry_run", kind=trace.SpanKind.CLIENT)
     def dry_run(self, sql: str) -> Any:
@@ -152,7 +156,7 @@ class BigQueryConnector(SimpleConnector):
             return super().query(sql, limit)
         except ValueError as e:
             # Import here to avoid override the custom datatypes
-            import ibis.backends.bigquery  # noqa: PLC0415
+            import ibis.backends.bigquery
 
             # Try to match the error message from the google cloud bigquery library matching Arrow type error.
             # If the error message matches, requries to get the schema from the result and generate a empty pandas dataframe with the mapped schema
@@ -190,7 +194,7 @@ class BigQueryConnector(SimpleConnector):
 
 class DuckDBConnector:
     def __init__(self, connection_info: ConnectionInfo):
-        import duckdb  # noqa: PLC0415
+        import duckdb
 
         self.connection = duckdb.connect()
         if isinstance(connection_info, S3FileConnectionInfo):
@@ -221,7 +225,7 @@ class DuckDBConnector:
 
 class RedshiftConnector:
     def __init__(self, connection_info: RedshiftConnectionUnion):
-        import redshift_connector  # noqa: PLC0415
+        import redshift_connector
 
         if isinstance(connection_info, RedshiftIAMConnectionInfo):
             self.connection = redshift_connector.connect(

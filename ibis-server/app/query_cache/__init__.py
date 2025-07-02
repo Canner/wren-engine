@@ -9,6 +9,8 @@ from duckdb import DuckDBPyConnection, connect
 from loguru import logger
 from opentelemetry import trace
 
+from app.util import round_decimal_columns
+
 tracer = trace.get_tracer(__name__)
 
 
@@ -27,9 +29,11 @@ class QueryCacheManager:
         if op.exists(cache_file_name):
             try:
                 logger.info(f"Reading query cache {cache_file_name}")
-                df = ibis.read_parquet(full_path).to_pyarrow()
+                ibis_table = ibis.read_parquet(full_path)
+                ibis_table = round_decimal_columns(ibis_table)
+                arrow_table = ibis_table.to_pyarrow()
                 logger.info("query cache to dataframe")
-                return df
+                return arrow_table
             except Exception as e:
                 logger.debug(f"Failed to read query cache {e}")
                 return None

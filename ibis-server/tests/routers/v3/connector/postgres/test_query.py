@@ -697,3 +697,19 @@ SELECT
         "1.123456789",  # round_to_9_decimal_places
         "0.12345678912345678",  # round_to_18_decimal_places
     ]
+
+
+async def test_decimal_precision(client, manifest_str, connection_info):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT cast(1 as decimal(38, 8)) / cast(3 as decimal(38, 8)) as result",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 1
+    assert len(result["data"][0]) == 1
+    assert result["data"][0][0] == "0.33333333"
