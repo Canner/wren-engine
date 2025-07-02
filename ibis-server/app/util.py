@@ -188,13 +188,13 @@ def pd_to_arrow_schema(df: pd.DataFrame) -> pa.Schema:
     return pa.schema(fields)
 
 
-def round_decimal_columns(ibis_table: Table, scale: int = 8) -> Table:
+def round_decimal_columns(ibis_table: Table, scale: int = 9) -> Table:
     fields = []
     for name, dtype in ibis_table.schema().items():
         col = ibis_table[name]
         if isinstance(dtype, Decimal):
-            # maxinum precision for pyarrow decimal is 38, so we limit it to 36
-            decimal_type = Decimal(precision=36, scale=scale)
+            # maxinum precision for pyarrow decimal is 38
+            decimal_type = Decimal(precision=38, scale=scale)
             col = col.cast(decimal_type).round(scale)
             fields.append(col.name(name))
         else:

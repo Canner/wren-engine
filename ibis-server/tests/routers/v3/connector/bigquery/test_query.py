@@ -335,4 +335,4 @@ async def test_decimal_precision(client, manifest_str, connection_info):
     assert response.status_code == 200
     result = response.json()
     assert len(result["data"]) == 1
-    assert result["data"][0][0] == "0.33333333"
+    assert result["data"][0][0] == "0.333333333"

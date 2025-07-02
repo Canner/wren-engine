@@ -1023,7 +1023,7 @@ async def test_decimal_precision(client, manifest_str, postgres: PostgresContain
     assert response.status_code == 200
     result = response.json()
     assert len(result["data"]) == 1
-    assert result["data"][0][0] == "0.33333333"
+    assert result["data"][0][0] == "0.333333333"
 
 
 def _to_connection_info(pg: PostgresContainer):
