@@ -1010,6 +1010,22 @@ async def test_postgis_geometry(client, manifest_str, postgis: PostgresContainer
     assert result["data"][0] == [74.66265347816136]
 
 
+async def test_decimal_precision(client, manifest_str, postgres: PostgresContainer):
+    connection_info = _to_connection_info(postgres)
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT cast(1 as decimal(38, 8)) / cast(3 as decimal(38, 8)) as result",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 1
+    assert result["data"][0][0] == "0.33333333"
+
+
 def _to_connection_info(pg: PostgresContainer):
     return {
         "host": pg.get_container_host_ip(),
