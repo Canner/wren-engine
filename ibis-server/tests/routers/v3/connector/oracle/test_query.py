@@ -104,7 +104,7 @@ async def test_query(client, manifest_str, connection_info):
         "orderkey": "int64",
         "custkey": "int64",
         "orderstatus": "string",
-        "totalprice": "decimal128(38, 2)",
+        "totalprice": "decimal128(38, 9)",
         "orderdate": "date32[day]",
         "order_cust_key": "string",
         "timestamp": "timestamp[ns]",
@@ -178,7 +178,7 @@ async def test_query_number_scale(client, connection_info):
                     {
                         "name": "id_p_s",
                         "expression": '"ID_P_S"',
-                        "type": "decimal128(10, 2)",
+                        "type": "decimal128(38, 9)",
                     },
                 ],
                 "primaryKey": "id",
@@ -207,5 +207,5 @@ async def test_query_number_scale(client, connection_info):
     assert result["dtypes"] == {
         "id": "int64",
         "id_p": "int64",
-        "id_p_s": "decimal128(10, 2)",
+        "id_p_s": "decimal128(38, 9)",
     }

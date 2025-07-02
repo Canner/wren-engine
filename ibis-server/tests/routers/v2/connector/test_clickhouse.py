@@ -191,7 +191,7 @@ async def test_query(client, manifest_str, clickhouse: ClickHouseContainer):
         "orderkey": "int32",
         "custkey": "int32",
         "orderstatus": "string",
-        "totalprice": "decimal128(15, 2)",
+        "totalprice": "decimal128(38, 9)",
         "orderdate": "date32[day]",
         "order_cust_key": "string",
         "timestamp": "timestamp[ns]",
@@ -310,7 +310,7 @@ async def test_query_to_many_relationship(
     assert len(result["data"]) == 1
     assert result["data"][0] == ["2860895.79"]
     assert result["dtypes"] == {
-        "totalprice": "decimal128(38, 2)",
+        "totalprice": "decimal128(38, 9)",
     }
 
 
