@@ -6,6 +6,8 @@ import pandas as pd
 import pyarrow as pa
 import wren_core
 from fastapi import Header
+from ibis.expr.datatypes import Decimal
+from ibis.expr.types import Table
 from loguru import logger
 from opentelemetry import trace
 from opentelemetry.baggage.propagation import W3CBaggagePropagator
@@ -184,6 +186,20 @@ def pd_to_arrow_schema(df: pd.DataFrame) -> pa.Schema:
             pa_type = pa.string()
         fields.append(pa.field(column, pa_type))
     return pa.schema(fields)
+
+
+def round_decimal_columns(ibis_table: Table, scale: int = 9) -> Table:
+    fields = []
+    for name, dtype in ibis_table.schema().items():
+        col = ibis_table[name]
+        if isinstance(dtype, Decimal):
+            # maxinum precision for pyarrow decimal is 38
+            decimal_type = Decimal(precision=38, scale=scale)
+            col = col.cast(decimal_type).round(scale)
+            fields.append(col.name(name))
+        else:
+            fields.append(col)
+    return ibis_table.select(*fields)
 
 
 def update_response_headers(response, required_headers: dict):

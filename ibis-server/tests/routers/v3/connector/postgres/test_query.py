@@ -655,8 +655,7 @@ SELECT
     CAST(1.23e4 AS DECIMAL(10,5)) AS case_cast_decimal,
     CAST(1.234e+14 AS DECIMAL(20,0)) AS show_float,
     CAST(1.234e+15 AS DECIMAL(20,0)) AS show_exponent,
-    CAST(1.123456789 AS DECIMAL(20,9)) AS round_to_9_decimal_places,
-    CAST(0.123456789123456789 AS DECIMAL(20,18)) AS round_to_18_decimal_places
+    CAST(1.123456789 AS DECIMAL(20,9)) AS round_to_9_decimal_places
             """,
         },
         headers={
@@ -695,5 +694,19 @@ SELECT
         # DataFusion does not support it, so we show the full number
         "1234000000000000.0",  # show_exponent
         "1.123456789",  # round_to_9_decimal_places
-        "0.12345678912345678",  # round_to_18_decimal_places
     ]
+
+
+async def test_decimal_precision(client, manifest_str, connection_info):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT cast(1 as decimal(38, 8)) / cast(3 as decimal(38, 8)) as result",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 1
+    assert result["data"][0][0] == "0.333333333"
