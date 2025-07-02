@@ -655,7 +655,7 @@ SELECT
     CAST(1.23e4 AS DECIMAL(10,5)) AS case_cast_decimal,
     CAST(1.234e+14 AS DECIMAL(20,0)) AS show_float,
     CAST(1.234e+15 AS DECIMAL(20,0)) AS show_exponent,
-    CAST(1.123456789 AS DECIMAL(20,9)) AS round_to_9_decimal_places,
+    CAST(1.123456789 AS DECIMAL(20,9)) AS round_to_9_decimal_places
             """,
         },
         headers={

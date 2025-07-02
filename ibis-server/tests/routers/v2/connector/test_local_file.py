@@ -154,7 +154,7 @@ async def test_query_calculated_field(client, manifest_str, connection_info):
     ]
     assert result["dtypes"] == {
         "custkey": "int32",
-        "sum_totalprice": "decimal128(38, 9)",
+        "sum_totalprice": "decimal128(38, 2)",
     }
 
 
