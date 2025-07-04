@@ -221,5 +221,3 @@ async def test_query_duckdb_format(client):
     result = response.json()
     assert len(result["columns"]) == len(manifest["models"][0]["columns"])
     assert len(result["data"]) == 1
-
-
