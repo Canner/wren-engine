@@ -345,7 +345,7 @@ class DuckDBMetadata(ObjectStorageMetadata):
         return []
 
     def get_version(self):
-        df: pa.Table = self.connector.query("SELECT version()")
+        df: pa.Table = self.connection.query("SELECT version()")
         if df is None:
             raise UnprocessableEntityError("Failed to get DuckDB version")
         if df.num_rows == 0:
