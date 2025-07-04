@@ -378,7 +378,7 @@ class LocalFileConnectionInfo(BaseConnectionInfo):
         description="the root path of the local file", default="/", examples=["/data"]
     )
     format: str = Field(
-        description="File format", default="csv", examples=["csv", "parquet", "json"]
+        description="File format", default="csv", examples=["csv", "parquet", "json", "duckdb"]
     )
 
 
@@ -387,7 +387,7 @@ class S3FileConnectionInfo(BaseConnectionInfo):
         description="the root path of the s3 bucket", default="/", examples=["/data"]
     )
     format: str = Field(
-        description="File format", default="csv", examples=["csv", "parquet", "json"]
+        description="File format", default="csv", examples=["csv", "parquet", "json", "duckdb"]
     )
     bucket: SecretStr = Field(
         description="the name of the s3 bucket", examples=["my-bucket"]
@@ -408,7 +408,7 @@ class MinioFileConnectionInfo(BaseConnectionInfo):
         description="the root path of the minio bucket", default="/", examples=["/data"]
     )
     format: str = Field(
-        description="File format", default="csv", examples=["csv", "parquet", "json"]
+        description="File format", default="csv", examples=["csv", "parquet", "json", "duckdb"]
     )
     ssl_enabled: bool = Field(
         description="use the ssl connection or not",
@@ -434,7 +434,7 @@ class GcsFileConnectionInfo(BaseConnectionInfo):
         description="the root path of the gcs bucket", default="/", examples=["/data"]
     )
     format: str = Field(
-        description="File format", default="csv", examples=["csv", "parquet", "json"]
+        description="File format", default="csv", examples=["csv", "parquet", "json", "duckdb"]
     )
     bucket: SecretStr = Field(
         description="the name of the gcs bucket", examples=["my-bucket"]

@@ -447,3 +447,36 @@ async def test_list_json_files(client):
     assert columns[21]["type"] == "UUID"
     assert columns[22]["name"] == "c_varchar"
     assert columns[22]["type"] == "STRING"
+
+
+async def test_duckdb_metadata_list_tables(client):
+    response = await client.post(
+        url=f"{base_url}/metadata/tables",
+        json={
+            "connectionInfo": {
+                "url": "tests/resource/test_file_source",
+                "format": "duckdb",
+            },
+        },
+    )
+    assert response.status_code == 200
+
+    result = next(filter(lambda x: x["name"] == "main.customers", response.json()))
+    assert result["name"] == "main.customers"
+    assert result["primaryKey"] is not None
+    assert result["description"] is None
+    assert result["properties"] == {
+        "catalog": "jaffle_shop",
+        "schema": "main",
+        "table": "customers",
+        "path": None,
+    }
+    assert len(result["columns"]) == 7
+    assert result["columns"][1] == {
+        "name": "number_of_orders",
+        "nestedColumns": None,
+        "type": "INT64",
+        "notNull": False,
+        "description": None,
+        "properties": None,
+    }

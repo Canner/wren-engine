@@ -2,6 +2,7 @@ import os
 
 import duckdb
 import opendal
+import pyarrow as pa
 from loguru import logger
 
 from app.model import (
@@ -11,6 +12,7 @@ from app.model import (
     S3FileConnectionInfo,
     UnprocessableEntityError,
 )
+from app.model.connector import DuckDBConnector
 from app.model.metadata.dto import (
     Column,
     RustWrenEngineColumnType,
@@ -271,3 +273,81 @@ class GcsFileMetadata(ObjectStorageMetadata):
             path = path[1:]
 
         return f"gs://{self.connection_info.bucket.get_secret_value()}/{path}"
+
+
+class DuckDBMetadata(ObjectStorageMetadata):
+    def __init__(self, connection_info: LocalFileConnectionInfo):
+        super().__init__(connection_info)
+        self.connection = DuckDBConnector(connection_info)
+
+    def get_table_list(self) -> list[Table]:
+        sql = """
+            SELECT
+                t.table_catalog,
+                t.table_schema,
+                t.table_name,
+                c.column_name,
+                c.data_type,
+                c.is_nullable,
+                c.ordinal_position
+            FROM
+                information_schema.tables t
+            JOIN
+                information_schema.columns c
+                ON t.table_schema = c.table_schema
+                AND t.table_name = c.table_name
+            WHERE
+                t.table_type IN ('BASE TABLE', 'VIEW')
+                AND t.table_schema NOT IN ('information_schema', 'pg_catalog');
+            """
+        response = (
+            self.connection.query(
+                sql,
+            )
+            .to_pandas()
+            .to_dict(orient="records")
+        )
+
+        unique_tables = {}
+        for row in response:
+            # generate unique table name
+            schema_table = self._format_compact_table_name(
+                row["table_schema"], row["table_name"]
+            )
+            # init table if not exists
+            if schema_table not in unique_tables:
+                unique_tables[schema_table] = Table(
+                    name=schema_table,
+                    columns=[],
+                    properties=TableProperties(
+                        schema=row["table_schema"],
+                        catalog=row["table_catalog"],
+                        table=row["table_name"],
+                    ),
+                    primaryKey="",
+                )
+
+            # table exists, and add column to the table
+            unique_tables[schema_table].columns.append(
+                Column(
+                    name=row["column_name"],
+                    type=self._to_column_type(row["data_type"]),
+                    notNull=row["is_nullable"].lower() == "no",
+                    properties=None,
+                )
+            )
+        return list(unique_tables.values())
+
+    def _format_compact_table_name(self, schema: str, table: str):
+        return f"{schema}.{table}"
+
+    def get_constraints(self):
+        return []
+
+    def get_version(self):
+        df: pa.Table = self.connector.query("SELECT version()")
+        if df is None:
+            raise UnprocessableEntityError("Failed to get DuckDB version")
+        if df.num_rows == 0:
+            raise UnprocessableEntityError("DuckDB version is empty")
+        return df.column(0).to_pylist()[0]
