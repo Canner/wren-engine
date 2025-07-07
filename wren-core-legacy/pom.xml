@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>269</version>
+        <version>276</version>
     </parent>
 
     <groupId>io.wren</groupId>
@@ -67,8 +67,8 @@
         <dep.airlift.version>269</dep.airlift.version>
         <dep.packaging.version>${dep.airlift.version}</dep.packaging.version>
         <dep.drift.version>1.23</dep.drift.version>
-        <dep.testcontainers.version>1.21.2</dep.testcontainers.version>
-        <dep.errorprone.version>2.38.0</dep.errorprone.version>
+        <dep.testcontainers.version>1.21.3</dep.testcontainers.version>
+        <dep.errorprone.version>2.39.0</dep.errorprone.version>
         <dep.plugin.failsafe.version>${dep.plugin.surefire.version}</dep.plugin.failsafe.version>
         <netty.version>4.1.45.Final</netty.version>
 
@@ -349,7 +349,7 @@
             <dependency>
                 <groupId>org.checkerframework</groupId>
                 <artifactId>checker-qual</artifactId>
-                <version>3.49.4</version>
+                <version>3.49.5</version>
             </dependency>
 
             <dependency>
