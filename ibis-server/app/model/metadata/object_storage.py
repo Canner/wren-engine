@@ -301,11 +301,7 @@ class DuckDBMetadata(ObjectStorageMetadata):
                 AND t.table_schema NOT IN ('information_schema', 'pg_catalog');
             """
         response = (
-            self.connection.query(
-                sql,
-            )
-            .to_pandas()
-            .to_dict(orient="records")
+            self.connection.query(sql, limit=None).to_pandas().to_dict(orient="records")
         )
 
         unique_tables = {}
