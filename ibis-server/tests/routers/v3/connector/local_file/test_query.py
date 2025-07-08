@@ -178,3 +178,46 @@ async def test_dry_run(client, manifest_str):
     )
     assert response.status_code == 422
     assert response.text is not None
+
+
+async def test_query_duckdb_format(client):
+    manifest = {
+        "catalog": "wren",
+        "schema": "public",
+        "models": [
+            {
+                "name": "customers",
+                "tableReference": {
+                    "catalog": "jaffle_shop",
+                    "schema": "main",
+                    "table": "customers",
+                },
+                "columns": [
+                    {"name": "customer_id", "type": "integer"},
+                    {"name": "customer_lifetime_value", "type": "double"},
+                    {"name": "first_name", "type": "varchar"},
+                    {"name": "first_order", "type": "date"},
+                    {"name": "last_name", "type": "varchar"},
+                    {"name": "most_recent_order", "type": "date"},
+                    {"name": "number_of_orders", "type": "integer"},
+                ],
+            },
+        ],
+        "relationships": [],
+        "views": [],
+    }
+    response = await client.post(
+        f"{base_url}/query",
+        json={
+            "manifestStr": base64.b64encode(orjson.dumps(manifest)).decode("utf-8"),
+            "sql": "SELECT * FROM customers LIMIT 1",
+            "connectionInfo": {
+                "url": "tests/resource/test_file_source",
+                "format": "duckdb",
+            },
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["columns"]) == len(manifest["models"][0]["columns"])
+    assert len(result["data"]) == 1
