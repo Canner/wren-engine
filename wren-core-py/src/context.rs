@@ -20,8 +20,8 @@ use crate::manifest::to_manifest;
 use crate::remote_functions::PyRemoteFunction;
 use log::debug;
 use pyo3::types::{PyAnyMethods, PyFrozenSet, PyFrozenSetMethods, PyTuple};
-use pyo3::{PyObject, Python};
 use pyo3::{pyclass, pymethods, PyErr, PyResult};
+use pyo3::{PyObject, Python};
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::ops::ControlFlow;
@@ -187,10 +187,7 @@ impl PySessionContext {
 
     /// Transform the given Wren SQL to the equivalent Planned SQL.
     #[pyo3(signature = (sql=None))]
-    pub fn transform_sql(
-        &self,
-        sql: Option<&str>,
-    ) -> PyResult<String> {
+    pub fn transform_sql(&self, sql: Option<&str>) -> PyResult<String> {
         env_logger::try_init().ok();
         let Some(sql) = sql else {
             return Err(CoreError::new("SQL is required").into());
