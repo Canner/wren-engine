@@ -479,7 +479,7 @@ async fn permission_analyze(
             if let DataFusionError::Context(_, ee) = &e {
                 if let DataFusionError::External(we) = ee.as_ref() {
                     if let Some(_) = we.downcast_ref::<WrenError>() {
-                       return Err(e)
+                        return Err(e);
                     }
                 }
             }
