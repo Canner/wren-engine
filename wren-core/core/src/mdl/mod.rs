@@ -478,7 +478,7 @@ async fn permission_analyze(
         Err(e) => {
             if let DataFusionError::Context(_, ee) = &e {
                 if let DataFusionError::External(we) = ee.as_ref() {
-                    if let Some(_) = we.downcast_ref::<WrenError>() {
+                    if we.downcast_ref::<WrenError>().is_some() {
                         return Err(e);
                     }
                 }
@@ -2613,7 +2613,7 @@ mod test {
                 )
             }
             Ok(sql) => {
-                panic!("Expected error, but got SQL: {}", sql);
+                panic!("Expected error, but got SQL: {sql}");
             }
         }
 
