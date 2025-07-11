@@ -478,8 +478,8 @@ async fn permission_analyze(
         Err(e) => {
             if let DataFusionError::Context(_, ee) = &e {
                 if let DataFusionError::External(we) = ee.as_ref() {
-                    if let Some(we) = we.downcast_ref::<WrenError>() {
-                        return Err(DataFusionError::External(Box::new(we.clone())));
+                    if let Some(_) = we.downcast_ref::<WrenError>() {
+                       return Err(e)
                     }
                 }
             }
@@ -2605,7 +2605,11 @@ mod test {
             Err(e) => {
                 assert_snapshot!(
                     e.to_string(),
-                    @r#"External error: Permission Denied: No permission to access "customer"."c_name""#
+                    @r#"
+                ModelAnalyzeRule
+                caused by
+                External error: Permission Denied: No permission to access "customer"."c_name"
+                "#
                 )
             }
             Ok(sql) => {
