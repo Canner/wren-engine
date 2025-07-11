@@ -158,9 +158,11 @@ impl PySessionContext {
             };
             let manifest = to_manifest(mdl_base64)?;
             let properties_ref = Arc::new(properties_map);
-            let Ok(analyzed_mdl) =
-                AnalyzedWrenMDL::analyze(manifest, Arc::clone(&properties_ref))
-            else {
+            let Ok(analyzed_mdl) = AnalyzedWrenMDL::analyze(
+                manifest,
+                Arc::clone(&properties_ref),
+                mdl::context::Mode::Unparse,
+            ) else {
                 return Err(CoreError::new("Failed to analyze manifest").into());
             };
 
@@ -172,7 +174,7 @@ impl PySessionContext {
                     &ctx,
                     Arc::clone(&analyzed_mdl),
                     Arc::new(HashMap::new()),
-                    false,
+                    mdl::context::Mode::Unparse,
                 ))
                 .map_err(CoreError::from)?;
 
