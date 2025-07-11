@@ -19,8 +19,10 @@ use datafusion::logical_expr::{
 use log::debug;
 use petgraph::Graph;
 
+use crate::logical_plan::analyze::access_control::validate_clac_rule;
 use crate::logical_plan::analyze::RelationChain;
 use crate::logical_plan::analyze::RelationChain::Start;
+use crate::logical_plan::error::WrenError;
 use crate::logical_plan::utils::{from_qualified_name, try_map_data_type};
 use crate::mdl;
 use crate::mdl::context::SessionPropertiesRef;
@@ -146,6 +148,19 @@ impl ModelPlanNodeBuilder {
                     .any(|expr| is_required_column(expr, column.name()))
             });
         for column in required_columns {
+            // Actually, it's only be checked in PermissionAnalyze mode.
+            // In Unparse or LocalRuntime mode, an invalid column won't be registered in the table provider.
+            // A column accessing will be failed by the column not found error.
+            if !validate_clac_rule(&column, &self.properties)? {
+                return Err(DataFusionError::External(Box::new(
+                    WrenError::PermissionDenied(format!(
+                        r#"No permission to access "{}"."{}""#,
+                        model.name(),
+                        column.name
+                    )),
+                )));
+            }
+
             if column.is_calculated {
                 let expr = if column.expression.is_some() {
                     let column_rf = self

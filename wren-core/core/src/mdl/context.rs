@@ -50,7 +50,7 @@ pub async fn create_ctx_with_mdl(
     ctx: &SessionContext,
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
     properties: SessionPropertiesRef,
-    is_local_runtime: bool,
+    mode: Mode,
 ) -> Result<SessionContext> {
     let session_timezone = properties
         .get("x-wren-timezone")
@@ -88,27 +88,75 @@ pub async fn create_ctx_with_mdl(
             .collect::<HashMap<_, _>>(),
     );
 
-    let new_state = if is_local_runtime {
-        new_state.with_analyzer_rules(analyze_rule_for_local_runtime(
-            Arc::clone(&analyzed_mdl),
-            reset_default_catalog_schema.clone(),
-            Arc::clone(&properties),
-        ))
-        //  The plan will be executed locally, so apply the default optimizer rules
+    let new_state = new_state.with_analyzer_rules(mode.get_analyze_rules(
+        Arc::clone(&analyzed_mdl),
+        Arc::clone(&reset_default_catalog_schema),
+        Arc::clone(&properties),
+    ));
+    let new_state = if let Some(optimize_rules) = mode.get_optimize_rules() {
+        new_state.with_optimizer_rules(optimize_rules)
     } else {
         new_state
-            .with_analyzer_rules(analyze_rule_for_unparsing(
-                Arc::clone(&analyzed_mdl),
-                reset_default_catalog_schema.clone(),
-                Arc::clone(&properties),
-            ))
-            .with_optimizer_rules(optimize_rule_for_unparsing())
     };
 
     let new_state = new_state.with_config(config).build();
     let ctx = SessionContext::new_with_state(new_state);
-    register_table_with_mdl(&ctx, analyzed_mdl.wren_mdl(), properties).await?;
+    register_table_with_mdl(&ctx, analyzed_mdl.wren_mdl(), properties, mode).await?;
     Ok(ctx)
+}
+
+/// Execution mode for Wren engine.
+#[derive(Debug)]
+pub enum Mode {
+    /// Local runtime mode, used for executing queries by DataFusion directly.
+    LocalRuntime,
+    /// Unparse mode, used for generating SQL statements.
+    /// This mode is used to generate SQL statements that can be executed in other SQL engines.
+    Unparse,
+    /// Permission analyze mode, used for analyzing if the error is caused by permission denied.
+    /// It's only be used when an error is raised during Unparse mode.
+    PermissionAnalyze,
+}
+
+impl Mode {
+    pub fn get_analyze_rules(
+        &self,
+        analyzed_mdl: Arc<AnalyzedWrenMDL>,
+        session_state_ref: SessionStateRef,
+        properties: SessionPropertiesRef,
+    ) -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
+        match self {
+            Mode::LocalRuntime => analyze_rule_for_local_runtime(
+                Arc::clone(&analyzed_mdl),
+                Arc::clone(&session_state_ref),
+                Arc::clone(&properties),
+            ),
+            Mode::Unparse => analyze_rule_for_unparsing(
+                Arc::clone(&analyzed_mdl),
+                Arc::clone(&session_state_ref),
+                Arc::clone(&properties),
+            ),
+            Mode::PermissionAnalyze => analyze_rule_for_permission(
+                Arc::clone(&analyzed_mdl),
+                Arc::clone(&session_state_ref),
+                Arc::clone(&properties),
+            ),
+        }
+    }
+
+    pub fn get_optimize_rules(
+        &self,
+    ) -> Option<Vec<Arc<dyn OptimizerRule + Send + Sync>>> {
+        match self {
+            Mode::LocalRuntime => None,
+            Mode::Unparse => Some(optimize_rule_for_unparsing()),
+            Mode::PermissionAnalyze => Some(vec![]),
+        }
+    }
+
+    pub fn is_permission_analyze(&self) -> bool {
+        matches!(self, Mode::PermissionAnalyze)
+    }
 }
 
 // Analyzer rules for local runtime
@@ -227,10 +275,32 @@ fn optimize_rule_for_unparsing() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
     ]
 }
 
+fn analyze_rule_for_permission(
+    analyzed_mdl: Arc<AnalyzedWrenMDL>,
+    session_state_ref: SessionStateRef,
+    properties: SessionPropertiesRef,
+) -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
+    vec![
+        // To align the lastest change in datafusion, apply this this rule first.
+        Arc::new(ExpandWildcardRule::new()),
+        // expand the view should be the first rule
+        Arc::new(ExpandWrenViewRule::new(
+            Arc::clone(&analyzed_mdl),
+            Arc::clone(&session_state_ref),
+        )),
+        Arc::new(ModelAnalyzeRule::new(
+            Arc::clone(&analyzed_mdl),
+            Arc::clone(&session_state_ref),
+            Arc::clone(&properties),
+        )),
+    ]
+}
+
 pub async fn register_table_with_mdl(
     ctx: &SessionContext,
     wren_mdl: Arc<WrenMDL>,
     properties: SessionPropertiesRef,
+    mode: Mode,
 ) -> Result<()> {
     let catalog = MemoryCatalogProvider::new();
     let schema = MemorySchemaProvider::new();
@@ -239,7 +309,7 @@ pub async fn register_table_with_mdl(
     ctx.register_catalog(&wren_mdl.manifest.catalog, Arc::new(catalog));
 
     for model in wren_mdl.manifest.models.iter() {
-        let table = WrenDataSource::new(Arc::clone(model), &properties)?;
+        let table = WrenDataSource::new(Arc::clone(model), &properties, &mode)?;
         ctx.register_table(
             TableReference::full(wren_mdl.catalog(), wren_mdl.schema(), model.name()),
             Arc::new(table),
@@ -262,12 +332,17 @@ pub struct WrenDataSource {
 }
 
 impl WrenDataSource {
-    pub fn new(model: Arc<Model>, properties: &SessionPropertiesRef) -> Result<Self> {
+    pub fn new(
+        model: Arc<Model>,
+        properties: &SessionPropertiesRef,
+        mode: &Mode,
+    ) -> Result<Self> {
         let available_columns = model
             .get_physical_columns()
             .iter()
             .map(|column| {
-                if validate_clac_rule(column, properties)? {
+                if mode.is_permission_analyze() || validate_clac_rule(column, properties)?
+                {
                     Ok(Some(Arc::clone(column)))
                 } else {
                     Ok(None)

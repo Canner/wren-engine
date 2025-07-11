@@ -267,6 +267,7 @@ mod tests {
     use datafusion::prelude::SessionContext;
 
     use crate::logical_plan::utils::from_qualified_name;
+    use crate::mdl::context::Mode;
     use crate::mdl::manifest::Manifest;
     use crate::mdl::AnalyzedWrenMDL;
 
@@ -278,8 +279,11 @@ mod tests {
                 .collect();
         let mdl_json = fs::read_to_string(test_data.as_path()).unwrap();
         let mdl = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
-        let analyzed_mdl =
-            Arc::new(AnalyzedWrenMDL::analyze(mdl, Arc::new(HashMap::default()))?);
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            mdl,
+            Arc::new(HashMap::default()),
+            Mode::Unparse,
+        )?);
         let ctx = SessionContext::new();
         let column_rf = analyzed_mdl
             .wren_mdl
@@ -307,8 +311,11 @@ mod tests {
                 .collect();
         let mdl_json = fs::read_to_string(test_data.as_path()).unwrap();
         let mdl = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
-        let analyzed_mdl =
-            Arc::new(AnalyzedWrenMDL::analyze(mdl, Arc::new(HashMap::default()))?);
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            mdl,
+            Arc::new(HashMap::default()),
+            Mode::Unparse,
+        )?);
         let ctx = SessionContext::new();
         let column_rf = analyzed_mdl
             .wren_mdl
@@ -357,8 +364,11 @@ mod tests {
                 .collect();
         let mdl_json = fs::read_to_string(test_data.as_path()).unwrap();
         let mdl = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
-        let analyzed_mdl =
-            Arc::new(AnalyzedWrenMDL::analyze(mdl, Arc::new(HashMap::default()))?);
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            mdl,
+            Arc::new(HashMap::default()),
+            Mode::Unparse,
+        )?);
         let ctx = SessionContext::new();
         let model = analyzed_mdl.wren_mdl().get_model("customer").unwrap();
         let expr = super::create_wren_expr_for_model(
@@ -378,8 +388,11 @@ mod tests {
                 .collect();
         let mdl_json = fs::read_to_string(test_data.as_path()).unwrap();
         let mdl = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
-        let analyzed_mdl =
-            Arc::new(AnalyzedWrenMDL::analyze(mdl, Arc::new(HashMap::default()))?);
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            mdl,
+            Arc::new(HashMap::default()),
+            Mode::Unparse,
+        )?);
         let ctx = SessionContext::new();
         let model = analyzed_mdl.wren_mdl().get_model("customer").unwrap();
         let expr = super::create_remote_expr_for_model(

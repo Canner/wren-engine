@@ -1,7 +1,8 @@
 use crate::logical_plan::analyze::access_control::validate_clac_rule;
+use crate::logical_plan::error::WrenError;
 use crate::logical_plan::utils::{from_qualified_name_str, try_map_data_type};
 use crate::mdl::builder::ManifestBuilder;
-use crate::mdl::context::{create_ctx_with_mdl, WrenDataSource};
+use crate::mdl::context::{create_ctx_with_mdl, Mode, WrenDataSource};
 use crate::mdl::function::{
     ByPassAggregateUDF, ByPassScalarUDF, ByPassWindowFunction, FunctionType,
     RemoteFunction,
@@ -70,9 +71,13 @@ impl Default for AnalyzedWrenMDL {
 }
 
 impl AnalyzedWrenMDL {
-    pub fn analyze(manifest: Manifest, properties: SessionPropertiesRef) -> Result<Self> {
+    pub fn analyze(
+        manifest: Manifest,
+        properties: SessionPropertiesRef,
+        mode: Mode,
+    ) -> Result<Self> {
         let wren_mdl = Arc::new(WrenMDL::infer_and_register_remote_table(
-            manifest, properties,
+            manifest, properties, mode,
         )?);
         let lineage = Arc::new(lineage::Lineage::new(&wren_mdl)?);
         Ok(AnalyzedWrenMDL { wren_mdl, lineage })
@@ -184,6 +189,7 @@ impl WrenMDL {
     pub fn infer_and_register_remote_table(
         manifest: Manifest,
         properties: SessionPropertiesRef,
+        mode: Mode,
     ) -> Result<Self> {
         let mut mdl = WrenMDL::new(manifest);
         let sources: Vec<_> = mdl
@@ -195,7 +201,9 @@ impl WrenMDL {
                     .columns
                     .iter()
                     .map(|column| {
-                        if validate_clac_rule(column, &properties)? {
+                        if mode.is_permission_analyze()
+                            || validate_clac_rule(column, &properties)?
+                        {
                             Ok(Some(Arc::clone(column)))
                         } else {
                             Ok(None)
@@ -380,9 +388,33 @@ pub async fn transform_sql_with_ctx(
         register_remote_function(ctx, remote_function)?;
         Ok::<_, DataFusionError>(())
     })?;
-    let ctx =
-        create_ctx_with_mdl(ctx, Arc::clone(&analyzed_mdl), properties, false).await?;
-    let plan = ctx.state().create_logical_plan(sql).await?;
+    let ctx = create_ctx_with_mdl(
+        ctx,
+        Arc::clone(&analyzed_mdl),
+        Arc::clone(&properties),
+        Mode::Unparse,
+    )
+    .await?;
+    let plan = match ctx.state().create_logical_plan(sql).await {
+        Ok(plan) => plan,
+        Err(e) => {
+            match permission_analyze(
+                analyzed_mdl.wren_mdl().manifest.clone(),
+                sql,
+                remote_functions,
+                properties,
+            )
+            .await
+            {
+                Ok(_) => {
+                    return Err(e);
+                }
+                Err(e) => {
+                    return Err(e);
+                }
+            }
+        }
+    };
     debug!("wren-core original plan:\n {plan}");
     let analyzed = ctx.state().optimize(&plan)?;
     debug!("wren-core final planned:\n {analyzed}");
@@ -402,6 +434,58 @@ pub async fn transform_sql_with_ctx(
         }
         Err(e) => Err(e),
     }
+}
+
+/// Try to check if the fail reason is a permission denied error.
+///
+/// In a normal exeuction flow, if a column is not allowed to be used in the model plan,
+/// it will return an column not found error because the column won't be registered in the [WrenDataSource].
+/// Through this function, we can check if the error is a permission denied error, then provide a more user-friendly error message.
+async fn permission_analyze(
+    manifest: Manifest,
+    sql: &str,
+    remote_functions: &[RemoteFunction],
+    properties: SessionPropertiesRef,
+) -> Result<()> {
+    let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+        manifest,
+        Arc::clone(&properties),
+        Mode::PermissionAnalyze,
+    )?);
+    let ctx = SessionContext::new();
+    remote_functions.iter().try_for_each(|remote_function| {
+        debug!("Registering remote function: {remote_function:?}");
+        register_remote_function(&ctx, remote_function)?;
+        Ok::<_, DataFusionError>(())
+    })?;
+    let ctx =
+        create_ctx_with_mdl(&ctx, analyzed_mdl, properties, Mode::PermissionAnalyze)
+            .await?;
+
+    let plan = match ctx.state().create_logical_plan(sql).await {
+        Ok(plan) => plan,
+        Err(e) => {
+            debug!("Failed to create logical plan: {e}");
+            return Ok(());
+        }
+    };
+    debug!("wren-core start to anlayze:\n {plan}");
+    match ctx.state().optimize(&plan) {
+        Ok(_) => {
+            info!("SQL is allowed to be planned");
+        }
+        // If the error is a permission denied error, we throw it instead. Otherwise, we throw the original error.
+        Err(e) => {
+            if let DataFusionError::Context(_, ee) = &e {
+                if let DataFusionError::External(we) = ee.as_ref() {
+                    if we.downcast_ref::<WrenError>().is_some() {
+                        return Err(e);
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 fn register_remote_function(
@@ -459,7 +543,7 @@ mod test {
     use std::sync::Arc;
 
     use crate::mdl::builder::{ColumnBuilder, ManifestBuilder, ModelBuilder};
-    use crate::mdl::context::create_ctx_with_mdl;
+    use crate::mdl::context::{create_ctx_with_mdl, Mode};
     use crate::mdl::function::RemoteFunction;
     use crate::mdl::manifest::DataSource::MySQL;
     use crate::mdl::manifest::Manifest;
@@ -489,8 +573,11 @@ mod test {
             Ok(mdl) => mdl,
             Err(e) => return not_impl_err!("Failed to parse mdl json: {}", e),
         };
-        let analyzed_mdl =
-            Arc::new(AnalyzedWrenMDL::analyze(mdl, Arc::new(HashMap::default()))?);
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            mdl,
+            Arc::new(HashMap::default()),
+            Mode::Unparse,
+        )?);
         let _ = mdl::transform_sql(
             Arc::clone(&analyzed_mdl),
             &[],
@@ -511,8 +598,11 @@ mod test {
             Ok(mdl) => mdl,
             Err(e) => return not_impl_err!("Failed to parse mdl json: {}", e),
         };
-        let analyzed_mdl =
-            Arc::new(AnalyzedWrenMDL::analyze(mdl, Arc::new(HashMap::default()))?);
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            mdl,
+            Arc::new(HashMap::default()),
+            Mode::Unparse,
+        )?);
 
         let tests: Vec<&str> = vec![
                 "select o_orderkey + o_orderkey from test.test.orders",
@@ -555,8 +645,11 @@ mod test {
             Ok(mdl) => mdl,
             Err(e) => return not_impl_err!("Failed to parse mdl json: {e}"),
         };
-        let analyzed_mdl =
-            Arc::new(AnalyzedWrenMDL::analyze(mdl, Arc::new(HashMap::default()))?);
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            mdl,
+            Arc::new(HashMap::default()),
+            Mode::Unparse,
+        )?);
         let sql = "select * from test.test.customer_view";
         println!("Original: {sql}");
         let _ = transform_sql_with_ctx(
@@ -585,8 +678,11 @@ mod test {
             Ok(mdl) => mdl,
             Err(e) => return not_impl_err!("Failed to parse mdl json: {e}"),
         };
-        let analyzed_mdl =
-            Arc::new(AnalyzedWrenMDL::analyze(mdl, Arc::new(HashMap::default()))?);
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            mdl,
+            Arc::new(HashMap::default()),
+            Mode::Unparse,
+        )?);
         let sql = "select totalcost from profile";
         let result = transform_sql_with_ctx(
             &SessionContext::new(),
@@ -630,6 +726,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let sql = r#"select * from "CTest"."STest"."Customer""#;
         let actual = mdl::transform_sql_with_ctx(
@@ -674,6 +771,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let actual = transform_sql_with_ctx(
             &ctx,
@@ -747,6 +845,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let sql = r#"select * from wren.test.artist"#;
         let actual = transform_sql_with_ctx(
@@ -818,6 +917,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let sql = r#"select name_append from wren.test.artist"#;
         let _ = transform_sql_with_ctx(
@@ -876,6 +976,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let sql = r#"select "串接名字" from wren.test.artist"#;
         let actual = transform_sql_with_ctx(
@@ -951,6 +1052,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let sql = r#"select current_date > "出道時間" from wren.test.artist"#;
         let actual = transform_sql_with_ctx(
@@ -1057,6 +1159,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let sql = "select * from unnest([1, 2, 3])";
         let actual = transform_sql_with_ctx(
@@ -1075,6 +1178,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let sql = "select * from unnest([1, 2, 3])";
         let actual = transform_sql_with_ctx(
@@ -1209,6 +1313,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let sql = r#"select count(*) from wren.test.artist where cast(cast_timestamptz as timestamp) > timestamp '2011-01-01 21:00:00'"#;
         let actual = transform_sql_with_ctx(
@@ -1260,9 +1365,13 @@ mod test {
         let analyzed_mdl =
             Arc::new(AnalyzedWrenMDL::analyze_with_tables(manifest, registers)?);
         let properties_ref = Arc::new(HashMap::new());
-        let ctx =
-            create_ctx_with_mdl(&ctx, Arc::clone(&analyzed_mdl), properties_ref, true)
-                .await?;
+        let ctx = create_ctx_with_mdl(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            properties_ref,
+            Mode::LocalRuntime,
+        )
+        .await?;
         let sql = r#"select arrow_typeof(timestamp_col), arrow_typeof(timestamptz_col) from wren.test.timestamp_table limit 1"#;
         let result = ctx.sql(sql).await?.collect().await?;
         assert_snapshot!(batches_to_string(&result), @r#"
@@ -1300,6 +1409,7 @@ mod test {
             let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
                 manifest,
                 Arc::new(HashMap::default()),
+                Mode::Unparse,
             )?);
             let sql = r#"select timestamp_col = timestamptz_col from wren.test.timestamp_table"#;
             let actual = transform_sql_with_ctx(
@@ -1377,6 +1487,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let sql = "select list_col[1] from wren.test.list_table";
         let actual = transform_sql_with_ctx(
@@ -1421,6 +1532,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let sql = "select struct_col.float_field from wren.test.struct_table";
         let actual = transform_sql_with_ctx(
@@ -1476,6 +1588,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let sql = "select struct_col.float_field from wren.test.struct_table";
         let _ = transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::new(HashMap::new()), sql)
@@ -1539,6 +1652,7 @@ mod test {
         let mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let ctx = SessionContext::new();
         let sql = "SELECT trim(' abc')";
@@ -1572,6 +1686,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let result = transform_sql_with_ctx(
             &ctx,
@@ -1609,6 +1724,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let result = transform_sql_with_ctx(
             &ctx,
@@ -1645,6 +1761,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let result = transform_sql_with_ctx(
             &ctx,
@@ -1697,6 +1814,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let result = transform_sql_with_ctx(
             &ctx,
@@ -1749,6 +1867,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let result = transform_sql_with_ctx(
             &ctx,
@@ -1791,6 +1910,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let sql = "SELECT * FROM customer";
         let headers =
@@ -1854,6 +1974,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let sql = "SELECT * FROM customer";
         let headers = Arc::new(build_headers(&[
@@ -1932,6 +2053,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let sql = "SELECT * FROM customer";
 
@@ -2003,6 +2125,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let sql = "SELECT * FROM customer";
         let headers = Arc::new(build_headers(&[(
@@ -2039,6 +2162,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let headers = Arc::new(build_headers(&[(
             "session_nation".to_string(),
@@ -2080,6 +2204,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let headers = Arc::new(build_headers(&[(
             "session_nation".to_string(),
@@ -2135,6 +2260,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let headers = Arc::new(build_headers(&[(
             "session_nation".to_string(),
@@ -2215,6 +2341,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let headers = Arc::new(build_headers(&[(
             "session_user".to_string(),
@@ -2301,6 +2428,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let headers = Arc::new(build_headers(&[(
             "session_nation".to_string(),
@@ -2368,6 +2496,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let headers = Arc::new(build_headers(&[(
             "session_nation".to_string(),
@@ -2422,8 +2551,11 @@ mod test {
             "session_level".to_string(),
             Some("1".to_string()),
         )]));
-        let analyzed_mdl =
-            Arc::new(AnalyzedWrenMDL::analyze(manifest.clone(), headers.clone())?);
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest.clone(),
+            headers.clone(),
+            Mode::Unparse,
+        )?);
         let sql = "SELECT * FROM customer";
 
         assert_snapshot!(
@@ -2435,15 +2567,18 @@ mod test {
             "session_level".to_string(),
             Some("0".to_string()),
         )]));
-        let analyzed_mdl =
-            Arc::new(AnalyzedWrenMDL::analyze(manifest.clone(), headers.clone())?);
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest.clone(),
+            headers.clone(),
+            Mode::Unparse,
+        )?);
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
             @"SELECT customer.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer"
         );
 
         let headers = Arc::new(HashMap::default());
-        match AnalyzedWrenMDL::analyze(manifest, headers.clone()) {
+        match AnalyzedWrenMDL::analyze(manifest.clone(), headers.clone(), Mode::Unparse) {
             Err(e) => {
                 assert_snapshot!(
                     e.to_string(),
@@ -2451,6 +2586,35 @@ mod test {
                 )
             }
             _ => panic!("Expected error"),
+        }
+
+        let headers = Arc::new(build_headers(&[(
+            "session_level".to_string(),
+            Some("0".to_string()),
+        )]));
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest.clone(),
+            headers.clone(),
+            Mode::Unparse,
+        )?);
+        let sql = "SELECT c_name FROM customer";
+
+        match transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
+            .await
+        {
+            Err(e) => {
+                assert_snapshot!(
+                    e.to_string(),
+                    @r#"
+                ModelAnalyzeRule
+                caused by
+                External error: Permission Denied: No permission to access "customer"."c_name"
+                "#
+                )
+            }
+            Ok(sql) => {
+                panic!("Expected error, but got SQL: {sql}");
+            }
         }
 
         Ok(())
@@ -2487,8 +2651,11 @@ mod test {
             "session_level".to_string(),
             Some("1".to_string()),
         )]));
-        let analyzed_mdl =
-            Arc::new(AnalyzedWrenMDL::analyze(manifest.clone(), headers.clone())?);
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest.clone(),
+            headers.clone(),
+            Mode::Unparse,
+        )?);
         let sql = "SELECT * FROM customer";
 
         assert_snapshot!(
@@ -2500,8 +2667,11 @@ mod test {
             "session_level".to_string(),
             Some("0".to_string()),
         )]));
-        let analyzed_mdl =
-            Arc::new(AnalyzedWrenMDL::analyze(manifest.clone(), headers.clone())?);
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest.clone(),
+            headers.clone(),
+            Mode::Unparse,
+        )?);
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
             @"SELECT customer.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer"
@@ -2509,8 +2679,11 @@ mod test {
 
         // test the rule is applied the default value if the optional property is None
         let headers = Arc::new(HashMap::default());
-        let analyzed_mdl =
-            Arc::new(AnalyzedWrenMDL::analyze(manifest.clone(), headers.clone())?);
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest.clone(),
+            headers.clone(),
+            Mode::Unparse,
+        )?);
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
             @"SELECT customer.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer"
@@ -2543,8 +2716,11 @@ mod test {
 
         // test the rule is skipped when the optional property is None
         let headers = Arc::new(HashMap::default());
-        let analyzed_mdl =
-            Arc::new(AnalyzedWrenMDL::analyze(manifest.clone(), headers.clone())?);
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest.clone(),
+            headers.clone(),
+            Mode::Unparse,
+        )?);
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
             @"SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer"
@@ -2585,8 +2761,11 @@ mod test {
             "session_level".to_string(),
             Some("1".to_string()),
         )]));
-        let analyzed_mdl =
-            Arc::new(AnalyzedWrenMDL::analyze(manifest.clone(), headers.clone())?);
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest.clone(),
+            headers.clone(),
+            Mode::Unparse,
+        )?);
         let sql = "SELECT c_name_upper FROM customer";
 
         assert_snapshot!(
@@ -2598,8 +2777,11 @@ mod test {
             "session_level".to_string(),
             Some("0".to_string()),
         )]));
-        let analyzed_mdl =
-            Arc::new(AnalyzedWrenMDL::analyze(manifest.clone(), headers.clone())?);
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest.clone(),
+            headers.clone(),
+            Mode::Unparse,
+        )?);
 
         match transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
             .await
@@ -2643,6 +2825,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let sql = "SELECT * FROM customer";
         let headers = Arc::new(build_headers(&[(
@@ -2675,6 +2858,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let sql = "SELECT * FROM customer limit 0";
         let headers = Arc::new(HashMap::default());

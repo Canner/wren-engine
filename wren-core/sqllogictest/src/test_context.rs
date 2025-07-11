@@ -28,7 +28,7 @@ use tempfile::TempDir;
 use wren_core::mdl::builder::{
     ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder, ViewBuilder,
 };
-use wren_core::mdl::context::create_ctx_with_mdl;
+use wren_core::mdl::context::{create_ctx_with_mdl, Mode};
 use wren_core::mdl::manifest::JoinType;
 use wren_core::mdl::AnalyzedWrenMDL;
 
@@ -305,7 +305,7 @@ async fn register_ecommerce_mdl(
         ctx,
         Arc::clone(&analyzed_mdl),
         Arc::new(HashMap::new()),
-        true,
+        Mode::LocalRuntime,
     )
     .await?;
     Ok((ctx.to_owned(), analyzed_mdl))
@@ -541,7 +541,7 @@ async fn register_tpch_mdl(
         ctx,
         Arc::clone(&analyzed_mdl),
         Arc::new(HashMap::new()),
-        true,
+        Mode::LocalRuntime,
     )
     .await?;
     Ok((ctx.to_owned(), analyzed_mdl))

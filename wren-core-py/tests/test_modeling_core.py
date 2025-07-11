@@ -364,3 +364,13 @@ def test_clac():
         rewritten_sql
         == "SELECT customer.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM main.customer AS __source) AS customer) AS customer"
     )
+
+    session_context = SessionContext(manifest_str, None, properties_hashable)
+    sql = "SELECT c_name FROM my_catalog.my_schema.customer"
+    try:
+        session_context.transform_sql(sql)
+    except Exception as e:
+        assert (
+            str(e)
+            == "Permission Denied: No permission to access \"customer\".\"c_name\""
+        )
