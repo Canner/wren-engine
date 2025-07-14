@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 use structopt::StructOpt;
+use wren_core::mdl::context::Mode;
 use wren_core::mdl::{transform_sql_with_ctx, AnalyzedWrenMDL};
 
 #[derive(Debug, StructOpt, Clone)]
@@ -63,6 +64,7 @@ impl RunOpt {
             let mdl = Arc::new(AnalyzedWrenMDL::analyze(
                 get_manifest(query_id)?,
                 Arc::new(HashMap::default()),
+                Mode::Unparse,
             )?);
             let start = Instant::now();
             let sql = &get_query_sql(query_id)?;

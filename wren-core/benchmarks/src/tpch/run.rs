@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 use structopt::StructOpt;
+use wren_core::mdl::context::Mode;
 use wren_core::mdl::{transform_sql_with_ctx, AnalyzedWrenMDL};
 
 #[derive(Debug, StructOpt, Clone)]
@@ -53,6 +54,7 @@ impl RunOpt {
         let mdl = Arc::new(AnalyzedWrenMDL::analyze(
             tpch_manifest(),
             Arc::new(HashMap::default()),
+            Mode::Unparse,
         )?);
         let mut millis = vec![];
         // run benchmark

@@ -4,6 +4,7 @@ use std::sync::Arc;
 use wren_core::mdl::builder::{
     ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder,
 };
+use wren_core::mdl::context::Mode;
 use wren_core::mdl::manifest::{JoinType, Manifest};
 use wren_core::mdl::{transform_sql_with_ctx, AnalyzedWrenMDL};
 
@@ -13,6 +14,7 @@ async fn main() -> datafusion::common::Result<()> {
     let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
         manifest,
         Arc::new(HashMap::default()),
+        Mode::Unparse,
     )?);
 
     let sql = "select customer_state from wrenai.public.orders_model";
