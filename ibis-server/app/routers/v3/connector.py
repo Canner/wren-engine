@@ -389,7 +389,11 @@ async def model_substitute(
                 headers.get(X_WREN_FALLBACK_DISABLE)
                 and safe_strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
             )
-            if java_engine_connector.client is None or is_fallback_disable:
+            if (
+                java_engine_connector.client is None
+                or is_fallback_disable
+                or exist_wren_variables_header(headers)
+            ):
                 raise e
 
             logger.warning(

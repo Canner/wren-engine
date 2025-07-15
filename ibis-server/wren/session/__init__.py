@@ -73,11 +73,11 @@ class Task:
         self.task_id: str = task_id or str(uuid.uuid4())
         self.context: Context = context
         self.properties: dict = self._lowrcase_properties(properties)
-        self.wren_sql: str = None
-        self.planned_sql: str = None
-        self.dialect_sql: str = None
-        self.results: pa.Table = None
-        self.manifest: str = None
+        self.wren_sql: str | None = None
+        self.planned_sql: str | None = None
+        self.dialect_sql: str | None = None
+        self.results: pa.Table | None = None
+        self.manifest: str | None = None
 
     def _lowrcase_properties(self, properties: dict | None) -> dict:
         """Convert all keys in the properties dictionary to lowercase."""

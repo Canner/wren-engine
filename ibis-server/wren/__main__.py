@@ -12,7 +12,7 @@ def main():
     """Main entry point for the Wren module."""
 
     if len(sys.argv) < 2:
-        print("Usage: python -m wren [data_source] <mdl_path> <connection_info_path>")  # noqa: T201
+        print("Usage: python -m wren <data_source> <mdl_path> [connection_info_path]")  # noqa: T201
         sys.exit(1)
 
     data_source = sys.argv[1]

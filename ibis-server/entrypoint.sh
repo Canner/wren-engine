@@ -20,7 +20,7 @@ if [[ "$1" == "jupyter" ]]; then
             --ServerApp.websocket_ping_interval=30000
     else
         # If jupyter with additional arguments, pass all arguments to jupyter
-        echo "Executing: $@"
+        echo "Executing: $*"
         exec "$@"
     fi
 fi

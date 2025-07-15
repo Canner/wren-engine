@@ -56,12 +56,15 @@ def create_session_context(
     with open(mdl_path) as f:
         if not f.readable():
             raise ValueError(f"Cannot read MDL file at {mdl_path}")
-        manifest = json.load(f)
-        manifest_base64 = (
-            base64.b64encode(json.dumps(manifest).encode("utf-8")).decode("utf-8")
-            if manifest
-            else None
-        )
+        try:
+            manifest = json.load(f)
+            manifest_base64 = (
+                base64.b64encode(json.dumps(manifest).encode("utf-8")).decode("utf-8")
+                if manifest
+                else None
+            )
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON in MDL file at {mdl_path}: {e}") from e
 
     return Context(
         data_source=data_source,
