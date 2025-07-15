@@ -1,0 +1,167 @@
+{
+  "catalog": "wren",
+  "schema": "public",
+  "models": [
+    {
+      "name": "orders",
+      "tableReference": {
+        "catalog": "jaffle_shop",
+        "schema": "main",
+        "table": "orders"
+      },
+      "columns": [
+        {
+          "name": "amount",
+          "type": "double",
+          "properties": {
+            "description": "Total amount (AUD) of the order"
+          }
+        },
+        {
+          "name": "bank_transfer_amount",
+          "type": "double",
+          "properties": {
+            "description": "Amount of the order (AUD) paid for by bank transfer"
+          }
+        },
+        {
+          "name": "coupon_amount",
+          "type": "double",
+          "properties": {
+            "description": "Amount of the order (AUD) paid for by coupon"
+          }
+        },
+        {
+          "name": "credit_card_amount",
+          "type": "double",
+          "columnLevelAccessControl": {
+              "name": "credit_card_access",
+              "requiredProperties": [
+                  {
+                      "name": "session_level",
+                      "required": false
+                  }
+              ],
+              "operator": "GREATER_THAN",
+              "threshold": "3"
+          },
+          "properties": {
+            "description": "Amount of the order (AUD) paid for by credit card"
+          }
+        },
+        {
+          "name": "customer_id",
+          "type": "integer",
+          "properties": {
+            "description": "Foreign key to the customers table"
+          }
+        },
+        {
+          "name": "gift_card_amount",
+          "type": "double",
+          "properties": {
+            "description": "Amount of the order (AUD) paid for by gift card"
+          }
+        },
+        {
+          "name": "order_date",
+          "type": "date",
+          "properties": {
+            "description": "Date (UTC) that the order was placed"
+          }
+        },
+        {
+          "name": "order_id",
+          "type": "integer",
+          "properties": {
+            "description": "This is a unique identifier for an order"
+          }
+        },
+        {
+          "name": "status",
+          "type": "varchar",
+          "properties": {
+            "description": "Orders can be one of the following statuses:\n\n| status         | description                                                                                                            |\n|----------------|------------------------------------------------------------------------------------------------------------------------|\n| placed         | The order has been placed but has not yet left the warehouse                                                           |\n| shipped        | The order has ben shipped to the customer and is currently in transit                                                  |\n| completed      | The order has been received by the customer                                                                            |\n| return_pending | The customer has indicated that they would like to return the order, but it has not yet been received at the warehouse |\n| returned       | The order has been returned by the customer and received at the warehouse                                              |"
+          }
+        }
+      ],
+      "rowLevelAccessControls": [
+          {
+              "name": "status_rule",
+              "requiredProperties": [
+                  {
+                      "name": "session_status",
+                      "required": false
+                  }
+              ],
+              "condition": "status = @session_status"
+          }
+      ],
+      "properties": {
+        "description": "This table has basic information about orders, as well as some derived facts based on payments"
+      }
+    },
+    {
+      "name": "customers",
+      "tableReference": {
+        "catalog": "jaffle_shop",
+        "schema": "main",
+        "table": "customers"
+      },
+      "columns": [
+        {
+          "name": "customer_id",
+          "type": "integer",
+          "properties": {
+            "description": "This is a unique identifier for a customer"
+          }
+        },
+        {
+          "name": "customer_lifetime_value",
+          "type": "double"
+        },
+        {
+          "name": "first_name",
+          "type": "varchar",
+          "properties": {
+            "description": "Customer's first name. PII."
+          }
+        },
+        {
+          "name": "first_order",
+          "type": "date",
+          "properties": {
+            "description": "Date (UTC) of a customer's first order"
+          }
+        },
+        {
+          "name": "last_name",
+          "type": "varchar",
+          "properties": {
+            "description": "Customer's last name. PII."
+          }
+        },
+        {
+          "name": "most_recent_order",
+          "type": "date",
+          "properties": {
+            "description": "Date (UTC) of a customer's most recent order"
+          }
+        },
+        {
+          "name": "number_of_orders",
+          "type": "integer",
+          "properties": {
+            "description": "Count of the number of orders a customer has placed"
+          }
+        }
+      ],
+      "properties": {
+        "description": "This table has basic information about a customer, as well as some derived facts based on a customer's orders"
+      }
+    }
+  ],
+  "relationships": [],
+  "views": [],
+  "dataSources": "local_file"
+}

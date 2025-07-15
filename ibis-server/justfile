@@ -63,6 +63,15 @@ docker-build:
         --build-context wren-core-base=../wren-core-base \
         .
 
+demo-image-name := "ghcr.io/canner/wren-engine-ibis:latest"
+
+docker-build-demo:
+    docker buildx build -t {{ demo-image-name }} -f Dockerfile.jupyter \
+        --build-context wren-core-py=../wren-core-py \
+        --build-context wren-core=../wren-core \
+        --build-context wren-core-base=../wren-core-base \
+        .
+
 docker-run:
     docker run -it --rm -p 8000:8000 --env-file .env {{ image-name }}
 
