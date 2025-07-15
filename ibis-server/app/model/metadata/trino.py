@@ -43,6 +43,7 @@ class TrinoMetadata(Metadata):
                     AND t.table_schema = tc.schema_name
                     AND t.table_name = tc.table_name
                 WHERE t.table_schema = '{schema}'
+                AND c.table_catalog = (SELECT current_catalog)
                 """
         response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
         unique_tables = {}
