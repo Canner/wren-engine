@@ -62,7 +62,7 @@ class Connector:
         else:
             self._connector = SimpleConnector(data_source, connection_info)
 
-    def query(self, sql: str, limit: int) -> pa.Table:
+    def query(self, sql: str, limit: int | None = None) -> pa.Table:
         return self._connector.query(sql, limit)
 
     def dry_run(self, sql: str) -> None:
@@ -78,8 +78,10 @@ class SimpleConnector:
         self.connection = self.data_source.get_connection(connection_info)
 
     @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
-    def query(self, sql: str, limit: int) -> pa.Table:
-        ibis_table = self.connection.sql(sql).limit(limit)
+    def query(self, sql: str, limit: int | None = None) -> pa.Table:
+        ibis_table = self.connection.sql(sql)
+        if limit is not None:
+            ibis_table = ibis_table.limit(limit)
         ibis_table = round_decimal_columns(ibis_table)
         return ibis_table.to_pyarrow()
 
@@ -120,10 +122,12 @@ class CannerConnector:
         self.connection = DataSource.canner.get_connection(connection_info)
 
     @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
-    def query(self, sql: str, limit: int) -> pa.Table:
+    def query(self, sql: str, limit: int | None = None) -> pa.Table:
         # Canner enterprise does not support `CREATE TEMPORARY VIEW` for getting schema
         schema = self._get_schema(sql)
-        ibis_table = self.connection.sql(sql, schema=schema).limit(limit)
+        ibis_table = self.connection.sql(sql, schema=schema)
+        if limit is not None:
+            ibis_table = ibis_table.limit(limit)
         ibis_table = round_decimal_columns(ibis_table)
         return ibis_table.to_pyarrow()
 
@@ -153,7 +157,7 @@ class BigQueryConnector(SimpleConnector):
         super().__init__(DataSource.bigquery, connection_info)
         self.connection_info = connection_info
 
-    def query(self, sql: str, limit: int) -> pa.Table:
+    def query(self, sql: str, limit: int | None = None) -> pa.Table:
         try:
             return super().query(sql, limit)
         except ValueError as e:

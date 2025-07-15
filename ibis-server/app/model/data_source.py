@@ -15,6 +15,9 @@ from app.model import (
     CannerConnectionInfo,
     ClickHouseConnectionInfo,
     ConnectionInfo,
+    GcsFileConnectionInfo,
+    LocalFileConnectionInfo,
+    MinioFileConnectionInfo,
     MSSqlConnectionInfo,
     MySqlConnectionInfo,
     OracleConnectionInfo,
@@ -35,6 +38,8 @@ from app.model import (
     QueryS3FileDTO,
     QuerySnowflakeDTO,
     QueryTrinoDTO,
+    RedshiftConnectionInfo,
+    S3FileConnectionInfo,
     SnowflakeConnectionInfo,
     SSLMode,
     TrinoConnectionInfo,
@@ -69,6 +74,44 @@ class DataSource(StrEnum):
             return DataSourceExtension[self].dto
         except KeyError:
             raise NotImplementedError(f"Unsupported data source: {self}")
+
+    def get_connection_info(self, data: dict) -> ConnectionInfo:
+        """Build a ConnectionInfo object from the provided data."""
+        match self:
+            case DataSource.athena:
+                return AthenaConnectionInfo.model_validate(data)
+            case DataSource.bigquery:
+                return BigQueryConnectionInfo.model_validate(data)
+            case DataSource.canner:
+                return CannerConnectionInfo.model_validate(data)
+            case DataSource.clickhouse:
+                return ClickHouseConnectionInfo.model_validate(data)
+            case DataSource.mssql:
+                return MSSqlConnectionInfo.model_validate(data)
+            case DataSource.mysql:
+                return MySqlConnectionInfo.model_validate(data)
+            case DataSource.oracle:
+                return OracleConnectionInfo.model_validate(data)
+            case DataSource.postgres:
+                return PostgresConnectionInfo.model_validate(data)
+            case DataSource.redshift:
+                if "redshift_type" in data and data["redshift_type"] == "redshift_iam":
+                    return RedshiftConnectionInfo.model_validate(data)
+                return RedshiftConnectionInfo.model_validate(data)
+            case DataSource.snowflake:
+                return SnowflakeConnectionInfo.model_validate(data)
+            case DataSource.trino:
+                return TrinoConnectionInfo.model_validate(data)
+            case DataSource.local_file:
+                return LocalFileConnectionInfo.model_validate(data)
+            case DataSource.s3_file:
+                return S3FileConnectionInfo.model_validate(data)
+            case DataSource.minio_file:
+                return MinioFileConnectionInfo.model_validate(data)
+            case DataSource.gcs_file:
+                return GcsFileConnectionInfo.model_validate(data)
+            case _:
+                raise NotImplementedError(f"Unsupported data source: {self}")
 
 
 class DataSourceExtension(Enum):
