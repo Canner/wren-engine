@@ -3,7 +3,7 @@ This module is the API server of Wren Engine. It's built on top of [FastAPI](htt
 
 ## Quick Start
 
-### Running on Docker
+### Running Ibis Server on Docker
 You can follow the steps below to run the Java engine and ibis.
 > Wren Engine is migrating to [wren-core](../wren-core/). However, we still recommend starting [the Java engine](../wren-core-legacy/) to enable the query fallback mechanism.
 
@@ -41,7 +41,7 @@ docker compose up
 Set up [OpenTelemetry Envrionment Variables](docs/development#environment-variable) to enable tracing log.
 See [Tracing with Jaeger](#tracing-with-jaeger) to start up a Jaeger Server.
 
-### Running on Local
+### Running Ibis Server on Local
 Requirements:
 - Python 3.11
 - [casey/just](https://github.com/casey/just)
@@ -73,6 +73,39 @@ Run the server
 ```bash
 just run
 ```
+
+### Start with Python Interactive Mode
+Install the dependencies
+```bash
+just install
+```
+Launch a CLI with an active Wren session using the following command:
+```
+python -m wren local_file <mdl_path> <connection_info_path>
+```
+This will create an interactive CLI environment with a `wren.session.Context` instance for querying your database.
+```
+Session created: Context(id=1352f5de-a8a7-4342-b2cf-015dbb2bba4f, data_source=local_file)
+You can now interact with the Wren session using the 'wren' variable:
+> task = wren.sql('SELECT * FROM your_table').execute()
+> print(task.results)
+> print(task.formatted_result())
+Python 3.11.11 (main, Dec  3 2024, 17:20:40) [Clang 16.0.0 (clang-1600.0.26.4)] on darwin
+Type "help", "copyright", "credits" or "license" for more information.
+(InteractiveConsole)
+>>> 
+```
+
+### Start with Jupyter Notebook
+Launch a Jupyter notebook server with Wren engine dependencies using Docker:
+```
+docker run --rm -p 8888:8888 ghcr.io/canner/wren-engine-ibis:latest jupyter
+```
+Explore the demo notebooks to learn how to use the Wren session context:
+```
+http://localhost:8888/lab/doc/tree/notebooks/demo.ipynb
+```
+
 
 ### Enable Tracing
 We use OpenTelemetry as its tracing framework. Refer to OpenTelemetry zero-code instrumentation to install the required dependencies.

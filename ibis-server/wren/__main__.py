@@ -27,6 +27,11 @@ def main():
                 )
 
             connection_info = json.load(f)
+            # The connection_info file proeduced by Wren AI dbt integration
+            # contains a "type" field to indicate the data source type.
+            # If it is present, we need to use the `get_connection_info` method
+            # of the DataSource class to get the connection info.
+            # Otherwise, we can directly use the connection_info as is.
             if "type" in connection_info:
                 connection_info = data_source.get_connection_info(
                     connection_info["properties"]
@@ -42,6 +47,10 @@ def main():
         mdl_path=mdl_path,
     )
     print(f"Session created: {session}")  # noqa: T201
+    print("You can now interact with the Wren session using the 'wren' variable:")  # noqa: T201
+    print("> task = wren.sql('SELECT * FROM your_table').execute()")  # noqa: T201
+    print("> print(task.results)")  # noqa: T201
+    print("> print(task.formatted_result())")  # noqa: T201
     code.interact(local={"wren": session})
 
 
