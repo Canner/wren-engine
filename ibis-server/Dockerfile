@@ -58,7 +58,11 @@ RUN apt-get -y install libpq-dev \
 
 ENV VIRTUAL_ENV=/app/.venv \
     PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH="/app:$PYTHONPATH" \
     REMOTE_FUNCTION_LIST_PATH=/resources/function_list
+
+# Set working directory before copying files
+WORKDIR /app
 
 COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 COPY app ./app/
@@ -78,9 +82,6 @@ RUN poetry install --with jupyter
 # Install Opentelemetry zero-instrumentation python
 RUN pip install opentelemetry-distro opentelemetry-exporter-otlp \
     && opentelemetry-bootstrap -a install
-
-# Create directories for jupyter
-RUN mkdir -p /app/notebooks /app/models /app/data
 
 # Generate jupyter lab config
 RUN jupyter lab --generate-config
