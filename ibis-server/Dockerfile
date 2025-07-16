@@ -37,13 +37,13 @@ COPY . .
 RUN just install --without dev
 
 
-FROM python:3.11-slim-buster AS runtime
+FROM python:3.11-slim-bookworm AS runtime
 
 # Add microsoft package list
 RUN apt-get update \
     && apt-get install -y curl gnupg \
     && curl https://packages.microsoft.com/keys/microsoft.asc | tee /etc/apt/trusted.gpg.d/microsoft.asc \
-    && curl https://packages.microsoft.com/config/debian/11/prod.list | tee /etc/apt/sources.list.d/mssql-release.list \
+    && curl https://packages.microsoft.com/config/debian/12/prod.list | tee /etc/apt/sources.list.d/mssql-release.list \
     && apt-get update
 
 # Install msodbcsql 18 driver for mssql
