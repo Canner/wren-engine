@@ -168,7 +168,11 @@ async def query(
             )
             # because the v2 API doesn't support row-level access control,
             # we don't fallback to v2 if the header include row-level access control properties.
-            if is_fallback_disable or exist_wren_variables_header(headers):
+            if (
+                java_engine_connector.client is None
+                or is_fallback_disable
+                or exist_wren_variables_header(headers)
+            ):
                 raise e
 
             logger.warning(
@@ -210,7 +214,11 @@ async def dry_plan(
             )
             # because the v2 API doesn't support row-level access control,
             # we don't fallback to v2 if the header include row-level access control properties.
-            if is_fallback_disable or exist_wren_variables_header(headers):
+            if (
+                java_engine_connector.client is None
+                or is_fallback_disable
+                or exist_wren_variables_header(headers)
+            ):
                 raise e
 
             logger.warning(
@@ -254,7 +262,11 @@ async def dry_plan_for_data_source(
             )
             # because the v2 API doesn't support row-level access control,
             # we don't fallback to v2 if the header include row-level access control properties.
-            if is_fallback_disable or exist_wren_variables_header(headers):
+            if (
+                java_engine_connector.client is None
+                or is_fallback_disable
+                or exist_wren_variables_header(headers)
+            ):
                 raise e
 
             logger.warning(
@@ -305,7 +317,11 @@ async def validate(
             )
             # because the v2 API doesn't support row-level access control,
             # we don't fallback to v2 if the header include row-level access control properties.
-            if is_fallback_disable or exist_wren_variables_header(headers):
+            if (
+                java_engine_connector.client is None
+                or is_fallback_disable
+                or exist_wren_variables_header(headers)
+            ):
                 raise e
 
             logger.warning(
@@ -373,7 +389,11 @@ async def model_substitute(
                 headers.get(X_WREN_FALLBACK_DISABLE)
                 and safe_strtobool(headers.get(X_WREN_FALLBACK_DISABLE, "false"))
             )
-            if is_fallback_disable:
+            if (
+                java_engine_connector.client is None
+                or is_fallback_disable
+                or exist_wren_variables_header(headers)
+            ):
                 raise e
 
             logger.warning(

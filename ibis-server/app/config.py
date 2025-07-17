@@ -20,14 +20,8 @@ class Config:
         load_dotenv(override=True)
         self.wren_engine_endpoint = os.getenv("WREN_ENGINE_ENDPOINT")
         self.remote_function_list_path = os.getenv("REMOTE_FUNCTION_LIST_PATH")
-        self.validate_wren_engine_endpoint(self.wren_engine_endpoint)
         self.diagnose = False
         self.init_logger()
-
-    @staticmethod
-    def validate_wren_engine_endpoint(endpoint):
-        if endpoint is None:
-            raise ValueError("WREN_ENGINE_ENDPOINT is not set")
 
     @staticmethod
     def init_logger():
@@ -39,6 +33,7 @@ class Config:
             diagnose=False,
             enqueue=True,
         )
+        logger.configure(extra={"correlation_id": "no-correlation"})
 
     @staticmethod
     def logger_diagnose():
@@ -50,6 +45,7 @@ class Config:
             diagnose=True,
             enqueue=True,
         )
+        logger.configure(extra={"correlation_id": "no-correlation"})
 
     def update(self, diagnose: bool):
         self.diagnose = diagnose
