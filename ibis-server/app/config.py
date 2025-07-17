@@ -20,6 +20,8 @@ class Config:
         load_dotenv(override=True)
         self.wren_engine_endpoint = os.getenv("WREN_ENGINE_ENDPOINT")
         self.remote_function_list_path = os.getenv("REMOTE_FUNCTION_LIST_PATH")
+        self.app_timeout_seconds = int(os.getenv("APP_TIMEOUT_SECONDS", "240"))
+        self.validate_wren_engine_endpoint(self.wren_engine_endpoint)
         self.diagnose = False
         self.init_logger()
 

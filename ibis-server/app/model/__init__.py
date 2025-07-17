@@ -95,6 +95,10 @@ class QueryGcsFileDTO(QueryDTO):
 
 class ConnectionUrl(BaseConnectionInfo):
     connection_url: SecretStr = Field(alias="connectionUrl")
+    kwargs: dict[str, str] | None = Field(
+        description="Additional keyword arguments to pass to the backend client connection.",
+        default=None,
+    )
 
 
 class BigQueryConnectionInfo(BaseConnectionInfo):
@@ -526,6 +530,14 @@ class InternalServerError(CustomHttpError):
 
 class UnprocessableEntityError(CustomHttpError):
     status_code = HTTP_422_UNPROCESSABLE_ENTITY
+
+
+class DatabaseTimeoutError(CustomHttpError):
+    status_code = 504
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = f"Database timeout error: {message!s}"
 
 
 class NotFoundError(CustomHttpError):
