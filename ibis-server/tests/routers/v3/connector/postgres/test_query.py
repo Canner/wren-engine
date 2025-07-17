@@ -4,6 +4,7 @@ import orjson
 import pytest
 
 from app.dependencies import X_WREN_FALLBACK_DISABLE, X_WREN_VARIABLE_PREFIX
+from app.model.data_source import X_WREN_DB_STATEMENT_TIMEOUT
 from tests.routers.v3.connector.postgres.conftest import base_url
 
 manifest = {
@@ -614,6 +615,42 @@ async def test_clac_query(client, manifest_str, connection_info):
     result = response.json()
     assert len(result["data"]) == 1
     assert len(result["data"][0]) == 2
+
+
+async def test_connection_timeout(
+    client, manifest_str, connection_info, connection_url
+):
+    # Set a very short timeout to force a timeout error
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT 1 FROM (SELECT pg_sleep(5))",  # This will take longer than the default timeout
+        },
+        headers={X_WREN_DB_STATEMENT_TIMEOUT: "1"},  # Set timeout to 1 second
+    )
+    assert response.status_code == 504
+    assert (
+        "Query was cancelled: canceling statement due to statement timeout"
+        in response.text
+    )
+
+    # test connection_url way can also timeout
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": {"connectionUrl": connection_url},
+            "manifestStr": manifest_str,
+            "sql": "SELECT 1 FROM (SELECT pg_sleep(5))",  # This will take longer than the default timeout
+        },
+        headers={X_WREN_DB_STATEMENT_TIMEOUT: "1"},  # Set timeout to 1 second
+    )
+    assert response.status_code == 504
+    assert (
+        "Query was cancelled: canceling statement due to statement timeout"
+        in response.text
+    )
 
 
 async def test_format_floating(client, manifest_str, connection_info):
