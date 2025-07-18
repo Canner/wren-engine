@@ -39,11 +39,14 @@ from app.model import (
     QuerySnowflakeDTO,
     QueryTrinoDTO,
     RedshiftConnectionInfo,
+    RedshiftIAMConnectionInfo,
     S3FileConnectionInfo,
     SnowflakeConnectionInfo,
     SSLMode,
     TrinoConnectionInfo,
 )
+
+X_WREN_DB_STATEMENT_TIMEOUT = "x-wren-db-statement_timeout"
 
 
 class DataSource(StrEnum):
@@ -75,7 +78,31 @@ class DataSource(StrEnum):
         except KeyError:
             raise NotImplementedError(f"Unsupported data source: {self}")
 
-    def get_connection_info(self, data: dict) -> ConnectionInfo:
+    def get_connection_info(
+        self, data: dict | ConnectionInfo, headers: dict
+    ) -> ConnectionInfo:
+        """Build a ConnectionInfo object from the provided data and add requried configuration from headers."""
+        if isinstance(data, ConnectionInfo):
+            info = data
+        else:
+            info = self._build_connection_info(data)
+        match self:
+            case DataSource.postgres:
+                kwargs = info.kwargs if info.kwargs else dict()
+                if not hasattr(info, "connect_timeout"):
+                    kwargs["connect_timeout"] = 120
+
+                options = kwargs.get("options", "")
+                if "statement_timeout" not in options:
+                    if options:
+                        options += " "
+                    options += f"-c statement_timeout={headers.get(X_WREN_DB_STATEMENT_TIMEOUT, 180)}s"
+                    kwargs["options"] = options
+                info.kwargs = kwargs
+
+        return info
+
+    def _build_connection_info(self, data: dict) -> ConnectionInfo:
         """Build a ConnectionInfo object from the provided data."""
         match self:
             case DataSource.athena:
@@ -96,7 +123,7 @@ class DataSource(StrEnum):
                 return PostgresConnectionInfo.model_validate(data)
             case DataSource.redshift:
                 if "redshift_type" in data and data["redshift_type"] == "redshift_iam":
-                    return RedshiftConnectionInfo.model_validate(data)
+                    return RedshiftIAMConnectionInfo.model_validate(data)
                 return RedshiftConnectionInfo.model_validate(data)
             case DataSource.snowflake:
                 return SnowflakeConnectionInfo.model_validate(data)
@@ -137,7 +164,8 @@ class DataSourceExtension(Enum):
     def get_connection(self, info: ConnectionInfo) -> BaseBackend:
         try:
             if hasattr(info, "connection_url"):
-                return ibis.connect(info.connection_url.get_secret_value())
+                kwargs = info.kwargs if info.kwargs else {}
+                return ibis.connect(info.connection_url.get_secret_value(), **kwargs)
             if self.name in {"local_file", "redshift"}:
                 raise NotImplementedError(
                     f"{self.name} connection is not implemented to get ibis backend"

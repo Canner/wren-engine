@@ -1,8 +1,12 @@
+import asyncio
 import base64
+import time
 
 import datafusion
 import orjson
 import pandas as pd
+import psycopg
+import psycopg2
 import pyarrow as pa
 import wren_core
 from fastapi import Header
@@ -20,6 +24,7 @@ from opentelemetry.trace import (
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from starlette.datastructures import Headers
 
+from app.config import get_config
 from app.dependencies import (
     X_CACHE_CREATE_AT,
     X_CACHE_HIT,
@@ -27,7 +32,9 @@ from app.dependencies import (
     X_CACHE_OVERRIDE_AT,
     X_WREN_TIMEZONE,
 )
+from app.model import DatabaseTimeoutError
 from app.model.data_source import DataSource
+from app.model.metadata.metadata import Metadata
 
 tracer = trace.get_tracer(__name__)
 
@@ -239,3 +246,155 @@ def _formater(field: pa.Field) -> str:
     elif pa.types.is_interval(field.type):
         return f"cast({column_name} as varchar) as {column_name}"
     return column_name
+
+
+def _safe_close_connector(connector):
+    """Safely close a connector with additional error handling."""
+    try:
+        time.sleep(0.1)
+        connector.close()
+    except Exception as e:
+        logger.warning(f"Error in _safe_close_connector: {e}")
+
+
+app_timeout_seconds = get_config().app_timeout_seconds
+
+
+async def execute_with_timeout(operation, operation_name: str):
+    """Asynchronously execute an operation with a timeout."""
+    try:
+        return await asyncio.wait_for(operation, timeout=app_timeout_seconds)
+    except TimeoutError:
+        raise DatabaseTimeoutError(
+            f"{operation_name} timeout after {app_timeout_seconds} seconds"
+        )
+    except (psycopg.errors.QueryCanceled, psycopg2.errors.QueryCanceled) as e:
+        raise DatabaseTimeoutError(f"{operation_name} was cancelled: {e}")
+
+
+async def _safe_execute_task_with_timeout(
+    operation_name: str,
+    query_task: asyncio.Task,
+    connector,
+):
+    """Execute a database query with a timeout control and handle cancellation."""
+    try:
+        # Create the query task
+        return await execute_with_timeout(query_task, operation_name)
+    except DatabaseTimeoutError:
+        # Cancel the task if it's still running
+        if query_task and not query_task.done():
+            query_task.cancel()
+            try:
+                # Wait a bit for the task to cancel gracefully
+                await asyncio.wait_for(query_task, timeout=2.0)
+            except (TimeoutError, asyncio.CancelledError):
+                # Task didn't cancel in time or was cancelled
+                logger.warning(
+                    f"{operation_name} task cancellation timed out or was cancelled"
+                )
+
+        # Now attempt to close the connection with additional safety
+        cleanup_task = asyncio.create_task(
+            asyncio.to_thread(_safe_close_connector, connector)
+        )
+        try:
+            await asyncio.wait_for(cleanup_task, timeout=5.0)
+        except TimeoutError:
+            logger.warning("Connection cleanup timed out")
+        except Exception as e:
+            logger.warning(f"Error during connection cleanup: {e}")
+        raise
+
+
+async def execute_query_with_timeout(
+    connector,
+    sql: str,
+    limit: int | None = None,
+):
+    """Execute a database query with a timeout control."""
+    query_task = asyncio.create_task(
+        asyncio.to_thread(connector.query, sql, limit=limit)
+    )
+    return await _safe_execute_task_with_timeout(
+        "Query",
+        query_task,
+        connector,
+    )
+
+
+async def execute_sample_with_timeout(
+    connector,
+    sql: str,
+    sample_rate: int,
+    limit: int,
+    manifest_str: str,
+):
+    """Execute a sample query with a timeout control."""
+    task = asyncio.create_task(
+        asyncio.to_thread(
+            connector.sample,
+            sql,
+            sample_rate=sample_rate,
+            limit=limit,
+            manifest_str=manifest_str,
+        ),
+    )
+    return await _safe_execute_task_with_timeout(
+        "Sample",
+        task,
+        connector,
+    )
+
+
+async def execute_validate_with_timeout(
+    validator,
+    rule_name: str,
+    parameters,
+    manifest_str: str,
+):
+    """Execute a validation rule with a timeout control."""
+    return await execute_with_timeout(
+        validator.validate(rule_name, parameters, manifest_str),
+        "Validation",
+    )
+
+
+async def execute_dry_run_with_timeout(connector, sql: str):
+    """Dry run a database query with a timeout control."""
+    dry_run_task = asyncio.create_task(asyncio.to_thread(connector.dry_run, sql))
+    return await _safe_execute_task_with_timeout(
+        "Dry-Run",
+        dry_run_task,
+        connector,
+    )
+
+
+async def execute_get_table_list_with_timeout(
+    metadata: Metadata,
+):
+    """Get the list of tables with a timeout control."""
+    return await execute_with_timeout(
+        asyncio.to_thread(metadata.get_table_list),
+        "Get Table List",
+    )
+
+
+async def execute_get_constraints_with_timeout(
+    metadata: Metadata,
+):
+    """Get the constraints of a table with a timeout control."""
+    return await execute_with_timeout(
+        asyncio.to_thread(metadata.get_constraints),
+        "Get Constraints",
+    )
+
+
+async def execute_get_version_with_timeout(
+    metadata: Metadata,
+):
+    """Get the database version with a timeout control."""
+    return await execute_with_timeout(
+        asyncio.to_thread(metadata.get_version),
+        "Get Database Version",
+    )
