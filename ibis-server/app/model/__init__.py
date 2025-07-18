@@ -537,7 +537,7 @@ class DatabaseTimeoutError(CustomHttpError):
 
     def __init__(self, message: str):
         super().__init__(message)
-        self.message = f"Database timeout error: {message!s}"
+        self.message = f"Database timeout error: {message!s}.\nIt seems your database is not responding or the query is taking too long to execute. Please check your database status and query performance."
 
 
 class NotFoundError(CustomHttpError):
