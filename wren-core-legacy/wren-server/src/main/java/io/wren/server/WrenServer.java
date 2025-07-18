@@ -17,7 +17,6 @@ package io.wren.server;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import io.airlift.event.client.EventModule;
 import io.airlift.http.server.HttpServerModule;
 import io.airlift.jaxrs.JaxrsModule;
 import io.airlift.json.JsonModule;
@@ -45,7 +44,6 @@ public class WrenServer
                 new HttpServerModule(),
                 new JsonModule(),
                 new JaxrsModule(),
-                new EventModule(),
                 new MainModule(),
                 new DuckDBConnectorModule(),
                 new WrenModule(),

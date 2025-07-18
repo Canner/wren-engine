@@ -64,7 +64,7 @@
         <air.modernizer.java-version>8</air.modernizer.java-version>
 
         <dep.antlr.version>4.13.2</dep.antlr.version>
-        <dep.airlift.version>269</dep.airlift.version>
+        <dep.airlift.version>305</dep.airlift.version>
         <dep.packaging.version>${dep.airlift.version}</dep.packaging.version>
         <dep.drift.version>1.23</dep.drift.version>
         <dep.testcontainers.version>1.21.3</dep.testcontainers.version>
@@ -209,12 +209,6 @@
 
             <dependency>
                 <groupId>io.airlift</groupId>
-                <artifactId>event</artifactId>
-                <version>${dep.airlift.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.airlift</groupId>
                 <artifactId>http-client</artifactId>
                 <version>${dep.airlift.version}</version>
             </dependency>
@@ -277,12 +271,6 @@
                 <groupId>io.airlift</groupId>
                 <artifactId>units</artifactId>
                 <version>1.10</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.opentelemetry.semconv</groupId>
-                <artifactId>opentelemetry-semconv</artifactId>
-                <version>1.34.0</version>
             </dependency>
 
             <dependency>
