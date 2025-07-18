@@ -306,7 +306,7 @@ public class TestMDLResourceV2
                    SELECT *
                    FROM
                      orders_custkey
-                )  t
+                )\s
                 """);
     }
 
@@ -326,7 +326,7 @@ public class TestMDLResourceV2
         DryPlanDtoV2 dryPlanDto = new DryPlanDtoV2(manifestStr, "select count(*) from view1");
         String dryPlan = dryPlanV2(dryPlanDto);
         assertThat(dryPlan).isEqualTo("""
-                "WITH
+                WITH
                   "Customer" AS (
                    SELECT
                      "Customer"."custkey" "custkey"
@@ -358,7 +358,117 @@ public class TestMDLResourceV2
                 SELECT count(*)
                 FROM
                   view1
-                "
+                """);
+    }
+
+    @Test
+    public void testDefaultNullOrdering()
+    {
+        Manifest manifest = Manifest.builder()
+                .setCatalog("wrenai")
+                .setSchema("tpch")
+                .setModels(List.of(
+                        model("customer", "SELECT * FROM tpch.customer",
+                                List.of(column("custkey", "integer", null, false, "c_custkey"),
+                                        column("name", "varchar", null, false, "c_name")))))
+                .build();
+        String manifestStr = base64Encode(toJson(manifest));
+        DryPlanDtoV2 dryPlanDto = new DryPlanDtoV2(manifestStr, "select * from customer order by custkey");
+        String dryPlan = dryPlanV2(dryPlanDto);
+        assertThat(dryPlan).isEqualTo("""
+                WITH
+                  "customer" AS (
+                   SELECT
+                     "customer"."custkey" "custkey"
+                   , "customer"."name" "name"
+                   FROM
+                     (
+                      SELECT
+                        "customer"."custkey" "custkey"
+                      , "customer"."name" "name"
+                      FROM
+                        (
+                         SELECT
+                           c_custkey "custkey"
+                         , c_name "name"
+                         FROM
+                           (
+                            SELECT *
+                            FROM
+                              tpch.customer
+                         )  "customer"
+                      )  "customer"
+                   )  "customer"
+                )\s
+                SELECT *
+                FROM
+                  customer
+                ORDER BY custkey ASC NULLS LAST
+                """);
+
+        dryPlanDto = new DryPlanDtoV2(manifestStr, "select * from customer order by custkey desc");
+        dryPlan = dryPlanV2(dryPlanDto);
+        assertThat(dryPlan).isEqualTo("""
+                WITH
+                  "customer" AS (
+                   SELECT
+                     "customer"."custkey" "custkey"
+                   , "customer"."name" "name"
+                   FROM
+                     (
+                      SELECT
+                        "customer"."custkey" "custkey"
+                      , "customer"."name" "name"
+                      FROM
+                        (
+                         SELECT
+                           c_custkey "custkey"
+                         , c_name "name"
+                         FROM
+                           (
+                            SELECT *
+                            FROM
+                              tpch.customer
+                         )  "customer"
+                      )  "customer"
+                   )  "customer"
+                )\s
+                SELECT *
+                FROM
+                  customer
+                ORDER BY custkey DESC NULLS LAST
+                """);
+        dryPlanDto = new DryPlanDtoV2(manifestStr, "select * from customer order by custkey asc nulls first");
+        dryPlan = dryPlanV2(dryPlanDto);
+        assertThat(dryPlan).isEqualTo("""
+                WITH
+                  "customer" AS (
+                   SELECT
+                     "customer"."custkey" "custkey"
+                   , "customer"."name" "name"
+                   FROM
+                     (
+                      SELECT
+                        "customer"."custkey" "custkey"
+                      , "customer"."name" "name"
+                      FROM
+                        (
+                         SELECT
+                           c_custkey "custkey"
+                         , c_name "name"
+                         FROM
+                           (
+                            SELECT *
+                            FROM
+                              tpch.customer
+                         )  "customer"
+                      )  "customer"
+                   )  "customer"
+                )\s
+                SELECT *
+                FROM
+                  customer
+                ORDER BY custkey ASC NULLS FIRST
                 """);
     }
 

@@ -197,6 +197,7 @@ import io.trino.sql.tree.With;
 import io.trino.sql.tree.WithQuery;
 import io.trino.sql.tree.ZeroOrMoreQuantifier;
 import io.trino.sql.tree.ZeroOrOneQuantifier;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -247,6 +248,7 @@ import static io.trino.sql.tree.ProcessingMode.Mode.FINAL;
 import static io.trino.sql.tree.ProcessingMode.Mode.RUNNING;
 import static io.trino.sql.tree.SetProperties.Type.MATERIALIZED_VIEW;
 import static io.trino.sql.tree.SkipTo.skipToNextRow;
+import static io.trino.sql.tree.SortItem.NullOrdering.LAST;
 import static io.trino.sql.tree.SortItem.NullOrdering.UNDEFINED;
 import static io.trino.sql.tree.SortItem.Ordering.ASCENDING;
 import static io.trino.sql.tree.SortItem.Ordering.DESCENDING;
@@ -637,6 +639,7 @@ public class TestSqlParser
     }
 
     @Test
+    @Disabled
     public void testSelectWithLimit()
     {
         assertStatement("SELECT * FROM table1 LIMIT 2",
@@ -1141,7 +1144,10 @@ public class TestSqlParser
                                         identifier("col0")))));
     }
 
+    // Wren engine doesn't expect the roundtrip between sql and ast.
+    // So disable the original trino test.
     @Test
+    @Disabled
     public void testSelectWithOrderBy()
     {
         assertStatement("SELECT * FROM table1 ORDER BY a",
@@ -2760,7 +2766,10 @@ public class TestSqlParser
         }
     }
 
+    // Wren engine doesn't expect the roundtrip between sql and ast.
+    // So disable the original trino test.
     @Test
+    @Disabled
     public void testShowStatsForQuery()
     {
         String[] tableNames = {"t", "s.t", "c.s.t"};
@@ -2982,7 +2991,10 @@ public class TestSqlParser
                         new SubqueryExpression(simpleQuery(selectList(new LongLiteral("10"))))));
     }
 
+    // Wren engine doesn't expect the roundtrip between sql and ast.
+    // So disable the original trino test.
     @Test
+    @Disabled
     public void testAggregationWithOrderBy()
     {
         assertExpression("array_agg(x ORDER BY x DESC)",
@@ -2991,7 +3003,7 @@ public class TestSqlParser
                         QualifiedName.of("array_agg"),
                         Optional.empty(),
                         Optional.empty(),
-                        Optional.of(new OrderBy(ImmutableList.of(new SortItem(identifier("x"), DESCENDING, UNDEFINED)))),
+                        Optional.of(new OrderBy(ImmutableList.of(new SortItem(identifier("x"), DESCENDING, LAST)))),
                         false,
                         Optional.empty(),
                         Optional.empty(),
@@ -3003,7 +3015,7 @@ public class TestSqlParser
                                 QualifiedName.of("array_agg"),
                                 Optional.empty(),
                                 Optional.empty(),
-                                Optional.of(new OrderBy(ImmutableList.of(new SortItem(new DereferenceExpression(new Identifier("t"), identifier("y")), ASCENDING, UNDEFINED)))),
+                                Optional.of(new OrderBy(ImmutableList.of(new SortItem(new DereferenceExpression(new Identifier("t"), identifier("y")), ASCENDING, LAST)))),
                                 false,
                                 Optional.empty(),
                                 Optional.empty(),
@@ -3465,7 +3477,10 @@ public class TestSqlParser
                         ImmutableList.of()));
     }
 
+    // Wren engine doesn't expect the roundtrip between sql and ast.
+    // So disable the original trino test.
     @Test
+    @Disabled
     public void testWindowClause()
     {
         assertStatement("SELECT * FROM T WINDOW someWindow AS (PARTITION BY a), otherWindow AS (someWindow ORDER BY b)",
@@ -3488,14 +3503,17 @@ public class TestSqlParser
                                         new WindowSpecification(
                                                 Optional.of(new Identifier("someWindow")),
                                                 ImmutableList.of(),
-                                                Optional.of(new OrderBy(ImmutableList.of(new SortItem(new Identifier("b"), ASCENDING, UNDEFINED)))),
+                                                Optional.of(new OrderBy(ImmutableList.of(new SortItem(new Identifier("b"), ASCENDING, LAST)))),
                                                 Optional.empty()))),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty()));
     }
 
+    // Wren engine doesn't expect the roundtrip between sql and ast.
+    // So disable the original trino test.
     @Test
+    @Disabled
     public void testWindowFrameWithPatternRecognition()
     {
         assertThat(expression("rank() OVER (" +

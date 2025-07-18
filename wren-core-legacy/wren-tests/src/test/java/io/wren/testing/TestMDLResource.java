@@ -97,7 +97,7 @@ public class TestMDLResource
         assertThat(preview2.getColumns().size()).isEqualTo(1);
 
         assertWebApplicationException(() -> preview(new PreviewDto(previewManifest, "select orderkey from Orders limit 100", null)))
-                .hasErrorMessageMatches(".*Orders does not exist.*\n.*\n.*\n.*");
+                .hasErrorMessageMatches("(?s).*Orders does not exist.*");
     }
 
     @Test

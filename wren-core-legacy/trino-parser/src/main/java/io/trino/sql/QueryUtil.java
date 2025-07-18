@@ -171,7 +171,7 @@ public final class QueryUtil
 
     public static SortItem ascending(String name)
     {
-        return new SortItem(identifier(name), SortItem.Ordering.ASCENDING, SortItem.NullOrdering.UNDEFINED);
+        return new SortItem(identifier(name), SortItem.Ordering.ASCENDING, SortItem.NullOrdering.LAST);
     }
 
     public static Expression logicalAnd(Expression left, Expression right)
