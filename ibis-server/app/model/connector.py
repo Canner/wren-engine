@@ -53,6 +53,15 @@ class QueryDryRunError(UnprocessableEntityError):
     pass
 
 
+class GenericUserError(UnprocessableEntityError):
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+    def __str__(self) -> str:
+        return self.message
+
+
 class Connector:
     @tracer.start_as_current_span("connector_init", kind=trace.SpanKind.INTERNAL)
     def __init__(self, data_source: DataSource, connection_info: ConnectionInfo):
@@ -187,6 +196,20 @@ class PostgresConnector(SimpleConnector):
 class MSSqlConnector(SimpleConnector):
     def __init__(self, connection_info: ConnectionInfo):
         super().__init__(DataSource.mssql, connection_info)
+
+    @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
+    def query(self, sql: str, limit: int | None = None) -> pa.Table:
+        try:
+            return super().query(sql, limit)
+        except Exception as e:
+            # To descirbe the query result, ibis will wrap the query with a subquery. MSSQL doesn't
+            # allow order by without limit in a subquery, so we need to handle this error and provide a more user-friendly error message.
+            # error code 1033: https://learn.microsoft.com/zh-tw/sql/relational-databases/errors-events/database-engine-events-and-errors-1000-to-1999?view=sql-server-ver15
+            if "(1033)" in e.args[1]:
+                raise GenericUserError(
+                    "The query with order-by requires a specific limit to be set in MSSQL."
+                )
+            raise
 
     def dry_run(self, sql: str) -> None:
         try:

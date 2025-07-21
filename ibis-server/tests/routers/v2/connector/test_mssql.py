@@ -64,6 +64,17 @@ manifest = {
             ],
             "primaryKey": "orderkey",
         },
+        {
+            "name": "null_test",
+            "tableReference": {
+                "schema": "dbo",
+                "table": "null_test",
+            },
+            "columns": [
+                {"name": "id", "type": "integer"},
+                {"name": "letter", "type": "varchar"},
+            ],
+        },
     ],
 }
 
@@ -103,6 +114,13 @@ def mssql(request) -> SqlServerContainer:
                     @level2type = N'COLUMN', @level2name = 'o_comment';
             """)
         )
+        conn.execute(text('CREATE TABLE "null_test" ("id" INT, "letter" TEXT)'))
+        conn.execute(
+            text(
+                "INSERT INTO \"null_test\" (\"id\", \"letter\") VALUES (1, 'one'), (2, 'two'), (NULL, 'three')"
+            )
+        )
+
     request.addfinalizer(mssql.stop)
     return mssql
 
@@ -436,6 +454,58 @@ async def test_password_with_special_characters(client):
 
         assert response.status_code == 200
         assert "Microsoft SQL Server 2019" in response.text
+
+
+async def test_order_by_nulls_last(client, manifest_str, mssql: SqlServerContainer):
+    connection_info = _to_connection_info(mssql)
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT letter FROM "null_test" ORDER BY id',
+        },
+        params={"limit": 3},
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 3
+    assert result["data"][0][0] == "one"
+    assert result["data"][1][0] == "two"
+    assert result["data"][2][0] == "three"
+
+    connection_info = _to_connection_info(mssql)
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT letter FROM "null_test" ORDER BY id LIMIT 3',
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 3
+    assert result["data"][0][0] == "one"
+    assert result["data"][1][0] == "two"
+    assert result["data"][2][0] == "three"
+
+
+async def test_order_by_require_limit(client, manifest_str, mssql: SqlServerContainer):
+    connection_info = _to_connection_info(mssql)
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT letter FROM "null_test" ORDER BY id NULLS LAST',
+        },
+    )
+    assert response.status_code == 422
+    assert (
+        "The query with order-by requires a specific limit to be set in MSSQL."
+        in response.text
+    )
 
 
 def _to_connection_info(mssql: SqlServerContainer):
