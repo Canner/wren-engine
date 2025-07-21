@@ -29,6 +29,14 @@ def postgres(request) -> PostgresContainer:
     pd.read_parquet(file_path("resource/tpch/data/customer.parquet")).to_sql(
         "customer", engine, index=False
     )
+    with engine.begin() as conn:
+        conn.execute(sqlalchemy.text("CREATE TABLE null_test (id INT, letter TEXT)"))
+        conn.execute(
+            sqlalchemy.text(
+                "INSERT INTO null_test (id, letter) VALUES (1, 'one'), (2, 'two'), (NULL, 'three')"
+            )
+        )
+
     request.addfinalizer(pg.stop)
     return pg
 

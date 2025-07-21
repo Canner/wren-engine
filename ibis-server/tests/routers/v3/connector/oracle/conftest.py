@@ -88,6 +88,12 @@ def oracle(request) -> OracleDbContainer:
                 "INSERT INTO test_number (id, id_p, id_p_s) VALUES (1, 1234567890, 12345678.12)"
             )
         )
+        conn.execute(text('CREATE TABLE "null_test" ("id" INT, "letter" CLOB)'))
+        conn.execute(
+            text(
+                "INSERT INTO \"null_test\" (\"id\", \"letter\") VALUES (1, 'one'), (2, 'two'), (NULL, 'three')"
+            )
+        )
     request.addfinalizer(oracle.stop)
     return oracle
 

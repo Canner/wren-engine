@@ -492,3 +492,20 @@ async def test_metadata_db_version(client):
     )
     assert response.status_code == 200
     assert response.text == '"Follow BigQuery release version"'
+
+
+async def test_order_by_nulls_last(client, manifest_str):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT letter FROM (VALUES (1, 'one'), (2, 'two'), (null, 'three')) AS t (num, letter) ORDER BY num",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 3
+    assert result["data"][0][0] == "one"
+    assert result["data"][1][0] == "two"
+    assert result["data"][2][0] == "three"

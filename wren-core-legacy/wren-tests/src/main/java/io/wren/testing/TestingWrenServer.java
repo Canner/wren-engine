@@ -21,7 +21,6 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import io.airlift.bootstrap.Bootstrap;
 import io.airlift.bootstrap.LifeCycleManager;
-import io.airlift.event.client.EventModule;
 import io.airlift.http.server.testing.TestingHttpServer;
 import io.airlift.http.server.testing.TestingHttpServerModule;
 import io.airlift.jaxrs.JaxrsModule;
@@ -70,7 +69,6 @@ public class TestingWrenServer
                 new NodeModule(),
                 new JsonModule(),
                 new JaxrsModule(),
-                new EventModule(),
                 new MainModule(),
                 new DuckDBConnectorModule(),
                 new WrenModule(),

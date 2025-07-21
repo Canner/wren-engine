@@ -36,11 +36,6 @@
 
         <dependency>
             <groupId>io.airlift</groupId>
-            <artifactId>event</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.airlift</groupId>
             <artifactId>http-server</artifactId>
         </dependency>
 
@@ -57,6 +52,11 @@
         <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>node</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-api</artifactId>
         </dependency>
 
         <dependency>

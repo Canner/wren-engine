@@ -4,6 +4,7 @@ import time
 import orjson
 import pytest
 
+from app.dependencies import X_WREN_FALLBACK_DISABLE
 from tests.routers.v3.connector.bigquery.conftest import base_url
 
 manifest = {
@@ -55,6 +56,17 @@ manifest = {
                 },
             ],
             "primaryKey": "o_orderkey",
+        },
+        {
+            "name": "null_test",
+            "tableReference": {
+                "schema": "engine_ci",
+                "table": "null_test",
+            },
+            "columns": [
+                {"name": "id", "type": "integer"},
+                {"name": "letter", "type": "varchar"},
+            ],
         },
     ],
 }
@@ -336,3 +348,41 @@ async def test_decimal_precision(client, manifest_str, connection_info):
     result = response.json()
     assert len(result["data"]) == 1
     assert result["data"][0][0] == "0.333333333"
+
+
+async def test_order_by_nulls_last(client, manifest_str, connection_info):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT letter FROM null_test ORDER BY id",
+        },
+        headers={
+            X_WREN_FALLBACK_DISABLE: "true",  # Disable fallback to DuckDB
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 3
+    assert result["data"][0][0] == "one"
+    assert result["data"][1][0] == "two"
+    assert result["data"][2][0] == "three"
+
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT letter FROM null_test ORDER BY id desc",
+        },
+        headers={
+            X_WREN_FALLBACK_DISABLE: "true",  # Disable fallback to DuckDB
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 3
+    assert result["data"][0][0] == "two"
+    assert result["data"][1][0] == "one"
+    assert result["data"][2][0] == "three"

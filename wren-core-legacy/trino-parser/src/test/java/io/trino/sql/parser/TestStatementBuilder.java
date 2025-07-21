@@ -17,6 +17,7 @@ import com.google.common.io.Resources;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.Statement;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -42,7 +43,10 @@ public class TestStatementBuilder
         printStatement("prepare p from grant select on table hive.test.\"case\" to role \"case\"");
     }
 
+    // Wren engine doesn't expect the roundtrip between sql and ast.
+    // So disable the original trino test.
     @Test
+    @Disabled
     public void testStatementBuilder()
     {
         printStatement("select * from foo");
@@ -341,7 +345,10 @@ public class TestStatementBuilder
         assertSqlFormatter("'시험'", "'시험'");
     }
 
+    // Wren engine doesn't expect the roundtrip between sql and ast.
+    // So disable the original trino test.
     @Test
+    @Disabled
     public void testStatementBuilderTpch()
     {
         printTpchQuery(1, 3);

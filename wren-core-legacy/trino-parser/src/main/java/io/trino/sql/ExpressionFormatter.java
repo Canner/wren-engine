@@ -1197,10 +1197,9 @@ public final class ExpressionFormatter
                     builder.append(" NULLS FIRST");
                     break;
                 case LAST:
-                    builder.append(" NULLS LAST");
-                    break;
+                    // wren engine prefer to use "NULLS LAST" by default null ordering
                 case UNDEFINED:
-                    // no op
+                    builder.append(" NULLS LAST");
                     break;
                 default:
                     throw new UnsupportedOperationException("unknown null ordering: " + input.getNullOrdering());
