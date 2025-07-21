@@ -475,6 +475,24 @@ async def test_connection_valid_ssl_mode(client, mysql_ssl_off: MySqlContainer):
     assert response.text == '"8.0.40"'
 
 
+async def test_order_by_nulls_last(client, manifest_str, mysql: MySqlContainer):
+    connection_info = _to_connection_info(mysql)
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT letter FROM (VALUES (1, 'one'), (2, 'two'), (null, 'three')) AS t (num, letter) ORDER BY num",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 3
+    assert result["data"][0][0] == "one"
+    assert result["data"][1][0] == "two"
+    assert result["data"][2][0] == "three"
+
+
 def _to_connection_info(mysql: MySqlContainer):
     return {
         "host": mysql.get_container_host_ip(),
