@@ -1,7 +1,8 @@
 import base64
 import importlib
 import os
-from contextlib import closing
+import time
+from contextlib import closing, suppress
 from functools import cache
 from json import loads
 from typing import Any
@@ -18,6 +19,7 @@ from google.cloud import bigquery
 from google.oauth2 import service_account
 from ibis import BaseBackend
 from ibis.backends.sql.compilers.postgres import compiler as postgres_compiler
+from loguru import logger
 from opentelemetry import trace
 
 from app.model import (
@@ -41,6 +43,16 @@ importlib.import_module("app.custom_ibis.backends.sql.datatypes")
 tracer = trace.get_tracer(__name__)
 
 
+@cache
+def _get_pg_type_names(connection: BaseBackend) -> dict[int, str]:
+    with closing(connection.raw_sql("SELECT oid, typname FROM pg_type")) as cur:
+        return dict(cur.fetchall())
+
+
+class QueryDryRunError(UnprocessableEntityError):
+    pass
+
+
 class Connector:
     @tracer.start_as_current_span("connector_init", kind=trace.SpanKind.INTERNAL)
     def __init__(self, data_source: DataSource, connection_info: ConnectionInfo):
@@ -59,6 +71,8 @@ class Connector:
             self._connector = DuckDBConnector(connection_info)
         elif data_source == DataSource.redshift:
             self._connector = RedshiftConnector(connection_info)
+        elif data_source == DataSource.postgres:
+            self._connector = PostgresConnector(connection_info)
         else:
             self._connector = SimpleConnector(data_source, connection_info)
 
@@ -71,11 +85,21 @@ class Connector:
         except Exception as e:
             raise QueryDryRunError(f"Exception: {type(e)}, message: {e!s}")
 
+    def close(self) -> None:
+        """Close the underlying connection."""
+        if hasattr(self._connector, "close"):
+            self._connector.close()
+        else:
+            logger.warning(
+                f"Close method not implemented for {type(self._connector).__name__}"
+            )
+
 
 class SimpleConnector:
     def __init__(self, data_source: DataSource, connection_info: ConnectionInfo):
         self.data_source = data_source
         self.connection = self.data_source.get_connection(connection_info)
+        self._closed = False
 
     @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
     def query(self, sql: str, limit: int | None = None) -> pa.Table:
@@ -88,6 +112,76 @@ class SimpleConnector:
     @tracer.start_as_current_span("connector_dry_run", kind=trace.SpanKind.CLIENT)
     def dry_run(self, sql: str) -> None:
         self.connection.sql(sql)
+
+    def close(self) -> None:
+        """Close the connection safely."""
+        if self._closed or not hasattr(self, "connection") or self.connection is None:
+            return
+
+        try:
+            if hasattr(self.connection, "con"):
+                # If the connection has a 'con' attribute (default for many ibis backends), try to invoke close()
+                if hasattr(self.connection.con, "close"):
+                    self.connection.con.close()
+            elif hasattr(self.connection, "close"):
+                # Try to close the connection directly if it has a close method
+                self.connection.close()
+            else:
+                logger.warning(
+                    f"Closing connection for {self.data_source.value} is not implemented."
+                )
+        except Exception as e:
+            logger.warning(
+                f"Error closing connection for {self.data_source.value}: {e}"
+            )
+        finally:
+            # Mark connection as closed to prevent double-close
+            self._closed = True
+            self.connection = None
+
+
+class PostgresConnector(SimpleConnector):
+    def __init__(self, connection_info):
+        super().__init__(DataSource.postgres, connection_info)
+
+    def close(self) -> None:
+        """Safely close postgres connection to prevent segfault."""
+        if self._closed or not hasattr(self, "connection") or self.connection is None:
+            return
+
+        try:
+            # Check if the underlying psycopg2 connection exists and is not already closed
+            if hasattr(self.connection, "con") and self.connection.con is not None:
+                # Check if connection is still alive before closing
+                if (
+                    hasattr(self.connection.con, "closed")
+                    and not self.connection.con.closed
+                ):
+                    # Cancel any running queries first
+                    with suppress(Exception):
+                        self.connection.con.cancel()
+
+                    time.sleep(0.1)
+
+                    # Close the connection
+                    self.connection.con.close()
+                elif (
+                    hasattr(self.connection.con, "closed")
+                    and self.connection.con.closed
+                ):
+                    # Connection is already closed, just log
+                    logger.debug("Postgres connection already closed")
+            elif hasattr(self.connection, "close"):
+                self.connection.close()
+        except Exception as e:
+            logger.warning(f"Error closing postgres connection: {e}")
+            # Force close by setting connection to None
+            if hasattr(self.connection, "con"):
+                self.connection.con = None
+        finally:
+            # Mark connection as closed to prevent double-close
+            self._closed = True
+            self.connection = None
 
 
 class MSSqlConnector(SimpleConnector):
@@ -135,6 +229,18 @@ class CannerConnector:
     def dry_run(self, sql: str) -> Any:
         # Canner enterprise does not support dry-run, so we have to query with limit zero
         return self.connection.raw_sql(f"SELECT * FROM ({sql}) LIMIT 0")
+
+    def close(self) -> None:
+        """Close the Canner connection."""
+        try:
+            if hasattr(self.connection, "con") and hasattr(
+                self.connection.con, "close"
+            ):
+                self.connection.con.close()
+            elif hasattr(self.connection, "close"):
+                self.connection.close()
+        except Exception as e:
+            logger.warning(f"Error closing Canner connection: {e}")
 
     @tracer.start_as_current_span("get_schema", kind=trace.SpanKind.CLIENT)
     def _get_schema(self, sql: str) -> sch.Schema:
@@ -276,6 +382,13 @@ class DuckDBConnector:
 
         return files
 
+    def close(self) -> None:
+        """Close the DuckDB connection."""
+        try:
+            self.connection.close()
+        except Exception as e:
+            logger.warning(f"Error closing DuckDB connection: {e}")
+
 
 class RedshiftConnector:
     def __init__(self, connection_info: RedshiftConnectionUnion):
@@ -318,12 +431,9 @@ class RedshiftConnector:
         with closing(self.connection.cursor()) as cursor:
             cursor.execute(f"SELECT * FROM ({sql}) AS sub LIMIT 0")
 
-
-@cache
-def _get_pg_type_names(connection: BaseBackend) -> dict[int, str]:
-    with closing(connection.raw_sql("SELECT oid, typname FROM pg_type")) as cur:
-        return dict(cur.fetchall())
-
-
-class QueryDryRunError(UnprocessableEntityError):
-    pass
+    def close(self) -> None:
+        """Close the Redshift connection."""
+        try:
+            self.connection.close()
+        except Exception as e:
+            logger.warning(f"Error closing Redshift connection: {e}")

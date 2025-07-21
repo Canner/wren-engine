@@ -36,6 +36,9 @@ from app.routers.v2.connector import get_java_engine_connector, get_query_cache_
 from app.util import (
     append_fallback_context,
     build_context,
+    execute_dry_run_with_timeout,
+    execute_query_with_timeout,
+    execute_validate_with_timeout,
     pushdown_limit,
     safe_strtobool,
     set_attribute,
@@ -80,6 +83,9 @@ async def query(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
     ) as span:
         set_attribute(headers, span)
+        connection_info = data_source.get_connection_info(
+            dto.connection_info, dict(headers)
+        )
         try:
             if dry_run:
                 sql = pushdown_limit(dto.sql, limit)
@@ -89,8 +95,11 @@ async def query(
                     experiment=True,
                     properties=dict(headers),
                 ).rewrite(sql)
-                connector = Connector(data_source, dto.connection_info)
-                connector.dry_run(rewritten_sql)
+                connector = Connector(data_source, connection_info)
+                await execute_dry_run_with_timeout(
+                    connector,
+                    rewritten_sql,
+                )
                 return Response(status_code=204)
 
             # Not a dry run
@@ -100,7 +109,7 @@ async def query(
 
             if cache_enable:
                 cached_result = query_cache_manager.get(
-                    data_source, dto.sql, dto.connection_info
+                    data_source, dto.sql, connection_info
                 )
                 cache_hit = cached_result is not None
 
@@ -112,7 +121,7 @@ async def query(
                 cache_headers[X_CACHE_HIT] = "true"
                 cache_headers[X_CACHE_CREATE_AT] = str(
                     query_cache_manager.get_cache_file_timestamp(
-                        data_source, dto.sql, dto.connection_info
+                        data_source, dto.sql, connection_info
                     )
                 )
             # all other cases require rewriting + connecting
@@ -124,8 +133,11 @@ async def query(
                     experiment=True,
                     properties=dict(headers),
                 ).rewrite(sql)
-                connector = Connector(data_source, dto.connection_info)
-                result = connector.query(rewritten_sql, limit=limit)
+                connector = Connector(data_source, connection_info)
+                result = await execute_query_with_timeout(
+                    connector,
+                    rewritten_sql,
+                )
 
                 # headers for all non-hit cases
                 cache_headers[X_CACHE_HIT] = "false"
@@ -135,24 +147,24 @@ async def query(
                     case (True, True, True):
                         cache_headers[X_CACHE_CREATE_AT] = str(
                             query_cache_manager.get_cache_file_timestamp(
-                                data_source, dto.sql, dto.connection_info
+                                data_source, dto.sql, connection_info
                             )
                         )
                         query_cache_manager.set(
-                            data_source, dto.sql, result, dto.connection_info
+                            data_source, dto.sql, result, connection_info
                         )
 
                         cache_headers[X_CACHE_OVERRIDE] = "true"
                         cache_headers[X_CACHE_OVERRIDE_AT] = str(
                             query_cache_manager.get_cache_file_timestamp(
-                                data_source, dto.sql, dto.connection_info
+                                data_source, dto.sql, connection_info
                             )
                         )
                     # case 3/4: cache miss but enabled (need to create cache)
                     # no matter the cache override or not, we need to create cache
                     case (True, False, _):
                         query_cache_manager.set(
-                            data_source, dto.sql, result, dto.connection_info
+                            data_source, dto.sql, result, connection_info
                         )
                     # case 5~8 Other cases (cache is not enabled)
                     case (False, _, _):
@@ -298,9 +310,12 @@ async def validate(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
     ) as span:
         set_attribute(headers, span)
+        connection_info = data_source.get_connection_info(
+            dto.connection_info, dict(headers)
+        )
         try:
             validator = Validator(
-                Connector(data_source, dto.connection_info),
+                Connector(data_source, connection_info),
                 Rewriter(
                     dto.manifest_str,
                     data_source=data_source,
@@ -308,7 +323,12 @@ async def validate(
                     properties=dict(headers),
                 ),
             )
-            await validator.validate(rule_name, dto.parameters, dto.manifest_str)
+            await execute_validate_with_timeout(
+                validator,
+                rule_name,
+                dto.parameters,
+                dto.manifest_str,
+            )
             return Response(status_code=204)
         except Exception as e:
             is_fallback_disable = bool(
@@ -372,16 +392,22 @@ async def model_substitute(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
     ) as span:
         set_attribute(headers, span)
+        connection_info = data_source.get_connection_info(
+            dto.connection_info, dict(headers)
+        )
         try:
             sql = ModelSubstitute(data_source, dto.manifest_str, headers).substitute(
                 dto.sql
             )
-            Connector(data_source, dto.connection_info).dry_run(
-                await Rewriter(
-                    dto.manifest_str,
-                    data_source=data_source,
-                    experiment=True,
-                ).rewrite(sql)
+            connector = Connector(data_source, connection_info)
+            rewritten_sql = await Rewriter(
+                dto.manifest_str,
+                data_source=data_source,
+                java_engine_connector=java_engine_connector,
+            ).rewrite(sql)
+            await execute_dry_run_with_timeout(
+                connector,
+                rewritten_sql,
             )
             return sql
         except Exception as e:

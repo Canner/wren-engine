@@ -27,6 +27,7 @@ async def test_config(client):
         "wren_engine_endpoint": "http://localhost:8080",
         "remote_function_list_path": None,
         "diagnose": False,
+        "app_timeout_seconds": 240,
     }
 
 

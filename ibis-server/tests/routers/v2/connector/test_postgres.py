@@ -10,6 +10,7 @@ import sqlalchemy
 from sqlalchemy import text
 from testcontainers.postgres import PostgresContainer
 
+from app.model.data_source import X_WREN_DB_STATEMENT_TIMEOUT
 from app.model.validator import rules
 from tests.conftest import file_path
 
@@ -1024,6 +1025,25 @@ async def test_decimal_precision(client, manifest_str, postgres: PostgresContain
     result = response.json()
     assert len(result["data"]) == 1
     assert result["data"][0][0] == "0.333333333"
+
+
+async def test_connection_timeout(client, manifest_str, postgres: PostgresContainer):
+    connection_info = _to_connection_info(postgres)
+    # Set a very short timeout to force a timeout error
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT 1 FROM (SELECT pg_sleep(5))",  # This will take longer than the default timeout
+        },
+        headers={X_WREN_DB_STATEMENT_TIMEOUT: "1"},  # Set timeout to 1 second
+    )
+    assert response.status_code == 504  # Gateway Timeout
+    assert (
+        "Query was cancelled: canceling statement due to statement timeout"
+        in response.text
+    )
 
 
 def _to_connection_info(pg: PostgresContainer):
