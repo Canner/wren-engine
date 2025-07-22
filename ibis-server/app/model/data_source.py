@@ -16,6 +16,7 @@ from app.model import (
     CannerConnectionInfo,
     ClickHouseConnectionInfo,
     ConnectionInfo,
+    ConnectionUrl,
     GcsFileConnectionInfo,
     LocalFileConnectionInfo,
     MinioFileConnectionInfo,
@@ -110,6 +111,10 @@ class DataSource(StrEnum):
 
     def _build_connection_info(self, data: dict) -> ConnectionInfo:
         """Build a ConnectionInfo object from the provided data."""
+        # Check if data contains connectionUrl for connection string-based connections
+        if "connectionUrl" in data or "connection_url" in data:
+            return ConnectionUrl.model_validate(data)
+
         match self:
             case DataSource.athena:
                 return AthenaConnectionInfo.model_validate(data)

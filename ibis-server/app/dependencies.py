@@ -13,9 +13,11 @@ X_CACHE_OVERRIDE = "X-Cache-Override"
 X_CACHE_OVERRIDE_AT = "X-Cache-Override-At"
 
 
-# Rebuild model to validate the dto is correct via validation of the pydantic
+# Validate the dto by building the specific connection info from the data source
 def verify_query_dto(data_source: DataSource, dto: QueryDTO):
-    data_source.get_dto_type()(**dto.model_dump(by_alias=True))
+    # Use data_source.get_connection_info to validate the connection_info
+    # This will ensure the connection_info can be properly parsed for the specific data source
+    data_source.get_connection_info(dto.connection_info, {})
 
 
 def get_wren_headers(request: Request) -> Headers:

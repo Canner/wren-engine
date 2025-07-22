@@ -7,7 +7,7 @@ from app.model import ConnectionInfo
 
 
 class MetadataDTO(BaseModel):
-    connection_info: ConnectionInfo = Field(alias="connectionInfo")
+    connection_info: dict[str, Any] | ConnectionInfo = Field(alias="connectionInfo")
 
 
 class RustWrenEngineColumnType(Enum):
