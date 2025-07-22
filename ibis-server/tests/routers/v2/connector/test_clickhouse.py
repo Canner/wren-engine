@@ -1,4 +1,5 @@
 import base64
+from multiprocessing import connection
 
 import clickhouse_connect
 import orjson
@@ -6,6 +7,7 @@ import pandas as pd
 import pytest
 from testcontainers.clickhouse import ClickHouseContainer
 
+from app.model.data_source import X_WREN_DB_STATEMENT_TIMEOUT
 from app.model.validator import rules
 from tests.conftest import file_path
 
@@ -564,6 +566,25 @@ async def test_metadata_db_version(client, clickhouse: ClickHouseContainer):
     )
     assert response.status_code == 200
     assert response.text is not None
+
+
+async def test_connection_timeout(
+    client, manifest_str, clickhouse: ClickHouseContainer
+):
+    connection_info = _to_connection_info(clickhouse)
+    print(connection_info)
+    # Set a very short timeout to force a timeout error
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT sleep(3)",  # This will take longer than the default timeout
+        },
+        headers={X_WREN_DB_STATEMENT_TIMEOUT: "1"},  # Set timeout to 1 second
+    )
+    assert response.status_code == 504  # Gateway Timeout
+    assert "Query was cancelled:" in response.text
 
 
 def _to_connection_info(db: ClickHouseContainer):

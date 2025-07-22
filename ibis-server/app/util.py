@@ -2,6 +2,7 @@ import asyncio
 import base64
 import time
 
+import clickhouse_connect
 import datafusion
 import orjson
 import pandas as pd
@@ -267,7 +268,10 @@ async def execute_with_timeout(operation, operation_name: str):
         raise DatabaseTimeoutError(
             f"{operation_name} timeout after {app_timeout_seconds} seconds"
         )
-    except psycopg.errors.QueryCanceled as e:
+    except (
+        psycopg.errors.QueryCanceled,
+        clickhouse_connect.driver.exceptions.DatabaseError,
+    ) as e:
         raise DatabaseTimeoutError(f"{operation_name} was cancelled: {e}")
 
 

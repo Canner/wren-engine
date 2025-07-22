@@ -4,6 +4,7 @@ import base64
 import ssl
 from enum import Enum, StrEnum, auto
 from json import loads
+from typing import Any
 
 import ibis
 from google.oauth2 import service_account
@@ -79,7 +80,7 @@ class DataSource(StrEnum):
             raise NotImplementedError(f"Unsupported data source: {self}")
 
     def get_connection_info(
-        self, data: dict | ConnectionInfo, headers: dict
+        self, data: dict[str, Any] | ConnectionInfo, headers: dict[str, str]
     ) -> ConnectionInfo:
         """Build a ConnectionInfo object from the provided data and add requried configuration from headers."""
         if isinstance(data, ConnectionInfo):
@@ -99,7 +100,13 @@ class DataSource(StrEnum):
                     options += f"-c statement_timeout={headers.get(X_WREN_DB_STATEMENT_TIMEOUT, 180)}s"
                     kwargs["options"] = options
                 info.kwargs = kwargs
-
+            case DataSource.clickhouse:
+                session_timeout = headers.get(X_WREN_DB_STATEMENT_TIMEOUT, 180)
+                if info.settings is None:
+                    info.settings = {}
+                if "max_execution_time" not in info.settings:
+                    info.settings["max_execution_time"] = int(session_timeout)
+                print(info)
         return info
 
     def _build_connection_info(self, data: dict) -> ConnectionInfo:
@@ -222,6 +229,7 @@ class DataSourceExtension(Enum):
             database=info.database.get_secret_value(),
             user=info.user.get_secret_value(),
             password=(info.password and info.password.get_secret_value()),
+            settings=info.settings if info.settings else dict(),
             **info.kwargs if info.kwargs else dict(),
         )
 

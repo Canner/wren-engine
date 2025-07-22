@@ -165,6 +165,11 @@ class ClickHouseConnectionInfo(BaseConnectionInfo):
     password: SecretStr | None = Field(
         description="the password of your database", examples=["password"], default=None
     )
+    settings: dict[str, str] | None = Field(
+        description="Additional settings for ClickHouse connection",
+        default=None,
+        examples=[{"server_host_name": "60"}],
+    )
     kwargs: dict[str, str] | None = Field(
         description="Client specific keyword arguments", default=None
     )
@@ -468,6 +473,7 @@ ConnectionInfo = (
     AthenaConnectionInfo
     | BigQueryConnectionInfo
     | CannerConnectionInfo
+    | ClickHouseConnectionInfo
     | ConnectionUrl
     | MSSqlConnectionInfo
     | MySqlConnectionInfo
