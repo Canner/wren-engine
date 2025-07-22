@@ -1,5 +1,4 @@
 import base64
-from multiprocessing import connection
 
 import clickhouse_connect
 import orjson
@@ -572,7 +571,6 @@ async def test_connection_timeout(
     client, manifest_str, clickhouse: ClickHouseContainer
 ):
     connection_info = _to_connection_info(clickhouse)
-    print(connection_info)
     # Set a very short timeout to force a timeout error
     response = await client.post(
         url=f"{base_url}/query",

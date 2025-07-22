@@ -106,7 +106,6 @@ class DataSource(StrEnum):
                     info.settings = {}
                 if "max_execution_time" not in info.settings:
                     info.settings["max_execution_time"] = int(session_timeout)
-                print(info)
         return info
 
     def _build_connection_info(self, data: dict) -> ConnectionInfo:
