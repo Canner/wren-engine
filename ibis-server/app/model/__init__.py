@@ -168,7 +168,7 @@ class ClickHouseConnectionInfo(BaseConnectionInfo):
     settings: dict[str, str] | None = Field(
         description="Additional settings for ClickHouse connection",
         default=None,
-        examples=[{"server_host_name": "60"}],
+        examples=[{"max_execution_time": "60"}],
     )
     kwargs: dict[str, str] | None = Field(
         description="Client specific keyword arguments", default=None
