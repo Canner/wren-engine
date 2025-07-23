@@ -6,7 +6,6 @@ import datafusion
 import orjson
 import pandas as pd
 import psycopg
-import psycopg2
 import pyarrow as pa
 import wren_core
 from fastapi import Header
@@ -268,7 +267,7 @@ async def execute_with_timeout(operation, operation_name: str):
         raise DatabaseTimeoutError(
             f"{operation_name} timeout after {app_timeout_seconds} seconds"
         )
-    except (psycopg.errors.QueryCanceled, psycopg2.errors.QueryCanceled) as e:
+    except psycopg.errors.QueryCanceled as e:
         raise DatabaseTimeoutError(f"{operation_name} was cancelled: {e}")
 
 
