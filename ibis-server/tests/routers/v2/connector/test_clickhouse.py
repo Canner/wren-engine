@@ -584,6 +584,19 @@ async def test_connection_timeout(
     assert response.status_code == 504  # Gateway Timeout
     assert "Query was cancelled:" in response.text
 
+    connection_info = _to_connection_url(clickhouse)
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": {"connectionUrl": connection_info},
+            "manifestStr": manifest_str,
+            "sql": "SELECT sleep(3)",  # This will take longer than the default timeout
+        },
+        headers={X_WREN_DB_STATEMENT_TIMEOUT: "1"},  # Set timeout to 1 second
+    )
+    assert response.status_code == 504  # Gateway Timeout
+    assert "Query was cancelled:" in response.text
+
 
 def _to_connection_info(db: ClickHouseContainer):
     return {

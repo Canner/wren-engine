@@ -22,6 +22,7 @@ from app.mdl.java_engine import JavaEngineConnector
 from app.mdl.rewriter import Rewriter
 from app.mdl.substitute import ModelSubstitute
 from app.model import (
+    DatabaseTimeoutError,
     DryPlanDTO,
     QueryDTO,
     TranspileDTO,
@@ -173,6 +174,9 @@ async def query(
             response = ORJSONResponse(to_json(result, headers, data_source=data_source))
             update_response_headers(response, cache_headers)
             return response
+        except DatabaseTimeoutError:
+            # won't fallback to v2 if timeout
+            raise
         except Exception as e:
             is_fallback_disable = bool(
                 headers.get(X_WREN_FALLBACK_DISABLE)
@@ -330,6 +334,9 @@ async def validate(
                 dto.manifest_str,
             )
             return Response(status_code=204)
+        except DatabaseTimeoutError:
+            # won't fallback to v2 if timeout
+            raise
         except Exception as e:
             is_fallback_disable = bool(
                 headers.get(X_WREN_FALLBACK_DISABLE)
@@ -410,6 +417,9 @@ async def model_substitute(
                 rewritten_sql,
             )
             return sql
+        except DatabaseTimeoutError:
+            # won't fallback to v2 if timeout
+            raise
         except Exception as e:
             is_fallback_disable = bool(
                 headers.get(X_WREN_FALLBACK_DISABLE)

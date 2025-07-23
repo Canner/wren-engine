@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import base64
 import ssl
+import urllib
 from enum import Enum, StrEnum, auto
 from json import loads
 from typing import Any
+from urllib.parse import unquote_plus
 
 import ibis
 from google.oauth2 import service_account
@@ -113,6 +115,12 @@ class DataSource(StrEnum):
         """Build a ConnectionInfo object from the provided data."""
         # Check if data contains connectionUrl for connection string-based connections
         if "connectionUrl" in data or "connection_url" in data:
+            if self == DataSource.clickhouse:
+                return self._handle_clickhouse_url(
+                    urllib.parse.urlparse(
+                        data.get("connectionUrl", data.get("connection_url"))
+                    )
+                )
             return ConnectionUrl.model_validate(data)
 
         match self:
@@ -150,6 +158,32 @@ class DataSource(StrEnum):
                 return GcsFileConnectionInfo.model_validate(data)
             case _:
                 raise NotImplementedError(f"Unsupported data source: {self}")
+
+    def _handle_clickhouse_url(
+        self, parsed: urllib.parse.ParseResult
+    ) -> ClickHouseConnectionInfo:
+        if not parsed.scheme or parsed.scheme != "clickhouse":
+            raise ValueError("Invalid connection URL for ClickHouse")
+        kwargs = {}
+        if parsed.username:
+            kwargs["user"] = parsed.username
+        if parsed.password:
+            kwargs["password"] = unquote_plus(parsed.password)
+        if parsed.hostname:
+            kwargs["host"] = parsed.hostname
+        if parsed.port:
+            kwargs["port"] = str(parsed.port)
+        if database := parsed.path[1:]:
+            kwargs["database"] = database
+        parsed_kwargs = dict(urllib.parse.parse_qsl(parsed.query))
+        if "secure" in parsed_kwargs:
+            kwargs["secure"] = self._safe_strtobool(parsed_kwargs["secure"])
+            parsed_kwargs.pop("secure")
+        kwargs["kwargs"] = parsed_kwargs
+        return ClickHouseConnectionInfo(**kwargs)
+
+    def _safe_strtobool(self, val: str) -> bool:
+        return val.lower() in {"1", "true", "yes", "y"}
 
 
 class DataSourceExtension(Enum):

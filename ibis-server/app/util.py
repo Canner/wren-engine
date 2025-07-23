@@ -268,10 +268,10 @@ async def execute_with_timeout(operation, operation_name: str):
         raise DatabaseTimeoutError(
             f"{operation_name} timeout after {app_timeout_seconds} seconds"
         )
-    except (
-        psycopg.errors.QueryCanceled,
-        clickhouse_connect.driver.exceptions.DatabaseError,
-    ) as e:
+    except clickhouse_connect.driver.exceptions.DatabaseError as e:
+        if "TIMEOUT_EXCEEDED" in str(e):
+            raise DatabaseTimeoutError(f"{operation_name} was cancelled: {e}")
+    except psycopg.errors.QueryCanceled as e:
         raise DatabaseTimeoutError(f"{operation_name} was cancelled: {e}")
 
 

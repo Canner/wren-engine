@@ -165,6 +165,11 @@ class ClickHouseConnectionInfo(BaseConnectionInfo):
     password: SecretStr | None = Field(
         description="the password of your database", examples=["password"], default=None
     )
+    secure: bool = Field(
+        description="Whether or not to use an authenticated endpoint",
+        default=False,
+        examples=[True, False],
+    )
     settings: dict[str, str] | None = Field(
         description="Additional settings for ClickHouse connection",
         default=None,
