@@ -216,7 +216,7 @@ class MySqlConnectionInfo(BaseConnectionInfo):
     )
     ssl_mode: SecretStr | None = Field(
         alias="sslMode",
-        default="ENABLED",
+        default=SecretStr("ENABLED"),
         description="Use ssl connection or not. The default value is `ENABLED` because MySQL uses `caching_sha2_password` by default and the driver MySQLdb support caching_sha2_password with ssl only.",
         examples=["DISABLED", "ENABLED", "VERIFY_CA"],
     )
