@@ -26,6 +26,7 @@ async def test_config(client):
     assert response.json() == {
         "wren_engine_endpoint": "http://localhost:8080",
         "remote_function_list_path": None,
+        "remote_white_function_list_path": None,
         "diagnose": False,
         "app_timeout_seconds": 240,
     }
