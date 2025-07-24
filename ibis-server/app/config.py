@@ -20,6 +20,7 @@ class Config:
         load_dotenv(override=True)
         self.wren_engine_endpoint = os.getenv("WREN_ENGINE_ENDPOINT")
         self.remote_function_list_path = os.getenv("REMOTE_FUNCTION_LIST_PATH")
+        self.remote_white_function_list_path = os.getenv("REMOTE_WHITE_FUNCTION_LIST_PATH")
         self.app_timeout_seconds = int(os.getenv("APP_TIMEOUT_SECONDS", "240"))
         self.diagnose = False
         self.init_logger()
@@ -61,6 +62,9 @@ class Config:
         if data_source in {"local_file", "s3_file", "minio_file", "gcs_file"}:
             data_source = "duckdb"
         base_path = os.path.normpath(self.remote_function_list_path)
+        # we override the path for bigquery to use the white list
+        if data_source == "bigquery":
+            base_path = os.path.normpath(self.remote_white_function_list_path)
         path = os.path.normpath(os.path.join(base_path, f"{data_source}.csv"))
         if not path.startswith(base_path):
             raise ValueError("Invalid data source path")
