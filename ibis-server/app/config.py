@@ -86,6 +86,9 @@ class Config:
         self.remote_white_function_list_path = path
 
     def get_data_source_is_white_list(self, data_source: str) -> bool:
+        if not self.remote_white_function_list_path:
+            return False
+
         return data_source in {"bigquery"}
 
 

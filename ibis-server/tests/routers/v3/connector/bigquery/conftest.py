@@ -34,5 +34,7 @@ def connection_info():
 def set_remote_function_list_path():
     config = get_config()
     config.set_remote_function_list_path(function_list_path)
+    config.set_remote_white_function_list_path(white_function_list_path)
     yield
     config.set_remote_function_list_path(None)
+    config.set_remote_white_function_list_path(None)

@@ -40,6 +40,7 @@ async def test_function_list(client):
     config = get_config()
 
     config.set_remote_function_list_path(None)
+    config.set_remote_white_function_list_path(None)
     response = await client.get(url=f"{base_url}/functions")
     assert response.status_code == 200
     result = response.json()
@@ -67,6 +68,7 @@ async def test_function_list(client):
     }
 
     config.set_remote_function_list_path(None)
+    config.set_remote_white_function_list_path(None)
     response = await client.get(url=f"{base_url}/functions")
     assert response.status_code == 200
     result = response.json()
