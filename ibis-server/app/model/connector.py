@@ -118,10 +118,10 @@ class SimpleConnector:
         ibis_table = self.connection.sql(sql)
         if limit is not None:
             ibis_table = ibis_table.limit(limit)
-        ibis_table = self._hanlde_pyarrow_unsupported_type(ibis_table)
+        ibis_table = self._handle_pyarrow_unsupported_type(ibis_table)
         return ibis_table.to_pyarrow()
 
-    def _hanlde_pyarrow_unsupported_type(self, ibis_table: Table, **kwargs) -> Table:
+    def _handle_pyarrow_unsupported_type(self, ibis_table: Table, **kwargs) -> Table:
         result_table = ibis_table
         for name, dtype in ibis_table.schema().items():
             if isinstance(dtype, Decimal):
