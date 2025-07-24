@@ -35,12 +35,9 @@ def main():
             if "type" in connection_info:
                 connection_info = data_source.get_connection_info(
                     connection_info["properties"],
-                    headers={},
                 )
             else:
-                connection_info = data_source.get_connection_info(
-                    connection_info, headers={}
-                )
+                connection_info = data_source.get_connection_info(connection_info)
     else:
         connection_info = None
 
