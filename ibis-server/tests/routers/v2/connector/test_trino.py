@@ -6,6 +6,7 @@ import pytest
 from testcontainers.trino import TrinoContainer
 from trino.dbapi import connect
 
+from app.model.data_source import X_WREN_DB_STATEMENT_TIMEOUT
 from app.model.validator import rules
 
 pytestmark = pytest.mark.trino
@@ -83,6 +84,19 @@ def trino(request) -> TrinoContainer:
     cur.execute(
         "COMMENT ON COLUMN memory.default.orders.comment IS 'This is a comment'"
     )
+
+    cur.execute("""
+CREATE FUNCTION memory.default.sleep(x integer)
+    RETURNS integer
+    LANGUAGE PYTHON
+    WITH (handler = 'sleep')
+    AS $$
+    def sleep(a):
+        import time
+        time.sleep(a)
+        return 0
+    $$
+                """)
 
     request.addfinalizer(db.stop)
     return db
@@ -425,6 +439,35 @@ async def test_metadata_db_version(client, trino: TrinoContainer):
     )
     assert response.status_code == 200
     assert response.text is not None
+
+
+async def test_connection_timeout(client, manifest_str, trino: TrinoContainer):
+    connection_info = _to_connection_info(trino)
+    # Set a very short timeout to force a timeout error
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT memory.default.sleep(3)",  # This will take longer than the default timeout
+        },
+        headers={X_WREN_DB_STATEMENT_TIMEOUT: "1"},  # Set timeout to 1 second
+    )
+    assert response.status_code == 504  # Gateway Timeout
+    assert "Query was cancelled:" in response.text
+
+    connection_info = _to_connection_url(trino)
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": {"connectionUrl": connection_info},
+            "manifestStr": manifest_str,
+            "sql": "SELECT memory.default.sleep(3)",  # This will take longer than the default timeout
+        },
+        headers={X_WREN_DB_STATEMENT_TIMEOUT: "1"},  # Set timeout to 1 second
+    )
+    assert response.status_code == 504  # Gateway Timeout
+    assert "Query was cancelled:" in response.text
 
 
 def _to_connection_info(trino: TrinoContainer):
