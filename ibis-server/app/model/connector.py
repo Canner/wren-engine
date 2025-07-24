@@ -232,8 +232,10 @@ class MSSqlConnector(SimpleConnector):
         super().__init__(DataSource.mssql, connection_info)
 
     @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
-    def query(self, sql: str, limit: int) -> pa.Table:
-        ibis_table = self.connection.sql(sql).limit(limit)
+    def query(self, sql: str, limit: int | None = None) -> pa.Table:
+        ibis_table = self.connection.sql(sql)
+        if limit is not None:
+            ibis_table = ibis_table.limit(limit)
         return self._round_decimal_columns(ibis_table)
 
     def _round_decimal_columns(self, ibis_table: Table, scale: int = 9) -> pa.Table:
@@ -294,10 +296,10 @@ class CannerConnector:
         ibis_table = self.connection.sql(sql, schema=schema)
         if limit is not None:
             ibis_table = ibis_table.limit(limit)
-        ibis_table = self._hanlde_pyarrow_unsupported_type(ibis_table)
+        ibis_table = self._handle_pyarrow_unsupported_type(ibis_table)
         return ibis_table.to_pyarrow()
 
-    def _hanlde_pyarrow_unsupported_type(self, ibis_table: Table, **kwargs) -> Table:
+    def _handle_pyarrow_unsupported_type(self, ibis_table: Table, **kwargs) -> Table:
         result_table = ibis_table
         for name, dtype in ibis_table.schema().items():
             if isinstance(dtype, Decimal):
