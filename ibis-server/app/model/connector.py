@@ -39,7 +39,6 @@ from app.model import (
 )
 from app.model.data_source import DataSource
 from app.model.utils import init_duckdb_gcs, init_duckdb_minio, init_duckdb_s3
-from app.util import hanlde_pyarrow_unsupported_type
 
 # Override datatypes of ibis
 importlib.import_module("app.custom_ibis.backends.sql.datatypes")
@@ -295,8 +294,24 @@ class CannerConnector:
         ibis_table = self.connection.sql(sql, schema=schema)
         if limit is not None:
             ibis_table = ibis_table.limit(limit)
-        ibis_table = hanlde_pyarrow_unsupported_type(ibis_table)
+        ibis_table = self._hanlde_pyarrow_unsupported_type(ibis_table)
         return ibis_table.to_pyarrow()
+
+    def _hanlde_pyarrow_unsupported_type(self, ibis_table: Table, **kwargs) -> Table:
+        result_table = ibis_table
+        for name, dtype in ibis_table.schema().items():
+            if isinstance(dtype, Decimal):
+                # Round decimal columns to a specified scale
+                result_table = self._round_decimal_columns(
+                    result_table=result_table, col_name=name, **kwargs
+                )
+            elif isinstance(dtype, UUID):
+                # Convert UUID to string for compatibility
+                result_table = self._cast_uuid_columns(
+                    result_table=result_table, col_name=name
+                )
+
+        return result_table
 
     @tracer.start_as_current_span("connector_dry_run", kind=trace.SpanKind.CLIENT)
     def dry_run(self, sql: str) -> Any:
