@@ -10,7 +10,8 @@ pytestmark = pytest.mark.bigquery
 
 base_url = "/v3/connector/bigquery"
 
-function_list_path = file_path("../resources/white_function_list/function_list")
+function_list_path = file_path("../resources/function_list")
+white_function_list_path = file_path("../resources/white_function_list")
 
 
 def pytest_collection_modifyitems(items):

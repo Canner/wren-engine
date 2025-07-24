@@ -59,7 +59,8 @@ RUN apt-get -y install libpq-dev \
 ENV VIRTUAL_ENV=/app/.venv \
     PATH="/app/.venv/bin:$PATH" \
     PYTHONPATH="/app" \
-    REMOTE_FUNCTION_LIST_PATH=/resources/function_list
+    REMOTE_FUNCTION_LIST_PATH=/resources/function_list \
+    REMOTE_WHITE_FUNCTION_LIST_PATH=/resources/white_function_list
 
 # Set working directory before copying files
 WORKDIR /app

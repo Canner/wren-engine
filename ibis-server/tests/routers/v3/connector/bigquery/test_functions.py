@@ -5,7 +5,11 @@ import pytest
 
 from app.config import get_config
 from tests.conftest import DATAFUSION_FUNCTION_COUNT
-from tests.routers.v3.connector.bigquery.conftest import base_url, function_list_path
+from tests.routers.v3.connector.bigquery.conftest import (
+    base_url,
+    function_list_path,
+    white_function_list_path,
+)
 
 pytestmark = pytest.mark.functions
 
@@ -42,6 +46,7 @@ async def test_function_list(client):
     assert len(result) == DATAFUSION_FUNCTION_COUNT
 
     config.set_remote_function_list_path(function_list_path)
+    config.set_remote_white_function_list_path(white_function_list_path)
     response = await client.get(url=f"{base_url}/functions")
     assert response.status_code == 200
     result = response.json()

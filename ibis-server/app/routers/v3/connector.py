@@ -1,5 +1,6 @@
 from typing import Annotated
 
+import duckdb
 from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import ORJSONResponse
 from loguru import logger
@@ -372,8 +373,22 @@ def functions(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
     ):
         file_path = get_config().get_remote_function_list_path(data_source)
+        white_function_list_path = get_config().get_remote_white_function_list_path(
+            data_source
+        )
+        is_white_list = get_config().get_data_source_is_white_list(data_source)
         session_context = get_session_context(None, file_path)
-        func_list = [f.to_dict() for f in session_context.get_available_functions()]
+        if is_white_list:
+            func_list = (
+                duckdb.read_csv(
+                    white_function_list_path,
+                    header=True,
+                )
+                .to_df()
+                .to_dict("records")
+            )
+        else:
+            func_list = [f.to_dict() for f in session_context.get_available_functions()]
         return ORJSONResponse(func_list)
 
 
