@@ -53,7 +53,7 @@ async def test_function_list(client):
     response = await client.get(url=f"{base_url}/functions")
     assert response.status_code == 200
     result = response.json()
-    assert len(result) == DATAFUSION_FUNCTION_COUNT + 5
+    assert len(result) == DATAFUSION_FUNCTION_COUNT + 6
     the_func = next(filter(lambda x: x["name"] == "uniq", result))
     assert the_func == {
         "name": "uniq",

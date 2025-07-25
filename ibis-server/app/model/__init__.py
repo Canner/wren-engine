@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC
 from enum import Enum
-from typing import Annotated, Literal, Union
+from typing import Annotated, Any, Literal, Union
 
 from pydantic import BaseModel, Field, SecretStr
 from starlette.status import (
@@ -30,7 +30,7 @@ class BaseConnectionInfo(BaseModel):
 class QueryDTO(BaseModel):
     sql: str
     manifest_str: str = manifest_str_field
-    connection_info: ConnectionInfo = connection_info_field
+    connection_info: dict[str, Any] | ConnectionInfo = connection_info_field
 
 
 class QueryBigQueryDTO(QueryDTO):
@@ -165,6 +165,16 @@ class ClickHouseConnectionInfo(BaseConnectionInfo):
     password: SecretStr | None = Field(
         description="the password of your database", examples=["password"], default=None
     )
+    secure: bool = Field(
+        description="Whether or not to use an authenticated endpoint",
+        default=False,
+        examples=[True, False],
+    )
+    settings: dict[str, str] | None = Field(
+        description="Additional settings for ClickHouse connection",
+        default=None,
+        examples=[{"max_execution_time": "60"}],
+    )
     kwargs: dict[str, str] | None = Field(
         description="Client specific keyword arguments", default=None
     )
@@ -211,7 +221,7 @@ class MySqlConnectionInfo(BaseConnectionInfo):
     )
     ssl_mode: SecretStr | None = Field(
         alias="sslMode",
-        default="ENABLED",
+        default=SecretStr("ENABLED"),
         description="Use ssl connection or not. The default value is `ENABLED` because MySQL uses `caching_sha2_password` by default and the driver MySQLdb support caching_sha2_password with ssl only.",
         examples=["DISABLED", "ENABLED", "VERIFY_CA"],
     )
@@ -468,6 +478,7 @@ ConnectionInfo = (
     AthenaConnectionInfo
     | BigQueryConnectionInfo
     | CannerConnectionInfo
+    | ClickHouseConnectionInfo
     | ConnectionUrl
     | MSSqlConnectionInfo
     | MySqlConnectionInfo
@@ -487,7 +498,7 @@ ConnectionInfo = (
 class ValidateDTO(BaseModel):
     manifest_str: str = manifest_str_field
     parameters: dict
-    connection_info: ConnectionInfo = connection_info_field
+    connection_info: dict[str, Any] | ConnectionInfo = connection_info_field
 
 
 class AnalyzeSQLDTO(BaseModel):
@@ -507,7 +518,7 @@ class DryPlanDTO(BaseModel):
 
 class TranspileDTO(BaseModel):
     manifest_str: str = manifest_str_field
-    connection_info: ConnectionInfo = connection_info_field
+    connection_info: dict[str, Any] | ConnectionInfo = connection_info_field
     sql: str
 
 

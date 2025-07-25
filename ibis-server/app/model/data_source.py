@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import base64
 import ssl
+import urllib
 from enum import Enum, StrEnum, auto
 from json import loads
+from typing import Any
+from urllib.parse import unquote_plus
 
 import ibis
 from google.oauth2 import service_account
@@ -15,6 +18,7 @@ from app.model import (
     CannerConnectionInfo,
     ClickHouseConnectionInfo,
     ConnectionInfo,
+    ConnectionUrl,
     GcsFileConnectionInfo,
     LocalFileConnectionInfo,
     MinioFileConnectionInfo,
@@ -79,7 +83,7 @@ class DataSource(StrEnum):
             raise NotImplementedError(f"Unsupported data source: {self}")
 
     def get_connection_info(
-        self, data: dict | ConnectionInfo, headers: dict
+        self, data: dict[str, Any] | ConnectionInfo, headers: dict[str, str]
     ) -> ConnectionInfo:
         """Build a ConnectionInfo object from the provided data and add requried configuration from headers."""
         if isinstance(data, ConnectionInfo):
@@ -99,11 +103,26 @@ class DataSource(StrEnum):
                     options += f"-c statement_timeout={headers.get(X_WREN_DB_STATEMENT_TIMEOUT, 180)}s"
                     kwargs["options"] = options
                 info.kwargs = kwargs
-
+            case DataSource.clickhouse:
+                session_timeout = headers.get(X_WREN_DB_STATEMENT_TIMEOUT, 180)
+                if info.settings is None:
+                    info.settings = {}
+                if "max_execution_time" not in info.settings:
+                    info.settings["max_execution_time"] = int(session_timeout)
         return info
 
     def _build_connection_info(self, data: dict) -> ConnectionInfo:
         """Build a ConnectionInfo object from the provided data."""
+        # Check if data contains connectionUrl for connection string-based connections
+        if "connectionUrl" in data or "connection_url" in data:
+            if self == DataSource.clickhouse:
+                return self._handle_clickhouse_url(
+                    urllib.parse.urlparse(
+                        data.get("connectionUrl", data.get("connection_url"))
+                    )
+                )
+            return ConnectionUrl.model_validate(data)
+
         match self:
             case DataSource.athena:
                 return AthenaConnectionInfo.model_validate(data)
@@ -139,6 +158,32 @@ class DataSource(StrEnum):
                 return GcsFileConnectionInfo.model_validate(data)
             case _:
                 raise NotImplementedError(f"Unsupported data source: {self}")
+
+    def _handle_clickhouse_url(
+        self, parsed: urllib.parse.ParseResult
+    ) -> ClickHouseConnectionInfo:
+        if not parsed.scheme or parsed.scheme != "clickhouse":
+            raise ValueError("Invalid connection URL for ClickHouse")
+        kwargs = {}
+        if parsed.username:
+            kwargs["user"] = parsed.username
+        if parsed.password:
+            kwargs["password"] = unquote_plus(parsed.password)
+        if parsed.hostname:
+            kwargs["host"] = parsed.hostname
+        if parsed.port:
+            kwargs["port"] = str(parsed.port)
+        if database := parsed.path[1:]:
+            kwargs["database"] = database
+        parsed_kwargs = dict(urllib.parse.parse_qsl(parsed.query))
+        if "secure" in parsed_kwargs:
+            kwargs["secure"] = self._safe_strtobool(parsed_kwargs["secure"])
+            parsed_kwargs.pop("secure")
+        kwargs["kwargs"] = parsed_kwargs
+        return ClickHouseConnectionInfo(**kwargs)
+
+    def _safe_strtobool(self, val: str) -> bool:
+        return val.lower() in {"1", "true", "yes", "y"}
 
 
 class DataSourceExtension(Enum):
@@ -222,6 +267,7 @@ class DataSourceExtension(Enum):
             database=info.database.get_secret_value(),
             user=info.user.get_secret_value(),
             password=(info.password and info.password.get_secret_value()),
+            settings=info.settings if info.settings else dict(),
             **info.kwargs if info.kwargs else dict(),
         )
 
