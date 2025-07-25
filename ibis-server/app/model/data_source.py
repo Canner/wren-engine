@@ -109,6 +109,16 @@ class DataSource(StrEnum):
                     info.settings = {}
                 if "max_execution_time" not in info.settings:
                     info.settings["max_execution_time"] = int(session_timeout)
+            case DataSource.trino:
+                session_timeout = headers.get(X_WREN_DB_STATEMENT_TIMEOUT, 180)
+                if info.kwargs is None:
+                    info.kwargs = {}
+                session_properties = info.kwargs.get("session_properties", {})
+                if "query_max_execution_time" not in session_properties:
+                    session_properties["query_max_execution_time"] = (
+                        f"{session_timeout}s"
+                    )
+                info.kwargs["session_properties"] = session_properties
         return info
 
     def _build_connection_info(self, data: dict) -> ConnectionInfo:

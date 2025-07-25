@@ -8,6 +8,7 @@ import orjson
 import pandas as pd
 import psycopg
 import pyarrow as pa
+import trino
 import wren_core
 from fastapi import Header
 from ibis.expr.datatypes import Decimal
@@ -270,6 +271,9 @@ async def execute_with_timeout(operation, operation_name: str):
         )
     except clickhouse_connect.driver.exceptions.DatabaseError as e:
         if "TIMEOUT_EXCEEDED" in str(e):
+            raise DatabaseTimeoutError(f"{operation_name} was cancelled: {e}")
+    except trino.exceptions.TrinoQueryError as e:
+        if e.error_name == "EXCEEDED_TIME_LIMIT":
             raise DatabaseTimeoutError(f"{operation_name} was cancelled: {e}")
     except psycopg.errors.QueryCanceled as e:
         raise DatabaseTimeoutError(f"{operation_name} was cancelled: {e}")
