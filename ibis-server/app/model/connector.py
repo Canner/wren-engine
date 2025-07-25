@@ -3,6 +3,7 @@ import importlib
 import os
 import time
 from contextlib import closing, suppress
+from decimal import Decimal as PyDecimal
 from functools import cache
 from json import loads
 from typing import Any
@@ -19,6 +20,9 @@ from google.cloud import bigquery
 from google.oauth2 import service_account
 from ibis import BaseBackend
 from ibis.backends.sql.compilers.postgres import compiler as postgres_compiler
+from ibis.expr.datatypes import Decimal
+from ibis.expr.datatypes.core import UUID
+from ibis.expr.types import Table
 from loguru import logger
 from opentelemetry import trace
 
@@ -35,7 +39,6 @@ from app.model import (
 )
 from app.model.data_source import DataSource
 from app.model.utils import init_duckdb_gcs, init_duckdb_minio, init_duckdb_s3
-from app.util import round_decimal_columns
 
 # Override datatypes of ibis
 importlib.import_module("app.custom_ibis.backends.sql.datatypes")
@@ -115,8 +118,39 @@ class SimpleConnector:
         ibis_table = self.connection.sql(sql)
         if limit is not None:
             ibis_table = ibis_table.limit(limit)
-        ibis_table = round_decimal_columns(ibis_table)
+        ibis_table = self._handle_pyarrow_unsupported_type(ibis_table)
         return ibis_table.to_pyarrow()
+
+    def _handle_pyarrow_unsupported_type(self, ibis_table: Table, **kwargs) -> Table:
+        result_table = ibis_table
+        for name, dtype in ibis_table.schema().items():
+            if isinstance(dtype, Decimal):
+                # Round decimal columns to a specified scale
+                result_table = self._round_decimal_columns(
+                    result_table=result_table, col_name=name, **kwargs
+                )
+            elif isinstance(dtype, UUID):
+                # Convert UUID to string for compatibility
+                result_table = self._cast_uuid_columns(
+                    result_table=result_table, col_name=name
+                )
+
+        return result_table
+
+    def _cast_uuid_columns(self, result_table: Table, col_name: str) -> Table:
+        col = result_table[col_name]
+        # Convert UUID to string for compatibility
+        casted_col = col.cast("string")
+        return result_table.mutate(**{col_name: casted_col})
+
+    def _round_decimal_columns(
+        self, result_table: Table, col_name, scale: int = 9
+    ) -> Table:
+        col = result_table[col_name]
+        # Maximum precision for pyarrow decimal is 38
+        decimal_type = Decimal(precision=38, scale=scale)
+        rounded_col = col.cast(decimal_type).round(scale)
+        return result_table.mutate(**{col_name: rounded_col})
 
     @tracer.start_as_current_span("connector_dry_run", kind=trace.SpanKind.CLIENT)
     def dry_run(self, sql: str) -> None:
@@ -199,17 +233,34 @@ class MSSqlConnector(SimpleConnector):
 
     @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
     def query(self, sql: str, limit: int | None = None) -> pa.Table:
-        try:
-            return super().query(sql, limit)
-        except Exception as e:
-            # To descirbe the query result, ibis will wrap the query with a subquery. MSSQL doesn't
-            # allow order by without limit in a subquery, so we need to handle this error and provide a more user-friendly error message.
-            # error code 1033: https://learn.microsoft.com/zh-tw/sql/relational-databases/errors-events/database-engine-events-and-errors-1000-to-1999?view=sql-server-ver15
-            if "(1033)" in e.args[1]:
-                raise GenericUserError(
-                    "The query with order-by requires a specific limit to be set in MSSQL."
-                )
-            raise
+        ibis_table = self.connection.sql(sql)
+        if limit is not None:
+            ibis_table = ibis_table.limit(limit)
+        return self._round_decimal_columns(ibis_table)
+
+    def _round_decimal_columns(self, ibis_table: Table, scale: int = 9) -> pa.Table:
+        def round_decimal(val):
+            if val is None:
+                return None
+            d = PyDecimal(str(val))
+            quant = PyDecimal("1." + "0" * scale)
+            return d.quantize(quant)
+
+        decimal_columns = []
+        for name, dtype in ibis_table.schema().items():
+            if isinstance(dtype, Decimal):
+                decimal_columns.append(name)
+
+        # If no decimal columns, return original table unchanged
+        if not decimal_columns:
+            return ibis_table.to_pyarrow()
+
+        pandas_df = ibis_table.to_pandas()
+        for col_name in decimal_columns:
+            pandas_df[col_name] = pandas_df[col_name].apply(round_decimal)
+
+        arrow_table = pa.Table.from_pandas(pandas_df)
+        return arrow_table
 
     def dry_run(self, sql: str) -> None:
         try:
@@ -245,8 +296,24 @@ class CannerConnector:
         ibis_table = self.connection.sql(sql, schema=schema)
         if limit is not None:
             ibis_table = ibis_table.limit(limit)
-        ibis_table = round_decimal_columns(ibis_table)
+        ibis_table = self._handle_pyarrow_unsupported_type(ibis_table)
         return ibis_table.to_pyarrow()
+
+    def _handle_pyarrow_unsupported_type(self, ibis_table: Table, **kwargs) -> Table:
+        result_table = ibis_table
+        for name, dtype in ibis_table.schema().items():
+            if isinstance(dtype, Decimal):
+                # Round decimal columns to a specified scale
+                result_table = self._round_decimal_columns(
+                    result_table=result_table, col_name=name, **kwargs
+                )
+            elif isinstance(dtype, UUID):
+                # Convert UUID to string for compatibility
+                result_table = self._cast_uuid_columns(
+                    result_table=result_table, col_name=name
+                )
+
+        return result_table
 
     @tracer.start_as_current_span("connector_dry_run", kind=trace.SpanKind.CLIENT)
     def dry_run(self, sql: str) -> Any:

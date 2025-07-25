@@ -34,7 +34,7 @@ def main():
             # Otherwise, we can directly use the connection_info as is.
             if "type" in connection_info:
                 connection_info = data_source.get_connection_info(
-                    connection_info["properties"]
+                    connection_info["properties"],
                 )
             else:
                 connection_info = data_source.get_connection_info(connection_info)
