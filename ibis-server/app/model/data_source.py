@@ -83,9 +83,13 @@ class DataSource(StrEnum):
             raise NotImplementedError(f"Unsupported data source: {self}")
 
     def get_connection_info(
-        self, data: dict[str, Any] | ConnectionInfo, headers: dict[str, str]
+        self,
+        data: dict[str, Any] | ConnectionInfo,
+        headers: dict[str, str] | None = None,
     ) -> ConnectionInfo:
         """Build a ConnectionInfo object from the provided data and add requried configuration from headers."""
+
+        headers = headers or {}
         if isinstance(data, ConnectionInfo):
             info = data
         else:

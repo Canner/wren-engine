@@ -1046,6 +1046,22 @@ async def test_connection_timeout(client, manifest_str, postgres: PostgresContai
     )
 
 
+async def test_uuid_type(client, manifest_str, postgres: PostgresContainer):
+    connection_info = _to_connection_info(postgres)
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "select '123e4567-e89b-12d3-a456-426614174000'::uuid as order_uuid",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 1
+    assert result["data"][0][0] == "123e4567-e89b-12d3-a456-426614174000"
+
+
 async def test_order_by_nulls_last(client, manifest_str, postgres: PostgresContainer):
     connection_info = _to_connection_info(postgres)
     response = await client.post(
