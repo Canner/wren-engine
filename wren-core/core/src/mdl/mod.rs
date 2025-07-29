@@ -1189,7 +1189,7 @@ mod test {
             sql,
         )
         .await?;
-        assert_snapshot!(actual, @"SELECT \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\" FROM UNNEST([1, 2, 3])");
+        assert_snapshot!(actual, @r#"SELECT "UNNEST_40make_array_40Int64_401_41_44Int64_402_41_44Int64_403_41_41_41" FROM UNNEST([1, 2, 3])"#);
         Ok(())
     }
 
