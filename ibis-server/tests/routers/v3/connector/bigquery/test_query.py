@@ -10,6 +10,7 @@ from tests.routers.v3.connector.bigquery.conftest import base_url
 manifest = {
     "catalog": "wren",
     "schema": "public",
+    "dataSource": "bigquery",
     "models": [
         {
             "name": "orders",
@@ -359,7 +360,7 @@ async def test_order_by_nulls_last(client, manifest_str, connection_info):
             "sql": "SELECT letter FROM null_test ORDER BY id",
         },
         headers={
-            X_WREN_FALLBACK_DISABLE: "true",  # Disable fallback to DuckDB
+            X_WREN_FALLBACK_DISABLE: "true",
         },
     )
     assert response.status_code == 200
@@ -377,7 +378,7 @@ async def test_order_by_nulls_last(client, manifest_str, connection_info):
             "sql": "SELECT letter FROM null_test ORDER BY id desc",
         },
         headers={
-            X_WREN_FALLBACK_DISABLE: "true",  # Disable fallback to DuckDB
+            X_WREN_FALLBACK_DISABLE: "true",
         },
     )
     assert response.status_code == 200
@@ -386,3 +387,24 @@ async def test_order_by_nulls_last(client, manifest_str, connection_info):
     assert result["data"][0][0] == "two"
     assert result["data"][1][0] == "one"
     assert result["data"][2][0] == "three"
+
+
+async def test_count(client, manifest_str, connection_info):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT COUNT(*) FROM wren.public.orders",
+        },
+        headers={
+            X_WREN_FALLBACK_DISABLE: "true",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 1
+    assert (
+        result["data"][0][0] == 15000
+    )  # Adjust based on actual data count in orders table
+    assert result["dtypes"] == {"count_40_42_41": "int64"}
