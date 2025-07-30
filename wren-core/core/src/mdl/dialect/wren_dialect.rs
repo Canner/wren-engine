@@ -91,6 +91,10 @@ impl Dialect for WrenDialect {
     fn unnest_as_table_factor(&self) -> bool {
         self.inner_dialect.unnest_as_table_factor()
     }
+
+    fn col_alias_overrides(&self, alias: &str) -> Result<Option<String>> {
+        self.inner_dialect.col_alias_overrides(alias)
+    }
 }
 
 impl Default for WrenDialect {

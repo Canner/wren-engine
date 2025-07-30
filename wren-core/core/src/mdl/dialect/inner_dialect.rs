@@ -48,6 +48,10 @@ pub trait InnerDialect: Send + Sync {
     fn identifier_quote_style(&self, _identifier: &str) -> Option<char> {
         None
     }
+
+    fn col_alias_overrides(&self, _alias: &str) -> Result<Option<String>> {
+        Ok(None)
+    }
 }
 
 /// [get_inner_dialect] returns the suitable InnerDialect for the given data source.
@@ -88,6 +92,29 @@ pub struct BigQueryDialect {}
 impl InnerDialect for BigQueryDialect {
     fn unnest_as_table_factor(&self) -> bool {
         true
+    }
+
+    fn col_alias_overrides(&self, alias: &str) -> Result<Option<String>> {
+        // Check if alias contains any special characters not supported by BigQuery col names
+        // https://cloud.google.com/bigquery/docs/schemas#flexible-column-names
+        let special_chars: [char; 20] = [
+            '!', '"', '$', '(', ')', '*', ',', '.', '/', ';', '?', '@', '[', '\\', ']',
+            '^', '`', '{', '}', '~',
+        ];
+
+        if alias.chars().any(|c| special_chars.contains(&c)) {
+            let mut encoded_name = String::new();
+            for c in alias.chars() {
+                if special_chars.contains(&c) {
+                    encoded_name.push_str(&format!("_{}", c as u32));
+                } else {
+                    encoded_name.push(c);
+                }
+            }
+            Ok(Some(encoded_name))
+        } else {
+            Ok(Some(alias.to_string()))
+        }
     }
 }
 
