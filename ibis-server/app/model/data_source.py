@@ -373,12 +373,12 @@ class DataSourceExtension(Enum):
                 "schema": info.sf_schema.get_secret_value(),
             }
 
-            # warehouse if it exists and is not None/empty
-            if hasattr(info, "warehouse") and info.warehouse:
-                connection_params["warehouse"] = info.warehouse.get_secret_value()
-            if info.kwargs:
-                connection_params.update(info.kwargs)
-            return ibis.snowflake.connect(**connection_params)
+        # warehouse if it exists and is not None/empty
+        if hasattr(info, "warehouse") and info.warehouse:
+            connection_params["warehouse"] = info.warehouse.get_secret_value()
+        if info.kwargs:
+            connection_params.update(info.kwargs)
+        return ibis.snowflake.connect(**connection_params)
 
     @staticmethod
     def get_trino_connection(info: TrinoConnectionInfo) -> BaseBackend:
