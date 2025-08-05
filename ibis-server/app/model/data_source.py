@@ -348,25 +348,37 @@ class DataSourceExtension(Enum):
 
     @staticmethod
     def get_snowflake_connection(info: SnowflakeConnectionInfo) -> BaseBackend:
+        # private key authentication
         if hasattr(info, "private_key") and info.private_key:
-            return ibis.snowflake.connect(
-                user=info.user.get_secret_value(),
-                account=info.account.get_secret_value(),
-                database=info.database.get_secret_value(),
-                schema=info.sf_schema.get_secret_value(),
-                warehouse=info.warehouse.get_secret_value(),
-                private_key=info.private_key.get_secret_value(),
-                **info.kwargs if info.kwargs else dict(),
-            )
+            connection_params = {
+                "user": info.user.get_secret_value(),
+                "private_key": info.private_key.get_secret_value(),
+                "account": info.account.get_secret_value(),
+                "database": info.database.get_secret_value(),
+                "schema": info.sf_schema.get_secret_value(),
+            }
+            # warehouse if it exists and is not None/empty
+            if hasattr(info, "warehouse") and info.warehouse:
+                connection_params["warehouse"] = info.warehouse.get_secret_value()
+            if info.kwargs:
+                connection_params.update(info.kwargs)
+            return ibis.snowflake.connect(**connection_params)
         else:
-            return ibis.snowflake.connect(
-                user=info.user.get_secret_value(),
-                password=info.password.get_secret_value(),
-                account=info.account.get_secret_value(),
-                database=info.database.get_secret_value(),
-                schema=info.sf_schema.get_secret_value(),
-                **info.kwargs if info.kwargs else dict(),
-            )
+            # password authentication
+            connection_params = {
+                "user": info.user.get_secret_value(),
+                "password": info.password.get_secret_value(),
+                "account": info.account.get_secret_value(),
+                "database": info.database.get_secret_value(),
+                "schema": info.sf_schema.get_secret_value(),
+            }
+
+        # warehouse if it exists and is not None/empty
+        if hasattr(info, "warehouse") and info.warehouse:
+            connection_params["warehouse"] = info.warehouse.get_secret_value()
+        if info.kwargs:
+            connection_params.update(info.kwargs)
+        return ibis.snowflake.connect(**connection_params)
 
     @staticmethod
     def get_trino_connection(info: TrinoConnectionInfo) -> BaseBackend:
