@@ -406,7 +406,8 @@ impl ModelPlanNodeBuilder {
             .row_level_access_controls()
             .iter()
             .try_for_each(|rule| {
-                if validate_rule(&rule.required_properties, &self.properties)? {
+                if validate_rule(&rule.name, &rule.required_properties, &self.properties)?
+                {
                     required_fields.extend(collect_condition(model, &rule.condition)?.0);
                 }
                 Ok::<_, DataFusionError>(())

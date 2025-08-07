@@ -271,7 +271,7 @@ impl ModelGenerationRule {
         model: Arc<Model>,
         rule: &RowLevelAccessControl,
     ) -> Result<Option<Expr>> {
-        if validate_rule(&rule.required_properties, &self.properties)? {
+        if validate_rule(&rule.name, &rule.required_properties, &self.properties)? {
             let filter = build_filter_expression(
                 &self.session_state,
                 model,
