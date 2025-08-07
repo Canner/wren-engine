@@ -1042,8 +1042,9 @@ async def test_cache_with_multiple_wren_variables(
             "sql": "SELECT * FROM customer LIMIT 1",
         },
         headers={
-            X_WREN_VARIABLE_PREFIX + "session_user": "'Customer#000000001'",
-            X_WREN_VARIABLE_PREFIX + "session_level": "2",  # Changed this value
+            X_WREN_VARIABLE_PREFIX
+            + "session_user": "'Customer#000000002'",  # Changed this value
+            X_WREN_VARIABLE_PREFIX + "session_level": "1",
         },
     )
     assert response3.status_code == 200
