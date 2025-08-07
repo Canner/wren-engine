@@ -89,6 +89,8 @@ async def query(
     connection_info = data_source.get_connection_info(
         dto.connection_info, dict(headers)
     )
+    # Convert headers to dict for cache manager
+    headers_dict = dict(headers) if headers else None
 
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
@@ -123,7 +125,7 @@ async def query(
 
         if cache_enable:
             cached_result = query_cache_manager.get(
-                data_source, dto.sql, connection_info
+                data_source, dto.sql, connection_info, headers_dict
             )
             cache_hit = cached_result is not None
 
@@ -135,7 +137,7 @@ async def query(
             cache_headers[X_CACHE_HIT] = "true"
             cache_headers[X_CACHE_CREATE_AT] = str(
                 query_cache_manager.get_cache_file_timestamp(
-                    data_source, dto.sql, connection_info
+                    data_source, dto.sql, connection_info, headers_dict
                 )
             )
         # all other cases require rewriting + connecting
@@ -159,7 +161,7 @@ async def query(
                 case (True, True, True):
                     cache_headers[X_CACHE_CREATE_AT] = str(
                         query_cache_manager.get_cache_file_timestamp(
-                            data_source, dto.sql, connection_info
+                            data_source, dto.sql, connection_info, headers_dict
                         )
                     )
                     query_cache_manager.set(
@@ -167,12 +169,13 @@ async def query(
                         dto.sql,
                         result,
                         connection_info,
+                        headers_dict,
                     )
 
                     cache_headers[X_CACHE_OVERRIDE] = "true"
                     cache_headers[X_CACHE_OVERRIDE_AT] = str(
                         query_cache_manager.get_cache_file_timestamp(
-                            data_source, dto.sql, connection_info
+                            data_source, dto.sql, connection_info, headers_dict
                         )
                     )
                 # case 3/4: cache miss but enabled (need to create cache)
@@ -183,6 +186,7 @@ async def query(
                         dto.sql,
                         result,
                         connection_info,
+                        headers_dict,
                     )
                 # case 5~8 Other cases (cache is not enabled)
                 case (False, _, _):
