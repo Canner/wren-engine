@@ -1935,7 +1935,7 @@ mod test {
                     @r"
                 ModelAnalyzeRule
                 caused by
-                Error during planning: session property session_nation is required, but not found in headers
+                Error during planning: session property session_nation is required for `nation` rule but not found in headers
                 "
                 )
             }
@@ -2024,7 +2024,7 @@ mod test {
                     @r"
                 ModelAnalyzeRule
                 caused by
-                Error during planning: session property session_user is required, but not found in headers
+                Error during planning: session property session_user is required for `name` rule but not found in headers
                 "
                 )
             }
@@ -2089,7 +2089,7 @@ mod test {
                     @r"
                 ModelAnalyzeRule
                 caused by
-                Error during planning: session property session_nation is required, but not found in headers
+                Error during planning: session property session_nation is required for `nation` rule but not found in headers
                 "
                 )
             }
@@ -2582,7 +2582,7 @@ mod test {
             Err(e) => {
                 assert_snapshot!(
                     e.to_string(),
-                    @"Error during planning: session property session_level is required, but not found in headers"
+                    @"Error during planning: session property session_level is required for `cls rule` rule but not found in headers"
                 )
             }
             _ => panic!("Expected error"),
