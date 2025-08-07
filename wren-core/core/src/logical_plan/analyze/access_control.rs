@@ -20,8 +20,8 @@ use datafusion::{
         TableReference,
     },
 };
-use wren_core_base::mdl::{Column, Model, SessionProperty};
 use wren_core_base::mdl::RowLevelAccessControl;
+use wren_core_base::mdl::{Column, Model, SessionProperty};
 
 use crate::mdl::{context::SessionPropertiesRef, Dataset, SessionStateRef};
 
