@@ -9,6 +9,13 @@ from duckdb import DuckDBPyConnection, connect
 from loguru import logger
 from opentelemetry import trace
 
+from app.dependencies import (
+    X_WREN_DB_STATEMENT_TIMEOUT,
+    X_WREN_FALLBACK_DISABLE,
+    X_WREN_TIMEZONE,
+    X_WREN_VARIABLE_PREFIX,
+)
+
 tracer = trace.get_tracer(__name__)
 
 
@@ -102,9 +109,10 @@ class QueryCacheManager:
         # Define which headers should be included in cache key
         # These are headers that can affect the query results
         cache_relevant_headers = [
-            "x-wren-variable",  # All Wren variable headers (prefix match)
-            "x-wren-db-statement_timeout",
-            "x-wren-timezone",
+            X_WREN_VARIABLE_PREFIX,
+            X_WREN_FALLBACK_DISABLE,
+            X_WREN_TIMEZONE,
+            X_WREN_DB_STATEMENT_TIMEOUT,
         ]
 
         # Filter headers that are relevant for caching
