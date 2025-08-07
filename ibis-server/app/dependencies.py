@@ -7,6 +7,7 @@ from app.model.data_source import DataSource
 X_WREN_FALLBACK_DISABLE = "x-wren-fallback_disable"
 X_WREN_VARIABLE_PREFIX = "x-wren-variable-"
 X_WREN_TIMEZONE = "x-wren-timezone"
+X_WREN_DB_STATEMENT_TIMEOUT = "x-wren-db-statement_timeout"
 X_CACHE_HIT = "X-Cache-Hit"
 X_CACHE_CREATE_AT = "X-Cache-Create-At"
 X_CACHE_OVERRIDE = "X-Cache-Override"
