@@ -174,5 +174,5 @@ async def test_validate_rlac_condition_syntax_is_valid(
     assert response.status_code == 422
     assert (
         response.text
-        == "Error during planning: The session property @session_not_found is used, but not found in the session properties"
+        == "Error during planning: The session property @session_not_found is used for `rlac_validation` rule, but not found in the session properties"
     )
