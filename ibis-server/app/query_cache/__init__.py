@@ -17,8 +17,10 @@ class QueryCacheManager:
         self.root = root
 
     @tracer.start_as_current_span("get_cache", kind=trace.SpanKind.INTERNAL)
-    def get(self, data_source: str, sql: str, info) -> Any | None:
-        cache_key = self._generate_cache_key(data_source, sql, info)
+    def get(
+        self, data_source: str, sql: str, info, headers: dict[str, str] | None = None
+    ) -> Any | None:
+        cache_key = self._generate_cache_key(data_source, sql, info, headers)
         cache_file_name = self._get_cache_file_name(cache_key)
         op = self._get_dal_operator()
         full_path = self._get_full_path(cache_file_name)
@@ -43,8 +45,9 @@ class QueryCacheManager:
         sql: str,
         result: pa.Table,
         info,
+        headers: dict[str, str] | None = None,
     ) -> None:
-        cache_key = self._generate_cache_key(data_source, sql, info)
+        cache_key = self._generate_cache_key(data_source, sql, info, headers)
         cache_file_name = self._set_cache_file_name(cache_key)
         op = self._get_dal_operator()
         full_path = self._get_full_path(cache_file_name)
@@ -59,8 +62,10 @@ class QueryCacheManager:
             logger.debug(f"Failed to write query cache: {e}")
             return
 
-    def get_cache_file_timestamp(self, data_source: str, sql: str, info) -> int | None:
-        cache_key = self._generate_cache_key(data_source, sql, info)
+    def get_cache_file_timestamp(
+        self, data_source: str, sql: str, info, headers: dict[str, str] | None = None
+    ) -> int | None:
+        cache_key = self._generate_cache_key(data_source, sql, info, headers)
         op = self._get_dal_operator()
         for file in op.list("/"):
             if file.path.startswith(cache_key):
@@ -75,13 +80,49 @@ class QueryCacheManager:
                     )
         return None
 
-    def _generate_cache_key(self, data_source: str, sql: str, info) -> str:
+    def _generate_cache_key(
+        self, data_source: str, sql: str, info, headers: dict[str, str] | None = None
+    ) -> str:
         connection_key = info.to_key_string()
 
-        # Combine with data source and SQL
-        key_string = f"{data_source}|{sql}|{connection_key}"
+        # Create a normalized headers string for cache key
+        headers_key = self._normalize_headers_for_cache(headers)
+
+        # Combine with data source, SQL, connection info, and headers
+        key_string = f"{data_source}|{sql}|{connection_key}|{headers_key}"
 
         return hashlib.sha256(key_string.encode()).hexdigest()
+
+    def _normalize_headers_for_cache(
+        self, headers: dict[str, str] | None = None
+    ) -> str:
+        if not headers:
+            return ""
+
+        # Define which headers should be included in cache key
+        # These are headers that can affect the query results
+        cache_relevant_headers = [
+            "x-wren-variable",  # All Wren variable headers (prefix match)
+            "x-wren-db-statement_timeout",
+            "x-wren-timezone",
+        ]
+
+        # Filter headers that are relevant for caching
+        relevant_headers = {}
+        for key, value in headers.items():
+            key_lower = key.lower()
+            for relevant_prefix in cache_relevant_headers:
+                if key_lower.startswith(relevant_prefix):
+                    relevant_headers[key_lower] = str(value)
+                    break
+
+        # Sort headers by key to ensure consistent ordering
+        sorted_headers = sorted(relevant_headers.items())
+
+        # Create a string representation
+        headers_str = "|".join([f"{k}:{v}" for k, v in sorted_headers])
+
+        return headers_str
 
     def _get_cache_file_name(self, cache_key: str) -> str:
         op = self._get_dal_operator()
