@@ -19,11 +19,12 @@
 
 use crate::mdl::dialect::utils::scalar_function_to_sql_internal;
 use crate::mdl::manifest::DataSource;
-use datafusion::common::Result;
+use datafusion::common::{plan_err, Result};
 use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
 use datafusion::logical_expr::Expr;
 
-use datafusion::sql::sqlparser::ast;
+use datafusion::scalar::ScalarValue;
+use datafusion::sql::sqlparser::ast::{self, ExtractSyntax};
 use datafusion::sql::unparser::Unparser;
 use regex::Regex;
 
@@ -114,6 +115,81 @@ impl InnerDialect for BigQueryDialect {
             Ok(Some(encoded_name))
         } else {
             Ok(Some(alias.to_string()))
+        }
+    }
+
+    fn scalar_function_to_sql_overrides(
+        &self,
+        unparser: &Unparser,
+        function_name: &str,
+        args: &[Expr],
+    ) -> Result<Option<ast::Expr>> {
+        match function_name {
+            "date_part" => Ok(Some(ast::Expr::Extract {
+                field: datetime_field_from_expr(&args[0])?,
+                syntax: ExtractSyntax::From,
+                expr: Box::new(unparser.expr_to_sql(&args[1])?),
+            })),
+            _ => Ok(None),
+        }
+    }
+}
+
+fn datetime_field_from_expr(expr: &Expr) -> Result<ast::DateTimeField> {
+    match expr {
+        Expr::Literal(ScalarValue::Utf8(Some(s))) => Ok(datetime_field_from_str(s)?),
+        _ => plan_err!("Invalid argument type for datetime field. Expected UTF8 string."),
+    }
+}
+
+fn datetime_field_from_str(s: &str) -> Result<ast::DateTimeField> {
+    match s.to_uppercase().as_str() {
+        "YEAR" => Ok(ast::DateTimeField::Year),
+        "YEARS" => Ok(ast::DateTimeField::Years),
+        "QUARTER" => Ok(ast::DateTimeField::Quarter),
+        "MONTH" => Ok(ast::DateTimeField::Month),
+        "MONTHS" => Ok(ast::DateTimeField::Months),
+        "WEEK" => Ok(ast::DateTimeField::Week(None)),
+        "WEEKS" => Ok(ast::DateTimeField::Weeks),
+        "DAY" => Ok(ast::DateTimeField::Day),
+        "DAYOFWEEK" => Ok(ast::DateTimeField::DayOfWeek),
+        "DAYOFYEAR" => Ok(ast::DateTimeField::DayOfYear),
+        "DAYS" => Ok(ast::DateTimeField::Days),
+        "DATE" => Ok(ast::DateTimeField::Date),
+        "DATETIME" => Ok(ast::DateTimeField::Datetime),
+        "HOUR" => Ok(ast::DateTimeField::Hour),
+        "HOURS" => Ok(ast::DateTimeField::Hours),
+        "MINUTE" => Ok(ast::DateTimeField::Minute),
+        "MINUTES" => Ok(ast::DateTimeField::Minutes),
+        "SECOND" => Ok(ast::DateTimeField::Second),
+        "SECONDS" => Ok(ast::DateTimeField::Seconds),
+        "CENTURY" => Ok(ast::DateTimeField::Century),
+        "DECADE" => Ok(ast::DateTimeField::Decade),
+        "DOW" => Ok(ast::DateTimeField::Dow),
+        "DOY" => Ok(ast::DateTimeField::Doy),
+        "EPOCH" => Ok(ast::DateTimeField::Epoch),
+        "ISODOW" => Ok(ast::DateTimeField::Isodow),
+        "ISOWEEK" => Ok(ast::DateTimeField::IsoWeek),
+        "ISOYEAR" => Ok(ast::DateTimeField::Isoyear),
+        "JULIAN" => Ok(ast::DateTimeField::Julian),
+        "MICROSECOND" => Ok(ast::DateTimeField::Microsecond),
+        "MICROSECONDS" => Ok(ast::DateTimeField::Microseconds),
+        "MILLENIUM" => Ok(ast::DateTimeField::Millenium),
+        "MILLENNIUM" => Ok(ast::DateTimeField::Millennium),
+        "MILLISECOND" => Ok(ast::DateTimeField::Millisecond),
+        "MILLISECONDS" => Ok(ast::DateTimeField::Milliseconds),
+        "NANOSECOND" => Ok(ast::DateTimeField::Nanosecond),
+        "NANOSECONDS" => Ok(ast::DateTimeField::Nanoseconds),
+        "TIME" => Ok(ast::DateTimeField::Time),
+        "TIMEZONE" => Ok(ast::DateTimeField::Timezone),
+        "TIMEZONE_ABBR" => Ok(ast::DateTimeField::TimezoneAbbr),
+        "TIMEZONE_HOUR" => Ok(ast::DateTimeField::TimezoneHour),
+        "TIMEZONE_MINUTE" => Ok(ast::DateTimeField::TimezoneMinute),
+        "TIMEZONE_REGION" => Ok(ast::DateTimeField::TimezoneRegion),
+        "NODATETIME" => Ok(ast::DateTimeField::NoDateTime),
+        _ => {
+            let ident = ast::Ident::new(s);
+            Ok(ast::DateTimeField::Custom(ident))
         }
     }
 }
