@@ -96,15 +96,17 @@ impl Dialect for WrenDialect {
         self.inner_dialect.col_alias_overrides(alias)
     }
 
-
     fn window_func_support_window_frame(
         &self,
         func_name: &str,
         start_bound: &WindowFrameBound,
         end_bound: &WindowFrameBound,
     ) -> bool {
-        self.inner_dialect
-            .window_func_support_window_frame(func_name, start_bound, end_bound)
+        self.inner_dialect.window_func_support_window_frame(
+            func_name,
+            start_bound,
+            end_bound,
+        )
     }
 }
 

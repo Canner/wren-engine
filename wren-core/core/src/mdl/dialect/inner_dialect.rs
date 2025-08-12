@@ -151,21 +151,31 @@ impl InnerDialect for BigQueryDialect {
         }
     }
 
-
     /// BigQuery only allow the aggregation function with window frame.
-    /// Other [window functions](https://cloud.google.com/bigquery/docs/reference/standard-sql/window-functions) are not supported. 
+    /// Other [window functions](https://cloud.google.com/bigquery/docs/reference/standard-sql/window-functions) are not supported.
     fn window_func_support_window_frame(
         &self,
         func_name: &str,
         _start_bound: &WindowFrameBound,
         _end_bound: &WindowFrameBound,
     ) -> bool {
-        match func_name {
-            "cume_dist" | "dense_rank" | "first_value" | "lag" | "last_value"
-            | "lead" | "nth_value" | "ntile" | "percent_rank" | "percentile_cont"
-            | "percentile_disc" | "rank" | "row_number" | "st_clusterdbscan" => false,
-            _ => true,
-        }
+        !matches!(
+            func_name,
+            "cume_dist"
+                | "dense_rank"
+                | "first_value"
+                | "lag"
+                | "last_value"
+                | "lead"
+                | "nth_value"
+                | "ntile"
+                | "percent_rank"
+                | "percentile_cont"
+                | "percentile_disc"
+                | "rank"
+                | "row_number"
+                | "st_clusterdbscan"
+        )
     }
 }
 
