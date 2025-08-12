@@ -22,7 +22,7 @@ use datafusion::common::{internal_err, plan_err, Result, ScalarValue};
 use datafusion::logical_expr::sqlparser::ast::{Ident, Subscript};
 use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
 use datafusion::logical_expr::Expr;
-use datafusion::sql::sqlparser::ast;
+use datafusion::sql::sqlparser::ast::{self, WindowFrameBound};
 use datafusion::sql::sqlparser::ast::{AccessExpr, Array, Value};
 use datafusion::sql::sqlparser::tokenizer::Span;
 use datafusion::sql::unparser::dialect::{Dialect, IntervalStyle};
@@ -94,6 +94,17 @@ impl Dialect for WrenDialect {
 
     fn col_alias_overrides(&self, alias: &str) -> Result<Option<String>> {
         self.inner_dialect.col_alias_overrides(alias)
+    }
+
+
+    fn window_func_support_window_frame(
+        &self,
+        func_name: &str,
+        start_bound: &WindowFrameBound,
+        end_bound: &WindowFrameBound,
+    ) -> bool {
+        self.inner_dialect
+            .window_func_support_window_frame(func_name, start_bound, end_bound)
     }
 }
 

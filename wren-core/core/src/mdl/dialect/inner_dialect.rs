@@ -24,7 +24,7 @@ use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
 use datafusion::logical_expr::Expr;
 
 use datafusion::scalar::ScalarValue;
-use datafusion::sql::sqlparser::ast::{self, ExtractSyntax};
+use datafusion::sql::sqlparser::ast::{self, ExtractSyntax, WindowFrameBound};
 use datafusion::sql::unparser::Unparser;
 use regex::Regex;
 
@@ -52,6 +52,15 @@ pub trait InnerDialect: Send + Sync {
 
     fn col_alias_overrides(&self, _alias: &str) -> Result<Option<String>> {
         Ok(None)
+    }
+
+    fn window_func_support_window_frame(
+        &self,
+        _func_name: &str,
+        _start_bound: &WindowFrameBound,
+        _end_bound: &WindowFrameBound,
+    ) -> bool {
+        true
     }
 }
 
@@ -139,6 +148,23 @@ impl InnerDialect for BigQueryDialect {
                 }))
             }
             _ => Ok(None),
+        }
+    }
+
+
+    /// BigQuery only allow the aggregation function with window frame.
+    /// Other [window functions](https://cloud.google.com/bigquery/docs/reference/standard-sql/window-functions) are not supported. 
+    fn window_func_support_window_frame(
+        &self,
+        func_name: &str,
+        _start_bound: &WindowFrameBound,
+        _end_bound: &WindowFrameBound,
+    ) -> bool {
+        match func_name {
+            "cume_dist" | "dense_rank" | "first_value" | "lag" | "last_value"
+            | "lead" | "nth_value" | "ntile" | "percent_rank" | "percentile_cont"
+            | "percentile_disc" | "rank" | "row_number" | "st_clusterdbscan" => false,
+            _ => true,
         }
     }
 }
