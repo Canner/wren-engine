@@ -2955,6 +2955,37 @@ mod test {
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
             @"SELECT EXTRACT(YEAR FROM orders.o_orderdate) FROM (SELECT orders.o_orderdate FROM (SELECT __source.o_orderdate AS o_orderdate FROM orders AS __source) AS orders) AS orders"
         );
+
+        let sql = "SELECT EXTRACT(WEEK FROM o_orderdate) FROM orders";
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
+            @"SELECT EXTRACT(WEEK FROM orders.o_orderdate) FROM (SELECT orders.o_orderdate FROM (SELECT __source.o_orderdate AS o_orderdate FROM orders AS __source) AS orders) AS orders"
+        );
+
+        let sql = "SELECT EXTRACT(WEEK(MONDAY) FROM o_orderdate) FROM orders";
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
+            @"SELECT EXTRACT(WEEK(MONDAY) FROM orders.o_orderdate) FROM (SELECT orders.o_orderdate FROM (SELECT __source.o_orderdate AS o_orderdate FROM orders AS __source) AS orders) AS orders"
+        );
+
+        let sql = "SELECT EXTRACT(WEEK(NOTFOUND) FROM o_orderdate) FROM orders";
+        match transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            Arc::clone(&headers),
+            sql,
+        )
+        .await
+        {
+            Ok(_) => {
+                panic!("Expected error, but got SQL");
+            }
+            Err(e) => assert_snapshot!(
+                e.to_string(),
+                @"Error during planning: Invalid weekday 'NOTFOUND' for WEEK. Valid values are SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, and SATURDAY"
+            ),
+        }
         Ok(())
     }
 

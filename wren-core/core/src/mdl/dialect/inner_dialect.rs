@@ -24,7 +24,7 @@ use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
 use datafusion::logical_expr::Expr;
 
 use datafusion::scalar::ScalarValue;
-use datafusion::sql::sqlparser::ast::{self, ExtractSyntax, WindowFrameBound};
+use datafusion::sql::sqlparser::ast::{self, ExtractSyntax, Ident, WindowFrameBound};
 use datafusion::sql::unparser::Unparser;
 use regex::Regex;
 
@@ -195,11 +195,30 @@ impl BigQueryDialect {
     /// BigQuery supports only the following date part
     /// <https://cloud.google.com/bigquery/docs/reference/standard-sql/date_functions#extract>
     fn datetime_field_from_str(&self, s: &str) -> Result<ast::DateTimeField> {
-        match s.to_uppercase().as_str() {
+        let s = s.to_uppercase();
+        if s.starts_with("WEEK") {
+            if s.len() > 4 {
+                // Parse WEEK(MONDAY) format
+                if let Some(start) = s.find('(') {
+                    if let Some(end) = s.find(')') {
+                        let weekday = &s[start + 1..end];
+                        match weekday {
+                            "SUNDAY" | "MONDAY" | "TUESDAY" | "WEDNESDAY" 
+                            | "THURSDAY" | "FRIDAY" | "SATURDAY" => {
+                                return Ok(ast::DateTimeField::Week(Some(Ident::new(weekday))));
+                            }
+                            _ => return plan_err!("Invalid weekday '{}' for WEEK. Valid values are SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, and SATURDAY", weekday),
+                        }
+                    }
+                }
+                return plan_err!("Invalid WEEK format '{}'. Expected WEEK(WEEKDAY)", s);
+            }
+            return Ok(ast::DateTimeField::Week(None));
+        }
+        match s.as_str() {
             "DAYOFWEEK" => Ok(ast::DateTimeField::DayOfWeek),
             "DAY" => Ok(ast::DateTimeField::Day),
             "DAYOFYEAR" => Ok(ast::DateTimeField::DayOfYear),
-            "WEEK" => Ok(ast::DateTimeField::Week(None)),
             "ISOWEEK" => Ok(ast::DateTimeField::IsoWeek),
             "MONTH" => Ok(ast::DateTimeField::Month),
             "QUARTER" => Ok(ast::DateTimeField::Quarter),
