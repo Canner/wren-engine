@@ -125,11 +125,19 @@ impl InnerDialect for BigQueryDialect {
         args: &[Expr],
     ) -> Result<Option<ast::Expr>> {
         match function_name {
-            "date_part" => Ok(Some(ast::Expr::Extract {
-                field: datetime_field_from_expr(&args[0])?,
-                syntax: ExtractSyntax::From,
-                expr: Box::new(unparser.expr_to_sql(&args[1])?),
-            })),
+            "date_part" => {
+                if args.len() != 2 {
+                    return plan_err!(
+                        "date_part requires exactly 2 arguments, found {}",
+                        args.len()
+                    );
+                }
+                Ok(Some(ast::Expr::Extract {
+                    field: datetime_field_from_expr(&args[0])?,
+                    syntax: ExtractSyntax::From,
+                    expr: Box::new(unparser.expr_to_sql(&args[1])?),
+                }))
+            }
             _ => Ok(None),
         }
     }
@@ -137,7 +145,10 @@ impl InnerDialect for BigQueryDialect {
 
 fn datetime_field_from_expr(expr: &Expr) -> Result<ast::DateTimeField> {
     match expr {
-        Expr::Literal(ScalarValue::Utf8(Some(s))) => Ok(datetime_field_from_str(s)?),
+        Expr::Literal(ScalarValue::Utf8(Some(s)))
+        | Expr::Literal(ScalarValue::LargeUtf8(Some(s))) => {
+            Ok(datetime_field_from_str(s)?)
+        }
         _ => plan_err!("Invalid argument type for datetime field. Expected UTF8 string."),
     }
 }
