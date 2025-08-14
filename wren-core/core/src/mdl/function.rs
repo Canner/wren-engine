@@ -366,6 +366,7 @@ impl WindowUDFImpl for ByPassWindowFunction {
 
 #[cfg(test)]
 mod test {
+    use std::slice::from_ref;
     use std::sync::Arc;
 
     use crate::mdl::function::{
@@ -598,9 +599,7 @@ mod test {
             DataType::List(Arc::new(Field::new("element", DataType::Int32, false)));
         assert_eq!(udf.name, "test");
         assert_eq!(
-            udf.return_type
-                .to_data_type(std::slice::from_ref(&list_type))
-                .unwrap(),
+            udf.return_type.to_data_type(from_ref(&list_type)).unwrap(),
             DataType::Int32
         );
         assert_eq!(
