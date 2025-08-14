@@ -2524,6 +2524,46 @@ mod test {
     }
 
     #[tokio::test]
+    async fn test_rlac_unicode_model_column_name() -> Result<()> {
+        let ctx = SessionContext::new();
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("VTU藝人")
+                    .table_reference("artist")
+                    .column(ColumnBuilder::new("名字", "string").build())
+                    .column(ColumnBuilder::new("組別", "string").build())
+                    .column(ColumnBuilder::new("訂閱數", "int").build())
+                    .add_row_level_access_control(
+                        "rule",
+                        vec![SessionProperty::new_required("預定組別A")],
+                        "\"組別\" = @預定組別A",
+                    )
+                    .build(),
+            )
+            .build();
+        let headers = Arc::new(build_headers(&[(
+            "預定組別A".to_string(),
+            Some("'JP'".to_string()),
+        )]));
+
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest,
+            Arc::clone(&headers),
+            Mode::Unparse,
+        )?);
+
+        let sql = r#"SELECT "名字", "組別", "訂閱數" FROM "VTU藝人""#;
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
+                .await?,
+            @r#"SELECT "VTU藝人"."名字", "VTU藝人"."組別", "VTU藝人"."訂閱數" FROM (SELECT "VTU藝人"."名字", "VTU藝人"."組別", "VTU藝人"."訂閱數" FROM (SELECT "VTU藝人"."名字", "VTU藝人"."組別", "VTU藝人"."訂閱數" FROM (SELECT __source."名字" AS "名字", __source."組別" AS "組別", __source."訂閱數" AS "訂閱數" FROM artist AS __source) AS "VTU藝人") AS "VTU藝人" WHERE "VTU藝人"."組別" = 'JP') AS "VTU藝人""#
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_clac_with_required_properties() -> Result<()> {
         let ctx = SessionContext::new();
 
