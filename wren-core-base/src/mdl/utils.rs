@@ -43,7 +43,7 @@ pub(crate) fn parse_identifiers_normalized(
     })
 }
 
-pub fn quote_identifier(s: &str) -> Cow<str> {
+pub fn quote_identifier(s: &str) -> Cow<'_, str> {
     if needs_quotes(s) {
         Cow::Owned(format!("\"{}\"", s.replace('"', "\"\"")))
     } else {

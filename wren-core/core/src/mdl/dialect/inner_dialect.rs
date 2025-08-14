@@ -19,11 +19,12 @@
 
 use crate::mdl::dialect::utils::scalar_function_to_sql_internal;
 use crate::mdl::manifest::DataSource;
-use datafusion::common::Result;
+use datafusion::common::{plan_err, Result};
 use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
 use datafusion::logical_expr::Expr;
 
-use datafusion::sql::sqlparser::ast;
+use datafusion::scalar::ScalarValue;
+use datafusion::sql::sqlparser::ast::{self, ExtractSyntax, Ident, WindowFrameBound};
 use datafusion::sql::unparser::Unparser;
 use regex::Regex;
 
@@ -51,6 +52,15 @@ pub trait InnerDialect: Send + Sync {
 
     fn col_alias_overrides(&self, _alias: &str) -> Result<Option<String>> {
         Ok(None)
+    }
+
+    fn window_func_support_window_frame(
+        &self,
+        _func_name: &str,
+        _start_bound: &WindowFrameBound,
+        _end_bound: &WindowFrameBound,
+    ) -> bool {
+        true
     }
 }
 
@@ -114,6 +124,109 @@ impl InnerDialect for BigQueryDialect {
             Ok(Some(encoded_name))
         } else {
             Ok(Some(alias.to_string()))
+        }
+    }
+
+    fn scalar_function_to_sql_overrides(
+        &self,
+        unparser: &Unparser,
+        function_name: &str,
+        args: &[Expr],
+    ) -> Result<Option<ast::Expr>> {
+        match function_name {
+            "date_part" => {
+                if args.len() != 2 {
+                    return plan_err!(
+                        "date_part requires exactly 2 arguments, found {}",
+                        args.len()
+                    );
+                }
+                Ok(Some(ast::Expr::Extract {
+                    field: self.datetime_field_from_expr(&args[0])?,
+                    syntax: ExtractSyntax::From,
+                    expr: Box::new(unparser.expr_to_sql(&args[1])?),
+                }))
+            }
+            _ => Ok(None),
+        }
+    }
+
+    /// BigQuery only allow the aggregation function with window frame.
+    /// Other [window functions](https://cloud.google.com/bigquery/docs/reference/standard-sql/window-functions) are not supported.
+    fn window_func_support_window_frame(
+        &self,
+        func_name: &str,
+        _start_bound: &WindowFrameBound,
+        _end_bound: &WindowFrameBound,
+    ) -> bool {
+        !matches!(
+            func_name,
+            "cume_dist"
+                | "dense_rank"
+                | "first_value"
+                | "lag"
+                | "last_value"
+                | "lead"
+                | "nth_value"
+                | "ntile"
+                | "percent_rank"
+                | "percentile_cont"
+                | "percentile_disc"
+                | "rank"
+                | "row_number"
+                | "st_clusterdbscan"
+        )
+    }
+}
+
+impl BigQueryDialect {
+    fn datetime_field_from_expr(&self, expr: &Expr) -> Result<ast::DateTimeField> {
+        match expr {
+            Expr::Literal(ScalarValue::Utf8(Some(s)))
+            | Expr::Literal(ScalarValue::LargeUtf8(Some(s))) => {
+                Ok(self.datetime_field_from_str(s)?)
+            }
+            _ => plan_err!(
+                "Invalid argument type for datetime field. Expected UTF8 string."
+            ),
+        }
+    }
+
+    /// BigQuery supports only the following date part
+    /// <https://cloud.google.com/bigquery/docs/reference/standard-sql/date_functions#extract>
+    fn datetime_field_from_str(&self, s: &str) -> Result<ast::DateTimeField> {
+        let s = s.to_uppercase();
+        if s.starts_with("WEEK") {
+            if s.len() > 4 {
+                // Parse WEEK(MONDAY) format
+                if let Some(start) = s.find('(') {
+                    if let Some(end) = s.find(')') {
+                        let weekday = &s[start + 1..end];
+                        match weekday {
+                            "SUNDAY" | "MONDAY" | "TUESDAY" | "WEDNESDAY" 
+                            | "THURSDAY" | "FRIDAY" | "SATURDAY" => {
+                                return Ok(ast::DateTimeField::Week(Some(Ident::new(weekday))));
+                            }
+                            _ => return plan_err!("Invalid weekday '{}' for WEEK. Valid values are SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, and SATURDAY", weekday),
+                        }
+                    }
+                }
+                return plan_err!("Invalid WEEK format '{}'. Expected WEEK(WEEKDAY)", s);
+            }
+            return Ok(ast::DateTimeField::Week(None));
+        }
+        match s.as_str() {
+            "DAYOFWEEK" => Ok(ast::DateTimeField::DayOfWeek),
+            "DAY" => Ok(ast::DateTimeField::Day),
+            "DAYOFYEAR" => Ok(ast::DateTimeField::DayOfYear),
+            "ISOWEEK" => Ok(ast::DateTimeField::IsoWeek),
+            "MONTH" => Ok(ast::DateTimeField::Month),
+            "QUARTER" => Ok(ast::DateTimeField::Quarter),
+            "YEAR" => Ok(ast::DateTimeField::Year),
+            "ISOYEAR" => Ok(ast::DateTimeField::Isoyear),
+            _ => {
+                plan_err!("Unsupported date part '{}' for BigQuery", s)
+            }
         }
     }
 }

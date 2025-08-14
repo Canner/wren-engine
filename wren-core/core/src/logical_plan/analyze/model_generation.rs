@@ -97,12 +97,14 @@ impl ModelGenerationRule {
                     let rls_filter = filters
                         .into_iter()
                         .reduce(|acc, filter| {
-                            if acc.is_none() {
-                                filter
-                            } else if let Some(filter) = filter {
-                                Some(acc.unwrap().and(filter))
+                            if let Some(acc) = acc {
+                                if let Some(filter) = filter {
+                                    Some(acc.and(filter))
+                                } else {
+                                    Some(acc)
+                                }
                             } else {
-                                acc
+                                filter
                             }
                         })
                         .flatten();
@@ -231,7 +233,7 @@ impl ModelGenerationRule {
                             .build()?;
                         Ok(Transformed::yes(alias))
                     } else {
-                        return plan_err!("measures should have an alias");
+                        plan_err!("measures should have an alias")
                     }
                 } else if let Some(partial_model) = extension
                     .node
