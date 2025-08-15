@@ -108,4 +108,4 @@ The project consists of 4 main modules:
 
 - Welcome to our [Discord server](https://discord.gg/5DvshJqG8Z) to give us feedback!
 - If there is any issues, please visit [Github Issues](https://github.com/Canner/wren-engine/issues).
-
+[![Trust Score](https://archestra.ai/mcp-catalog/api/badge/quality/Canner/wren-engine)](https://archestra.ai/mcp-catalog/Canner__wren-engine)
