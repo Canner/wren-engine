@@ -157,14 +157,14 @@ async def test_query_with_aws_iam_credential(client, manifest_str):
     assert result["dtypes"] == {
         "orderkey": "int64",
         "custkey": "int64",
-        "orderstatus": "object",
-        "totalprice": "object",
-        "orderdate": "object",
-        "order_cust_key": "object",
-        "timestamp": "object",
-        "timestamptz": "object",
-        "test_null_time": "object",
-        "bytea_column": "object",
+        "orderstatus": "string",
+        "totalprice": "decimal128(5, 2)",
+        "orderdate": "date32[day]",
+        "order_cust_key": "string",
+        "timestamp": "timestamp[ns]",
+        "timestamptz": "timestamp[ns, tz=UTC]",
+        "test_null_time": "null",
+        "bytea_column": "string",
     }
 
 
