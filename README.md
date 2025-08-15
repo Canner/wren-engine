@@ -9,6 +9,12 @@
 </p>
 
 <p align="center">
+  <a aria-label="Follow us" href="[https://x.com/getwrenai](https://archestra.ai/mcp-catalog/canner__wren-engine)">
+    <img alt="" src="https://archestra.ai/mcp-catalog/api/badge/quality/Canner/wren-engine">
+  </a>
+</p>
+
+<p align="center">
   <a aria-label="Follow us" href="https://x.com/getwrenai">
     <img alt="" src="https://img.shields.io/badge/-@getwrenai-blue?style=for-the-badge&logo=x&logoColor=white&labelColor=gray&logoWidth=20">
   </a>
@@ -21,7 +27,7 @@
   <a aria-label="Canner" href="https://cannerdata.com/">
     <img src="https://img.shields.io/badge/%F0%9F%A7%A1-Made%20by%20Canner-blue?style=for-the-badge">
   </a>
-</p>
+
 
 > Wren Engine is the Semantic Engine for MCP Clients and AI Agents. 
 > [Wren AI](https://github.com/Canner/WrenAI) GenBI AI Agent is based on Wren Engine.
@@ -108,4 +114,3 @@ The project consists of 4 main modules:
 
 - Welcome to our [Discord server](https://discord.gg/5DvshJqG8Z) to give us feedback!
 - If there is any issues, please visit [Github Issues](https://github.com/Canner/wren-engine/issues).
-[![Trust Score](https://archestra.ai/mcp-catalog/api/badge/quality/Canner/wren-engine)](https://archestra.ai/mcp-catalog/Canner__wren-engine)
