@@ -505,6 +505,10 @@ class RedshiftConnector:
         else:
             raise ValueError("Invalid Redshift connection_info type")
 
+        # Enable autocommit to prevent holding AccessShareLock indefinitely
+        # This ensures locks are released immediately after query execution
+        self.connection.autocommit = True
+
     @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
     def query(self, sql: str, limit: int | None = None) -> pa.Table:
         with closing(self.connection.cursor()) as cursor:
