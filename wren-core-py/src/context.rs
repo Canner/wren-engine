@@ -158,32 +158,35 @@ impl PySessionContext {
             };
             let manifest = to_manifest(mdl_base64)?;
             let properties_ref = Arc::new(properties_map);
-            let Ok(analyzed_mdl) = AnalyzedWrenMDL::analyze(
+            match AnalyzedWrenMDL::analyze(
                 manifest,
                 Arc::clone(&properties_ref),
                 mdl::context::Mode::Unparse,
-            ) else {
-                return Err(CoreError::new("Failed to analyze manifest").into());
-            };
+            ) {
+                Ok(analyzed_mdl) => {
+                    let analyzed_mdl = Arc::new(analyzed_mdl);
+                    // the headers won't be used in the context. Provide an empty map.
+                    let ctx = runtime
+                        .block_on(create_ctx_with_mdl(
+                            &ctx,
+                            Arc::clone(&analyzed_mdl),
+                            Arc::clone(&properties_ref),
+                            mdl::context::Mode::Unparse,
+                        ))
+                        .map_err(CoreError::from)?;
 
-            let analyzed_mdl = Arc::new(analyzed_mdl);
-
-            // the headers won't be used in the context. Provide an empty map.
-            let ctx = runtime
-                .block_on(create_ctx_with_mdl(
-                    &ctx,
-                    Arc::clone(&analyzed_mdl),
-                    Arc::new(HashMap::new()),
-                    mdl::context::Mode::Unparse,
-                ))
-                .map_err(CoreError::from)?;
-
-            Ok(Self {
-                ctx,
-                mdl: analyzed_mdl,
-                runtime: Arc::new(runtime),
-                properties: properties_ref,
-            })
+                    Ok(Self {
+                        ctx,
+                        mdl: analyzed_mdl,
+                        runtime: Arc::new(runtime),
+                        properties: properties_ref,
+                    })
+                }
+                Err(e) => Err(CoreError::new(
+                    format!("Failed to analyze MDL: {}", e).as_str(),
+                )
+                .into()),
+            }
         })
     }
 
