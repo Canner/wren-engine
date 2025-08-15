@@ -117,8 +117,9 @@ impl ModelGenerationRule {
                     // The filter should be on on the top of the model plan
                     // and the model plan should be another subquery alias
                     if let Some(filter) = rls_filter {
-                        builder =
-                            builder.alias(model_plan.plan_name())?.filter(filter)?;
+                        builder = builder
+                            .alias(quoted(model_plan.plan_name()))?
+                            .filter(filter)?;
                         // Following the DataFusion planning behavior, we need to
                         // add a projection behind the filter to ensure the unparsing is correct.
                         let indices = 0..builder.schema().fields().len();
