@@ -13,6 +13,7 @@ class RequestLogMiddleware(BaseHTTPMiddleware):
         with logger.contextualize(correlation_id=correlation_id):
             logger.info("{method} {path}", method=request.method, path=request.url.path)
             logger.info("Request params: {params}", params=dict(request.query_params))
+            logger.info("Request headers: {headers}", headers=dict(request.headers))
             body = await request.body()
             if body:
                 json_obj = orjson.loads(body)
