@@ -330,27 +330,44 @@ pub fn scalar_value_to_ast_value(value: &ScalarValue) -> ast::Value {
                 None => ast::Value::Null,
             }
         }
-        ScalarValue::TimestampNanosecond(Some(ns), tz) => {
-            match NaiveDateTime::from_timestamp_nanos(*ns) {
-                Some(dt) => {
-                    let formatted = dt.format("%Y-%m-%d %H:%M:%S.%9f").to_string();
-                     if tz.is_some() {
-                        ast::Value::SingleQuotedString(format!("{}Z", formatted))
-                    } else {
-                        ast::Value::SingleQuotedString(formatted)
-                    }
-                }
+        ScalarValue::TimestampNanosecond(Some(ns), _) => {
+            let secs = ns.div_euclid(1_000_000_000);
+            let nanos = ns.rem_euclid(1_000_000_000) as u32;
+            match NaiveDateTime::from_timestamp_opt(secs, nanos) {
+                Some(dt) => ast::Value::SingleQuotedString(
+                    dt.format("%Y-%m-%d %H:%M:%S.%9f").to_string()
+                ),
                 None => ast::Value::Null,
             }
         }
-        // Explicitly handle None for date/time types
-        ScalarValue::Date32(None)
-        | ScalarValue::Date64(None)
-        | ScalarValue::TimestampSecond(None, _)
-        | ScalarValue::TimestampMillisecond(None, _)
-        | ScalarValue::TimestampMicrosecond(None, _)
-        | ScalarValue::TimestampNanosecond(None, _) => ast::Value::Null,
-        // Fallback for any other types to avoid panicking
+        
+        // Explicitly map None for all Option-bearing scalar types to SQL NULL
+        ScalarValue::Boolean(None)
+            | ScalarValue::Float32(None)
+            | ScalarValue::Float64(None)
+            | ScalarValue::Int8(None)
+            | ScalarValue::Int16(None)
+            | ScalarValue::Int32(None)
+            | ScalarValue::Int64(None)
+            | ScalarValue::UInt8(None)
+            | ScalarValue::UInt16(None)
+            | ScalarValue::UInt32(None)
+            | ScalarValue::UInt64(None)
+            | ScalarValue::Utf8(None)
+            | ScalarValue::LargeUtf8(None)
+            | ScalarValue::Decimal128(None, _, _)
+            | ScalarValue::Decimal256(None, _, _)
+            | ScalarValue::Time32Second(None)
+            | ScalarValue::Time32Millisecond(None)
+            | ScalarValue::Time64Microsecond(None)
+            | ScalarValue::Time64Nanosecond(None)
+            | ScalarValue::Date32(None)
+            | ScalarValue::Date64(None)
+            | ScalarValue::TimestampSecond(None, _)
+            | ScalarValue::TimestampMillisecond(None, _)
+            | ScalarValue::TimestampMicrosecond(None, _)
+            | ScalarValue::TimestampNanosecond(None, _) => ast::Value::Null,
+        // Fallback for any other types to avoid panicking for non-None
         _ => ast::Value::SingleQuotedString(value.to_string()),
     }
 }
