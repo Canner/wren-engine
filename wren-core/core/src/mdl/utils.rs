@@ -256,6 +256,68 @@ fn collect_columns(expr: datafusion::logical_expr::sqlparser::ast::Expr) -> Vec<
     visited
 }
 
+use chrono::{NaiveDate, NaiveDateTime};
+use datafusion::scalar::ScalarValue;
+use datafusion::sql::sqlparser::ast;
+
+pub fn scalar_value_to_ast_value(value: &ScalarValue) -> ast::Value {
+    match value {
+        ScalarValue::Null => ast::Value::Null,
+        ScalarValue::Boolean(Some(b)) => ast::Value::Boolean(*b),
+        ScalarValue::Float32(Some(f)) => ast::Value::Number(f.to_string(), false),
+        ScalarValue::Float64(Some(d)) => ast::Value::Number(d.to_string(), false),
+        ScalarValue::Int8(Some(i)) => ast::Value::Number(i.to_string(), false),
+        ScalarValue::Int16(Some(i)) => ast::Value::Number(i.to_string(), false),
+        ScalarValue::Int32(Some(i)) => ast::Value::Number(i.to_string(), false),
+        ScalarValue::Int64(Some(i)) => ast::Value::Number(i.to_string(), false),
+        ScalarValue::UInt8(Some(i)) => ast::Value::Number(i.to_string(), false),
+        ScalarValue::UInt16(Some(i)) => ast::Value::Number(i.to_string(), false),
+        ScalarValue::UInt32(Some(i)) => ast::Value::Number(i.to_string(), false),
+        ScalarValue::UInt64(Some(i)) => ast::Value::Number(i.to_string(), false),
+        ScalarValue::Utf8(Some(s)) => ast::Value::SingleQuotedString(s.clone()),
+        ScalarValue::LargeUtf8(Some(s)) => ast::Value::SingleQuotedString(s.clone()),
+        ScalarValue::Date32(Some(days)) => {
+            let date = NaiveDate::from_num_days_from_ce_opt(*days).unwrap();
+            ast::Value::SingleQuotedString(date.format("%Y-%m-%d").to_string())
+        }
+        ScalarValue::Date64(Some(ms)) => {
+            let dt = NaiveDateTime::from_timestamp_millis(*ms).unwrap();
+            ast::Value::SingleQuotedString(dt.format("%Y-%m-%d").to_string())
+        }
+        ScalarValue::TimestampSecond(Some(s), _) => {
+            let dt = NaiveDateTime::from_timestamp_opt(*s, 0).unwrap();
+            ast::Value::SingleQuotedString(dt.format("%Y-%m-%d %H:%M:%S").to_string())
+        }
+        ScalarValue::TimestampMillisecond(Some(ms), _) => {
+            let dt = NaiveDateTime::from_timestamp_millis(*ms).unwrap();
+            ast::Value::SingleQuotedString(
+                dt.format("%Y-%m-%d %H:%M:%S.%3f").to_string(),
+            )
+        }
+        ScalarValue::TimestampMicrosecond(Some(us), _) => {
+            let dt = NaiveDateTime::from_timestamp_micros(*us).unwrap();
+            ast::Value::SingleQuotedString(
+                dt.format("%Y-%m-%d %H:%M:%S.%6f").to_string(),
+            )
+        }
+        ScalarValue::TimestampNanosecond(Some(ns), _) => {
+            let dt = NaiveDateTime::from_timestamp_nanos(*ns).unwrap();
+            ast::Value::SingleQuotedString(
+                dt.format("%Y-%m-%d %H:%M:%S.%9f").to_string(),
+            )
+        }
+        // Explicitly handle None for date/time types
+        ScalarValue::Date32(None)
+        | ScalarValue::Date64(None)
+        | ScalarValue::TimestampSecond(None, _)
+        | ScalarValue::TimestampMillisecond(None, _)
+        | ScalarValue::TimestampMicrosecond(None, _)
+        | ScalarValue::TimestampNanosecond(None, _) => ast::Value::Null,
+        // Fallback for any other types to avoid panicking
+        _ => ast::Value::SingleQuotedString(value.to_string()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;

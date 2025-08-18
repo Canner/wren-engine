@@ -16,8 +16,10 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 use crate::mdl::dialect::inner_dialect::{get_inner_dialect, InnerDialect};
 use crate::mdl::manifest::DataSource;
+use crate::mdl::utils::scalar_value_to_ast_value;
 use datafusion::common::{internal_err, plan_err, Result, ScalarValue};
 use datafusion::logical_expr::sqlparser::ast::{Ident, Subscript};
 use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
@@ -84,7 +86,15 @@ impl Dialect for WrenDialect {
                 let sql = self.named_struct_to_sql(args, unparser)?;
                 Ok(Some(sql))
             }
-            _ => Ok(None),
+            // Add override for Literal
+            _ => {
+                if let Some(Expr::Literal(value)) = args.get(0) {
+                     if func_name == "lit" {
+                         return Ok(Some(ast::Expr::Value(scalar_value_to_ast_value(value))));
+                     }
+                }
+                Ok(None)
+            }
         }
     }
 
