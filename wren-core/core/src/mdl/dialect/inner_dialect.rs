@@ -144,20 +144,22 @@ impl InnerDialect for BigQueryDialect {
                         args.len()
                     );
                 }
-                let mut extract_expr = ast::Expr::Extract {
-                    field: self.datetime_field_from_expr(&args[0])?,
-                    syntax: ExtractSyntax::From,
-                    expr: Box::new(unparser.expr_to_sql(&args[1])?),
-                };
+                // Base timestamp/datetime expression
+                let mut source_expr = unparser.expr_to_sql(&args[1])?;
+                // Apply timezone if provided as 3rd arg
                 if args.len() == 3 {
                     if let Expr::Literal(ScalarValue::Utf8(Some(tz))) = &args[2] {
-                        extract_expr = AstExpr::AtTimeZone {
-                            timestamp: Box::new(extract_expr),
-                            time_zone: tz.clone(),
-                        }
+                        source_expr = AstExpr::AtTimeZone {
+                            timestamp: Box::new(source_expr),
+                            time_zone: TimezoneInfo::Tz(tz.clone()),
+                        };
                     }
                 }
-                Ok(Some(extract_expr))
+                Ok(Some(ast::Expr::Extract {
+                    field: self.datetime_field_from_expr(&args[0])?,
+                    syntax: ExtractSyntax::From,
+                    expr: Box::new(source_expr),
+                }))
             }
             "date_trunc" | "datetime_trunc" | "timestamp_trunc" | "time_trunc" => {
                 if args.len() != 2 {
@@ -198,12 +200,18 @@ impl InnerDialect for BigQueryDialect {
                 let interval_expr = match &args[1] {
                     Expr::Literal(ScalarValue::IntervalDayTime(Some(interval))) => {
                         let (days, ms) = (*interval >> 32, *interval as i32);
+                        let use_day_unit = matches!(function_name, "date_add" | "date_sub");
+                        let (value_str, unit) = if use_day_unit {
+                            (format!("{}", days), DateTimeField::Day)
+                        } else {
+                            (
+                                format!("{}", days * 24 * 3600 * 1000 + ms as i64),
+                                DateTimeField::Millisecond,
+                            )
+                        };
                         AstExpr::Value(Value::Interval(Interval {
-                            value: Box::new(AstExpr::Value(Value::Number(
-                                format!("{}", days * 24 * 3600 * 1000 + ms as i64), // Convert to ms
-                                false,
-                            ))),
-                            leading_field: Some(DateTimeField::Millisecond),
+                            value: Box::new(AstExpr::Value(Value::Number(value_str, false))),
+                            leading_field: Some(unit),
                             leading_precision: None,
                             last_field: None,
                             fractional_seconds_precision: None,
@@ -211,6 +219,11 @@ impl InnerDialect for BigQueryDialect {
                     }
                     Expr::Literal(ScalarValue::IntervalYearMonth(Some(interval))) => {
                         let (years, months) = (*interval / 12, *interval % 12);
+                        if function_name.starts_with("time_") {
+                            return plan_err!(
+                                "Cannot add/subtract YEAR/MONTH interval to/from a TIME value"
+                            );
+                        }
                         AstExpr::Value(Value::Interval(Interval {
                             value: Box::new(AstExpr::Value(Value::Number(
                                 format!("{}", years * 12 + months),
@@ -253,13 +266,13 @@ impl InnerDialect for BigQueryDialect {
                     name: ast::ObjectName(vec![Ident::new(function_name.to_uppercase())]),
                     args: vec![
                         FunctionArg::Unnamed(FunctionArgExpr::Expr(
-                            unparser.expr_to_sql(&args[0])?,
-                        )),
-                        FunctionArg::Unnamed(FunctionArgExpr::Expr(
                             unparser.expr_to_sql(&args[1])?,
                         )),
                         FunctionArg::Unnamed(FunctionArgExpr::Expr(
                             unparser.expr_to_sql(&args[2])?,
+                        )),
+                        FunctionArg::Unnamed(FunctionArgExpr::Expr(
+                            unparser.expr_to_sql(&args[0])?,
                         )),
                     ],
                     filter: None,

@@ -1,0 +1,125 @@
+-- sqllogictest/test_files/bigquery_features.slt
+
+--
+-- Section 1: Temporal Functions
+--
+
+-- Test: Validate the original bug fix for NULL date literals
+statement ok
+SELECT CAST(NULL AS DATE)
+
+----
+SELECT NULL
+
+-- Test: Validate the defensive lit() function override
+statement ok
+SELECT lit(123), lit('abc')
+
+----
+SELECT 123, 'abc'
+
+-- Test: Validate correct argument reordering for DATE_DIFF (start, end, part)
+statement ok
+SELECT DATE_DIFF(CAST('2025-01-15' AS DATE), CAST('2025-01-01' AS DATE), DAY)
+
+----
+SELECT DATE_DIFF(CAST('2025-01-15' AS DATE), CAST('2025-01-01' AS DATE), DAY)
+
+-- Test: Validate correct timezone placement for EXTRACT (inside the function)
+statement ok
+SELECT EXTRACT(HOUR FROM CAST('2025-08-18 12:00:00' AS TIMESTAMP) AT TIME ZONE 'America/New_York')
+
+----
+SELECT EXTRACT(HOUR FROM CAST('2025-08-18 12:00:00' AS TIMESTAMP) AT TIME ZONE 'America/New_York')
+
+-- Test: Validate WEEK(WEEKDAY) parsing and unparsing round-trip
+statement ok
+SELECT EXTRACT(WEEK(MONDAY) FROM CAST('2025-08-18' AS DATE))
+
+----
+SELECT EXTRACT(WEEK(MONDAY) FROM CAST('2025-08-18' AS DATE))
+
+-- Test: DATE_ADD with a DAY interval
+statement ok
+SELECT DATE_ADD(CAST('2025-01-01' AS DATE), INTERVAL 5 DAY)
+
+----
+SELECT DATE_ADD(CAST('2025-01-01' AS DATE), INTERVAL 5 DAY)
+
+-- Test: TIMESTAMP_ADD with a MONTH interval
+statement ok
+SELECT TIMESTAMP_ADD(CAST('2025-01-01 00:00:00' AS TIMESTAMP), INTERVAL 2 MONTH)
+
+----
+SELECT TIMESTAMP_ADD(CAST('2025-01-01 00:00:00' AS TIMESTAMP), INTERVAL 2 MONTH)
+
+-- Test: DATE_TRUNC
+statement ok
+SELECT DATE_TRUNC(CAST('2025-08-18' AS DATE), MONTH)
+
+----
+SELECT DATE_TRUNC(CAST('2025-08-18' AS DATE), MONTH)
+
+-- Test: PARSE_DATE
+statement ok
+SELECT PARSE_DATE('%Y%m%d', '20250818')
+
+----
+SELECT PARSE_DATE('%Y%m%d', '20250818')
+
+-- Test: FORMAT_TIMESTAMP
+statement ok
+SELECT FORMAT_TIMESTAMP('%Y-%m-%d %H:%M:%S', CAST('2025-08-18 12:30:00' AS TIMESTAMP))
+
+----
+SELECT FORMAT_TIMESTAMP('%Y-%m-%d %H:%M:%S', CAST('2025-08-18 12:30:00' AS TIMESTAMP))
+
+-- Test: CURRENT_DATE
+statement ok
+SELECT CURRENT_DATE()
+
+----
+SELECT CURRENT_DATE()
+
+-- Test: GENERATE_DATE_ARRAY (wrapped in UNNEST as is common)
+statement ok
+SELECT * FROM UNNEST(GENERATE_DATE_ARRAY('2025-01-01', '2025-01-05'))
+
+----
+SELECT * FROM UNNEST(GENERATE_DATE_ARRAY('2025-01-01', '2025-01-05'))
+
+--
+-- Section 2: Column aliasing
+--
+
+-- Test: Validate column alias override for special characters
+statement ok
+SELECT 1 AS `!@#$%^&*()`
+
+----
+SELECT 1 AS `_33_64_35_36_37_94_38_42_40_41`
+
+--
+-- Section 3: Array/Struct Constructors
+--
+
+-- Test: Validate ARRAY constructor (make_array)
+statement ok
+SELECT make_array(1, 2, 3)
+
+----
+SELECT [1, 2, 3]
+
+-- Test: Validate STRUCT constructor (named_struct) and field access
+statement ok
+SELECT named_struct('a', 1, 'b', 'hello').a
+
+----
+SELECT STRUCT(1 AS a, 'hello' AS b).a
+
+-- Test: UNNEST table factor
+statement ok
+SELECT element FROM UNNEST([10, 20, 30]) AS element
+
+----
+SELECT element FROM UNNEST([10, 20, 30]) AS element

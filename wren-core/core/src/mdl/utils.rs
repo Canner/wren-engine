@@ -69,7 +69,7 @@ pub fn collect_identifiers(expr: &str) -> Result<BTreeSet<Column>> {
 pub fn qualify_name_from_column_name(column: &Column) -> String {
     column
         .flat_name()
-        .split(".")
+        .split('.')
         .map(quoted)
         .collect::<Vec<String>>()
         .join(".")
@@ -256,7 +256,7 @@ fn collect_columns(expr: datafusion::logical_expr::sqlparser::ast::Expr) -> Vec<
     visited
 }
 
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::{Duration, NaiveDate, NaiveDateTime};
 use datafusion::scalar::ScalarValue;
 use datafusion::sql::sqlparser::ast;
 
@@ -277,34 +277,43 @@ pub fn scalar_value_to_ast_value(value: &ScalarValue) -> ast::Value {
         ScalarValue::Utf8(Some(s)) => ast::Value::SingleQuotedString(s.clone()),
         ScalarValue::LargeUtf8(Some(s)) => ast::Value::SingleQuotedString(s.clone()),
         ScalarValue::Date32(Some(days)) => {
-            let date = NaiveDate::from_num_days_from_ce_opt(*days).unwrap();
-            ast::Value::SingleQuotedString(date.format("%Y-%m-%d").to_string())
+            // Date32 is days since UNIX epoch (1970-01-01)
+            match NaiveDate::from_ymd_opt(1970, 1, 1)
+                .and_then(|epoch| epoch.checked_add_signed(Duration::days(*days as i64)))
+            {
+                Some(date) => ast::Value::SingleQuotedString(date.format("%Y-%m-%d").to_string()),
+                None => ast::Value::Null,
+            }
         }
         ScalarValue::Date64(Some(ms)) => {
-            let dt = NaiveDateTime::from_timestamp_millis(*ms).unwrap();
-            ast::Value::SingleQuotedString(dt.format("%Y-%m-%d").to_string())
+            match NaiveDateTime::from_timestamp_millis(*ms) {
+                Some(dt) => ast::Value::SingleQuotedString(dt.date().format("%Y-%m-%d").to_string()),
+                None => ast::Value::Null,
+            }
         }
         ScalarValue::TimestampSecond(Some(s), _) => {
-            let dt = NaiveDateTime::from_timestamp_opt(*s, 0).unwrap();
-            ast::Value::SingleQuotedString(dt.format("%Y-%m-%d %H:%M:%S").to_string())
+            match NaiveDateTime::from_timestamp_opt(*s, 0) {
+                Some(dt) => ast::Value::SingleQuotedString(dt.format("%Y-%m-%d %H:%M:%S").to_string()),
+                None => ast::Value::Null,
+            }
         }
         ScalarValue::TimestampMillisecond(Some(ms), _) => {
-            let dt = NaiveDateTime::from_timestamp_millis(*ms).unwrap();
-            ast::Value::SingleQuotedString(
-                dt.format("%Y-%m-%d %H:%M:%S.%3f").to_string(),
-            )
+            match NaiveDateTime::from_timestamp_millis(*ms) {
+                Some(dt) => ast::Value::SingleQuotedString(dt.format("%Y-%m-%d %H:%M:%S.%3f").to_string()),
+                None => ast::Value::Null,
+            }
         }
         ScalarValue::TimestampMicrosecond(Some(us), _) => {
-            let dt = NaiveDateTime::from_timestamp_micros(*us).unwrap();
-            ast::Value::SingleQuotedString(
-                dt.format("%Y-%m-%d %H:%M:%S.%6f").to_string(),
-            )
+            match NaiveDateTime::from_timestamp_micros(*us) {
+                Some(dt) => ast::Value::SingleQuotedString(dt.format("%Y-%m-%d %H:%M:%S.%6f").to_string()),
+                None => ast::Value::Null,
+            }
         }
         ScalarValue::TimestampNanosecond(Some(ns), _) => {
-            let dt = NaiveDateTime::from_timestamp_nanos(*ns).unwrap();
-            ast::Value::SingleQuotedString(
-                dt.format("%Y-%m-%d %H:%M:%S.%9f").to_string(),
-            )
+            match NaiveDateTime::from_timestamp_nanos(*ns) {
+                Some(dt) => ast::Value::SingleQuotedString(dt.format("%Y-%m-%d %H:%M:%S.%9f").to_string()),
+                None => ast::Value::Null,
+            }
         }
         // Explicitly handle None for date/time types
         ScalarValue::Date32(None)
