@@ -291,27 +291,55 @@ pub fn scalar_value_to_ast_value(value: &ScalarValue) -> ast::Value {
                 None => ast::Value::Null,
             }
         }
-        ScalarValue::TimestampSecond(Some(s), _) => {
+        ScalarValue::TimestampSecond(Some(s), tz) => {
             match NaiveDateTime::from_timestamp_opt(*s, 0) {
-                Some(dt) => ast::Value::SingleQuotedString(dt.format("%Y-%m-%d %H:%M:%S").to_string()),
+                Some(dt) => {
+                    let formatted = dt.format("%Y-%m-%d %H:%M:%S").to_string();
+                    if tz.is_some() {
+                        ast::Value::SingleQuotedString(format!("{}Z", formatted))
+                    } else {
+                        ast::Value::SingleQuotedString(formatted)
+                    }
+                }
                 None => ast::Value::Null,
             }
         }
-        ScalarValue::TimestampMillisecond(Some(ms), _) => {
+        ScalarValue::TimestampMillisecond(Some(ms), tz) => {
             match NaiveDateTime::from_timestamp_millis(*ms) {
-                Some(dt) => ast::Value::SingleQuotedString(dt.format("%Y-%m-%d %H:%M:%S.%3f").to_string()),
+                Some(dt) => {
+                    let formatted = dt.format("%Y-%m-%d %H:%M:%S.%3f").to_string();
+                     if tz.is_some() {
+                        ast::Value::SingleQuotedString(format!("{}Z", formatted))
+                    } else {
+                        ast::Value::SingleQuotedString(formatted)
+                    }
+                }
                 None => ast::Value::Null,
             }
         }
-        ScalarValue::TimestampMicrosecond(Some(us), _) => {
+        ScalarValue::TimestampMicrosecond(Some(us), tz) => {
             match NaiveDateTime::from_timestamp_micros(*us) {
-                Some(dt) => ast::Value::SingleQuotedString(dt.format("%Y-%m-%d %H:%M:%S.%6f").to_string()),
+                Some(dt) => {
+                    let formatted = dt.format("%Y-%m-%d %H:%M:%S.%6f").to_string();
+                     if tz.is_some() {
+                        ast::Value::SingleQuotedString(format!("{}Z", formatted))
+                    } else {
+                        ast::Value::SingleQuotedString(formatted)
+                    }
+                }
                 None => ast::Value::Null,
             }
         }
-        ScalarValue::TimestampNanosecond(Some(ns), _) => {
+        ScalarValue::TimestampNanosecond(Some(ns), tz) => {
             match NaiveDateTime::from_timestamp_nanos(*ns) {
-                Some(dt) => ast::Value::SingleQuotedString(dt.format("%Y-%m-%d %H:%M:%S.%9f").to_string()),
+                Some(dt) => {
+                    let formatted = dt.format("%Y-%m-%d %H:%M:%S.%9f").to_string();
+                     if tz.is_some() {
+                        ast::Value::SingleQuotedString(format!("{}Z", formatted))
+                    } else {
+                        ast::Value::SingleQuotedString(formatted)
+                    }
+                }
                 None => ast::Value::Null,
             }
         }
@@ -326,6 +354,7 @@ pub fn scalar_value_to_ast_value(value: &ScalarValue) -> ast::Value {
         _ => ast::Value::SingleQuotedString(value.to_string()),
     }
 }
+
 
 #[cfg(test)]
 mod tests {

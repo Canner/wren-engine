@@ -16,7 +16,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 use crate::mdl::dialect::inner_dialect::{get_inner_dialect, InnerDialect};
 use crate::mdl::manifest::DataSource;
 use crate::mdl::utils::scalar_value_to_ast_value;
@@ -86,12 +85,20 @@ impl Dialect for WrenDialect {
                 let sql = self.named_struct_to_sql(args, unparser)?;
                 Ok(Some(sql))
             }
-            // Add override for Literal
             _ => {
-                if let Some(Expr::Literal(value)) = args.get(0) {
-                     if func_name == "lit" {
-                         return Ok(Some(ast::Expr::Value(scalar_value_to_ast_value(value))));
-                     }
+                if func_name == "lit" {
+                    match args.get(0) {
+                        Some(Expr::Literal(value)) => {
+                            return Ok(Some(ast::Expr::Value(scalar_value_to_ast_value(value))));
+                        }
+                        Some(other) => {
+                            // Fall back to the expression itself to avoid emitting `lit(...)` in SQL
+                            return Ok(Some(unparser.expr_to_sql(other)?));
+                        }
+                        None => {
+                            return plan_err!("lit requires exactly 1 argument");
+                        }
+                    }
                 }
                 Ok(None)
             }

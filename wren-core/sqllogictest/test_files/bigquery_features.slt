@@ -1,7 +1,7 @@
 -- sqllogictest/test_files/bigquery_features.slt
 
 --
--- Section 1: Temporal Functions
+-- Section 1: Temporal Functions and Bug Fixes
 --
 
 -- Test: Validate the original bug fix for NULL date literals
@@ -88,8 +88,34 @@ SELECT * FROM UNNEST(GENERATE_DATE_ARRAY('2025-01-01', '2025-01-05'))
 ----
 SELECT * FROM UNNEST(GENERATE_DATE_ARRAY('2025-01-01', '2025-01-05'))
 
+-- Test: High-precision timestamp formatting (microseconds)
+statement ok
+SELECT CAST('2025-08-18 12:30:00.123456' AS TIMESTAMP)
+
+----
+SELECT CAST('2025-08-18 12:30:00.123456' AS TIMESTAMP)
+
+-- Test: High-precision timestamp formatting (nanoseconds) - will be rounded to micros by BigQuery
+statement ok
+SELECT CAST('2025-08-18 12:30:00.123456789' AS TIMESTAMP)
+
+----
+SELECT CAST('2025-08-18 12:30:00.123457' AS TIMESTAMP)
+
+
 --
--- Section 2: Column aliasing
+-- Section 2: Nullability and Data Types
+--
+
+-- Test: Validate NULL handling for various types via lit()
+statement ok
+SELECT lit(CAST(NULL AS INT)), lit(CAST(NULL AS BOOLEAN)), lit(CAST(NULL AS VARCHAR))
+
+----
+SELECT NULL, NULL, NULL
+
+--
+-- Section 3: Column Aliasing
 --
 
 -- Test: Validate column alias override for special characters
@@ -100,7 +126,7 @@ SELECT 1 AS `!@#$%^&*()`
 SELECT 1 AS `_33_64_35_36_37_94_38_42_40_41`
 
 --
--- Section 3: Array/Struct Constructors
+-- Section 4: Advanced Array/Struct Operations
 --
 
 -- Test: Validate ARRAY constructor (make_array)
@@ -117,9 +143,23 @@ SELECT named_struct('a', 1, 'b', 'hello').a
 ----
 SELECT STRUCT(1 AS a, 'hello' AS b).a
 
--- Test: UNNEST table factor
+-- Test: UNNEST table factor on a primitive array
 statement ok
 SELECT element FROM UNNEST([10, 20, 30]) AS element
 
 ----
 SELECT element FROM UNNEST([10, 20, 30]) AS element
+
+-- Test: UNNEST over an array of STRUCTs with field projection
+statement ok
+SELECT item.id FROM UNNEST([STRUCT(1 AS id), STRUCT(2 AS id)]) AS item
+
+----
+SELECT item.id FROM UNNEST([STRUCT(1 AS id), STRUCT(2 AS id)]) AS item
+
+-- Test: UNNEST with WITH OFFSET
+statement ok
+SELECT element, offset FROM UNNEST(['a', 'b', 'c']) AS element WITH OFFSET
+
+----
+SELECT element, offset FROM UNNEST(['a', 'b', 'c']) AS element WITH OFFSET
