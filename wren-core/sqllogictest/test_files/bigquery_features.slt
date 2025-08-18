@@ -18,12 +18,27 @@ SELECT lit(123), lit('abc')
 ----
 SELECT 123, 'abc'
 
--- Test: Validate correct argument reordering for DATE_DIFF (start, end, part)
+-- Test: Validate lit() pass-through for non-literal expression
 statement ok
-SELECT DATE_DIFF(CAST('2025-01-15' AS DATE), CAST('2025-01-01' AS DATE), DAY)
+SELECT lit(1 + 2)
 
 ----
-SELECT DATE_DIFF(CAST('2025-01-15' AS DATE), CAST('2025-01-01' AS DATE), DAY)
+SELECT 1 + 2
+
+-- Test: lit() with no args should error
+statement error
+SELECT lit()
+
+-- Test: lit() with too many args should error
+statement error
+SELECT lit(1, 2)
+
+-- Test: Validate correct argument reordering for DATE_DIFF (start, end, part)
+statement ok
+SELECT DATE_DIFF(CAST('2025-01-01' AS DATE), CAST('2025-01-15' AS DATE), DAY)
+
+----
+SELECT DATE_DIFF(CAST('2025-01-01' AS DATE), CAST('2025-01-15' AS DATE), DAY)
 
 -- Test: Validate correct timezone placement for EXTRACT (inside the function)
 statement ok
@@ -113,6 +128,13 @@ SELECT lit(CAST(NULL AS INT)), lit(CAST(NULL AS BOOLEAN)), lit(CAST(NULL AS VARC
 
 ----
 SELECT NULL, NULL, NULL
+
+-- Test: Validate NULL handling for temporal types via lit()
+statement ok
+SELECT lit(CAST(NULL AS DATE)), lit(CAST(NULL AS TIMESTAMP))
+
+----
+SELECT NULL, NULL
 
 --
 -- Section 3: Column Aliasing

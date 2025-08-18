@@ -87,20 +87,21 @@ impl Dialect for WrenDialect {
             }
             _ => {
                 if func_name == "lit" {
-                    match args.get(0) {
-                        Some(Expr::Literal(value)) => {
-                            return Ok(Some(ast::Expr::Value(scalar_value_to_ast_value(value))));
+                    if args.len() != 1 {
+                        return plan_err!("lit requires exactly 1 argument");
+                    }
+                    match &args[0] {
+                        Expr::Literal(value) => {
+                            Ok(Some(ast::Expr::Value(scalar_value_to_ast_value(value))))
                         }
-                        Some(other) => {
+                        other => {
                             // Fall back to the expression itself to avoid emitting `lit(...)` in SQL
-                            return Ok(Some(unparser.expr_to_sql(other)?));
-                        }
-                        None => {
-                            return plan_err!("lit requires exactly 1 argument");
+                            Ok(Some(unparser.expr_to_sql(other)?))
                         }
                     }
+                } else {
+                    Ok(None)
                 }
-                Ok(None)
             }
         }
     }
