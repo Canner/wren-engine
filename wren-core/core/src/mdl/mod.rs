@@ -1170,7 +1170,7 @@ mod test {
             sql,
         )
         .await?;
-        assert_snapshot!(actual, @"SELECT \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\" FROM (SELECT UNNEST([1, 2, 3]) AS \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\")");
+        assert_snapshot!(actual, @r#"SELECT "UNNEST(make_array(Int64(1),Int64(2),Int64(3)))" FROM (SELECT UNNEST([1, 2, 3]) AS "UNNEST(make_array(Int64(1),Int64(2),Int64(3)))") AS derived_projection ("UNNEST(make_array(Int64(1),Int64(2),Int64(3)))")"#);
 
         let manifest = ManifestBuilder::new()
             .data_source(DataSource::BigQuery)
@@ -1736,9 +1736,7 @@ mod test {
         .await?;
         assert_snapshot!(
             result,
-            @"SELECT customer.c_custkey, (SELECT customer.c_name FROM (SELECT customer.c_custkey, customer.c_name \
-            FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer \
-            WHERE customer.c_custkey = 1) FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer"
+            @"SELECT customer.c_custkey, (SELECT customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer WHERE CAST(customer.c_custkey AS BIGINT) = 1) FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer"
         );
         Ok(())
     }
@@ -1773,9 +1771,7 @@ mod test {
         .await?;
         assert_snapshot!(
             result,
-            @"SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM \
-            (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer \
-            WHERE customer.c_custkey = 1"
+            @"SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer WHERE CAST(customer.c_custkey AS BIGINT) = 1"
         );
         Ok(())
     }
@@ -1824,11 +1820,9 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(
+        assert_snapshot!(
             result,
-            "SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM \
-            (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM \"remote\".test.\"CUSTOMER\" AS __source) AS customer) AS customer \
-            WHERE customer.c_custkey = 1"
+            @r#"SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM "remote".test."CUSTOMER" AS __source) AS customer) AS customer WHERE CAST(customer.c_custkey AS BIGINT) = 1"#
         );
         Ok(())
     }
@@ -1877,11 +1871,9 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(
+        assert_snapshot!(
             result,
-            "SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM \
-            (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM \"遠端\".test.\"客戶\" AS __source) AS customer) AS customer \
-            WHERE customer.c_custkey = 1"
+            @r#"SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM "遠端".test."客戶" AS __source) AS customer) AS customer WHERE CAST(customer.c_custkey AS BIGINT) = 1"#
         );
         Ok(())
     }

@@ -18,7 +18,7 @@
  */
 use datafusion::common::Result;
 use datafusion::logical_expr::Expr;
-use datafusion::sql::sqlparser::ast;
+use datafusion::sql::sqlparser::ast::{self, ObjectNamePart};
 use datafusion::sql::sqlparser::ast::{Function, Ident, ObjectName};
 use datafusion::sql::sqlparser::tokenizer::Span;
 use datafusion::sql::unparser::Unparser;
@@ -55,11 +55,11 @@ pub(crate) fn scalar_function_to_sql_internal(
 ) -> Result<Option<ast::Expr>> {
     let args = function_args_to_sql(unparser, args)?;
     Ok(Some(ast::Expr::Function(Function {
-        name: ObjectName(vec![Ident {
+        name: ObjectName(vec![ObjectNamePart::Identifier(Ident {
             value: func_name.to_string(),
             quote_style: None,
             span: Span::empty(),
-        }]),
+        })]),
         args: ast::FunctionArguments::List(ast::FunctionArgumentList {
             duplicate_treatment: None,
             args,

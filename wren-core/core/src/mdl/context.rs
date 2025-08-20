@@ -14,14 +14,12 @@ use crate::mdl::{AnalyzedWrenMDL, SessionStateRef, WrenMDL};
 use async_trait::async_trait;
 use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::catalog::memory::MemoryCatalogProvider;
+use datafusion::catalog::CatalogProvider;
 use datafusion::catalog::{MemorySchemaProvider, Session};
-use datafusion::catalog_common::CatalogProvider;
 use datafusion::common::Result;
 use datafusion::datasource::{TableProvider, TableType, ViewTable};
 use datafusion::execution::session_state::SessionStateBuilder;
 use datafusion::logical_expr::Expr;
-use datafusion::optimizer::analyzer::expand_wildcard_rule::ExpandWildcardRule;
-use datafusion::optimizer::analyzer::inline_table_scan::InlineTableScan;
 use datafusion::optimizer::analyzer::type_coercion::TypeCoercion;
 use datafusion::optimizer::decorrelate_predicate_subquery::DecorrelatePredicateSubquery;
 use datafusion::optimizer::eliminate_cross_join::EliminateCrossJoin;
@@ -35,7 +33,6 @@ use datafusion::optimizer::extract_equijoin_predicate::ExtractEquijoinPredicate;
 use datafusion::optimizer::filter_null_join_keys::FilterNullJoinKeys;
 use datafusion::optimizer::propagate_empty_relation::PropagateEmptyRelation;
 use datafusion::optimizer::replace_distinct_aggregate::ReplaceDistinctWithAggregate;
-use datafusion::optimizer::unwrap_cast_in_comparison::UnwrapCastInComparison;
 use datafusion::optimizer::{AnalyzerRule, OptimizerRule};
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::SessionContext;
@@ -170,8 +167,6 @@ fn analyze_rule_for_local_runtime(
     properties: SessionPropertiesRef,
 ) -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     vec![
-        // To align the lastest change in datafusion, apply this this rule first.
-        Arc::new(ExpandWildcardRule::new()),
         // expand the view should be the first rule
         Arc::new(ExpandWrenViewRule::new(
             Arc::clone(&analyzed_mdl),
@@ -187,9 +182,6 @@ fn analyze_rule_for_local_runtime(
             session_state_ref,
             properties,
         )),
-        Arc::new(InlineTableScan::new()),
-        // Every rule that will generate [Expr::Wildcard] should be placed in front of [ExpandWildcardRule].
-        Arc::new(ExpandWildcardRule::new()),
         // [Expr::Wildcard] should be expanded before [TypeCoercion]
         Arc::new(TypeCoercion::new()),
     ]
@@ -202,8 +194,6 @@ fn analyze_rule_for_unparsing(
     properties: SessionPropertiesRef,
 ) -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     vec![
-        // To align the lastest change in datafusion, apply this this rule first.
-        Arc::new(ExpandWildcardRule::new()),
         // expand the view should be the first rule
         Arc::new(ExpandWrenViewRule::new(
             Arc::clone(&analyzed_mdl),
@@ -219,17 +209,10 @@ fn analyze_rule_for_unparsing(
             session_state_ref,
             properties,
         )),
-        Arc::new(InlineTableScan::new()),
-        // Every rule that will generate [Expr::Wildcard] should be placed in front of [ExpandWildcardRule].
-        Arc::new(ExpandWildcardRule::new()),
         // TimestampSimplify should be placed before TypeCoercion because the simplified timestamp should
         // be casted to the target type if needed
         Arc::new(TimestampSimplify::new()),
-        // [Expr::Wildcard] should be expanded before [TypeCoercion]
         Arc::new(TypeCoercion::new()),
-        // Disable it to avoid generate the alias name, `count(*)` because BigQuery doesn't allow
-        // the special character `*` in the alias name
-        // Arc::new(CountWildcardRule::new()),
     ]
 }
 
@@ -241,7 +224,6 @@ fn optimize_rule_for_unparsing() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
         // Arc::new(EliminateNestedUnion::new()),
         // Disable SimplifyExpressions to avoid apply some function locally
         // Arc::new(SimplifyExpressions::new()),
-        Arc::new(UnwrapCastInComparison::new()),
         Arc::new(ReplaceDistinctWithAggregate::new()),
         Arc::new(EliminateJoin::new()),
         Arc::new(DecorrelatePredicateSubquery::new()),
@@ -270,7 +252,6 @@ fn optimize_rule_for_unparsing() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
         // Arc::new(SingleDistinctToGroupBy::new()),
         // Disable SimplifyExpressions to avoid apply some function locally
         // Arc::new(SimplifyExpressions::new()),
-        Arc::new(UnwrapCastInComparison::new()),
         // Disable CommonSubexprEliminate to avoid generate invalid projection plan
         // Arc::new(CommonSubexprEliminate::new()),
         Arc::new(EliminateGroupByConstant::new()),
@@ -285,8 +266,6 @@ fn analyze_rule_for_permission(
     properties: SessionPropertiesRef,
 ) -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     vec![
-        // To align the lastest change in datafusion, apply this this rule first.
-        Arc::new(ExpandWildcardRule::new()),
         // expand the view should be the first rule
         Arc::new(ExpandWrenViewRule::new(
             Arc::clone(&analyzed_mdl),
@@ -321,7 +300,7 @@ pub async fn register_table_with_mdl(
     }
     for view in wren_mdl.manifest.views.iter() {
         let plan = ctx.state().create_logical_plan(&view.statement).await?;
-        let view_table = ViewTable::try_new(plan, Some(view.statement.clone()))?;
+        let view_table = ViewTable::new(plan, Some(view.statement.clone()));
         ctx.register_table(
             TableReference::full(wren_mdl.catalog(), wren_mdl.schema(), view.name()),
             Arc::new(view_table),

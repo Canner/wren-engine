@@ -298,7 +298,7 @@ pub fn expr_to_columns(
             Expr::Unnest(_)
             | Expr::ScalarVariable(_, _)
             | Expr::Alias(_)
-            | Expr::Literal(_)
+            | Expr::Literal(_, _)
             | Expr::BinaryExpr { .. }
             | Expr::Like { .. }
             | Expr::SimilarTo { .. }

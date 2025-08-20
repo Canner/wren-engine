@@ -104,6 +104,7 @@ impl ModelAnalyzeRule {
                 if let LogicalPlan::Subquery(Subquery {
                     subquery,
                     outer_ref_columns,
+                    ..
                 }) = &plan
                 {
                     outer_ref_columns.iter().try_for_each(|expr| {
@@ -442,7 +443,7 @@ impl ModelAnalyzeRule {
                     schema: join.schema,
                     filter: join.filter,
                     join_constraint: join.join_constraint,
-                    null_equals_null: join.null_equals_null,
+                    null_equality: join.null_equality,
                 })))
             }
             _ => Ok(Transformed::no(plan)),
@@ -595,6 +596,7 @@ impl ModelAnalyzeRule {
             LogicalPlan::Subquery(Subquery {
                 subquery,
                 outer_ref_columns,
+                spans,
             }) => {
                 let subquery = self
                     .remove_wren_catalog_schema_prefix_and_refresh_schema(
@@ -604,6 +606,7 @@ impl ModelAnalyzeRule {
                 Ok(Transformed::yes(LogicalPlan::Subquery(Subquery {
                     subquery: Arc::new(subquery),
                     outer_ref_columns,
+                    spans,
                 })))
             }
             LogicalPlan::Distinct(Distinct::On(DistinctOn {
@@ -725,6 +728,7 @@ impl ModelAnalyzeRule {
                 expr,
                 relation,
                 name,
+                metadata,
             }) => {
                 let expr =
                     self.map_column_and_rewrite_qualifier(*expr, alias_model, schema)?;
@@ -732,6 +736,7 @@ impl ModelAnalyzeRule {
                     expr: Box::new(expr.data),
                     relation,
                     name,
+                    metadata,
                 })))
             }
             _ => expr.map_children(|e| {

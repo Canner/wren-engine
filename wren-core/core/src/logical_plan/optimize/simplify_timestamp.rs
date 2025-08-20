@@ -132,7 +132,7 @@ impl TreeNodeRewriter for ExprRewriter<'_> {
                 data_type,
                 expr: sub_expr,
             }) if is_timestamp(data_type)
-                && matches!(sub_expr.as_ref(), Expr::Literal(_)) =>
+                && matches!(sub_expr.as_ref(), Expr::Literal(_, _)) =>
             {
                 let original_name = self.name_preserver.save(&expr);
                 let new_e = self
@@ -143,7 +143,7 @@ impl TreeNodeRewriter for ExprRewriter<'_> {
                 // or not. For now conservatively return Transformed::yes
                 Ok(Transformed::yes(new_e))
             }
-            Expr::Literal(value) => {
+            Expr::Literal(value, _) => {
                 if let Some(cast_type) = cast_to_utc(value) {
                     let cast_to_utc_expr = cast(expr.clone(), cast_type);
                     let new_e = self.simplifier.simplify(cast_to_utc_expr)?;
