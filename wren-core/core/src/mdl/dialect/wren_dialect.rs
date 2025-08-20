@@ -18,6 +18,7 @@
  */
 use crate::mdl::dialect::inner_dialect::{get_inner_dialect, InnerDialect};
 use crate::mdl::manifest::DataSource;
+use crate::mdl::utils::scalar_value_to_ast_value;
 use datafusion::common::{internal_err, plan_err, Result, ScalarValue};
 use datafusion::logical_expr::sqlparser::ast::{Ident, Subscript};
 use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
@@ -84,7 +85,24 @@ impl Dialect for WrenDialect {
                 let sql = self.named_struct_to_sql(args, unparser)?;
                 Ok(Some(sql))
             }
-            _ => Ok(None),
+            _ => {
+                if func_name == "lit" {
+                    if args.len() != 1 {
+                        return plan_err!("lit requires exactly 1 argument");
+                    }
+                    match &args[0] {
+                        Expr::Literal(value) => {
+                            Ok(Some(ast::Expr::Value(scalar_value_to_ast_value(value))))
+                        }
+                        other => {
+                            // Fall back to the expression itself to avoid emitting `lit(...)` in SQL
+                            Ok(Some(unparser.expr_to_sql(other)?))
+                        }
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
         }
     }
 

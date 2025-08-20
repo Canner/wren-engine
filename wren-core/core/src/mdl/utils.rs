@@ -69,7 +69,7 @@ pub fn collect_identifiers(expr: &str) -> Result<BTreeSet<Column>> {
 pub fn qualify_name_from_column_name(column: &Column) -> String {
     column
         .flat_name()
-        .split(".")
+        .split('.')
         .map(quoted)
         .collect::<Vec<String>>()
         .join(".")
@@ -255,6 +255,123 @@ fn collect_columns(expr: datafusion::logical_expr::sqlparser::ast::Expr) -> Vec<
     });
     visited
 }
+
+use chrono::{Duration, NaiveDate, NaiveDateTime};
+use datafusion::scalar::ScalarValue;
+use datafusion::sql::sqlparser::ast;
+
+pub fn scalar_value_to_ast_value(value: &ScalarValue) -> ast::Value {
+    match value {
+        ScalarValue::Null => ast::Value::Null,
+        ScalarValue::Boolean(Some(b)) => ast::Value::Boolean(*b),
+        ScalarValue::Float32(Some(f)) => ast::Value::Number(f.to_string(), false),
+        ScalarValue::Float64(Some(d)) => ast::Value::Number(d.to_string(), false),
+        ScalarValue::Int8(Some(i)) => ast::Value::Number(i.to_string(), false),
+        ScalarValue::Int16(Some(i)) => ast::Value::Number(i.to_string(), false),
+        ScalarValue::Int32(Some(i)) => ast::Value::Number(i.to_string(), false),
+        ScalarValue::Int64(Some(i)) => ast::Value::Number(i.to_string(), false),
+        ScalarValue::UInt8(Some(i)) => ast::Value::Number(i.to_string(), false),
+        ScalarValue::UInt16(Some(i)) => ast::Value::Number(i.to_string(), false),
+        ScalarValue::UInt32(Some(i)) => ast::Value::Number(i.to_string(), false),
+        ScalarValue::UInt64(Some(i)) => ast::Value::Number(i.to_string(), false),
+        ScalarValue::Utf8(Some(s)) => ast::Value::SingleQuotedString(s.clone()),
+        ScalarValue::LargeUtf8(Some(s)) => ast::Value::SingleQuotedString(s.clone()),
+        ScalarValue::Date32(Some(days)) => {
+            // Date32 is days since UNIX epoch (1970-01-01)
+            match NaiveDate::from_ymd_opt(1970, 1, 1)
+                .and_then(|epoch| epoch.checked_add_signed(Duration::days(*days as i64)))
+            {
+                Some(date) => ast::Value::SingleQuotedString(date.format("%Y-%m-%d").to_string()),
+                None => ast::Value::Null,
+            }
+        }
+        ScalarValue::Date64(Some(ms)) => {
+            match NaiveDateTime::from_timestamp_millis(*ms) {
+                Some(dt) => ast::Value::SingleQuotedString(dt.date().format("%Y-%m-%d").to_string()),
+                None => ast::Value::Null,
+            }
+        }
+        ScalarValue::TimestampSecond(Some(s), tz) => {
+            match NaiveDateTime::from_timestamp_opt(*s, 0) {
+                Some(dt) => {
+                    let formatted = dt.format("%Y-%m-%d %H:%M:%S").to_string();
+                    if tz.is_some() {
+                        ast::Value::SingleQuotedString(format!("{}Z", formatted))
+                    } else {
+                        ast::Value::SingleQuotedString(formatted)
+                    }
+                }
+                None => ast::Value::Null,
+            }
+        }
+        ScalarValue::TimestampMillisecond(Some(ms), tz) => {
+            match NaiveDateTime::from_timestamp_millis(*ms) {
+                Some(dt) => {
+                    let formatted = dt.format("%Y-%m-%d %H:%M:%S.%3f").to_string();
+                     if tz.is_some() {
+                        ast::Value::SingleQuotedString(format!("{}Z", formatted))
+                    } else {
+                        ast::Value::SingleQuotedString(formatted)
+                    }
+                }
+                None => ast::Value::Null,
+            }
+        }
+        ScalarValue::TimestampMicrosecond(Some(us), tz) => {
+            match NaiveDateTime::from_timestamp_micros(*us) {
+                Some(dt) => {
+                    let formatted = dt.format("%Y-%m-%d %H:%M:%S.%6f").to_string();
+                     if tz.is_some() {
+                        ast::Value::SingleQuotedString(format!("{}Z", formatted))
+                    } else {
+                        ast::Value::SingleQuotedString(formatted)
+                    }
+                }
+                None => ast::Value::Null,
+            }
+        }
+        ScalarValue::TimestampNanosecond(Some(ns), _) => {
+            let secs = ns.div_euclid(1_000_000_000);
+            let nanos = ns.rem_euclid(1_000_000_000) as u32;
+            match NaiveDateTime::from_timestamp_opt(secs, nanos) {
+                Some(dt) => ast::Value::SingleQuotedString(
+                    dt.format("%Y-%m-%d %H:%M:%S.%9f").to_string()
+                ),
+                None => ast::Value::Null,
+            }
+        }
+        
+        // Explicitly map None for all Option-bearing scalar types to SQL NULL
+        ScalarValue::Boolean(None)
+            | ScalarValue::Float32(None)
+            | ScalarValue::Float64(None)
+            | ScalarValue::Int8(None)
+            | ScalarValue::Int16(None)
+            | ScalarValue::Int32(None)
+            | ScalarValue::Int64(None)
+            | ScalarValue::UInt8(None)
+            | ScalarValue::UInt16(None)
+            | ScalarValue::UInt32(None)
+            | ScalarValue::UInt64(None)
+            | ScalarValue::Utf8(None)
+            | ScalarValue::LargeUtf8(None)
+            | ScalarValue::Decimal128(None, _, _)
+            | ScalarValue::Decimal256(None, _, _)
+            | ScalarValue::Time32Second(None)
+            | ScalarValue::Time32Millisecond(None)
+            | ScalarValue::Time64Microsecond(None)
+            | ScalarValue::Time64Nanosecond(None)
+            | ScalarValue::Date32(None)
+            | ScalarValue::Date64(None)
+            | ScalarValue::TimestampSecond(None, _)
+            | ScalarValue::TimestampMillisecond(None, _)
+            | ScalarValue::TimestampMicrosecond(None, _)
+            | ScalarValue::TimestampNanosecond(None, _) => ast::Value::Null,
+        // Fallback for any other types to avoid panicking for non-None
+        _ => ast::Value::SingleQuotedString(value.to_string()),
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
