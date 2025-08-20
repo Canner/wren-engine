@@ -70,7 +70,13 @@ encoded_str = wren_core.to_json_base64(manifest)
 
 print("### Starting the session context ###")
 print("#")
-session_context = SessionContext(encoded_str, function_list_path + f"/{data_source}.csv")
+# Set the session properties here. It should be lowercase.
+properties =  {}
+properties = frozenset(properties.items())
+print("### Session Properties ###")
+for key, value in properties:
+    print(f"# {key}: {value}")
+session_context = SessionContext(encoded_str, function_list_path + f"/{data_source}.csv", properties)
 planned_sql = session_context.transform_sql(sql)
 print("# Planned SQL:\n", planned_sql)
 

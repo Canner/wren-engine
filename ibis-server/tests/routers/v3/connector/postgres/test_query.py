@@ -99,11 +99,12 @@ manifest = {
                     "name": "customer_access",
                     "requiredProperties": [
                         {
-                            "name": "session_user",
+                            # To test the name is case insensitive
+                            "name": "Session_user",
                             "required": False,
                         }
                     ],
-                    "condition": "c_name = @session_user",
+                    "condition": "c_name = @session_User",
                 },
             ],
             "primaryKey": "c_custkey",
@@ -616,6 +617,58 @@ async def test_clac_query(client, manifest_str, connection_info):
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
+            "sql": "SELECT * FROM customer limit 1",
+        },
+        headers={
+            X_WREN_VARIABLE_PREFIX + "session_level": "2",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 1
+    assert len(result["data"][0]) == 2
+
+    manifest_with_required_properties = {
+        "catalog": "wren",
+        "schema": "public",
+        "models": [
+            {
+                "name": "customer",
+                "tableReference": {
+                    "schema": "public",
+                    "table": "customer",
+                },
+                "columns": [
+                    {"name": "c_custkey", "type": "integer"},
+                    {
+                        "name": "c_name",
+                        "type": "varchar",
+                        "columnLevelAccessControl": {
+                            "name": "c_name_access",
+                            "requiredProperties": [
+                                {
+                                    "name": "Session_level",
+                                    "required": True,
+                                }
+                            ],
+                            "operator": "EQUALS",
+                            "threshold": "1",
+                        },
+                    },
+                ],
+                "primaryKey": "c_custkey",
+            },
+        ],
+    }
+
+    base64_manifest_with_required_properties = base64.b64encode(
+        orjson.dumps(manifest_with_required_properties)
+    ).decode("utf-8")
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": base64_manifest_with_required_properties,
             "sql": "SELECT * FROM customer limit 1",
         },
         headers={

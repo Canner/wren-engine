@@ -13,6 +13,21 @@ class RequestLogMiddleware(BaseHTTPMiddleware):
         with logger.contextualize(correlation_id=correlation_id):
             logger.info("{method} {path}", method=request.method, path=request.url.path)
             logger.info("Request params: {params}", params=dict(request.query_params))
+            # Redact sensitive headers before logging
+            sensitive = {
+                "authorization",
+                "proxy-authorization",
+                "cookie",
+                "set-cookie",
+            }
+            redacted_headers = {}
+            for k, v in request.headers.items():
+                kl = k.lower()
+                if kl in sensitive:
+                    redacted_headers[k] = "REDACTED"
+                else:
+                    redacted_headers[k] = v
+            logger.info("Request headers: {headers}", headers=redacted_headers)
             body = await request.body()
             if body:
                 json_obj = orjson.loads(body)
