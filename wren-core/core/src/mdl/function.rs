@@ -601,7 +601,7 @@ mod test {
         };
         let udf = ByPassScalarUDF::from(remote_function);
         let list_type =
-            DataType::List(Arc::new(Field::new("element", DataType::Int32, false)));
+            DataType::List(Arc::new(Field::new("item", DataType::Int32, true)));
         assert_eq!(udf.name, "test");
         assert_eq!(
             udf.return_type
