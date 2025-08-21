@@ -735,7 +735,7 @@ dependencies = [
 [[package]]
 name = "datafusion"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "arrow",
  "arrow-ipc",
@@ -789,7 +789,7 @@ dependencies = [
 [[package]]
 name = "datafusion-catalog"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "arrow",
  "async-trait",
@@ -814,7 +814,7 @@ dependencies = [
 [[package]]
 name = "datafusion-catalog-listing"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "arrow",
  "async-trait",
@@ -836,7 +836,7 @@ dependencies = [
 [[package]]
 name = "datafusion-common"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "ahash",
  "arrow",
@@ -861,7 +861,7 @@ dependencies = [
 [[package]]
 name = "datafusion-common-runtime"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "futures",
  "log",
@@ -871,7 +871,7 @@ dependencies = [
 [[package]]
 name = "datafusion-datasource"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "arrow",
  "async-compression",
@@ -906,7 +906,7 @@ dependencies = [
 [[package]]
 name = "datafusion-datasource-csv"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "arrow",
  "async-trait",
@@ -930,7 +930,7 @@ dependencies = [
 [[package]]
 name = "datafusion-datasource-json"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "arrow",
  "async-trait",
@@ -954,7 +954,7 @@ dependencies = [
 [[package]]
 name = "datafusion-datasource-parquet"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "arrow",
  "async-trait",
@@ -986,12 +986,12 @@ dependencies = [
 [[package]]
 name = "datafusion-doc"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 
 [[package]]
 name = "datafusion-execution"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "arrow",
  "dashmap",
@@ -1009,7 +1009,7 @@ dependencies = [
 [[package]]
 name = "datafusion-expr"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "arrow",
  "async-trait",
@@ -1030,7 +1030,7 @@ dependencies = [
 [[package]]
 name = "datafusion-expr-common"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "arrow",
  "datafusion-common",
@@ -1042,7 +1042,7 @@ dependencies = [
 [[package]]
 name = "datafusion-functions"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "arrow",
  "arrow-buffer",
@@ -1070,7 +1070,7 @@ dependencies = [
 [[package]]
 name = "datafusion-functions-aggregate"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "ahash",
  "arrow",
@@ -1090,7 +1090,7 @@ dependencies = [
 [[package]]
 name = "datafusion-functions-aggregate-common"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "ahash",
  "arrow",
@@ -1102,7 +1102,7 @@ dependencies = [
 [[package]]
 name = "datafusion-functions-nested"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "arrow",
  "arrow-ord",
@@ -1123,7 +1123,7 @@ dependencies = [
 [[package]]
 name = "datafusion-functions-table"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "arrow",
  "async-trait",
@@ -1138,7 +1138,7 @@ dependencies = [
 [[package]]
 name = "datafusion-functions-window"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "arrow",
  "datafusion-common",
@@ -1155,7 +1155,7 @@ dependencies = [
 [[package]]
 name = "datafusion-functions-window-common"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "datafusion-common",
  "datafusion-physical-expr-common",
@@ -1164,7 +1164,7 @@ dependencies = [
 [[package]]
 name = "datafusion-macros"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "datafusion-expr",
  "quote",
@@ -1174,7 +1174,7 @@ dependencies = [
 [[package]]
 name = "datafusion-optimizer"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "arrow",
  "chrono",
@@ -1193,7 +1193,7 @@ dependencies = [
 [[package]]
 name = "datafusion-physical-expr"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "ahash",
  "arrow",
@@ -1214,7 +1214,7 @@ dependencies = [
 [[package]]
 name = "datafusion-physical-expr-common"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "ahash",
  "arrow",
@@ -1227,7 +1227,7 @@ dependencies = [
 [[package]]
 name = "datafusion-physical-optimizer"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "arrow",
  "datafusion-common",
@@ -1246,7 +1246,7 @@ dependencies = [
 [[package]]
 name = "datafusion-physical-plan"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "ahash",
  "arrow",
@@ -1275,7 +1275,7 @@ dependencies = [
 [[package]]
 name = "datafusion-pruning"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "arrow",
  "arrow-schema",
@@ -1292,7 +1292,7 @@ dependencies = [
 [[package]]
 name = "datafusion-session"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "arrow",
  "async-trait",
@@ -1315,7 +1315,7 @@ dependencies = [
 [[package]]
 name = "datafusion-sql"
 version = "49.0.1"
-source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#a022a3a723e4ae59c1984cd5a8ca6c8eff0e1f9c"
+source = "git+https://github.com/Canner/datafusion.git?branch=canner%2Fv49.0.1#732dd555f485863647113565d7aaa22188db8bcc"
 dependencies = [
  "arrow",
  "bigdecimal",
