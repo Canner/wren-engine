@@ -91,7 +91,7 @@ impl InnerDialect for MySQLDialect {
         args: &[Expr],
     ) -> Result<Option<ast::Expr>> {
         match function_name {
-            "btrim" => scalar_function_to_sql_internal(unparser, "trim", args),
+            "btrim" => scalar_function_to_sql_internal(unparser, None, "trim", args),
             _ => Ok(None),
         }
     }
