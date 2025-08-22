@@ -1707,6 +1707,41 @@ mod test {
     }
 
     #[tokio::test]
+    async fn test_disable_distinct_to_group_by() -> Result<()> {
+        let ctx = SessionContext::new();
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_custkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .build(),
+            )
+            .build();
+        let sql = r#"SELECT DISTINCT c_custkey, c_name FROM customer"#;
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest,
+            Arc::new(HashMap::default()),
+            Mode::Unparse,
+        )?);
+        let result = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            Arc::new(HashMap::new()),
+            sql,
+        )
+        .await?;
+        assert_snapshot!(
+            result,
+            @"SELECT DISTINCT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_disable_scalar_subquery() -> Result<()> {
         let ctx = SessionContext::new();
         let manifest = ManifestBuilder::new()

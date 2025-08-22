@@ -46,6 +46,7 @@ use wren_core::{
 #[derive(Clone)]
 pub struct PySessionContext {
     ctx: wren_core::SessionContext,
+    exec_ctx: wren_core::SessionContext,
     mdl: Arc<AnalyzedWrenMDL>,
     properties: Arc<HashMap<String, Option<String>>>,
     runtime: Arc<Runtime>,
@@ -61,6 +62,7 @@ impl Default for PySessionContext {
     fn default() -> Self {
         Self {
             ctx: wren_core::SessionContext::new(),
+            exec_ctx: wren_core::SessionContext::new(),
             mdl: Arc::new(AnalyzedWrenMDL::default()),
             properties: Arc::new(HashMap::new()),
             runtime: Arc::new(Runtime::new().unwrap()),
@@ -115,7 +117,8 @@ impl PySessionContext {
 
         let Some(mdl_base64) = mdl_base64 else {
             return Ok(Self {
-                ctx,
+                ctx: ctx.clone(),
+                exec_ctx: ctx,
                 mdl: Arc::new(AnalyzedWrenMDL::default()),
                 properties: Arc::new(HashMap::new()),
                 runtime: Arc::new(runtime),
@@ -165,8 +168,7 @@ impl PySessionContext {
             ) {
                 Ok(analyzed_mdl) => {
                     let analyzed_mdl = Arc::new(analyzed_mdl);
-                    // the headers won't be used in the context. Provide an empty map.
-                    let ctx = runtime
+                    let unparser_ctx = runtime
                         .block_on(create_ctx_with_mdl(
                             &ctx,
                             Arc::clone(&analyzed_mdl),
@@ -175,8 +177,18 @@ impl PySessionContext {
                         ))
                         .map_err(CoreError::from)?;
 
+                    let exec_ctx = runtime
+                        .block_on(create_ctx_with_mdl(
+                            &ctx,
+                            Arc::clone(&analyzed_mdl),
+                            Arc::clone(&properties_ref),
+                            mdl::context::Mode::LocalRuntime,
+                        ))
+                        .map_err(CoreError::from)?;
+
                     Ok(Self {
-                        ctx,
+                        ctx: unparser_ctx,
+                        exec_ctx,
                         mdl: analyzed_mdl,
                         runtime: Arc::new(runtime),
                         properties: properties_ref,
@@ -214,7 +226,7 @@ impl PySessionContext {
     pub fn get_available_functions(&self) -> PyResult<Vec<PyRemoteFunction>> {
         let registered_functions: Vec<PyRemoteFunction> = self
             .runtime
-            .block_on(Self::get_regietered_functions(&self.ctx))
+            .block_on(Self::get_regietered_functions(&self.exec_ctx))
             .map_err(CoreError::from)?
             .into_iter()
             .map(|f| f.into())
