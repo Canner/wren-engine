@@ -212,9 +212,12 @@ async def query(
                     override_cache=override_cache,
                     query_cache_manager=query_cache_manager,
                 )
-            except Exception:
+            except Exception as ve:
                 # ignore v2 error messages in fallback, return v3 error instead.
-                raise e
+                logger.debug(
+                    "v2 fallback failed for v3 query; suppressing v2 error: %s", ve
+                )
+                raise e from None
 
 
 @router.post("/dry-plan", description="get the planned WrenSQL")
@@ -256,9 +259,12 @@ async def dry_plan(
                     headers=headers,
                     is_fallback=True,
                 )
-            except Exception:
+            except Exception as ve:
                 # ignore v2 error messages in fallback, return v3 error instead.
-                raise e
+                logger.debug(
+                    "v2 fallback failed for v3 dry-plan; suppressing v2 error: %s", ve
+                )
+                raise e from None
 
 
 @router.post(
@@ -310,9 +316,12 @@ async def dry_plan_for_data_source(
                     headers=headers,
                     is_fallback=True,
                 )
-            except Exception:
+            except Exception as ve:
                 # ignore v2 error messages in fallback, return v3 error instead.
-                raise e
+                logger.debug(
+                    "v2 fallback failed for v3 dry-plan; suppressing v2 error: %s", ve
+                )
+                raise e from None
 
 
 @router.post(
@@ -372,14 +381,21 @@ async def validate(
                 str(e),
             )
             headers = append_fallback_context(headers, span)
-            return await v2.connector.validate(
-                data_source=data_source,
-                rule_name=rule_name,
-                dto=dto,
-                java_engine_connector=java_engine_connector,
-                headers=headers,
-                is_fallback=True,
-            )
+            try:
+                return await v2.connector.validate(
+                    data_source=data_source,
+                    rule_name=rule_name,
+                    dto=dto,
+                    java_engine_connector=java_engine_connector,
+                    headers=headers,
+                    is_fallback=True,
+                )
+            except Exception as ve:
+                # ignore v2 error messages in fallback, return v3 error instead.
+                logger.debug(
+                    "v2 fallback failed for v3 validate; suppressing v2 error: %s", ve
+                )
+                raise e from None
 
 
 @router.get(
@@ -475,6 +491,10 @@ async def model_substitute(
                     java_engine_connector=java_engine_connector,
                     is_fallback=True,
                 )
-            except Exception:
+            except Exception as ve:
                 # ignore v2 error messages in fallback, return v3 error instead.
-                raise e
+                logger.debug(
+                    "v2 fallback failed for v3 model-substitute; suppressing v2 error: %s",
+                    ve,
+                )
+                raise e from None
