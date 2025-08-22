@@ -127,6 +127,7 @@ async def test_aggregate_function(client, manifest_str: str, connection_info):
         "dtypes": {"col": "int64"},
     }
 
+
 async def test_datetime_function(client, manifest_str: str, connection_info):
     response = await client.post(
         url=f"{base_url}/query",
