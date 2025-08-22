@@ -1,4 +1,4 @@
-use datafusion::arrow::datatypes::{DataType, Field};
+use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
 use datafusion::common::Result;
 use datafusion::common::{internal_err, not_impl_err};
 use datafusion::logical_expr::function::{
@@ -6,8 +6,8 @@ use datafusion::logical_expr::function::{
 };
 use datafusion::logical_expr::{
     Accumulator, AggregateUDFImpl, ColumnarValue, DocSection, Documentation,
-    DocumentationBuilder, PartitionEvaluator, ScalarUDFImpl, Signature, TypeSignature,
-    Volatility, WindowUDFImpl,
+    DocumentationBuilder, PartitionEvaluator, ScalarFunctionArgs, ScalarUDFImpl,
+    Signature, TypeSignature, Volatility, WindowUDFImpl,
 };
 use serde::{Deserialize, Serialize};
 use std::any::Any;
@@ -225,7 +225,7 @@ impl ScalarUDFImpl for ByPassScalarUDF {
         self.return_type.to_data_type(arg_types)
     }
 
-    fn invoke(&self, _args: &[ColumnarValue]) -> Result<ColumnarValue> {
+    fn invoke_with_args(&self, _args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         internal_err!("This function should not be called")
     }
 
@@ -354,9 +354,15 @@ impl WindowUDFImpl for ByPassWindowFunction {
         internal_err!("This function should not be called")
     }
 
-    fn field(&self, field_args: WindowUDFFieldArgs) -> Result<Field> {
-        let return_type = self.return_type.to_data_type(field_args.input_types())?;
-        Ok(Field::new(field_args.name(), return_type, false))
+    fn field(&self, field_args: WindowUDFFieldArgs) -> Result<FieldRef> {
+        let return_type = self.return_type.to_data_type(
+            &field_args
+                .input_fields()
+                .iter()
+                .map(|f| f.data_type().clone())
+                .collect::<Vec<_>>(),
+        )?;
+        Ok(Field::new(field_args.name(), return_type, false).into())
     }
 
     fn documentation(&self) -> Option<&Documentation> {
@@ -596,7 +602,7 @@ mod test {
         };
         let udf = ByPassScalarUDF::from(remote_function);
         let list_type =
-            DataType::List(Arc::new(Field::new("element", DataType::Int32, false)));
+            DataType::List(Arc::new(Field::new("item", DataType::Int32, true)));
         assert_eq!(udf.name, "test");
         assert_eq!(
             udf.return_type.to_data_type(from_ref(&list_type)).unwrap(),

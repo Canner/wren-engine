@@ -692,7 +692,7 @@ mod test {
             sql,
         )
         .await?;
-        assert_snapshot!(result, @r#"SELECT "profile".totalcost FROM (SELECT totalcost.totalcost FROM (SELECT __relation__2.p_custkey AS p_custkey, sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost FROM (SELECT __relation__1.c_custkey, orders.o_custkey, orders.o_totalprice, __relation__1.p_custkey FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey, __source.o_totalprice AS o_totalprice FROM orders AS __source) AS orders) AS orders) AS orders RIGHT JOIN (SELECT customer.c_custkey, "profile".p_custkey FROM (SELECT customer.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer) AS customer RIGHT JOIN (SELECT __source.p_custkey AS p_custkey FROM "profile" AS __source) AS "profile" ON customer.c_custkey = "profile".p_custkey) AS __relation__1 ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost) AS "profile""#);
+        assert_snapshot!(result, @r#"SELECT "profile".totalcost FROM (SELECT totalcost.totalcost FROM (SELECT __relation__2.p_custkey AS p_custkey, sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost FROM (SELECT __relation__1.c_custkey, orders.o_custkey, orders.o_totalprice, __relation__1.p_custkey FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey, __source.o_totalprice AS o_totalprice FROM orders AS __source) AS orders) AS orders) AS orders RIGHT OUTER JOIN (SELECT customer.c_custkey, "profile".p_custkey FROM (SELECT customer.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer) AS customer RIGHT OUTER JOIN (SELECT __source.p_custkey AS p_custkey FROM "profile" AS __source) AS "profile" ON customer.c_custkey = "profile".p_custkey) AS __relation__1 ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost) AS "profile""#);
 
         let sql = "select totalcost from profile where p_sex = 'M'";
         let result = transform_sql_with_ctx(
@@ -704,7 +704,7 @@ mod test {
         )
         .await?;
         assert_snapshot!(result,
-          @r#"SELECT "profile".totalcost FROM (SELECT __relation__1.p_sex, __relation__1.totalcost FROM (SELECT totalcost.p_custkey, "profile".p_sex, totalcost.totalcost FROM (SELECT __relation__2.p_custkey AS p_custkey, sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost FROM (SELECT __relation__1.c_custkey, orders.o_custkey, orders.o_totalprice, __relation__1.p_custkey FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey, __source.o_totalprice AS o_totalprice FROM orders AS __source) AS orders) AS orders) AS orders RIGHT JOIN (SELECT customer.c_custkey, "profile".p_custkey FROM (SELECT customer.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer) AS customer RIGHT JOIN (SELECT __source.p_custkey AS p_custkey FROM "profile" AS __source) AS "profile" ON customer.c_custkey = "profile".p_custkey) AS __relation__1 ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost RIGHT JOIN (SELECT __source.p_custkey AS p_custkey, __source.p_sex AS p_sex FROM "profile" AS __source) AS "profile" ON totalcost.p_custkey = "profile".p_custkey) AS __relation__1) AS "profile" WHERE "profile".p_sex = 'M'"#);
+          @r#"SELECT "profile".totalcost FROM (SELECT __relation__1.p_sex, __relation__1.totalcost FROM (SELECT totalcost.p_custkey, "profile".p_sex, totalcost.totalcost FROM (SELECT __relation__2.p_custkey AS p_custkey, sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost FROM (SELECT __relation__1.c_custkey, orders.o_custkey, orders.o_totalprice, __relation__1.p_custkey FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey, __source.o_totalprice AS o_totalprice FROM orders AS __source) AS orders) AS orders) AS orders RIGHT OUTER JOIN (SELECT customer.c_custkey, "profile".p_custkey FROM (SELECT customer.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer) AS customer RIGHT OUTER JOIN (SELECT __source.p_custkey AS p_custkey FROM "profile" AS __source) AS "profile" ON customer.c_custkey = "profile".p_custkey) AS __relation__1 ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost RIGHT OUTER JOIN (SELECT __source.p_custkey AS p_custkey, __source.p_sex AS p_sex FROM "profile" AS __source) AS "profile" ON totalcost.p_custkey = "profile".p_custkey) AS __relation__1) AS "profile" WHERE "profile".p_sex = 'M'"#);
         Ok(())
     }
 
@@ -1170,7 +1170,7 @@ mod test {
             sql,
         )
         .await?;
-        assert_snapshot!(actual, @"SELECT \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\" FROM (SELECT UNNEST([1, 2, 3]) AS \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\")");
+        assert_snapshot!(actual, @r#"SELECT "UNNEST(make_array(Int64(1),Int64(2),Int64(3)))" FROM (SELECT UNNEST([1, 2, 3]) AS "UNNEST(make_array(Int64(1),Int64(2),Int64(3)))") AS derived_projection ("UNNEST(make_array(Int64(1),Int64(2),Int64(3)))")"#);
 
         let manifest = ManifestBuilder::new()
             .data_source(DataSource::BigQuery)
@@ -1736,9 +1736,7 @@ mod test {
         .await?;
         assert_snapshot!(
             result,
-            @"SELECT customer.c_custkey, (SELECT customer.c_name FROM (SELECT customer.c_custkey, customer.c_name \
-            FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer \
-            WHERE customer.c_custkey = 1) FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer"
+            @"SELECT customer.c_custkey, (SELECT customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer WHERE CAST(customer.c_custkey AS BIGINT) = 1) FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer"
         );
         Ok(())
     }
@@ -1773,9 +1771,7 @@ mod test {
         .await?;
         assert_snapshot!(
             result,
-            @"SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM \
-            (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer \
-            WHERE customer.c_custkey = 1"
+            @"SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer WHERE CAST(customer.c_custkey AS BIGINT) = 1"
         );
         Ok(())
     }
@@ -1824,11 +1820,9 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(
+        assert_snapshot!(
             result,
-            "SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM \
-            (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM \"remote\".test.\"CUSTOMER\" AS __source) AS customer) AS customer \
-            WHERE customer.c_custkey = 1"
+            @r#"SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM "remote".test."CUSTOMER" AS __source) AS customer) AS customer WHERE CAST(customer.c_custkey AS BIGINT) = 1"#
         );
         Ok(())
     }
@@ -1877,11 +1871,9 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(
+        assert_snapshot!(
             result,
-            "SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM \
-            (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM \"遠端\".test.\"客戶\" AS __source) AS customer) AS customer \
-            WHERE customer.c_custkey = 1"
+            @r#"SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM "遠端".test."客戶" AS __source) AS customer) AS customer WHERE CAST(customer.c_custkey AS BIGINT) = 1"#
         );
         Ok(())
     }
@@ -1917,7 +1909,7 @@ mod test {
             build_headers(&[("session_nation".to_string(), Some("1".to_string()))]);
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::new(headers), sql).await?,
-            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1) AS customer"
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE CAST(customer.c_nationkey AS BIGINT) = 1) AS customer"
         );
 
         match transform_sql_with_ctx(
@@ -1983,13 +1975,13 @@ mod test {
         ]));
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers.clone(), sql,).await?,
-            @"SELECT customer.c_custkey, customer.c_nationkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Gura') AS customer"
+            @"SELECT customer.c_custkey, customer.c_nationkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE CAST(customer.c_nationkey AS BIGINT) = 1 AND customer.c_name = 'Gura') AS customer"
         );
 
         let sql = "SELECT * FROM customer WHERE c_custkey = 1";
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
-            @"SELECT customer.c_custkey, customer.c_nationkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Gura') AS customer WHERE customer.c_custkey = 1"
+            @"SELECT customer.c_custkey, customer.c_nationkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE CAST(customer.c_nationkey AS BIGINT) = 1 AND customer.c_name = 'Gura') AS customer WHERE CAST(customer.c_custkey AS BIGINT) = 1"
         );
 
         // test other model won't be affected
@@ -2006,7 +1998,7 @@ mod test {
         ]));
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
-            @"SELECT orders.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Gura') AS customer JOIN (SELECT orders.o_custkey, orders.o_orderkey FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders) AS orders ON customer.c_custkey = orders.o_custkey"
+            @"SELECT orders.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE CAST(customer.c_nationkey AS BIGINT) = 1 AND customer.c_name = 'Gura') AS customer INNER JOIN (SELECT orders.o_custkey, orders.o_orderkey FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders) AS orders ON customer.c_custkey = orders.o_custkey"
         );
 
         // test property is required
@@ -2063,7 +2055,7 @@ mod test {
         ]));
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
-            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Peko') AS customer"
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE CAST(customer.c_nationkey AS BIGINT) = 1 AND customer.c_name = 'Peko') AS customer"
         );
 
         // expect ignore the rule because session_user is optional without default value
@@ -2135,12 +2127,12 @@ mod test {
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
                 .await?,
-            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1) AS customer"
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE CAST(customer.c_nationkey AS BIGINT) = 1) AS customer"
         );
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::new(HashMap::new()), sql)
                 .await?,
-            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 3) AS customer"
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE CAST(customer.c_nationkey AS BIGINT) = 3) AS customer"
         );
 
         let manifest = ManifestBuilder::new()
@@ -2171,7 +2163,7 @@ mod test {
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
                 .await?,
-            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1) AS customer"
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE CAST(customer.c_nationkey AS BIGINT) = 1) AS customer"
         );
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::new(HashMap::new()), sql)
@@ -2213,7 +2205,7 @@ mod test {
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
                 .await?,
-            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Gura') AS customer"
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE CAST(customer.c_nationkey AS BIGINT) = 1 AND customer.c_name = 'Gura') AS customer"
         );
         // the rule is expected to be skipped because the optional property is None without default value
         let headers = Arc::new(build_headers(&[(
@@ -2269,7 +2261,7 @@ mod test {
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
                 .await?,
-            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1 AND customer.c_name = 'Gura') AS customer"
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE CAST(customer.c_nationkey AS BIGINT) = 1 AND customer.c_name = 'Gura') AS customer"
         );
         // the rule is expected to be skipped because the optional property is None without default value
         let headers = Arc::new(build_headers(&[(
@@ -2350,13 +2342,13 @@ mod test {
         let sql = "SELECT * FROM orders";
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers.clone(), sql).await?,
-            @"SELECT orders.o_orderkey, orders.o_custkey, orders.customer_name FROM (SELECT orders.customer_name, orders.o_custkey, orders.o_orderkey FROM (SELECT __relation__1.c_name AS customer_name, __relation__1.o_custkey, __relation__1.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name, orders.o_custkey, orders.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer) AS customer RIGHT JOIN (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders ON customer.c_custkey = orders.o_custkey) AS __relation__1) AS orders WHERE orders.customer_name = 'Gura') AS orders"
+            @"SELECT orders.o_orderkey, orders.o_custkey, orders.customer_name FROM (SELECT orders.customer_name, orders.o_custkey, orders.o_orderkey FROM (SELECT __relation__1.c_name AS customer_name, __relation__1.o_custkey, __relation__1.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name, orders.o_custkey, orders.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer) AS customer RIGHT OUTER JOIN (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders ON customer.c_custkey = orders.o_custkey) AS __relation__1) AS orders WHERE orders.customer_name = 'Gura') AS orders"
         );
 
         let sql = "SELECT * FROM orders where o_orderkey > 10";
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
-            @"SELECT orders.o_orderkey, orders.o_custkey, orders.customer_name FROM (SELECT orders.customer_name, orders.o_custkey, orders.o_orderkey FROM (SELECT __relation__1.c_name AS customer_name, __relation__1.o_custkey, __relation__1.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name, orders.o_custkey, orders.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer) AS customer RIGHT JOIN (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders ON customer.c_custkey = orders.o_custkey) AS __relation__1) AS orders WHERE orders.customer_name = 'Gura') AS orders WHERE orders.o_orderkey > 10"
+            @"SELECT orders.o_orderkey, orders.o_custkey, orders.customer_name FROM (SELECT orders.customer_name, orders.o_custkey, orders.o_orderkey FROM (SELECT __relation__1.c_name AS customer_name, __relation__1.o_custkey, __relation__1.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name, orders.o_custkey, orders.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer) AS customer RIGHT OUTER JOIN (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders ON customer.c_custkey = orders.o_custkey) AS __relation__1) AS orders WHERE orders.customer_name = 'Gura') AS orders WHERE CAST(orders.o_orderkey AS BIGINT) > 10"
         );
 
         let manifest = ManifestBuilder::new()
@@ -2438,7 +2430,7 @@ mod test {
         // test custoer model used by customer_name should be filtered by nation rule.
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
-            @"SELECT orders.customer_name FROM (SELECT __relation__1.c_name AS customer_name FROM (SELECT customer.c_custkey, customer.c_name, orders.o_custkey, orders.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1) AS customer) AS customer RIGHT JOIN (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders ON customer.c_custkey = orders.o_custkey) AS __relation__1) AS orders"
+            @"SELECT orders.customer_name FROM (SELECT __relation__1.c_name AS customer_name FROM (SELECT customer.c_custkey, customer.c_name, orders.o_custkey, orders.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE CAST(customer.c_nationkey AS BIGINT) = 1) AS customer) AS customer RIGHT OUTER JOIN (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders ON customer.c_custkey = orders.o_custkey) AS __relation__1) AS orders"
         );
         let headers = Arc::new(build_headers(&[(
             "session_user".to_string(),
@@ -2448,14 +2440,14 @@ mod test {
         // test orders model used by totalprice should be filtered by user rule.
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
-            @"SELECT customer.totalprice FROM (SELECT totalprice.totalprice FROM (SELECT __relation__1.c_custkey AS c_custkey, sum(CAST(__relation__1.o_totalprice AS BIGINT)) AS totalprice FROM (SELECT customer.c_custkey, orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey, __source.o_totalprice AS o_totalprice FROM orders AS __source) AS orders) AS orders WHERE orders.o_custkey = 1) AS orders) AS orders RIGHT JOIN (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer ON orders.o_custkey = customer.c_custkey) AS __relation__1 GROUP BY __relation__1.c_custkey) AS totalprice) AS customer",
+            @"SELECT customer.totalprice FROM (SELECT totalprice.totalprice FROM (SELECT __relation__1.c_custkey AS c_custkey, sum(CAST(__relation__1.o_totalprice AS BIGINT)) AS totalprice FROM (SELECT customer.c_custkey, orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey, __source.o_totalprice AS o_totalprice FROM orders AS __source) AS orders) AS orders WHERE CAST(orders.o_custkey AS BIGINT) = 1) AS orders) AS orders RIGHT OUTER JOIN (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer ON orders.o_custkey = customer.c_custkey) AS __relation__1 GROUP BY __relation__1.c_custkey) AS totalprice) AS customer",
         );
 
         let sql = "SELECT totalprice FROM customer c";
         // test orders model used by totalprice should be filtered by user rule.
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
-            @"SELECT c.totalprice FROM (SELECT totalprice.totalprice FROM (SELECT __relation__1.c_custkey AS c_custkey, sum(CAST(__relation__1.o_totalprice AS BIGINT)) AS totalprice FROM (SELECT customer.c_custkey, orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey, __source.o_totalprice AS o_totalprice FROM orders AS __source) AS orders) AS orders WHERE orders.o_custkey = 1) AS orders) AS orders RIGHT JOIN (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer ON orders.o_custkey = customer.c_custkey) AS __relation__1 GROUP BY __relation__1.c_custkey) AS totalprice) AS c",
+            @"SELECT c.totalprice FROM (SELECT totalprice.totalprice FROM (SELECT __relation__1.c_custkey AS c_custkey, sum(CAST(__relation__1.o_totalprice AS BIGINT)) AS totalprice FROM (SELECT customer.c_custkey, orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey, __source.o_totalprice AS o_totalprice FROM orders AS __source) AS orders) AS orders WHERE CAST(orders.o_custkey AS BIGINT) = 1) AS orders) AS orders RIGHT OUTER JOIN (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer ON orders.o_custkey = customer.c_custkey) AS __relation__1 GROUP BY __relation__1.c_custkey) AS totalprice) AS c",
         );
         Ok(())
     }
@@ -2506,7 +2498,7 @@ mod test {
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
                 .await?,
-            @"SELECT c.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1) AS c"
+            @"SELECT c.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE CAST(customer.c_nationkey AS BIGINT) = 1) AS c"
         );
 
         let headers = Arc::new(build_headers(&[
@@ -2518,7 +2510,7 @@ mod test {
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
                 .await?,
-            @"SELECT c.c_name FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1) AS c JOIN (SELECT orders.o_custkey FROM (SELECT orders.o_custkey FROM (SELECT __source.o_custkey AS o_custkey FROM orders AS __source) AS orders) AS orders WHERE orders.o_custkey = 1) AS o ON c.c_custkey = o.o_custkey"
+            @"SELECT c.c_name FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE CAST(customer.c_nationkey AS BIGINT) = 1) AS c INNER JOIN (SELECT orders.o_custkey FROM (SELECT orders.o_custkey FROM (SELECT __source.o_custkey AS o_custkey FROM orders AS __source) AS orders) AS orders WHERE CAST(orders.o_custkey AS BIGINT) = 1) AS o ON c.c_custkey = o.o_custkey"
         );
         Ok(())
     }
@@ -2874,7 +2866,7 @@ mod test {
         )]));
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
-            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE customer.c_nationkey = 1) AS customer"
+            @"SELECT customer.c_nationkey, customer.c_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE CAST(customer.c_nationkey AS BIGINT) = 1) AS customer"
         );
         Ok(())
     }

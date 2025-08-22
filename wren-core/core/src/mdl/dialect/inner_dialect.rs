@@ -182,8 +182,8 @@ impl InnerDialect for BigQueryDialect {
 impl BigQueryDialect {
     fn datetime_field_from_expr(&self, expr: &Expr) -> Result<ast::DateTimeField> {
         match expr {
-            Expr::Literal(ScalarValue::Utf8(Some(s)))
-            | Expr::Literal(ScalarValue::LargeUtf8(Some(s))) => {
+            Expr::Literal(ScalarValue::Utf8(Some(s)), _)
+            | Expr::Literal(ScalarValue::LargeUtf8(Some(s)), _) => {
                 Ok(self.datetime_field_from_str(s)?)
             }
             _ => plan_err!(

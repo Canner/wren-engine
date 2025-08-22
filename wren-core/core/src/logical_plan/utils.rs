@@ -48,7 +48,7 @@ fn create_list_type(array_type: &str) -> Result<DataType> {
             }
         };
         return Ok(DataType::List(Arc::new(Field::new(
-            "element", data_type, false,
+            "item", data_type, true,
         ))));
     }
     unreachable!()
@@ -298,7 +298,7 @@ pub fn expr_to_columns(
             Expr::Unnest(_)
             | Expr::ScalarVariable(_, _)
             | Expr::Alias(_)
-            | Expr::Literal(_)
+            | Expr::Literal(_, _)
             | Expr::BinaryExpr { .. }
             | Expr::Like { .. }
             | Expr::SimilarTo { .. }

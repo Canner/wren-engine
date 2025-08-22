@@ -54,7 +54,7 @@ async def test_function_list(client):
     assert response.status_code == 200
     result = response.json()
     # 429 is the number of functions in `resources/function_list/duckdb.csv` file excluded the default functions in DataFusion.
-    assert len(result) == DATAFUSION_FUNCTION_COUNT + 429
+    assert len(result) == DATAFUSION_FUNCTION_COUNT + 427
     the_func = next(filter(lambda x: x["name"] == "regexp_escape", result))
     assert the_func == {
         "name": "regexp_escape",

@@ -18,13 +18,10 @@
  */
 use crate::mdl::dialect::inner_dialect::{get_inner_dialect, InnerDialect};
 use crate::mdl::manifest::DataSource;
-use datafusion::common::{internal_err, plan_err, Result, ScalarValue};
-use datafusion::logical_expr::sqlparser::ast::{Ident, Subscript};
+use datafusion::common::Result;
 use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
 use datafusion::logical_expr::Expr;
 use datafusion::sql::sqlparser::ast::{self, WindowFrameBound};
-use datafusion::sql::sqlparser::ast::{AccessExpr, Array, Value};
-use datafusion::sql::sqlparser::tokenizer::Span;
 use datafusion::sql::unparser::dialect::{Dialect, IntervalStyle};
 use datafusion::sql::unparser::Unparser;
 use regex::Regex;
@@ -70,22 +67,7 @@ impl Dialect for WrenDialect {
             return Ok(Some(function));
         }
 
-        match func_name {
-            "make_array" => {
-                let sql = self.make_array_to_sql(args, unparser)?;
-                Ok(Some(sql))
-            }
-            "array_element" => {
-                let sql = self.array_element_to_sql(args, unparser)?;
-                Ok(Some(sql))
-            }
-            "get_field" => self.get_fields_to_sql(args, unparser),
-            "named_struct" => {
-                let sql = self.named_struct_to_sql(args, unparser)?;
-                Ok(Some(sql))
-            }
-            _ => Ok(None),
-        }
+        Ok(None)
     }
 
     fn unnest_as_table_factor(&self) -> bool {
@@ -120,97 +102,6 @@ impl WrenDialect {
     pub fn new(data_source: &DataSource) -> Self {
         Self {
             inner_dialect: get_inner_dialect(data_source),
-        }
-    }
-
-    fn make_array_to_sql(&self, args: &[Expr], unparser: &Unparser) -> Result<ast::Expr> {
-        let args = args
-            .iter()
-            .map(|e| unparser.expr_to_sql(e))
-            .collect::<Result<Vec<_>>>()?;
-        Ok(ast::Expr::Array(Array {
-            elem: args,
-            named: false,
-        }))
-    }
-
-    fn array_element_to_sql(
-        &self,
-        args: &[Expr],
-        unparser: &Unparser,
-    ) -> Result<ast::Expr> {
-        if args.len() != 2 {
-            return internal_err!("array_element must have exactly 2 arguments");
-        }
-        let array = unparser.expr_to_sql(&args[0])?;
-        let index = unparser.expr_to_sql(&args[1])?;
-        Ok(ast::Expr::CompoundFieldAccess {
-            root: Box::new(array),
-            access_chain: vec![AccessExpr::Subscript(Subscript::Index { index })],
-        })
-    }
-
-    fn named_struct_to_sql(
-        &self,
-        args: &[Expr],
-        unparser: &Unparser,
-    ) -> Result<ast::Expr> {
-        if args.is_empty() {
-            return plan_err!("struct must have at least one field");
-        }
-        if args.len() % 2 != 0 {
-            return internal_err!(
-                "named_struct must have an even number of arguments or more than 0"
-            );
-        }
-        let fields = args
-            .chunks(2)
-            .map(|pair| {
-                let name = match &pair[0] {
-                    Expr::Literal(ScalarValue::Utf8(Some(s))) => s,
-                    _ => {
-                        return internal_err!("named_struct field name must be a string")
-                    }
-                };
-                let value = unparser.expr_to_sql(&pair[1])?;
-                Ok(ast::DictionaryField {
-                    key: self.new_ident_quoted_if_needs(name.to_string()),
-                    value: Box::new(value),
-                })
-            })
-            .collect::<Result<Vec<_>>>()?;
-        Ok(ast::Expr::Dictionary(fields))
-    }
-
-    fn get_fields_to_sql(
-        &self,
-        args: &[Expr],
-        unparser: &Unparser,
-    ) -> Result<Option<ast::Expr>> {
-        if args.len() != 2 {
-            return internal_err!("get_fields must have exactly 2 argument");
-        }
-
-        let sql = unparser.expr_to_sql(&args[0])?;
-        if let ast::Expr::Value(Value::SingleQuotedString(field_name)) =
-            unparser.expr_to_sql(&args[1])?
-        {
-            let key = self.new_ident_quoted_if_needs(field_name);
-            return Ok(Some(ast::Expr::CompositeAccess {
-                expr: Box::new(sql),
-                key,
-            }));
-        }
-
-        Ok(None)
-    }
-
-    fn new_ident_quoted_if_needs(&self, ident: String) -> Ident {
-        let quote_style = self.identifier_quote_style(&ident);
-        Ident {
-            value: ident,
-            quote_style,
-            span: Span::empty(),
         }
     }
 }

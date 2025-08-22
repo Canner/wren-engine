@@ -30,7 +30,7 @@ use std::sync::Arc;
 use std::vec;
 use tokio::runtime::Runtime;
 use wren_core::array::AsArray;
-use wren_core::ast::{visit_statements_mut, Expr, Statement, Value};
+use wren_core::ast::{visit_statements_mut, Expr, Statement, Value, ValueWithSpan};
 use wren_core::dialect::GenericDialect;
 use wren_core::mdl::context::create_ctx_with_mdl;
 use wren_core::mdl::function::{
@@ -241,17 +241,19 @@ impl PySessionContext {
         let _ = visit_statements_mut(&mut statements, |stmt| {
             if let Statement::Query(q) = stmt {
                 if let Some(limit) = &q.limit {
-                    if let Expr::Value(Value::Number(n, is)) = limit {
-                        if n.parse::<usize>().unwrap() > pushdown {
-                            q.limit = Some(Expr::Value(Value::Number(
-                                pushdown.to_string(),
-                                *is,
-                            )));
+                    if let Expr::Value(ValueWithSpan { value: Value::Number(n, is), .. }) = limit {
+                        if let Ok(curr) = n.parse::<usize>() {
+                            if curr > pushdown {
+                                q.limit = Some(Expr::Value(Value::Number(
+                                    pushdown.to_string(),
+                                    *is,
+                                ).into()));
+                            }
                         }
                     }
                 } else {
                     q.limit =
-                        Some(Expr::Value(Value::Number(pushdown.to_string(), false)));
+                        Some(Expr::Value(Value::Number(pushdown.to_string(), false).into()));
                 }
             }
             ControlFlow::<()>::Continue(())
