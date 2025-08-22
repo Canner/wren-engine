@@ -239,11 +239,13 @@ impl PySessionContext {
             if let Statement::Query(q) = stmt {
                 if let Some(limit) = &q.limit {
                     if let Expr::Value(ValueWithSpan { value: Value::Number(n, is), .. }) = limit {
-                        if n.parse::<usize>().unwrap() > pushdown {
-                            q.limit = Some(Expr::Value(Value::Number(
-                                pushdown.to_string(),
-                                *is,
-                            ).into()));
+                        if let Ok(curr) = n.parse::<usize>() {
+                            if curr > pushdown {
+                                q.limit = Some(Expr::Value(Value::Number(
+                                    pushdown.to_string(),
+                                    *is,
+                                ).into()));
+                            }
                         }
                     }
                 } else {
