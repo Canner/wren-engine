@@ -694,11 +694,11 @@ async def test_connection_timeout(
         },
         headers={X_WREN_DB_STATEMENT_TIMEOUT: "1"},  # Set timeout to 1 second
     )
-    assert response.status_code == 504
     assert (
         "Query was cancelled: canceling statement due to statement timeout"
         in response.text
     )
+    assert response.status_code == 504
 
     # test connection_url way can also timeout
     response = await client.post(
@@ -710,11 +710,11 @@ async def test_connection_timeout(
         },
         headers={X_WREN_DB_STATEMENT_TIMEOUT: "1"},  # Set timeout to 1 second
     )
-    assert response.status_code == 504
     assert (
         "Query was cancelled: canceling statement due to statement timeout"
         in response.text
     )
+    assert response.status_code == 504
 
 
 async def test_format_floating(client, manifest_str, connection_info):

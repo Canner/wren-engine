@@ -23,5 +23,6 @@ fn wren_core_wrapper(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(manifest::to_json_base64, m)?)?;
     m.add_function(wrap_pyfunction!(manifest::to_manifest, m)?)?;
     m.add_function(wrap_pyfunction!(validation::validate_rlac_rule, m)?)?;
+    m.add_function(wrap_pyfunction!(manifest::is_backward_compatible, m)?)?;
     Ok(())
 }

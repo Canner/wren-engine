@@ -14,8 +14,8 @@ from app.dependencies import (
     X_CACHE_OVERRIDE,
     X_CACHE_OVERRIDE_AT,
     X_WREN_FALLBACK_DISABLE,
-    exist_wren_variables_header,
     get_wren_headers,
+    is_backward_compatible,
     verify_query_dto,
 )
 from app.mdl.core import get_session_context
@@ -191,7 +191,7 @@ async def query(
             if (
                 java_engine_connector.client is None
                 or is_fallback_disable
-                or exist_wren_variables_header(headers)
+                or not is_backward_compatible(dto.manifest_str)
             ):
                 raise e
 
@@ -237,7 +237,7 @@ async def dry_plan(
             if (
                 java_engine_connector.client is None
                 or is_fallback_disable
-                or exist_wren_variables_header(headers)
+                or not is_backward_compatible(dto.manifest_str)
             ):
                 raise e
 
@@ -285,7 +285,7 @@ async def dry_plan_for_data_source(
             if (
                 java_engine_connector.client is None
                 or is_fallback_disable
-                or exist_wren_variables_header(headers)
+                or not is_backward_compatible(dto.manifest_str)
             ):
                 raise e
 
@@ -351,7 +351,7 @@ async def validate(
             if (
                 java_engine_connector.client is None
                 or is_fallback_disable
-                or exist_wren_variables_header(headers)
+                or not is_backward_compatible(dto.manifest_str)
             ):
                 raise e
 
@@ -446,7 +446,7 @@ async def model_substitute(
             if (
                 java_engine_connector.client is None
                 or is_fallback_disable
-                or exist_wren_variables_header(headers)
+                or not is_backward_compatible(dto.manifest_str)
             ):
                 raise e
 
