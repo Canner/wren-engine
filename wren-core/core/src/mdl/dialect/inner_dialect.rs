@@ -91,7 +91,7 @@ impl InnerDialect for MySQLDialect {
         args: &[Expr],
     ) -> Result<Option<ast::Expr>> {
         match function_name {
-            "btrim" => scalar_function_to_sql_internal(unparser, "trim", args),
+            "btrim" => scalar_function_to_sql_internal(unparser, None, "trim", args),
             _ => Ok(None),
         }
     }
@@ -146,6 +146,9 @@ impl InnerDialect for BigQueryDialect {
                     syntax: ExtractSyntax::From,
                     expr: Box::new(unparser.expr_to_sql(&args[1])?),
                 }))
+            }
+            "now" => {
+                scalar_function_to_sql_internal(unparser, None, "CURRENT_TIMESTAMP", args)
             }
             _ => Ok(None),
         }

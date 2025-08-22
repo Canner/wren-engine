@@ -50,6 +50,7 @@ pub(crate) fn function_args_to_sql(
 
 pub(crate) fn scalar_function_to_sql_internal(
     unparser: &Unparser,
+    _schema_name: Option<&str>,
     func_name: &str,
     args: &[Expr],
 ) -> Result<Option<ast::Expr>> {

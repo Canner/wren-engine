@@ -28,6 +28,7 @@ manifest = {
             ],
         },
     ],
+    "dataSource": "bigquery",
 }
 
 
@@ -51,7 +52,7 @@ async def test_function_list(client):
     response = await client.get(url=f"{base_url}/functions")
     assert response.status_code == 200
     result = response.json()
-    assert len(result) == 173
+    assert len(result) == 175
     the_func = next(
         filter(
             lambda x: x["name"] == "string_agg",
@@ -124,4 +125,38 @@ async def test_aggregate_function(client, manifest_str: str, connection_info):
         "columns": ["col"],
         "data": [[1]],
         "dtypes": {"col": "int64"},
+    }
+
+
+async def test_datetime_function(client, manifest_str: str, connection_info):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT CURRENT_TIMESTAMP() AS col",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert result == {
+        "columns": ["col"],
+        "data": [[result["data"][0][0]]],
+        "dtypes": {"col": "timestamp[us, tz=UTC]"},
+    }
+
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT DATETIME('2001-01-01 00:11:11') AS col",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert result == {
+        "columns": ["col"],
+        "data": [["2001-01-01 00:11:11.000000"]],
+        "dtypes": {"col": "timestamp[us]"},
     }
