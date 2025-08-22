@@ -241,19 +241,23 @@ impl PySessionContext {
         let _ = visit_statements_mut(&mut statements, |stmt| {
             if let Statement::Query(q) = stmt {
                 if let Some(limit) = &q.limit {
-                    if let Expr::Value(ValueWithSpan { value: Value::Number(n, is), .. }) = limit {
+                    if let Expr::Value(ValueWithSpan {
+                        value: Value::Number(n, is),
+                        ..
+                    }) = limit
+                    {
                         if let Ok(curr) = n.parse::<usize>() {
                             if curr > pushdown {
-                                q.limit = Some(Expr::Value(Value::Number(
-                                    pushdown.to_string(),
-                                    *is,
-                                ).into()));
+                                q.limit = Some(Expr::Value(
+                                    Value::Number(pushdown.to_string(), *is).into(),
+                                ));
                             }
                         }
                     }
                 } else {
-                    q.limit =
-                        Some(Expr::Value(Value::Number(pushdown.to_string(), false).into()));
+                    q.limit = Some(Expr::Value(
+                        Value::Number(pushdown.to_string(), false).into(),
+                    ));
                 }
             }
             ControlFlow::<()>::Continue(())

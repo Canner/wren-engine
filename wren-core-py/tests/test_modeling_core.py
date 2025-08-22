@@ -371,6 +371,5 @@ def test_clac():
         session_context.transform_sql(sql)
     except Exception as e:
         assert (
-            str(e)
-            == "Permission Denied: No permission to access \"customer\".\"c_name\""
+            str(e) == 'Permission Denied: No permission to access "customer"."c_name"'
         )
