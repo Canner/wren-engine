@@ -147,6 +147,9 @@ impl InnerDialect for BigQueryDialect {
                     expr: Box::new(unparser.expr_to_sql(&args[1])?),
                 }))
             }
+            "now" => {
+                scalar_function_to_sql_internal(unparser, None, "CURRENT_TIMESTAMP", args)
+            }
             _ => Ok(None),
         }
     }
