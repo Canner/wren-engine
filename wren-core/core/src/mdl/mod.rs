@@ -1033,6 +1033,38 @@ mod test {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_disable_decorrelate_predicate_subquery() -> Result<()> {
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("artist")
+                    .table_reference("artist")
+                    .column(ColumnBuilder::new("出道時間", "timestamp").build())
+                    .column(ColumnBuilder::new("名字", "string").build())
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest,
+            Arc::new(HashMap::default()),
+            Mode::Unparse,
+        )?);
+        let sql = r#"select * from wren.test.artist where "名字" in (SELECT "名字" FROM wren.test.artist)"#;
+        let actual = transform_sql_with_ctx(
+            &SessionContext::new(),
+            Arc::clone(&analyzed_mdl),
+            &[],
+            Arc::new(HashMap::new()),
+            sql,
+        )
+        .await?;
+        assert_snapshot!(actual,
+                   @r#"SELECT artist."出道時間", artist."名字" FROM (SELECT artist."出道時間", artist."名字" FROM (SELECT __source."出道時間" AS "出道時間", __source."名字" AS "名字" FROM artist AS __source) AS artist) AS artist WHERE artist."名字" IN (SELECT artist."名字" FROM (SELECT artist."名字" FROM (SELECT __source."名字" AS "名字" FROM artist AS __source) AS artist) AS artist)"#);
+        Ok(())
+    }
+
     /// This test will be failed if the `出道時間` is not inferred as a timestamp column correctly.
     #[tokio::test]
     async fn test_infer_timestamp_column() -> Result<()> {
