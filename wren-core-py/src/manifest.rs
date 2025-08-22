@@ -22,6 +22,24 @@ pub fn to_manifest(mdl_base64: &str) -> Result<Manifest, CoreError> {
     Ok(manifest)
 }
 
+/// Check if the MDL can be used by the v2 wren core. If there are any access controls rules,
+/// the MDL should be used by the v3 wren core only.
+#[pyfunction]
+pub fn is_backward_compatible(mdl_base64: &str) -> Result<bool, CoreError> {
+    let manifest = to_manifest(mdl_base64)?;
+    let ralc_exist = manifest
+        .models
+        .iter()
+        .all(|model| model.row_level_access_controls().is_empty());
+    let clac_exist = manifest.models.iter().all(|model| {
+        model
+            .columns
+            .iter()
+            .all(|column| column.column_level_access_control().is_none())
+    });
+    Ok(ralc_exist && clac_exist)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::manifest::{to_json_base64, to_manifest, Manifest};

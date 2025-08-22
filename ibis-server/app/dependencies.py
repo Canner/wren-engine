@@ -1,3 +1,4 @@
+import wren_core
 from fastapi import Request
 from starlette.datastructures import Headers
 
@@ -48,9 +49,8 @@ def _filter_headers(header_string: str) -> bool:
     return False
 
 
-def exist_wren_variables_header(
-    headers: Headers,
-) -> bool:
-    if headers is None:
+def is_backward_compatible(manifest_str: str) -> bool:
+    try:
+        return wren_core.is_backward_compatible(manifest_str)
+    except Exception:
         return False
-    return any(key.startswith(X_WREN_VARIABLE_PREFIX) for key in headers.keys())

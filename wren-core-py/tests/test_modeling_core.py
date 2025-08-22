@@ -8,6 +8,7 @@ from wren_core import (
     RowLevelAccessControl,
     SessionContext,
     SessionProperty,
+    is_backward_compatible,
     to_json_base64,
     to_manifest,
     validate_rlac_rule,
@@ -332,7 +333,21 @@ def test_validate_rlac_rule():
                 required=False,
             )
         ],
-        condition="c_name = @session_user",
+        condition="customer.c_name = @session_user",
+    )
+
+    validate_rlac_rule(rlac, model)
+
+    # Test case insensitivity
+    rlac = RowLevelAccessControl(
+        name="test",
+        required_properties=[
+            SessionProperty(
+                name="session_usEr",
+                required=False,
+            )
+        ],
+        condition="c_name = @SEssion_user",
     )
 
     validate_rlac_rule(rlac, model)
@@ -371,6 +386,164 @@ def test_clac():
         session_context.transform_sql(sql)
     except Exception as e:
         assert (
-            str(e)
-            == "Permission Denied: No permission to access \"customer\".\"c_name\""
+            str(e) == 'Permission Denied: No permission to access "customer"."c_name"'
         )
+
+
+def test_opt_clac():
+    headers = {}
+    properties_hashable = frozenset(headers.items()) if headers else None
+
+    manifest = {
+        "catalog": "my_catalog",
+        "schema": "my_schema",
+        "dataSource": "bigquery",
+        "models": [
+            {
+                "name": "orders",
+                "tableReference": {
+                    "schema": "main",
+                    "table": "orders",
+                },
+                "columns": [
+                    {
+                        "name": "o_orderkey",
+                        "type": "integer",
+                        "columnLevelAccessControl": {
+                            "name": "o_orderkey_access",
+                            "requiredProperties": [
+                                {
+                                    "name": "session_level",
+                                    "required": False,
+                                    "defaultExpr": "2",
+                                }
+                            ],
+                            "operator": "GREATER_THAN",
+                            "threshold": "3",
+                        },
+                    },
+                    {"name": "o_custkey", "type": "integer"},
+                    {"name": "o_orderdate", "type": "date"},
+                ],
+                "primaryKey": "o_orderkey",
+            },
+        ],
+    }
+
+    manifest_str = base64.b64encode(json.dumps(manifest).encode("utf-8")).decode(
+        "utf-8"
+    )
+
+    session_context = SessionContext(manifest_str, None, properties_hashable)
+    sql = "SELECT o_orderkey FROM my_catalog.my_schema.orders"
+    try:
+        session_context.transform_sql(sql)
+    except Exception as e:
+        assert (
+            str(e) == 'Permission Denied: No permission to access "orders"."o_orderkey"'
+        )
+
+
+def test_backward_compatible_check():
+    manifest_with_clac = {
+        "catalog": "my_catalog",
+        "schema": "my_schema",
+        "dataSource": "bigquery",
+        "models": [
+            {
+                "name": "orders",
+                "tableReference": {
+                    "schema": "main",
+                    "table": "orders",
+                },
+                "columns": [
+                    {
+                        "name": "o_orderkey",
+                        "type": "integer",
+                        "columnLevelAccessControl": {
+                            "name": "o_orderkey_access",
+                            "requiredProperties": [
+                                {
+                                    "name": "session_level",
+                                    "required": False,
+                                    "defaultExpr": "2",
+                                }
+                            ],
+                            "operator": "GREATER_THAN",
+                            "threshold": "3",
+                        },
+                    },
+                    {"name": "o_custkey", "type": "integer"},
+                    {"name": "o_orderdate", "type": "date"},
+                ],
+                "primaryKey": "o_orderkey",
+            },
+        ],
+    }
+
+    manifest_with_clac_str = base64.b64encode(
+        json.dumps(manifest_with_clac).encode("utf-8")
+    ).decode("utf-8")
+    assert not is_backward_compatible(manifest_with_clac_str)
+
+    manifest_with_rlac = {
+        "catalog": "my_catalog",
+        "schema": "my_schema",
+        "dataSource": "bigquery",
+        "models": [
+            {
+                "name": "orders",
+                "tableReference": {
+                    "schema": "main",
+                    "table": "orders",
+                },
+                "columns": [
+                    {"name": "o_orderkey", "type": "integer"},
+                    {"name": "o_custkey", "type": "integer"},
+                    {"name": "o_orderdate", "type": "date"},
+                ],
+                "primaryKey": "o_orderkey",
+                "rowLevelAccessControls": [
+                    {
+                        "name": "customer_access",
+                        "requiredProperties": [
+                            {
+                                "name": "session_user",
+                                "required": False,
+                            }
+                        ],
+                        "condition": "o_custkey = @session_user",
+                    },
+                ],
+            },
+        ],
+    }
+    manifest_with_rlac_str = base64.b64encode(
+        json.dumps(manifest_with_rlac).encode("utf-8")
+    ).decode("utf-8")
+    assert not is_backward_compatible(manifest_with_rlac_str)
+
+    manifest_backward = {
+        "catalog": "my_catalog",
+        "schema": "my_schema",
+        "dataSource": "bigquery",
+        "models": [
+            {
+                "name": "orders",
+                "tableReference": {
+                    "schema": "main",
+                    "table": "orders",
+                },
+                "columns": [
+                    {"name": "o_orderkey", "type": "integer"},
+                    {"name": "o_custkey", "type": "integer"},
+                    {"name": "o_orderdate", "type": "date"},
+                ],
+                "primaryKey": "o_orderkey",
+            },
+        ],
+    }
+    manifest_backward_str = base64.b64encode(
+        json.dumps(manifest_backward).encode("utf-8")
+    ).decode("utf-8")
+    assert is_backward_compatible(manifest_backward_str)

@@ -380,4 +380,92 @@ async def test_query_rlac(client, manifest_str, connection_info):
         },
         headers={X_WREN_VARIABLE_PREFIX + "session_user": "1"},
     )
+    assert response.status_code == 200
+
+    manifest_rlac = {
+        "catalog": "wren",
+        "schema": "public",
+        "models": [
+            {
+                "name": "orders",
+                "tableReference": {"schema": "public", "table": "orders"},
+                "columns": [
+                    {
+                        "name": "orderkey",
+                        "type": "varchar",
+                        "expression": "cast(o_orderkey as varchar)",
+                    }
+                ],
+                "rowLevelAccessControls": [
+                    {
+                        "name": "rule",
+                        "requiredProperties": [
+                            {
+                                "name": "session_user",
+                                "required": False,
+                            }
+                        ],
+                        "condition": "orderkey = @session_user",
+                    },
+                ],
+            }
+        ],
+    }
+
+    manifest_rlac_str = base64.b64encode(orjson.dumps(manifest_rlac)).decode("utf-8")
+
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_rlac_str,
+            "sql": "SELECT orderkey FROM orders LIMIT 1",
+        },
+    )
+    assert response.status_code == 422
+
+    manifest_clac = {
+        "catalog": "wren",
+        "schema": "public",
+        "models": [
+            {
+                "name": "orders",
+                "tableReference": {"schema": "public", "table": "orders"},
+                "columns": [
+                    {
+                        "name": "orderkey",
+                        "type": "varchar",
+                        "expression": "cast(o_orderkey as varchar)",
+                    },
+                    {
+                        "name": "custkey",
+                        "type": "varchar",
+                        "columnLevelAccessControl": {
+                            "name": "o_custkey_access",
+                            "requiredProperties": [
+                                {
+                                    "name": "session_level",
+                                    "required": False,
+                                    "defaultExpr": "2",
+                                }
+                            ],
+                            "operator": "GREATER_THAN",
+                            "threshold": "3",
+                        },
+                        "expression": "cast(o_custkey as varchar)",
+                    },
+                ],
+            }
+        ],
+    }
+
+    manifest_clac_str = base64.b64encode(orjson.dumps(manifest_clac)).decode("utf-8")
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_clac_str,
+            "sql": "SELECT orderkey FROM orders LIMIT 1",
+        },
+    )
     assert response.status_code == 422

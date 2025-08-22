@@ -56,7 +56,10 @@ pub fn collect_condition(
                     spans: Spans::new(),
                 }));
             } else {
-                let session_property = value.trim_start_matches("@").to_string();
+                let session_property = value
+                    .trim_start_matches("@")
+                    .to_string()
+                    .to_ascii_lowercase();
                 if !session_properties.contains(&session_property) {
                     session_properties.insert(session_property);
                 }
