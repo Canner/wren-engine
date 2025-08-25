@@ -314,30 +314,6 @@ async def execute_query_with_timeout(
     )
 
 
-async def execute_sample_with_timeout(
-    connector,
-    sql: str,
-    sample_rate: int,
-    limit: int,
-    manifest_str: str,
-):
-    """Execute a sample query with a timeout control."""
-    task = asyncio.create_task(
-        asyncio.to_thread(
-            connector.sample,
-            sql,
-            sample_rate=sample_rate,
-            limit=limit,
-            manifest_str=manifest_str,
-        ),
-    )
-    return await _safe_execute_task_with_timeout(
-        "Sample",
-        task,
-        connector,
-    )
-
-
 async def execute_validate_with_timeout(
     validator,
     rule_name: str,

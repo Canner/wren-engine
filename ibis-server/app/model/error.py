@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from starlette.status import (
     HTTP_404_NOT_FOUND,
     HTTP_422_UNPROCESSABLE_ENTITY,
@@ -53,12 +53,13 @@ class ErrorPhase(int, Enum):
 
 
 class ErrorResponse(BaseModel):
-    error_code: str
+    model_config = {"populate_by_name": True}
+    error_code: str = Field(alias="errorCode")
     message: str
     metadata: dict[str, Any] | None = None
     phase: str | None = None
     timestamp: str
-    correlation_id: str | None = None
+    correlation_id: str | None = Field(alias="correlationId", default=None)
 
 
 class WrenError(Exception):
@@ -74,6 +75,7 @@ class WrenError(Exception):
         message: str,
         phase: ErrorPhase | None = None,
         metadata: dict[str, Any] | None = None,
+        cause: Exception | None = None,
     ):
         self.error_code = error_code
         self.message = message

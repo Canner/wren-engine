@@ -28,6 +28,8 @@ class Validator:
             )
         try:
             await getattr(self, f"_validate_{rule}")(parameters, manifest_str)
+        except WrenError:
+            raise
         except Exception as e:
             raise WrenError(
                 ErrorCode.GENERIC_USER_ERROR, str(e), phase=ErrorPhase.VALIDATION

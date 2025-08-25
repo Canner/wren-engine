@@ -103,7 +103,7 @@ async def test_model_substitute(
             "sql": 'SELECT * FROM "orders"',
         },
     )
-    assert response.status_code == 422
+    assert response.status_code == 404
 
     # Test only have x-user-catalog but have schema in SQL
     response = await client.post(
@@ -135,7 +135,7 @@ async def test_model_substitute(
             "sql": 'SELECT * FROM "orders"',
         },
     )
-    assert response.status_code == 422
+    assert response.status_code == 404
 
     # Test only have x-user-schema with no catalog mdl
     response = await client.post(
@@ -267,8 +267,8 @@ async def test_model_substitute_out_of_scope(client, manifest_str, connection_in
             "sql": 'SELECT * FROM "Nation" LIMIT 1',
         },
     )
-    assert response.status_code == 422
-    assert response.text == 'Model not found: "Nation"'
+    assert response.status_code == 404
+    assert response.json()["message"] == 'Model not found: "Nation"'
 
     # Test without catalog and schema in SQL but in headers(x-user-xxx)
     response = await client.post(
@@ -283,8 +283,8 @@ async def test_model_substitute_out_of_scope(client, manifest_str, connection_in
             "sql": 'SELECT * FROM "Nation" LIMIT 1',
         },
     )
-    assert response.status_code == 422
-    assert response.text == 'Model not found: "Nation"'
+    assert response.status_code == 404
+    assert response.json()["message"] == 'Model not found: "Nation"'
 
 
 async def test_model_substitute_non_existent_column(

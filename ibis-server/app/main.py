@@ -83,20 +83,20 @@ def exception_handler(request, exc: Exception):
             message=str(exc),
             timestamp=datetime.now().isoformat(),
             correlation_id=request.headers.get(X_CORRELATION_ID),
-        ).model_dump(),
+        ).model_dump(by_alias=True),
     )
 
 
 # In Starlette, the exceptions other than the Exception are not raised when call_next in the middleware.
 @app.exception_handler(WrenError)
-def custom_http_error_handler(request, exc: WrenError):
+def wren_error_handler(request, exc: WrenError):
     with logger.contextualize(correlation_id=request.headers.get(X_CORRELATION_ID)):
         logger.opt(exception=exc).error("Request failed")
     return ORJSONResponse(
         status_code=exc.get_http_status_code(),
         content=exc.get_response(
             correlation_id=request.headers.get(X_CORRELATION_ID)
-        ).model_dump(),
+        ).model_dump(by_alias=True),
     )
 
 
@@ -109,5 +109,5 @@ def not_implemented_error_handler(request, exc: NotImplementedError):
             message=str(exc),
             timestamp=datetime.now().isoformat(),
             correlation_id=request.headers.get(X_CORRELATION_ID),
-        ).model_dump(),
+        ).model_dump(by_alias=True),
     )

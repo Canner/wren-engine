@@ -8,13 +8,16 @@ from functools import cache
 from json import loads
 from typing import Any
 
+import clickhouse_connect
 import ibis
 import ibis.expr.datatypes as dt
 import ibis.expr.schema as sch
 import opendal
 import pandas as pd
+import psycopg
 import pyarrow as pa
 import sqlglot.expressions as sge
+import trino
 from duckdb import HTTPException, IOException
 from google.cloud import bigquery
 from google.oauth2 import service_account
@@ -36,7 +39,12 @@ from app.model import (
     S3FileConnectionInfo,
 )
 from app.model.data_source import DataSource
-from app.model.error import DIALECT_SQL, ErrorCode, ErrorPhase, WrenError
+from app.model.error import (
+    DIALECT_SQL,
+    ErrorCode,
+    ErrorPhase,
+    WrenError,
+)
 from app.model.utils import init_duckdb_gcs, init_duckdb_minio, init_duckdb_s3
 
 # Override datatypes of ibis
@@ -77,11 +85,17 @@ class Connector:
     def query(self, sql: str, limit: int | None = None) -> pa.Table:
         try:
             return self._connector.query(sql, limit)
-        except WrenError:
+        except (
+            WrenError,
+            TimeoutError,
+            clickhouse_connect.driver.exceptions.DatabaseError,
+            trino.exceptions.TrinoQueryError,
+            psycopg.errors.QueryCanceled,
+        ):
             raise
         except Exception as e:
             raise WrenError(
-                ErrorCode.INVALID_SQL,
+                ErrorCode.GENERIC_USER_ERROR,
                 str(e),
                 phase=ErrorPhase.SQL_EXECUTION,
                 metadata={DIALECT_SQL: sql},
@@ -90,11 +104,17 @@ class Connector:
     def dry_run(self, sql: str) -> None:
         try:
             self._connector.dry_run(sql)
-        except WrenError:
+        except (
+            WrenError,
+            TimeoutError,
+            clickhouse_connect.driver.exceptions.DatabaseError,
+            trino.exceptions.TrinoQueryError,
+            psycopg.errors.QueryCanceled,
+        ):
             raise
         except Exception as e:
             raise WrenError(
-                ErrorCode.INVALID_SQL,
+                ErrorCode.GENERIC_USER_ERROR,
                 str(e),
                 phase=ErrorPhase.SQL_DRY_RUN,
                 metadata={DIALECT_SQL: sql},
@@ -118,19 +138,11 @@ class SimpleConnector:
 
     @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
     def query(self, sql: str, limit: int | None = None) -> pa.Table:
-        try:
-            ibis_table = self.connection.sql(sql)
-            if limit is not None:
-                ibis_table = ibis_table.limit(limit)
-            ibis_table = self._handle_pyarrow_unsupported_type(ibis_table)
-            return ibis_table.to_pyarrow()
-        except Exception as e:
-            raise WrenError(
-                ErrorCode.INVALID_SQL,
-                str(e),
-                phase=ErrorPhase.SQL_EXECUTION,
-                metadata={DIALECT_SQL: sql},
-            ) from e
+        ibis_table = self.connection.sql(sql)
+        if limit is not None:
+            ibis_table = ibis_table.limit(limit)
+        ibis_table = self._handle_pyarrow_unsupported_type(ibis_table)
+        return ibis_table.to_pyarrow()
 
     def _handle_pyarrow_unsupported_type(self, ibis_table: Table, **kwargs) -> Table:
         result_table = ibis_table
@@ -165,15 +177,7 @@ class SimpleConnector:
 
     @tracer.start_as_current_span("connector_dry_run", kind=trace.SpanKind.CLIENT)
     def dry_run(self, sql: str) -> None:
-        try:
-            self.connection.sql(sql)
-        except Exception as e:
-            raise WrenError(
-                ErrorCode.INVALID_SQL,
-                str(e),
-                phase=ErrorPhase.SQL_DRY_RUN,
-                metadata={DIALECT_SQL: sql},
-            ) from e
+        self.connection.sql(sql)
 
     def close(self) -> None:
         """Close the connection safely."""
