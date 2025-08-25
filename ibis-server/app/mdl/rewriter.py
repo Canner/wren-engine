@@ -14,8 +14,8 @@ from app.mdl.core import (
     to_json_base64,
 )
 from app.mdl.java_engine import JavaEngineConnector
-from app.model import InternalServerError, UnprocessableEntityError
 from app.model.data_source import DataSource
+from app.model.error import PLANNED_SQL, ErrorCode, ErrorPhase, WrenError
 
 # To register custom dialects from ibis library for sqlglot
 importlib.import_module("ibis.backends.sql.dialects")
@@ -47,9 +47,17 @@ class Rewriter:
 
     @tracer.start_as_current_span("transpile", kind=trace.SpanKind.INTERNAL)
     def _transpile(self, planned_sql: str) -> str:
-        read = self._get_read_dialect(self.experiment)
-        write = self._get_write_dialect(self.data_source)
-        return sqlglot.transpile(planned_sql, read=read, write=write)[0]
+        try:
+            read = self._get_read_dialect(self.experiment)
+            write = self._get_write_dialect(self.data_source)
+            return sqlglot.transpile(planned_sql, read=read, write=write)[0]
+        except Exception as e:
+            raise WrenError(
+                ErrorCode.SQLGLOT_ERROR,
+                str(e),
+                phase=ErrorPhase.SQL_TRANSPILE,
+                metadata={PLANNED_SQL: planned_sql},
+            )
 
     @tracer.start_as_current_span("rewrite", kind=trace.SpanKind.INTERNAL)
     async def rewrite(self, sql: str) -> str:
@@ -102,11 +110,18 @@ class ExternalEngineRewriter:
         try:
             return await self.java_engine_connector.dry_plan(manifest_str, sql)
         except httpx.ConnectError as e:
-            raise WrenEngineError(f"Can not connect to Java Engine: {e}")
+            raise WrenError(
+                ErrorCode.LEGACY_ENGINE_ERROR, f"Can not connect to Java Engine: {e}"
+            )
         except httpx.TimeoutException as e:
-            raise WrenEngineError(f"Timeout when connecting to Java Engine: {e}")
+            raise WrenError(
+                ErrorCode.LEGACY_ENGINE_ERROR,
+                f"Timeout when connecting to Java Engine: {e}",
+            )
         except httpx.HTTPStatusError as e:
-            raise RewriteError(e.response.text)
+            raise WrenError(
+                ErrorCode.INVALID_SQL, e.response.text, ErrorPhase.SQL_PLANNING
+            )
 
     @staticmethod
     def handle_extract_exception(e: Exception):
@@ -131,7 +146,7 @@ class EmbeddedEngineRewriter:
                 sql,
             )
         except Exception as e:
-            raise RewriteError(str(e))
+            raise WrenError(ErrorCode.INVALID_SQL, str(e), ErrorPhase.SQL_PLANNING)
 
     @tracer.start_as_current_span("embedded_rewrite", kind=trace.SpanKind.INTERNAL)
     def rewrite_sync(
@@ -144,7 +159,7 @@ class EmbeddedEngineRewriter:
             )
             return session_context.transform_sql(sql)
         except Exception as e:
-            raise RewriteError(str(e))
+            raise WrenError(ErrorCode.INVALID_SQL, str(e), ErrorPhase.SQL_PLANNING)
 
     def get_session_properties(self, properties: dict) -> frozenset | None:
         if properties is None:
@@ -162,14 +177,4 @@ class EmbeddedEngineRewriter:
 
     @staticmethod
     def handle_extract_exception(e: Exception):
-        raise RewriteError(str(e))
-
-
-class RewriteError(UnprocessableEntityError):
-    def __init__(self, message: str):
-        super().__init__(message)
-
-
-class WrenEngineError(InternalServerError):
-    def __init__(self, message: str):
-        super().__init__(message)
+        raise WrenError(ErrorCode.INVALID_MDL, str(e), ErrorPhase.MDL_EXTRACTION)

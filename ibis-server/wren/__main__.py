@@ -5,6 +5,7 @@ import json
 import sys
 
 from app.model.data_source import DataSource
+from app.model.error import ErrorCode, WrenError
 from wren import create_session_context
 
 
@@ -22,12 +23,13 @@ def main():
     if len(sys.argv) > 3:
         with open(connection_info_path := sys.argv[3]) as f:
             if not f.readable():
-                raise ValueError(
-                    f"Cannot read connection info file at {connection_info_path}"
+                raise WrenError(
+                    ErrorCode.GENERIC_USER_ERROR,
+                    f"Cannot read connection info file at {connection_info_path}",
                 )
 
             connection_info = json.load(f)
-            # The connection_info file proeduced by Wren AI dbt integration
+            # The connection_info file produced by Wren AI dbt integration
             # contains a "type" field to indicate the data source type.
             # If it is present, we need to use the `get_connection_info` method
             # of the DataSource class to get the connection info.

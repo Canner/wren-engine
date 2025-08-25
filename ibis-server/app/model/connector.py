@@ -34,10 +34,9 @@ from app.model import (
     RedshiftConnectionUnion,
     RedshiftIAMConnectionInfo,
     S3FileConnectionInfo,
-    UnknownIbisError,
-    UnprocessableEntityError,
 )
 from app.model.data_source import DataSource
+from app.model.error import DIALECT_SQL, ErrorCode, ErrorPhase, WrenError
 from app.model.utils import init_duckdb_gcs, init_duckdb_minio, init_duckdb_s3
 
 # Override datatypes of ibis
@@ -50,19 +49,6 @@ tracer = trace.get_tracer(__name__)
 def _get_pg_type_names(connection: BaseBackend) -> dict[int, str]:
     with closing(connection.raw_sql("SELECT oid, typname FROM pg_type")) as cur:
         return dict(cur.fetchall())
-
-
-class QueryDryRunError(UnprocessableEntityError):
-    pass
-
-
-class GenericUserError(UnprocessableEntityError):
-    def __init__(self, message: str):
-        super().__init__(message)
-        self.message = message
-
-    def __str__(self) -> str:
-        return self.message
 
 
 class Connector:
@@ -89,13 +75,30 @@ class Connector:
             self._connector = SimpleConnector(data_source, connection_info)
 
     def query(self, sql: str, limit: int | None = None) -> pa.Table:
-        return self._connector.query(sql, limit)
+        try:
+            return self._connector.query(sql, limit)
+        except WrenError:
+            raise
+        except Exception as e:
+            raise WrenError(
+                ErrorCode.INVALID_SQL,
+                str(e),
+                phase=ErrorPhase.SQL_EXECUTION,
+                metadata={DIALECT_SQL: sql},
+            ) from e
 
     def dry_run(self, sql: str) -> None:
         try:
             self._connector.dry_run(sql)
+        except WrenError:
+            raise
         except Exception as e:
-            raise QueryDryRunError(f"Exception: {type(e)}, message: {e!s}")
+            raise WrenError(
+                ErrorCode.INVALID_SQL,
+                str(e),
+                phase=ErrorPhase.SQL_DRY_RUN,
+                metadata={DIALECT_SQL: sql},
+            ) from e
 
     def close(self) -> None:
         """Close the underlying connection."""
@@ -115,11 +118,19 @@ class SimpleConnector:
 
     @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
     def query(self, sql: str, limit: int | None = None) -> pa.Table:
-        ibis_table = self.connection.sql(sql)
-        if limit is not None:
-            ibis_table = ibis_table.limit(limit)
-        ibis_table = self._handle_pyarrow_unsupported_type(ibis_table)
-        return ibis_table.to_pyarrow()
+        try:
+            ibis_table = self.connection.sql(sql)
+            if limit is not None:
+                ibis_table = ibis_table.limit(limit)
+            ibis_table = self._handle_pyarrow_unsupported_type(ibis_table)
+            return ibis_table.to_pyarrow()
+        except Exception as e:
+            raise WrenError(
+                ErrorCode.INVALID_SQL,
+                str(e),
+                phase=ErrorPhase.SQL_EXECUTION,
+                metadata={DIALECT_SQL: sql},
+            ) from e
 
     def _handle_pyarrow_unsupported_type(self, ibis_table: Table, **kwargs) -> Table:
         result_table = ibis_table
@@ -154,7 +165,15 @@ class SimpleConnector:
 
     @tracer.start_as_current_span("connector_dry_run", kind=trace.SpanKind.CLIENT)
     def dry_run(self, sql: str) -> None:
-        self.connection.sql(sql)
+        try:
+            self.connection.sql(sql)
+        except Exception as e:
+            raise WrenError(
+                ErrorCode.INVALID_SQL,
+                str(e),
+                phase=ErrorPhase.SQL_DRY_RUN,
+                metadata={DIALECT_SQL: sql},
+            ) from e
 
     def close(self) -> None:
         """Close the connection safely."""
@@ -269,8 +288,17 @@ class MSSqlConnector(SimpleConnector):
             # Workaround for ibis issue #10331
             if e.args[0] == "'NoneType' object has no attribute 'lower'":
                 error_message = self._describe_sql_for_error_message(sql)
-                raise QueryDryRunError(f"The sql dry run failed. {error_message}.")
-            raise UnknownIbisError(e)
+                raise WrenError(
+                    error_code=ErrorCode.INVALID_SQL,
+                    message=f"The sql dry run failed. {error_message}.",
+                    phase=ErrorPhase.SQL_DRY_RUN,
+                    metadata={DIALECT_SQL: sql},
+                ) from e
+            raise WrenError(
+                error_code=ErrorCode.IBIS_PROJECT_ERROR,
+                message=str(e),
+                phase=ErrorPhase.SQL_DRY_RUN,
+            ) from e
 
     @tracer.start_as_current_span(
         "describe_sql_for_error_message", kind=trace.SpanKind.CLIENT
@@ -412,36 +440,25 @@ class DuckDBConnector:
 
     @tracer.start_as_current_span("duckdb_query", kind=trace.SpanKind.INTERNAL)
     def query(self, sql: str, limit: int | None) -> pa.Table:
-        try:
-            if limit is None:
-                # If no limit is specified, we return the full result
-                return self.connection.execute(sql).fetch_arrow_table()
-            else:
-                # If a limit is specified, we slice the result
-                # DuckDB does not support LIMIT in fetch_arrow_table, so we use slice
-                # to limit the number of rows returned
-                return (
-                    self.connection.execute(sql).fetch_arrow_table().slice(length=limit)
-                )
-        except IOException as e:
-            raise UnprocessableEntityError(f"Failed to execute query: {e!s}")
-        except HTTPException as e:
-            raise UnprocessableEntityError(f"Failed to execute query: {e!s}")
+        if limit is None:
+            # If no limit is specified, we return the full result
+            return self.connection.execute(sql).fetch_arrow_table()
+        else:
+            # If a limit is specified, we slice the result
+            # DuckDB does not support LIMIT in fetch_arrow_table, so we use slice
+            # to limit the number of rows returned
+            return self.connection.execute(sql).fetch_arrow_table().slice(length=limit)
 
     @tracer.start_as_current_span("duckdb_dry_run", kind=trace.SpanKind.INTERNAL)
     def dry_run(self, sql: str) -> None:
-        try:
-            self.connection.execute(sql)
-        except IOException as e:
-            raise QueryDryRunError(f"Failed to execute query: {e!s}")
-        except HTTPException as e:
-            raise QueryDryRunError(f"Failed to execute query: {e!s}")
+        self.connection.execute(sql)
 
     def _attach_database(self, connection_info: ConnectionInfo) -> None:
         db_files = self._list_duckdb_files(connection_info)
         if not db_files:
-            raise UnprocessableEntityError(
-                "No DuckDB files found in the specified path."
+            raise WrenError(
+                ErrorCode.DUCKDB_FILE_NOT_FOUND,
+                "No DuckDB files found in the specified path.",
             )
 
         for file in db_files:
@@ -450,9 +467,13 @@ class DuckDBConnector:
                     f"ATTACH DATABASE '{file}' AS \"{os.path.splitext(os.path.basename(file))[0]}\" (READ_ONLY);"
                 )
             except IOException as e:
-                raise UnprocessableEntityError(f"Failed to attach database: {e!s}")
+                raise WrenError(
+                    ErrorCode.ATTACH_DUCKDB_ERROR, f"Failed to attach database: {e!s}"
+                )
             except HTTPException as e:
-                raise UnprocessableEntityError(f"Failed to attach database: {e!s}")
+                raise WrenError(
+                    ErrorCode.ATTACH_DUCKDB_ERROR, f"Failed to attach database: {e!s}"
+                )
 
     def _list_duckdb_files(self, connection_info: ConnectionInfo) -> list[str]:
         # This method should return a list of file paths in the DuckDB database
@@ -468,7 +489,9 @@ class DuckDBConnector:
                         )
                         files.append(full_path)
         except Exception as e:
-            raise UnprocessableEntityError(f"Failed to list files: {e!s}")
+            raise WrenError(
+                ErrorCode.GENERIC_USER_ERROR, f"Failed to list files: {e!s}"
+            )
 
         return files
 
@@ -503,7 +526,10 @@ class RedshiftConnector:
                 password=connection_info.password.get_secret_value(),
             )
         else:
-            raise ValueError("Invalid Redshift connection_info type")
+            raise WrenError(
+                ErrorCode.GENERIC_INTERNAL_ERROR,
+                "Invalid Redshift connection_info type",
+            )
 
         # Enable autocommit to prevent holding AccessShareLock indefinitely
         # This ensures locks are released immediately after query execution

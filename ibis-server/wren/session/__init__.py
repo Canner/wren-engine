@@ -9,6 +9,7 @@ from app.mdl.rewriter import EmbeddedEngineRewriter
 from app.model import ConnectionInfo
 from app.model.connector import Connector
 from app.model.data_source import DataSource
+from app.model.error import ErrorCode, WrenError
 from app.util import to_json
 
 
@@ -135,7 +136,10 @@ class Task:
     def dry_run(self):
         """Perform a dry run of the dialect SQL without executing it."""
         if self.dialect_sql is None:
-            raise ValueError("Dialect SQL is not set. Call transpile() first.")
+            raise WrenError(
+                ErrorCode.GENERIC_USER_ERROR,
+                "Dialect SQL is not set. Call transpile() first.",
+            )
         self.context.get_connector().dry_run(self.dialect_sql)
 
     def execute(self, limit: int | None = None):
@@ -147,17 +151,24 @@ class Task:
             The maximum number of rows to return. If None, returns all rows.
         """
         if self.context.connection_info is None:
-            raise ValueError(
-                "Connection info is not set. Cannot execute without connection info."
+            raise WrenError(
+                ErrorCode.GENERIC_USER_ERROR,
+                "Connection info is not set. Cannot execute without connection info.",
             )
         if self.dialect_sql is None:
-            raise ValueError("Dialect SQL is not set. Call transpile() first.")
+            raise WrenError(
+                ErrorCode.GENERIC_USER_ERROR,
+                "Dialect SQL is not set. Call transpile() first.",
+            )
         self.results = self.context.get_connector().query(self.dialect_sql, limit)
         return self
 
     def formatted_result(self):
         """Get the formatted result of the executed task."""
         if self.results is None:
-            raise ValueError("Results are not set. Call execute() first.")
+            raise WrenError(
+                ErrorCode.GENERIC_USER_ERROR,
+                "Results are not set. Call execute() first.",
+            )
 
         return to_json(self.results, self.properties, self.context.data_source)

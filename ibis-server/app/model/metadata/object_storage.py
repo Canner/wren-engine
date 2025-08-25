@@ -10,9 +10,9 @@ from app.model import (
     LocalFileConnectionInfo,
     MinioFileConnectionInfo,
     S3FileConnectionInfo,
-    UnprocessableEntityError,
 )
 from app.model.connector import DuckDBConnector
+from app.model.error import ErrorCode, ErrorPhase, WrenError
 from app.model.metadata.dto import (
     Column,
     RustWrenEngineColumnType,
@@ -81,7 +81,11 @@ class ObjectStorageMetadata(Metadata):
                     )
                     unique_tables[table_name].columns = columns
         except Exception as e:
-            raise UnprocessableEntityError(f"Failed to list files: {e!s}")
+            raise WrenError(
+                ErrorCode.GENERIC_USER_ERROR,
+                f"Failed to list files: {e!s}",
+                phase=ErrorPhase.METADATA_FETCHING,
+            )
 
         return list(unique_tables.values())
 
@@ -343,7 +347,9 @@ class DuckDBMetadata(ObjectStorageMetadata):
     def get_version(self):
         df: pa.Table = self.connection.query("SELECT version()")
         if df is None:
-            raise UnprocessableEntityError("Failed to get DuckDB version")
+            raise WrenError(
+                ErrorCode.GENERIC_USER_ERROR, "Failed to get DuckDB version"
+            )
         if df.num_rows == 0:
-            raise UnprocessableEntityError("DuckDB version is empty")
+            raise WrenError(ErrorCode.GENERIC_USER_ERROR, "DuckDB version is empty")
         return df.column(0).to_pylist()[0]

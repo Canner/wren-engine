@@ -31,8 +31,8 @@ from app.dependencies import (
     X_CACHE_OVERRIDE_AT,
     X_WREN_TIMEZONE,
 )
-from app.model import DatabaseTimeoutError
 from app.model.data_source import DataSource
+from app.model.error import DatabaseTimeoutError
 from app.model.metadata.metadata import Metadata
 
 tracer = trace.get_tracer(__name__)

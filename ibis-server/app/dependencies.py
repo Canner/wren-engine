@@ -13,6 +13,7 @@ X_CACHE_HIT = "X-Cache-Hit"
 X_CACHE_CREATE_AT = "X-Cache-Create-At"
 X_CACHE_OVERRIDE = "X-Cache-Override"
 X_CACHE_OVERRIDE_AT = "X-Cache-Override-At"
+X_CORRELATION_ID = "X-Correlation-ID"
 
 
 # Validate the dto by building the specific connection info from the data source

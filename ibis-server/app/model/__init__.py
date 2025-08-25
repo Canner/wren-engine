@@ -1,15 +1,9 @@
 from __future__ import annotations
 
-from abc import ABC
 from enum import Enum
 from typing import Annotated, Any, Literal, Union
 
 from pydantic import BaseModel, Field, SecretStr
-from starlette.status import (
-    HTTP_404_NOT_FOUND,
-    HTTP_422_UNPROCESSABLE_ENTITY,
-    HTTP_500_INTERNAL_SERVER_ERROR,
-)
 
 manifest_str_field = Field(alias="manifestStr", description="Base64 manifest")
 connection_info_field = Field(alias="connectionInfo")
@@ -524,35 +518,6 @@ class TranspileDTO(BaseModel):
 
 class ConfigModel(BaseModel):
     diagnose: bool
-
-
-class UnknownIbisError(Exception):
-    def __init__(self, message):
-        self.message = f"Unknown ibis error: {message!s}"
-
-
-class CustomHttpError(ABC, Exception):
-    status_code: int
-
-
-class InternalServerError(CustomHttpError):
-    status_code = HTTP_500_INTERNAL_SERVER_ERROR
-
-
-class UnprocessableEntityError(CustomHttpError):
-    status_code = HTTP_422_UNPROCESSABLE_ENTITY
-
-
-class DatabaseTimeoutError(CustomHttpError):
-    status_code = 504
-
-    def __init__(self, message: str):
-        super().__init__(message)
-        self.message = f"Database timeout error: {message!s}.\nIt seems your database is not responding or the query is taking too long to execute. Please check your database status and query performance."
-
-
-class NotFoundError(CustomHttpError):
-    status_code = HTTP_404_NOT_FOUND
 
 
 class SSLMode(str, Enum):
