@@ -8,6 +8,7 @@ from testcontainers.clickhouse import ClickHouseContainer
 
 from app.model.data_source import X_WREN_DB_STATEMENT_TIMEOUT
 from app.model.validator import rules
+from app.model.error import ErrorCode
 from tests.conftest import file_path
 
 pytestmark = pytest.mark.clickhouse
@@ -318,8 +319,7 @@ async def test_query_to_many_relationship(
 async def test_query_alias_join(client, manifest_str, clickhouse: ClickHouseContainer):
     connection_info = _to_connection_info(clickhouse)
     # ClickHouse does not support alias join
-    with pytest.raises(Exception):
-        await client.post(
+    response = await client.post(
             url=f"{base_url}/query",
             json={
                 "connectionInfo": connection_info,
@@ -327,6 +327,9 @@ async def test_query_alias_join(client, manifest_str, clickhouse: ClickHouseCont
                 "sql": 'SELECT orderstatus FROM ("Orders" o JOIN "Customer" c ON o.custkey = c.custkey) j1 LIMIT 1',
             },
         )
+    
+    assert response.status_code == 422
+    assert response.json()["errorCode"] == ErrorCode.INVALID_SQL.name
 
 
 async def test_query_without_manifest(client, clickhouse: ClickHouseContainer):
@@ -423,7 +426,7 @@ async def test_validate_with_unknown_rule(
     )
     assert response.status_code == 404
     assert (
-        response.text == f"The rule `unknown_rule` is not in the rules, rules: {rules}"
+        response.json()["message"] == f"The rule `unknown_rule` is not in the rules, rules: {rules}"
     )
 
 
@@ -496,7 +499,7 @@ async def test_validate_rule_column_is_valid_without_one_parameter(
         },
     )
     assert response.status_code == 422
-    assert response.text == "Missing required parameter: `columnName`"
+    assert response.json()["message"] == "columnName is required"
 
     response = await client.post(
         url=f"{base_url}/validate/column_is_valid",
@@ -507,7 +510,7 @@ async def test_validate_rule_column_is_valid_without_one_parameter(
         },
     )
     assert response.status_code == 422
-    assert response.text == "Missing required parameter: `modelName`"
+    assert response.json()["message"] == "modelName is required"
 
 
 async def test_metadata_list_tables(client, clickhouse: ClickHouseContainer):

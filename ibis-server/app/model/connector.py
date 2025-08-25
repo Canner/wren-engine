@@ -88,11 +88,19 @@ class Connector:
         except (
             WrenError,
             TimeoutError,
-            clickhouse_connect.driver.exceptions.DatabaseError,
             trino.exceptions.TrinoQueryError,
             psycopg.errors.QueryCanceled,
         ):
             raise
+        except clickhouse_connect.driver.exceptions.DatabaseError as e:
+            if not "TIMEOUT_EXCEEDED" in str(e):
+                raise WrenError(
+                    ErrorCode.INVALID_SQL,
+                    str(e),
+                    phase=ErrorPhase.SQL_DRY_RUN,
+                    metadata={DIALECT_SQL: sql},
+                ) from e
+            raise e
         except Exception as e:
             raise WrenError(
                 ErrorCode.GENERIC_USER_ERROR,
@@ -107,11 +115,18 @@ class Connector:
         except (
             WrenError,
             TimeoutError,
-            clickhouse_connect.driver.exceptions.DatabaseError,
             trino.exceptions.TrinoQueryError,
             psycopg.errors.QueryCanceled,
-        ):
+        ) as e:
             raise
+        except clickhouse_connect.driver.exceptions.DatabaseError as e:
+            if not "TIMEOUT_EXCEEDED" in str(e):
+                raise WrenError(
+                    ErrorCode.INVALID_SQL,
+                    str(e),
+                    phase=ErrorPhase.SQL_DRY_RUN,
+                    metadata={DIALECT_SQL: sql},
+                ) from e
         except Exception as e:
             raise WrenError(
                 ErrorCode.GENERIC_USER_ERROR,
