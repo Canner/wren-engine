@@ -8,7 +8,16 @@ from functools import cache
 from json import loads
 from typing import Any
 
-import clickhouse_connect
+try:
+    import clickhouse_connect
+
+    ClickHouseDbError = clickhouse_connect.driver.exceptions.DatabaseError
+except Exception:  # pragma: no cover
+
+    class ClickHouseDbError(Exception):
+        pass
+
+
 import ibis
 import ibis.expr.datatypes as dt
 import ibis.expr.schema as sch
@@ -92,7 +101,7 @@ class Connector:
             psycopg.errors.QueryCanceled,
         ):
             raise
-        except clickhouse_connect.driver.exceptions.DatabaseError as e:
+        except ClickHouseDbError as e:
             if "TIMEOUT_EXCEEDED" not in str(e):
                 raise WrenError(
                     ErrorCode.INVALID_SQL,
@@ -119,7 +128,7 @@ class Connector:
             psycopg.errors.QueryCanceled,
         ):
             raise
-        except clickhouse_connect.driver.exceptions.DatabaseError as e:
+        except ClickHouseDbError as e:
             if "TIMEOUT_EXCEEDED" not in str(e):
                 raise WrenError(
                     ErrorCode.INVALID_SQL,
