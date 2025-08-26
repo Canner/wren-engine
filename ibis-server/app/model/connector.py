@@ -106,7 +106,7 @@ class Connector:
                 raise WrenError(
                     ErrorCode.INVALID_SQL,
                     str(e),
-                    phase=ErrorPhase.SQL_DRY_RUN,
+                    phase=ErrorPhase.SQL_EXECUTION,
                     metadata={DIALECT_SQL: sql},
                 ) from e
             raise e
