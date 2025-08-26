@@ -7,7 +7,6 @@ from testcontainers.trino import TrinoContainer
 from trino.dbapi import connect
 
 from app.model.data_source import X_WREN_DB_STATEMENT_TIMEOUT
-from app.model.validator import rules
 
 pytestmark = pytest.mark.trino
 
@@ -270,8 +269,6 @@ async def test_query_with_dry_run_and_invalid_sql(
     )
     assert response.status_code == 422
     assert response.text is not None
-
-
 
 
 async def test_metadata_list_tables(client, trino: TrinoContainer):

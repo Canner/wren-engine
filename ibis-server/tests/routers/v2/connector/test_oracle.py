@@ -416,7 +416,10 @@ async def test_model_substitute(
         },
     )
     assert response.status_code == 422
-    assert response.text == 'Ambiguous model: found multiple matches for "ORDERS"'
+    assert (
+        response.json()["message"]
+        == 'Ambiguous model: found multiple matches for "ORDERS"'
+    )
 
 
 def _to_connection_info(oracle: OracleDbContainer):

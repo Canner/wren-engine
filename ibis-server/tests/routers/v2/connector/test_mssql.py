@@ -8,7 +8,6 @@ import sqlalchemy
 from sqlalchemy import text
 from testcontainers.mssql import SqlServerContainer
 
-from app.model.validator import rules
 from tests.conftest import file_path
 
 pytestmark = pytest.mark.mssql
@@ -287,7 +286,6 @@ async def test_query_non_ascii_column(client, manifest_str, mssql: SqlServerCont
     assert response.status_code == 200
     result = response.json()
     assert result["columns"] == ["калона"]
-
 
 
 async def test_metadata_list_tables(client, mssql: SqlServerContainer):

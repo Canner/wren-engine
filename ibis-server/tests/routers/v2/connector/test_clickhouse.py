@@ -8,7 +8,6 @@ from testcontainers.clickhouse import ClickHouseContainer
 
 from app.model.data_source import X_WREN_DB_STATEMENT_TIMEOUT
 from app.model.error import ErrorCode
-from app.model.validator import rules
 from tests.conftest import file_path
 
 pytestmark = pytest.mark.clickhouse
@@ -410,7 +409,6 @@ async def test_query_with_dry_run_and_invalid_sql(
     )
     assert response.status_code == 422
     assert response.text is not None
-
 
 
 async def test_metadata_list_tables(client, clickhouse: ClickHouseContainer):

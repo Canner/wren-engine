@@ -5,8 +5,6 @@ import time
 import orjson
 import pytest
 
-from app.model.validator import rules
-
 pytestmark = pytest.mark.bigquery
 
 base_url = "/v2/connector/bigquery"
@@ -364,7 +362,6 @@ async def test_custom_datatypes_no_overrides(client, manifest_str):
     result = response.json()
     assert result["data"][0] == ["112 mons 100 days 1 hours"]
     assert result["dtypes"] == {"col": "month_day_nano_interval"}
-
 
 
 async def test_metadata_list_tables(client):
