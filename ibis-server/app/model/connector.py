@@ -93,7 +93,7 @@ class Connector:
         ):
             raise
         except clickhouse_connect.driver.exceptions.DatabaseError as e:
-            if not "TIMEOUT_EXCEEDED" in str(e):
+            if "TIMEOUT_EXCEEDED" not in str(e):
                 raise WrenError(
                     ErrorCode.INVALID_SQL,
                     str(e),
@@ -117,10 +117,10 @@ class Connector:
             TimeoutError,
             trino.exceptions.TrinoQueryError,
             psycopg.errors.QueryCanceled,
-        ) as e:
+        ):
             raise
         except clickhouse_connect.driver.exceptions.DatabaseError as e:
-            if not "TIMEOUT_EXCEEDED" in str(e):
+            if "TIMEOUT_EXCEEDED" not in str(e):
                 raise WrenError(
                     ErrorCode.INVALID_SQL,
                     str(e),

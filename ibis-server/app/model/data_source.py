@@ -236,8 +236,10 @@ class DataSourceExtension(Enum):
             return getattr(self, f"get_{self.name}_connection")(info)
         except KeyError:
             raise NotImplementedError(f"Unsupported data source: {self}")
+        except WrenError:
+            raise
         except Exception as e:
-            raise WrenError(ErrorCode.GET_CONNECTION_ERROR, str(e)) from e
+            raise WrenError(ErrorCode.GET_CONNECTION_ERROR, f"{e!s}") from e
 
     @staticmethod
     def get_athena_connection(info: AthenaConnectionInfo) -> BaseBackend:

@@ -7,8 +7,8 @@ import pytest
 from testcontainers.clickhouse import ClickHouseContainer
 
 from app.model.data_source import X_WREN_DB_STATEMENT_TIMEOUT
-from app.model.validator import rules
 from app.model.error import ErrorCode
+from app.model.validator import rules
 from tests.conftest import file_path
 
 pytestmark = pytest.mark.clickhouse
@@ -320,14 +320,14 @@ async def test_query_alias_join(client, manifest_str, clickhouse: ClickHouseCont
     connection_info = _to_connection_info(clickhouse)
     # ClickHouse does not support alias join
     response = await client.post(
-            url=f"{base_url}/query",
-            json={
-                "connectionInfo": connection_info,
-                "manifestStr": manifest_str,
-                "sql": 'SELECT orderstatus FROM ("Orders" o JOIN "Customer" c ON o.custkey = c.custkey) j1 LIMIT 1',
-            },
-        )
-    
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT orderstatus FROM ("Orders" o JOIN "Customer" c ON o.custkey = c.custkey) j1 LIMIT 1',
+        },
+    )
+
     assert response.status_code == 422
     assert response.json()["errorCode"] == ErrorCode.INVALID_SQL.name
 
@@ -426,7 +426,8 @@ async def test_validate_with_unknown_rule(
     )
     assert response.status_code == 404
     assert (
-        response.json()["message"] == f"The rule `unknown_rule` is not in the rules, rules: {rules}"
+        response.json()["message"]
+        == f"The rule `unknown_rule` is not in the rules, rules: {rules}"
     )
 
 

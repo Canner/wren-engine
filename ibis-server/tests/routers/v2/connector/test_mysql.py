@@ -5,11 +5,11 @@ import pandas as pd
 import pymysql
 import pytest
 import sqlalchemy
-from MySQLdb import OperationalError
 from sqlalchemy import text
 from testcontainers.mysql import MySqlContainer
 
 from app.model import SSLMode
+from app.model.error import ErrorCode
 from app.model.validator import rules
 from tests.conftest import file_path
 
@@ -289,7 +289,8 @@ async def test_validate_with_unknown_rule(client, manifest_str, mysql: MySqlCont
     )
     assert response.status_code == 404
     assert (
-        response.text == f"The rule `unknown_rule` is not in the rules, rules: {rules}"
+        response.json()["message"]
+        == f"The rule `unknown_rule` is not in the rules, rules: {rules}"
     )
 
 
@@ -362,7 +363,7 @@ async def test_validate_rule_column_is_valid_without_one_parameter(
         },
     )
     assert response.status_code == 422
-    assert response.text == "Missing required parameter: `columnName`"
+    assert response.json()["message"] == "columnName is required"
 
     response = await client.post(
         url=f"{base_url}/validate/column_is_valid",
@@ -373,7 +374,7 @@ async def test_validate_rule_column_is_valid_without_one_parameter(
         },
     )
     assert response.status_code == 422
-    assert response.text == "Missing required parameter: `modelName`"
+    assert response.json()["message"] == "modelName is required"
 
 
 async def test_metadata_list_tables(client, mysql: MySqlContainer):
@@ -436,32 +437,35 @@ async def test_metadata_db_version(client, mysql: MySqlContainer):
 
 
 @pytest.mark.parametrize(
-    "ssl_mode, expected_exception, expected_error",
+    "ssl_mode, error_code, expected_error",
     [
         (
             SSLMode.ENABLED,
-            OperationalError,
-            "SSL connection error: SSL is required but the server doesn't support it",
+            ErrorCode.GET_CONNECTION_ERROR,
+            '(2026, "SSL connection error: SSL is required but the server doesn\'t support it")',
         ),
         (
             SSLMode.VERIFY_CA,
-            ValueError,
+            ErrorCode.INVALID_CONNECTION_INFO,
             "SSL CA must be provided when SSL mode is VERIFY CA",
         ),
     ],
 )
 async def test_connection_invalid_ssl_mode(
-    client, mysql_ssl_off: MySqlContainer, ssl_mode, expected_exception, expected_error
+    client, mysql_ssl_off: MySqlContainer, ssl_mode, error_code, expected_error
 ):
     connection_info = _to_connection_info(mysql_ssl_off)
     connection_info["sslMode"] = ssl_mode
 
-    with pytest.raises(expected_exception) as excinfo:
-        await client.post(
-            url=f"{base_url}/metadata/version",
-            json={"connectionInfo": connection_info},
-        )
-    assert expected_error in str(excinfo.value)
+    response = await client.post(
+        url=f"{base_url}/metadata/version",
+        json={"connectionInfo": connection_info},
+    )
+
+    assert response.status_code == 422
+    result = response.json()
+    assert result["errorCode"] == error_code.name
+    assert result["message"] == expected_error
 
 
 async def test_connection_valid_ssl_mode(client, mysql_ssl_off: MySqlContainer):
