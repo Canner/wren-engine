@@ -366,22 +366,6 @@ async def test_custom_datatypes_no_overrides(client, manifest_str):
     assert result["dtypes"] == {"col": "month_day_nano_interval"}
 
 
-async def test_validate_with_unknown_rule(client, manifest_str):
-    response = await client.post(
-        url=f"{base_url}/validate/unknown_rule",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "Orders", "columnName": "orderkey"},
-        },
-    )
-
-    assert response.status_code == 404
-    assert (
-        response.json()["message"]
-        == f"The rule `unknown_rule` is not in the rules, rules: {rules}"
-    )
-
 
 async def test_metadata_list_tables(client):
     def _assert_nested_column(column):

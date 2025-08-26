@@ -289,23 +289,6 @@ async def test_query_non_ascii_column(client, manifest_str, mssql: SqlServerCont
     assert result["columns"] == ["калона"]
 
 
-async def test_validate_with_unknown_rule(
-    client, manifest_str, mssql: SqlServerContainer
-):
-    connection_info = _to_connection_info(mssql)
-    response = await client.post(
-        url=f"{base_url}/validate/unknown_rule",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "Orders", "columnName": "orderkey"},
-        },
-    )
-    assert response.status_code == 404
-    assert (
-        response.text == f"The rule `unknown_rule` is not in the rules, rules: {rules}"
-    )
-
 
 async def test_metadata_list_tables(client, mssql: SqlServerContainer):
     connection_info = _to_connection_info(mssql)

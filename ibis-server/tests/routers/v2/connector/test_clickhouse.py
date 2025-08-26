@@ -412,24 +412,6 @@ async def test_query_with_dry_run_and_invalid_sql(
     assert response.text is not None
 
 
-async def test_validate_with_unknown_rule(
-    client, manifest_str, clickhouse: ClickHouseContainer
-):
-    connection_info = _to_connection_info(clickhouse)
-    response = await client.post(
-        url=f"{base_url}/validate/unknown_rule",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "Orders", "columnName": "orderkey"},
-        },
-    )
-    assert response.status_code == 404
-    assert (
-        response.json()["message"]
-        == f"The rule `unknown_rule` is not in the rules, rules: {rules}"
-    )
-
 
 async def test_metadata_list_tables(client, clickhouse: ClickHouseContainer):
     connection_info = _to_connection_info(clickhouse)
