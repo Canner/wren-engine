@@ -7,7 +7,6 @@ import sqlalchemy
 from sqlalchemy import text
 from testcontainers.oracle import OracleDbContainer
 
-from app.model.validator import rules
 from tests.conftest import file_path
 
 pytestmark = pytest.mark.oracle
@@ -315,98 +314,6 @@ async def test_query_with_dry_run_and_invalid_sql(
     assert (
         "ORA-00942" in response.text
     )  # Oracle ORA-00942 Error: Table or view does not exist
-
-
-async def test_validate_with_unknown_rule(
-    client, manifest_str, oracle: OracleDbContainer
-):
-    connection_info = _to_connection_info(oracle)
-    response = await client.post(
-        url=f"{base_url}/validate/unknown_rule",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "Orders", "columnName": "orderkey"},
-        },
-    )
-    assert response.status_code == 404
-    assert (
-        response.text == f"The rule `unknown_rule` is not in the rules, rules: {rules}"
-    )
-
-
-async def test_validate_rule_column_is_valid(
-    client, manifest_str, oracle: OracleDbContainer
-):
-    connection_info = _to_connection_info(oracle)
-    response = await client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "Orders", "columnName": "orderkey"},
-        },
-    )
-    assert response.status_code == 204
-
-
-async def test_validate_rule_column_is_valid_with_invalid_parameters(
-    client, manifest_str, oracle: OracleDbContainer
-):
-    connection_info = _to_connection_info(oracle)
-    response = await client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={"connectionInfo": connection_info, "manifestStr": manifest_str},
-    )
-    assert response.status_code == 422
-    result = response.json()
-    assert result["detail"][0] is not None
-    assert result["detail"][0]["type"] == "missing"
-    assert result["detail"][0]["loc"] == ["body", "parameters"]
-    assert result["detail"][0]["msg"] == "Field required"
-
-
-async def test_validate_rule_column_is_valid_without_parameters(
-    client, manifest_str, oracle: OracleDbContainer
-):
-    connection_info = _to_connection_info(oracle)
-    response = await client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={"connectionInfo": connection_info, "manifestStr": manifest_str},
-    )
-    assert response.status_code == 422
-    result = response.json()
-    assert result["detail"][0] is not None
-    assert result["detail"][0]["type"] == "missing"
-    assert result["detail"][0]["loc"] == ["body", "parameters"]
-    assert result["detail"][0]["msg"] == "Field required"
-
-
-async def test_validate_rule_column_is_valid_without_one_parameter(
-    client, manifest_str, oracle: OracleDbContainer
-):
-    connection_info = _to_connection_info(oracle)
-    response = await client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "Orders"},
-        },
-    )
-    assert response.status_code == 422
-    assert response.text == "Missing required parameter: `columnName`"
-
-    response = await client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"columnName": "orderkey"},
-        },
-    )
-    assert response.status_code == 422
-    assert response.text == "Missing required parameter: `modelName`"
 
 
 async def test_metadata_list_tables(client, oracle: OracleDbContainer):

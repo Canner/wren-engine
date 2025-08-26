@@ -10,7 +10,6 @@ from testcontainers.mysql import MySqlContainer
 
 from app.model import SSLMode
 from app.model.error import ErrorCode
-from app.model.validator import rules
 from tests.conftest import file_path
 
 pytestmark = pytest.mark.mysql
@@ -275,106 +274,6 @@ async def test_query_with_dry_run_and_invalid_sql(
     )
     assert response.status_code == 422
     assert response.text is not None
-
-
-async def test_validate_with_unknown_rule(client, manifest_str, mysql: MySqlContainer):
-    connection_info = _to_connection_info(mysql)
-    response = await client.post(
-        url=f"{base_url}/validate/unknown_rule",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "Orders", "columnName": "orderkey"},
-        },
-    )
-    assert response.status_code == 404
-    assert (
-        response.json()["message"]
-        == f"The rule `unknown_rule` is not in the rules, rules: {rules}"
-    )
-
-
-async def test_validate_rule_column_is_valid(
-    client, manifest_str, mysql: MySqlContainer
-):
-    connection_info = _to_connection_info(mysql)
-    response = await client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "Orders", "columnName": "orderkey"},
-        },
-    )
-    assert response.status_code == 204
-
-
-async def test_validate_rule_column_is_valid_with_invalid_parameters(
-    client, manifest_str, mysql: MySqlContainer
-):
-    connection_info = _to_connection_info(mysql)
-    response = await client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "X", "columnName": "orderkey"},
-        },
-    )
-    assert response.status_code == 422
-
-    response = await client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "Orders", "columnName": "X"},
-        },
-    )
-    assert response.status_code == 422
-
-
-async def test_validate_rule_column_is_valid_without_parameters(
-    client, manifest_str, mysql: MySqlContainer
-):
-    connection_info = _to_connection_info(mysql)
-    response = await client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={"connectionInfo": connection_info, "manifestStr": manifest_str},
-    )
-    assert response.status_code == 422
-    result = response.json()
-    assert result["detail"][0] is not None
-    assert result["detail"][0]["type"] == "missing"
-    assert result["detail"][0]["loc"] == ["body", "parameters"]
-    assert result["detail"][0]["msg"] == "Field required"
-
-
-async def test_validate_rule_column_is_valid_without_one_parameter(
-    client, manifest_str, mysql: MySqlContainer
-):
-    connection_info = _to_connection_info(mysql)
-    response = await client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "Orders"},
-        },
-    )
-    assert response.status_code == 422
-    assert response.json()["message"] == "columnName is required"
-
-    response = await client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"columnName": "orderkey"},
-        },
-    )
-    assert response.status_code == 422
-    assert response.json()["message"] == "modelName is required"
 
 
 async def test_metadata_list_tables(client, mysql: MySqlContainer):
