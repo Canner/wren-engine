@@ -23,7 +23,6 @@ from app.mdl.java_engine import JavaEngineConnector
 from app.mdl.rewriter import Rewriter
 from app.mdl.substitute import ModelSubstitute
 from app.model import (
-    DatabaseTimeoutError,
     DryPlanDTO,
     QueryDTO,
     TranspileDTO,
@@ -31,6 +30,7 @@ from app.model import (
 )
 from app.model.connector import Connector
 from app.model.data_source import DataSource
+from app.model.error import DatabaseTimeoutError
 from app.model.validator import Validator
 from app.query_cache import QueryCacheManager
 from app.routers import v2

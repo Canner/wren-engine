@@ -9,6 +9,7 @@ import json
 from app import model
 from app.model import ConnectionInfo
 from app.model.data_source import DataSource
+from app.model.error import ErrorCode, WrenError
 
 __all__ = ["Context", "Task", "create_session_context", "model"]
 
@@ -46,16 +47,18 @@ def create_session_context(
     from .session import Context  # noqa: PLC0415
 
     if not mdl_path:
-        raise ValueError("mdl_path must be provided")
+        raise WrenError(ErrorCode.GENERIC_USER_ERROR, "mdl_path must be provided")
 
     if not data_source:
-        raise ValueError("data_source must be provided")
+        raise WrenError(ErrorCode.GENERIC_USER_ERROR, "data_source must be provided")
 
     data_source = DataSource(data_source)
 
     with open(mdl_path) as f:
         if not f.readable():
-            raise ValueError(f"Cannot read MDL file at {mdl_path}")
+            raise WrenError(
+                ErrorCode.GENERIC_USER_ERROR, f"Cannot read MDL file at {mdl_path}"
+            )
         try:
             manifest = json.load(f)
             manifest_base64 = (
@@ -64,7 +67,10 @@ def create_session_context(
                 else None
             )
         except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON in MDL file at {mdl_path}: {e}") from e
+            raise WrenError(
+                ErrorCode.GENERIC_USER_ERROR,
+                f"Invalid JSON in MDL file at {mdl_path}: {e}",
+            ) from e
 
     return Context(
         data_source=data_source,

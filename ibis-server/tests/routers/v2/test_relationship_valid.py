@@ -118,7 +118,7 @@ async def test_validation_relationship_not_found(
     )
 
     assert response.status_code == 422
-    assert response.text == "Relationship not_found not found in manifest"
+    assert response.json()["message"] == "Relationship not_found not found in manifest"
 
     connection_info = _to_connection_info(postgres)
     response = await client.post(
@@ -131,7 +131,7 @@ async def test_validation_relationship_not_found(
     )
 
     assert response.status_code == 422
-    assert response.text == "Missing required parameter: `relationship`"
+    assert response.json()["message"] == "relationshipName is required"
 
 
 async def test_validation_failure(client, manifest_str, postgres: PostgresContainer):
@@ -147,9 +147,8 @@ async def test_validation_failure(client, manifest_str, postgres: PostgresContai
 
     assert response.status_code == 422
     assert (
-        response.text
-        == "Exception: <class 'app.model.validator.ValidationError'>, message: Relationship invalid_t1_many_t2_id is not valid: {'result': 'False', 'is_related': 'True', "
-        "'left_table_unique': 'False', 'right_table_unique': 'True'}"
+        response.json()["message"]
+        == "Relationship invalid_t1_many_t2_id is not valid: {'result': 'False', 'is_related': 'True', 'left_table_unique': 'False', 'right_table_unique': 'True'}"
     )
 
 

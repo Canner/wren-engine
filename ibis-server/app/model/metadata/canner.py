@@ -5,6 +5,7 @@ from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 
 from app.model import CannerConnectionInfo
+from app.model.error import ErrorCode, WrenError
 from app.model.metadata.dto import (
     Column,
     Constraint,
@@ -68,7 +69,9 @@ class CannerMetadata(Metadata):
         try:
             return next(ws["id"] for ws in workspaces if ws["sqlName"] == ws_sql_name)
         except StopIteration:
-            raise ValueError(f"Workspace {ws_sql_name} not found")
+            raise WrenError(
+                ErrorCode.INVALID_CONNECTION_INFO, f"Workspace {ws_sql_name} not found"
+            )
 
     def _get_metadata(self, workspace_id: str) -> dict:
         query = gql("""

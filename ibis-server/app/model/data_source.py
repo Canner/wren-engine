@@ -49,6 +49,7 @@ from app.model import (
     SSLMode,
     TrinoConnectionInfo,
 )
+from app.model.error import ErrorCode, WrenError
 
 X_WREN_DB_STATEMENT_TIMEOUT = "x-wren-db-statement_timeout"
 
@@ -177,7 +178,10 @@ class DataSource(StrEnum):
         self, parsed: urllib.parse.ParseResult
     ) -> ClickHouseConnectionInfo:
         if not parsed.scheme or parsed.scheme != "clickhouse":
-            raise ValueError("Invalid connection URL for ClickHouse")
+            raise WrenError(
+                ErrorCode.INVALID_CONNECTION_INFO,
+                "Invalid connection URL for ClickHouse",
+            )
         kwargs = {}
         if parsed.username:
             kwargs["user"] = parsed.username
@@ -232,6 +236,10 @@ class DataSourceExtension(Enum):
             return getattr(self, f"get_{self.name}_connection")(info)
         except KeyError:
             raise NotImplementedError(f"Unsupported data source: {self}")
+        except WrenError:
+            raise
+        except Exception as e:
+            raise WrenError(ErrorCode.GET_CONNECTION_ERROR, f"{e!s}") from e
 
     @staticmethod
     def get_athena_connection(info: AthenaConnectionInfo) -> BaseBackend:
@@ -401,7 +409,10 @@ class DataSourceExtension(Enum):
         )
 
         if ssl_mode == SSLMode.VERIFY_CA and not info.ssl_ca:
-            raise ValueError("SSL CA must be provided when SSL mode is VERIFY CA")
+            raise WrenError(
+                ErrorCode.INVALID_CONNECTION_INFO,
+                "SSL CA must be provided when SSL mode is VERIFY CA",
+            )
 
         if not ssl_mode or ssl_mode == SSLMode.DISABLED:
             return None

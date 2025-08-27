@@ -245,7 +245,10 @@ async def test_unsupported_format(client):
         },
     )
     assert response.status_code == 422
-    assert response.text == "Failed to list files: Unsupported format: unsupported"
+    assert (
+        response.json()["message"]
+        == "Failed to list files: Unsupported format: unsupported"
+    )
 
 
 async def test_list_parquet_files(client):

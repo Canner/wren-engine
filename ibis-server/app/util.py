@@ -2,7 +2,16 @@ import asyncio
 import base64
 import time
 
-import clickhouse_connect
+try:
+    import clickhouse_connect
+
+    ClickHouseDbError = clickhouse_connect.driver.exceptions.DatabaseError
+except ImportError:  # pragma: no cover
+
+    class ClickHouseDbError(Exception):
+        pass
+
+
 import datafusion
 import orjson
 import pandas as pd
@@ -31,8 +40,8 @@ from app.dependencies import (
     X_CACHE_OVERRIDE_AT,
     X_WREN_TIMEZONE,
 )
-from app.model import DatabaseTimeoutError
 from app.model.data_source import DataSource
+from app.model.error import DatabaseTimeoutError
 from app.model.metadata.metadata import Metadata
 
 tracer = trace.get_tracer(__name__)
@@ -253,12 +262,14 @@ async def execute_with_timeout(operation, operation_name: str):
         raise DatabaseTimeoutError(
             f"{operation_name} timeout after {app_timeout_seconds} seconds"
         )
-    except clickhouse_connect.driver.exceptions.DatabaseError as e:
+    except ClickHouseDbError as e:
         if "TIMEOUT_EXCEEDED" in str(e):
             raise DatabaseTimeoutError(f"{operation_name} was cancelled: {e}")
+        raise
     except trino.exceptions.TrinoQueryError as e:
         if e.error_name == "EXCEEDED_TIME_LIMIT":
             raise DatabaseTimeoutError(f"{operation_name} was cancelled: {e}")
+        raise
     except psycopg.errors.QueryCanceled as e:
         raise DatabaseTimeoutError(f"{operation_name} was cancelled: {e}")
 
@@ -310,30 +321,6 @@ async def execute_query_with_timeout(
     return await _safe_execute_task_with_timeout(
         "Query",
         query_task,
-        connector,
-    )
-
-
-async def execute_sample_with_timeout(
-    connector,
-    sql: str,
-    sample_rate: int,
-    limit: int,
-    manifest_str: str,
-):
-    """Execute a sample query with a timeout control."""
-    task = asyncio.create_task(
-        asyncio.to_thread(
-            connector.sample,
-            sql,
-            sample_rate=sample_rate,
-            limit=limit,
-            manifest_str=manifest_str,
-        ),
-    )
-    return await _safe_execute_task_with_timeout(
-        "Sample",
-        task,
         connector,
     )
 

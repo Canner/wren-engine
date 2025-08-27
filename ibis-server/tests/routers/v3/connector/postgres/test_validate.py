@@ -40,7 +40,8 @@ async def test_validate_with_unknown_rule(client, manifest_str, connection_info)
     )
     assert response.status_code == 404
     assert (
-        response.text == f"The rule `unknown_rule` is not in the rules, rules: {rules}"
+        response.json()["message"]
+        == f"The rule `unknown_rule` is not in the rules, rules: {rules}"
     )
 
 
@@ -107,7 +108,7 @@ async def test_validate_rule_column_is_valid_without_one_parameter(
         },
     )
     assert response.status_code == 422
-    assert response.text == "Missing required parameter: `columnName`"
+    assert response.json()["message"] == "columnName is required"
 
     response = await client.post(
         url=f"{base_url}/validate/column_is_valid",
@@ -118,7 +119,7 @@ async def test_validate_rule_column_is_valid_without_one_parameter(
         },
     )
     assert response.status_code == 422
-    assert response.text == "Missing required parameter: `modelName`"
+    assert response.json()["message"] == "modelName is required"
 
 
 async def test_validate_rlac_condition_syntax_is_valid(
@@ -173,6 +174,6 @@ async def test_validate_rlac_condition_syntax_is_valid(
 
     assert response.status_code == 422
     assert (
-        response.text
+        response.json()["message"]
         == "Error during planning: The session property @session_not_found is used for `rlac_validation` rule, but not found in the session properties"
     )

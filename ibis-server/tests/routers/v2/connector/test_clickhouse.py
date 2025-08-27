@@ -7,7 +7,7 @@ import pytest
 from testcontainers.clickhouse import ClickHouseContainer
 
 from app.model.data_source import X_WREN_DB_STATEMENT_TIMEOUT
-from app.model.validator import rules
+from app.model.error import ErrorCode
 from tests.conftest import file_path
 
 pytestmark = pytest.mark.clickhouse
@@ -318,15 +318,17 @@ async def test_query_to_many_relationship(
 async def test_query_alias_join(client, manifest_str, clickhouse: ClickHouseContainer):
     connection_info = _to_connection_info(clickhouse)
     # ClickHouse does not support alias join
-    with pytest.raises(Exception):
-        await client.post(
-            url=f"{base_url}/query",
-            json={
-                "connectionInfo": connection_info,
-                "manifestStr": manifest_str,
-                "sql": 'SELECT orderstatus FROM ("Orders" o JOIN "Customer" c ON o.custkey = c.custkey) j1 LIMIT 1',
-            },
-        )
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT orderstatus FROM ("Orders" o JOIN "Customer" c ON o.custkey = c.custkey) j1 LIMIT 1',
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["errorCode"] == ErrorCode.INVALID_SQL.name
 
 
 async def test_query_without_manifest(client, clickhouse: ClickHouseContainer):
@@ -407,107 +409,6 @@ async def test_query_with_dry_run_and_invalid_sql(
     )
     assert response.status_code == 422
     assert response.text is not None
-
-
-async def test_validate_with_unknown_rule(
-    client, manifest_str, clickhouse: ClickHouseContainer
-):
-    connection_info = _to_connection_info(clickhouse)
-    response = await client.post(
-        url=f"{base_url}/validate/unknown_rule",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "Orders", "columnName": "orderkey"},
-        },
-    )
-    assert response.status_code == 404
-    assert (
-        response.text == f"The rule `unknown_rule` is not in the rules, rules: {rules}"
-    )
-
-
-async def test_validate_rule_column_is_valid(
-    client, manifest_str, clickhouse: ClickHouseContainer
-):
-    connection_info = _to_connection_info(clickhouse)
-    response = await client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "Orders", "columnName": "orderkey"},
-        },
-    )
-    assert response.status_code == 204
-
-
-async def test_validate_rule_column_is_valid_with_invalid_parameters(
-    client, manifest_str, clickhouse: ClickHouseContainer
-):
-    connection_info = _to_connection_info(clickhouse)
-    response = await client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "X", "columnName": "orderkey"},
-        },
-    )
-    assert response.status_code == 422
-
-    response = await client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "Orders", "columnName": "X"},
-        },
-    )
-    assert response.status_code == 422
-
-
-async def test_validate_rule_column_is_valid_without_parameters(
-    client, manifest_str, clickhouse: ClickHouseContainer
-):
-    connection_info = _to_connection_info(clickhouse)
-    response = await client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={"connectionInfo": connection_info, "manifestStr": manifest_str},
-    )
-    assert response.status_code == 422
-    result = response.json()
-    assert result["detail"][0] is not None
-    assert result["detail"][0]["type"] == "missing"
-    assert result["detail"][0]["loc"] == ["body", "parameters"]
-    assert result["detail"][0]["msg"] == "Field required"
-
-
-async def test_validate_rule_column_is_valid_without_one_parameter(
-    client, manifest_str, clickhouse: ClickHouseContainer
-):
-    connection_info = _to_connection_info(clickhouse)
-    response = await client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "Orders"},
-        },
-    )
-    assert response.status_code == 422
-    assert response.text == "Missing required parameter: `columnName`"
-
-    response = await client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"columnName": "orderkey"},
-        },
-    )
-    assert response.status_code == 422
-    assert response.text == "Missing required parameter: `modelName`"
 
 
 async def test_metadata_list_tables(client, clickhouse: ClickHouseContainer):
