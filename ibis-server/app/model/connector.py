@@ -12,7 +12,7 @@ try:
     import clickhouse_connect
 
     ClickHouseDbError = clickhouse_connect.driver.exceptions.DatabaseError
-except Exception:  # pragma: no cover
+except ImportError:  # pragma: no cover
 
     class ClickHouseDbError(Exception):
         pass
@@ -97,9 +97,17 @@ class Connector:
         except (
             WrenError,
             TimeoutError,
-            trino.exceptions.TrinoQueryError,
             psycopg.errors.QueryCanceled,
         ):
+            raise
+        except trino.exceptions.TrinoQueryError as e:
+            if not e.error_name == "EXCEEDED_TIME_LIMIT":
+                raise WrenError(
+                    ErrorCode.INVALID_SQL,
+                    str(e),
+                    phase=ErrorPhase.SQL_DRY_RUN,
+                    metadata={DIALECT_SQL: sql},
+                ) from e
             raise
         except ClickHouseDbError as e:
             if "TIMEOUT_EXCEEDED" not in str(e):
@@ -124,9 +132,17 @@ class Connector:
         except (
             WrenError,
             TimeoutError,
-            trino.exceptions.TrinoQueryError,
             psycopg.errors.QueryCanceled,
         ):
+            raise
+        except trino.exceptions.TrinoQueryError as e:
+            if not e.error_name == "EXCEEDED_TIME_LIMIT":
+                raise WrenError(
+                    ErrorCode.INVALID_SQL,
+                    str(e),
+                    phase=ErrorPhase.SQL_DRY_RUN,
+                    metadata={DIALECT_SQL: sql},
+                ) from e
             raise
         except ClickHouseDbError as e:
             if "TIMEOUT_EXCEEDED" not in str(e):
@@ -136,6 +152,7 @@ class Connector:
                     phase=ErrorPhase.SQL_DRY_RUN,
                     metadata={DIALECT_SQL: sql},
                 ) from e
+            raise
         except Exception as e:
             raise WrenError(
                 ErrorCode.GENERIC_USER_ERROR,

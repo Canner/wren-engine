@@ -6,7 +6,7 @@ try:
     import clickhouse_connect
 
     ClickHouseDbError = clickhouse_connect.driver.exceptions.DatabaseError
-except Exception:  # pragma: no cover
+except ImportError:  # pragma: no cover
 
     class ClickHouseDbError(Exception):
         pass
@@ -265,9 +265,11 @@ async def execute_with_timeout(operation, operation_name: str):
     except ClickHouseDbError as e:
         if "TIMEOUT_EXCEEDED" in str(e):
             raise DatabaseTimeoutError(f"{operation_name} was cancelled: {e}")
+        raise
     except trino.exceptions.TrinoQueryError as e:
         if e.error_name == "EXCEEDED_TIME_LIMIT":
             raise DatabaseTimeoutError(f"{operation_name} was cancelled: {e}")
+        raise
     except psycopg.errors.QueryCanceled as e:
         raise DatabaseTimeoutError(f"{operation_name} was cancelled: {e}")
 
