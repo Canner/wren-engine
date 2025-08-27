@@ -3,6 +3,9 @@ aggregate,every,boolean,,boolean,"Equivalent to bool_and"
 aggregate,json_object_agg,json,,"text,any","Aggregates pairs into JSON object"
 aggregate,jsonb_object_agg,jsonb,,"text,any","Aggregates pairs into JSONB object"
 aggregate,xmlagg,xml,,xml,"Concatenates XML values"
+aggregate,every,boolean,"",boolean,boolean-and aggregate
+aggregate,json_agg,json,"",any,aggregate input into json
+aggregate,percentile_disc,any,"","double precision,any",discrete percentile
 scalar,age,interval,,"timestamp,timestamp","Difference between timestamps"
 scalar,array_lower,int,,"array,integer","Lower bound of array"
 scalar,array_to_json,json,,array,"Convert array to JSON"
@@ -13,12 +16,19 @@ scalar,extract,numeric,,"text,timestamp","Get subfield from date/time"
 scalar,format,text,,"text,array<any>","Format string"
 scalar,host,text,,inet,"Extract host from IP address"
 scalar,isfinite,boolean,,timestamp,"Test for finite date/timestamp/interval"
+scalar,json_object,json,"",array<text>,map text array of key value pairs to json object
+scalar,json_typeof,text,"",json,get the type of a json value
 scalar,json_array_length,int,,json,"Length of JSON array"
 scalar,json_extract_path,json,,"json,array<text>","Get JSON object at path"
 scalar,json_object_keys,array<text>,,json,"Get JSON object keys"
 scalar,jsonb_array_length,int,,jsonb,"Length of JSONB array"
 scalar,jsonb_extract_path,jsonb,,"jsonb,array<text>","Get JSONB object at path"
 scalar,jsonb_object_keys,array<text>,,jsonb,"Get JSONB object keys"
+scalar,jsonb_subscript_handler,internal,"",internal,jsonb subscripting logic
+scalar,jsonb_typeof,text,"",jsonb,get the type of a jsonb value
+scalar,justify_days,interval,"",interval,promote groups of 30 days to numbers of months
+scalar,justify_hours,interval,"",interval,promote groups of 24 hours to numbers of days
+scalar,justify_interval,interval,"",interval,promote groups of 24 hours to numbers of days and promote groups of 30 days to numbers of months
 scalar,mod,numeric,,"numeric,numeric","Modulo (remainder)"
 scalar,parse_ident,array<text>,,"text,boolean","Parse qualified identifier"
 scalar,pg_client_encoding,name,,,"Current client encoding"
@@ -34,3 +44,22 @@ scalar,to_json,json,,boolean,"Convert to JSON"
 scalar,to_number,numeric,,"text,text","Convert string to number"
 scalar,unistr,varchar,,text,"Postgres: Evaluate escaped Unicode characters in the argument"
 scalar,pg_sleep,,,"bigint","Sleep for specified time in seconds"
+scalar,area,double precision,"",circle,area of circle
+scalar,ceiling,numeric,"",numeric,nearest integer >= value
+scalar,char,"""char""","",text,convert text to char
+scalar,div,numeric,"","numeric,numeric",trunc(x/y)
+scalar,dlog1,double precision,"",double precision,natural logarithm
+scalar,dlog10,double precision,"",double precision,base 10 logarithm
+scalar,is_normalized,boolean,"","text,text",check Unicode normalization
+scalar,overlaps,boolean,"","time without time zone,time without time zone,time without time zone,time without time zone",intervals overlap?
+scalar,overlay,text,"","text,text,integer",substitute portion of string
+scalar,regexp_instr,integer,"","text,text,integer,integer",position of regexp match
+scalar,regexp_matches,array<text>,"","text,text,text",find match(es) for regexp
+scalar,regexp_split_to_array,array<text>,"","text,text,text",split string by pattern
+scalar,regexp_split_to_table,text,"","text,text",split string by pattern
+scalar,regexp_substr,text,"","text,text",extract substring that matches regexp
+scalar,tand,double precision,"",double precision,"tangent, degrees"
+scalar,to_ascii,text,"","text,name",encode text from encoding to ASCII text
+scalar,to_json,json,"",any,map input to json
+scalar,to_jsonb,jsonb,"",any,map input to jsonb
+scalar,to_number,numeric,"","text,text",convert text to numeric

@@ -1,0 +1,398 @@
+function_type,name,return_type,param_names,param_types,description
+aggregate,every,boolean,,boolean,"Equivalent to bool_and"
+aggregate,json_object_agg,json,,"text,any","Aggregates pairs into JSON object"
+aggregate,jsonb_object_agg,jsonb,,"text,any","Aggregates pairs into JSONB object"
+aggregate,xmlagg,xml,,xml,"Concatenates XML values"
+aggregate,every,boolean,"",boolean,boolean-and aggregate
+aggregate,json_agg,json,"",any,aggregate input into json
+aggregate,percentile_disc,any,"","double precision,any",discrete percentile
+scalar,age,interval,,"timestamp,timestamp","Difference between timestamps"
+scalar,array_lower,int,,"array,integer","Lower bound of array"
+scalar,array_to_json,json,,array,"Convert array to JSON"
+scalar,array_upper,int,,"array,integer","Upper bound of array"
+scalar,convert_from,text,,"bytea,text","Convert from encoding"
+scalar,convert_to,bytea,,"text,text","Convert to encoding"
+scalar,extract,numeric,,"text,timestamp","Get subfield from date/time"
+scalar,format,text,,"text,array<any>","Format string"
+scalar,host,text,,inet,"Extract host from IP address"
+scalar,isfinite,boolean,,timestamp,"Test for finite date/timestamp/interval"
+scalar,json_object,json,"",array<text>,map text array of key value pairs to json object
+scalar,json_typeof,text,"",json,get the type of a json value
+scalar,json_array_length,int,,json,"Length of JSON array"
+scalar,json_extract_path,json,,"json,array<text>","Get JSON object at path"
+scalar,json_object_keys,array<text>,,json,"Get JSON object keys"
+scalar,jsonb_array_length,int,,jsonb,"Length of JSONB array"
+scalar,jsonb_extract_path,jsonb,,"jsonb,array<text>","Get JSONB object at path"
+scalar,jsonb_object_keys,array<text>,,jsonb,"Get JSONB object keys"
+scalar,jsonb_subscript_handler,internal,"",internal,jsonb subscripting logic
+scalar,jsonb_typeof,text,"",jsonb,get the type of a jsonb value
+scalar,justify_days,interval,"",interval,promote groups of 30 days to numbers of months
+scalar,justify_hours,interval,"",interval,promote groups of 24 hours to numbers of days
+scalar,justify_interval,interval,"",interval,promote groups of 24 hours to numbers of days and promote groups of 30 days to numbers of months
+scalar,mod,numeric,,"numeric,numeric","Modulo (remainder)"
+scalar,parse_ident,array<text>,,"text,boolean","Parse qualified identifier"
+scalar,pg_client_encoding,name,,,"Current client encoding"
+scalar,pg_get_expr,text,,"pg_node_tree,oid","Decompile internal form of expression"
+scalar,pg_get_viewdef,text,,"oid","Get view definition"
+scalar,quote_ident,text,,text,"Quote identifier"
+scalar,quote_literal,text,,any,"Quote literal"
+scalar,quote_nullable,text,,any,"Quote nullable"
+scalar,regexp_split_to_array,array<text>,,"text,text","Split string by pattern"
+scalar,regexp_split_to_table,array<text>,,"text,text","Split string by pattern"
+scalar,sign,numeric,,numeric,"Sign of number"
+scalar,to_json,json,,boolean,"Convert to JSON"
+scalar,to_number,numeric,,"text,text","Convert string to number"
+scalar,unistr,varchar,,text,"Postgres: Evaluate escaped Unicode characters in the argument"
+scalar,pg_sleep,,,"bigint","Sleep for specified time in seconds"
+scalar,area,double precision,"",circle,area of circle
+scalar,ceiling,numeric,"",numeric,nearest integer >= value
+scalar,char,"""char""","",text,convert text to char
+scalar,div,numeric,"","numeric,numeric",trunc(x/y)
+scalar,dlog1,double precision,"",double precision,natural logarithm
+scalar,dlog10,double precision,"",double precision,base 10 logarithm
+scalar,is_normalized,boolean,"","text,text",check Unicode normalization
+scalar,overlaps,boolean,"","time without time zone,time without time zone,time without time zone,time without time zone",intervals overlap?
+scalar,overlay,text,"","text,text,integer",substitute portion of string
+scalar,regexp_instr,integer,"","text,text,integer,integer",position of regexp match
+scalar,regexp_matches,array<text>,"","text,text,text",find match(es) for regexp
+scalar,regexp_split_to_array,array<text>,"","text,text,text",split string by pattern
+scalar,regexp_split_to_table,text,"","text,text",split string by pattern
+scalar,regexp_substr,text,"","text,text",extract substring that matches regexp
+scalar,tand,double precision,"",double precision,"tangent, degrees"
+scalar,to_ascii,text,"","text,name",encode text from encoding to ASCII text
+scalar,to_json,json,"",any,map input to json
+scalar,to_jsonb,jsonb,"",any,map input to jsonb
+scalar,to_number,numeric,"","text,text",convert text to numeric
+scalar,regexp_count,,,,Returns the number of matches that a [regular expression](https://docs.rs/regex/latest/regex/#syntax) has in a string.
+scalar,array_union,,,,Returns an array of elements that are present in both arrays (all elements from both arrays) with out duplicates.
+scalar,uuid,,,,Returns [`UUID v4`](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random)) string value which is unique per row.
+scalar,substr_index,,,,"Returns the substring from str before count occurrences of the delimiter delim.
+If count is positive, everything to the left of the final delimiter (counting from the left) is returned.
+If count is negative, everything to the right of the final delimiter (counting from the right) is returned."
+scalar,atan,,,,Returns the arc tangent or inverse tangent of a number.
+scalar,log,,,,"Returns the base-x logarithm of a number. Can either provide a specified base, or if omitted then takes the base-10 of a number."
+scalar,current_time,,,,"
+Returns the current UTC time.
+
+The `current_time()` return value is determined at query time and will return the same time, no matter when in the query plan the function executes.
+"
+scalar,array_join,,,,Converts each element to its text representation.
+scalar,sin,,,,Returns the sine of a number.
+scalar,now,,,,"
+Returns the current UTC timestamp.
+
+The `now()` return value is determined at query time and will return the same timestamp, no matter when in the query plan the function executes.
+"
+scalar,iszero,,,,Returns true if a given number is +0.0 or -0.0 otherwise returns false.
+scalar,list_extract,,,,Extracts the element with the index n from the array.
+scalar,ends_with,,,,Tests if a string ends with a substring.
+scalar,least,,,,Returns the smallest value in a list of expressions. Returns _null_ if all expressions are _null_.
+scalar,contains,,,,Return true if search_str is found within string (case-sensitive).
+scalar,array_position,,,,Returns the position of the first occurrence of the specified element in the array.
+scalar,decode,,,,Decode binary data from textual representation in string.
+scalar,list_distance,,,,Returns the Euclidean distance between two input arrays of equal length.
+scalar,degrees,,,,Converts radians to degrees.
+aggregate,var,,,,Returns the statistical sample variance of a set of numbers.
+aggregate,approx_distinct,,,,Returns the approximate number of distinct input values calculated using the HyperLogLog algorithm.
+scalar,concat_ws,,,,Concatenates multiple strings together with a specified separator.
+scalar,to_char,,,,"Returns a string representation of a date, time, timestamp or duration based on a [Chrono format](https://docs.rs/chrono/latest/chrono/format/strftime/index.html). Unlike the PostgreSQL equivalent of this function numerical formatting is not supported."
+scalar,date_part,,,,Returns the specified part of the date as an integer.
+scalar,exp,,,,Returns the base-e exponential of a number.
+scalar,repeat,,,,Returns a string with an input string repeated a specified number.
+scalar,pow,,,,Returns a base expression raised to the power of an exponent.
+scalar,get_field,,,,"Returns a field within a map or a struct with the given key.
+    Note: most users invoke `get_field` indirectly via field access
+    syntax such as `my_struct_col['field_name']` which results in a call to
+    `get_field(my_struct_col, 'field_name')`."
+scalar,asinh,,,,Returns the area hyperbolic sine or inverse hyperbolic sine of a number.
+scalar,atanh,,,,Returns the area hyperbolic tangent or inverse hyperbolic tangent of a number.
+scalar,sha512,,,,Computes the SHA-512 hash of a binary string.
+scalar,array_has_any,,,,Returns true if any elements exist in both arrays.
+scalar,to_date,,,,"Converts a value to a date (`YYYY-MM-DD`).
+Supports strings, integer and double types as input.
+Strings are parsed as YYYY-MM-DD (e.g. '2023-07-20') if no [Chrono format](https://docs.rs/chrono/latest/chrono/format/strftime/index.html)s are provided.
+Integers and doubles are interpreted as days since the unix epoch (`1970-01-01T00:00:00Z`).
+Returns the corresponding date.
+
+Note: `to_date` returns Date32, which represents its values as the number of days since unix epoch(`1970-01-01`) stored as signed 32 bit value. The largest supported date value is `9999-12-31`."
+scalar,array_cat,,,,Concatenates arrays.
+scalar,list_positions,,,,"Searches for an element in the array, returns all occurrences."
+scalar,isnan,,,,Returns true if a given number is +NaN or -NaN otherwise returns false.
+scalar,arrays_overlap,,,,Returns true if any elements exist in both arrays.
+scalar,lcm,,,,Returns the least common multiple of `expression_x` and `expression_y`. Returns 0 if either input is zero.
+scalar,list_slice,,,,Returns a slice of the array based on 1-indexed start and end positions.
+scalar,sha224,,,,Computes the SHA-224 hash of a binary string.
+scalar,nvl2,,,,Returns _expression2_ if _expression1_ is not NULL; otherwise it returns _expression3_.
+scalar,pi,,,,Returns an approximate value of π.
+scalar,array_resize,,,,Resizes the list to contain size elements. Initializes new elements with value or empty if value is not set.
+scalar,cbrt,,,,Returns the cube root of a number.
+scalar,array_prepend,,,,Prepends an element to the beginning of an array.
+scalar,ifnull,,,,Returns _expression2_ if _expression1_ is NULL otherwise it returns _expression1_.
+scalar,substring_index,,,,"Returns the substring from str before count occurrences of the delimiter delim.
+If count is positive, everything to the left of the final delimiter (counting from the left) is returned.
+If count is negative, everything to the right of the final delimiter (counting from the right) is returned."
+scalar,lpad,,,,Pads the left side of a string with another string to a specified string length.
+scalar,list_dims,,,,Returns an array of the array's dimensions.
+scalar,array_append,,,,Appends an element to the end of an array.
+scalar,sha384,,,,Computes the SHA-384 hash of a binary string.
+scalar,sha256,,,,Computes the SHA-256 hash of a binary string.
+scalar,current_date,,,,"
+Returns the current UTC date.
+
+The `current_date()` return value is determined at query time and will return the same date, no matter when in the query plan the function executes.
+"
+scalar,list_empty,,,,Returns 1 for an empty array or 0 for a non-empty array.
+scalar,regexp_like,,,,"Returns true if a [regular expression](https://docs.rs/regex/latest/regex/#syntax) has at least one match in a string, false otherwise."
+aggregate,covar,,,,Returns the sample covariance of a set of number pairs.
+aggregate,approx_percentile_cont_with_weight,,,,Returns the weighted approximate percentile of input values using the t-digest algorithm.
+aggregate,approx_median,,,,"Returns the approximate median (50th percentile) of input values. It is an alias of `approx_percentile_cont(x, 0.5)`."
+aggregate,covar_pop,,,,Returns the sample covariance of a set of number pairs.
+aggregate,bool_and,,,,"Returns true if all non-null input values are true, otherwise false."
+aggregate,grouping,,,,"Returns 1 if the data is aggregated across the specified column, or 0 if it is not aggregated in the result set."
+window,row_number,,,,"Number of the current row within its partition, counting from 1."
+window,lag,,,,"Returns value evaluated at the row that is offset rows before the current row within the partition; if there is no such row, instead return default (which must be of the same type as value)."
+scalar,string_to_list,,,,Splits a string into an array of substrings based on a delimiter. Any substrings matching the optional `null_str` argument are replaced with NULL.
+scalar,left,,,,Returns a specified number of characters from the left side of a string.
+scalar,to_timestamp_nanos,,,,"Converts a value to a timestamp (`YYYY-MM-DDT00:00:00.000000000Z`). Supports strings, integer, and unsigned integer types as input. Strings are parsed as RFC3339 (e.g. '2023-07-20T05:44:00') if no [Chrono format](https://docs.rs/chrono/latest/chrono/format/strftime/index.html)s are provided. Integers and unsigned integers are interpreted as nanoseconds since the unix epoch (`1970-01-01T00:00:00Z`). Returns the corresponding timestamp."
+scalar,upper,,,,Converts a string to upper-case.
+scalar,position,,,,"Returns the starting position of a specified substring in a string. Positions begin at 1. If the substring does not exist in the string, the function returns 0."
+scalar,right,,,,Returns a specified number of characters from the right side of a string.
+scalar,asin,,,,Returns the arc sine or inverse sine of a number.
+scalar,list_push_front,,,,Prepends an element to the beginning of an array.
+scalar,list_length,,,,Returns the length of the array dimension.
+scalar,sinh,,,,Returns the hyperbolic sine of a number.
+scalar,list_position,,,,Returns the position of the first occurrence of the specified element in the array.
+scalar,array_pop_back,,,,Returns the array without the last element.
+scalar,array_any_value,,,,Returns the first non-null element in the array.
+scalar,array_intersect,,,,Returns an array of elements in the intersection of array1 and array2.
+scalar,list_cat,,,,Concatenates arrays.
+scalar,string_to_array,,,,Splits a string into an array of substrings based on a delimiter. Any substrings matching the optional `null_str` argument are replaced with NULL.
+scalar,map_keys,,,,Returns a list of all keys in the map.
+scalar,acos,,,,Returns the arc cosine or inverse cosine of a number.
+scalar,list_to_string,,,,Converts each element to its text representation.
+scalar,list_union,,,,Returns an array of elements that are present in both arrays (all elements from both arrays) with out duplicates.
+scalar,round,,,,Rounds a number to the nearest integer.
+scalar,range,,,,Returns an Arrow array between start and stop with step. The range start..end contains all values with start <= x < end. It is empty if start >= end. Step cannot be 0.
+scalar,array_reverse,,,,Returns the array with the order of the elements reversed.
+scalar,atan2,,,,Returns the arc tangent or inverse tangent of `expression_y / expression_x`.
+scalar,array_replace_n,,,,Replaces the first `max` occurrences of the specified element with another specified element.
+scalar,initcap,,,,Capitalizes the first character in each word in the input string. Words are delimited by non-alphanumeric characters.
+aggregate,mean,,,,Returns the average of numeric values in the specified column.
+aggregate,var_sample,,,,Returns the statistical sample variance of a set of numbers.
+aggregate,approx_percentile_cont,,,,Returns the approximate percentile of input values using the t-digest algorithm.
+window,first_value,,,,Returns value evaluated at the row that is the first row of the window frame.
+scalar,replace,,,,Replaces all occurrences of a specified substring in a string with a new substring.
+scalar,list_has_any,,,,Returns true if any elements exist in both arrays.
+scalar,struct,,,,"Returns an Arrow struct using the specified input expressions optionally named.
+Fields in the returned struct use the optional name or the `cN` naming convention.
+For example: `c0`, `c1`, `c2`, etc."
+scalar,btrim,,,,"Trims the specified trim string from the start and end of a string. If no trim string is provided, all whitespace is removed from the start and end of the input string."
+scalar,to_timestamp_seconds,,,,"Converts a value to a timestamp (`YYYY-MM-DDT00:00:00.000Z`). Supports strings, integer, and unsigned integer types as input. Strings are parsed as RFC3339 (e.g. '2023-07-20T05:44:00') if no [Chrono format](https://docs.rs/chrono/latest/chrono/format/strftime/index.html)s are provided. Integers and unsigned integers are interpreted as seconds since the unix epoch (`1970-01-01T00:00:00Z`). Returns the corresponding timestamp."
+scalar,array_ndims,,,,Returns the number of dimensions of the array.
+scalar,list_distinct,,,,Returns distinct values from the array after removing duplicates.
+scalar,list_repeat,,,,Returns an array containing element `count` times.
+scalar,datetrunc,,,,Truncates a timestamp value to a specified precision.
+scalar,row,,,,"Returns an Arrow struct using the specified input expressions optionally named.
+Fields in the returned struct use the optional name or the `cN` naming convention.
+For example: `c0`, `c1`, `c2`, etc."
+scalar,today,,,,"
+Returns the current UTC date.
+
+The `current_date()` return value is determined at query time and will return the same date, no matter when in the query plan the function executes.
+"
+scalar,current_timestamp,,,,"
+Returns the current UTC timestamp.
+
+The `now()` return value is determined at query time and will return the same timestamp, no matter when in the query plan the function executes.
+"
+scalar,array_slice,,,,Returns a slice of the array based on 1-indexed start and end positions.
+scalar,find_in_set,,,,Returns a value in the range of 1 to N if the string str is in the string list strlist consisting of N substrings.
+scalar,array_positions,,,,"Searches for an element in the array, returns all occurrences."
+scalar,datepart,,,,Returns the specified part of the date as an integer.
+scalar,flatten,,,,"Converts an array of arrays to a flat array.
+
+- Applies to any depth of nested arrays
+- Does not change arrays that are already flat
+
+The flattened array contains all the elements from all source arrays."
+scalar,to_hex,,,,Converts an integer to a hexadecimal string.
+scalar,factorial,,,,Factorial. Returns 1 if value is less than 2.
+scalar,substring,,,,Extracts a substring of a specified number of characters from a specific starting position in a string.
+scalar,to_unixtime,,,,"Converts a value to seconds since the unix epoch (`1970-01-01T00:00:00Z`). Supports strings, dates, timestamps and double types as input. Strings are parsed as RFC3339 (e.g. '2023-07-20T05:44:00') if no [Chrono formats](https://docs.rs/chrono/latest/chrono/format/strftime/index.html) are provided."
+scalar,octet_length,,,,Returns the length of a string in bytes.
+scalar,array_sort,,,,Sort array.
+scalar,array_contains,,,,Returns true if the array contains the element.
+scalar,nullif,,,,"Returns _null_ if _expression1_ equals _expression2_; otherwise it returns _expression1_.
+This can be used to perform the inverse operation of [`coalesce`](#coalesce)."
+aggregate,regr_intercept,,,,"Computes the y-intercept of the linear regression line. For the equation (y = kx + b), this function returns b."
+aggregate,last_value,,,,"Returns the last element in an aggregation group according to the requested ordering. If no ordering is given, returns an arbitrary element from the group."
+aggregate,regr_sxy,,,,Computes the sum of products of paired data points.
+aggregate,nth_value,,,,Returns the nth value in a group of values.
+scalar,log10,,,,Returns the base-10 logarithm of a number.
+scalar,sqrt,,,,Returns the square root of a number.
+scalar,to_timestamp,,,,"
+Converts a value to a timestamp (`YYYY-MM-DDT00:00:00Z`). Supports strings, integer, unsigned integer, and double types as input. Strings are parsed as RFC3339 (e.g. '2023-07-20T05:44:00') if no [Chrono formats] are provided. Integers, unsigned integers, and doubles are interpreted as seconds since the unix epoch (`1970-01-01T00:00:00Z`). Returns the corresponding timestamp.
+
+Note: `to_timestamp` returns `Timestamp(Nanosecond)`. The supported range for integer input is between `-9223372037` and `9223372036`. Supported range for string input is between `1677-09-21T00:12:44.0` and `2262-04-11T23:47:16.0`. Please use `to_timestamp_seconds` for the input outside of supported bounds.
+"
+scalar,digest,,,,Computes the binary hash of an expression using the specified algorithm.
+scalar,tan,,,,Returns the tangent of a number.
+scalar,array_replace_all,,,,Replaces all occurrences of the specified element with another specified element.
+scalar,nvl,,,,Returns _expression2_ if _expression1_ is NULL otherwise it returns _expression1_.
+scalar,encode,,,,Encode binary data into a textual representation.
+scalar,map_extract,,,,Returns a list containing the value for the given key or an empty list if the key is not present in the map.
+scalar,char_length,,,,Returns the number of characters in a string.
+scalar,arrow_cast,,,,Casts a value to a specific Arrow data type.
+scalar,list_element,,,,Extracts the element with the index n from the array.
+scalar,element_at,,,,Returns a list containing the value for the given key or an empty list if the key is not present in the map.
+scalar,array_extract,,,,Extracts the element with the index n from the array.
+scalar,arrow_typeof,,,,Returns the name of the underlying [Arrow data type](https://docs.rs/arrow/latest/arrow/datatypes/enum.DataType.html) of the expression.
+scalar,make_list,,,,Returns an array using the specified input expressions.
+scalar,ln,,,,Returns the natural logarithm of a number.
+scalar,array_to_string,,,,Converts each element to its text representation.
+scalar,map,,,,"Returns an Arrow map with the specified key-value pairs.
+
+The `make_map` function creates a map from two lists: one for keys and one for values. Each key must be unique and non-null."
+scalar,to_timestamp_micros,,,,"Converts a value to a timestamp (`YYYY-MM-DDT00:00:00.000000Z`). Supports strings, integer, and unsigned integer types as input. Strings are parsed as RFC3339 (e.g. '2023-07-20T05:44:00') if no [Chrono format](https://docs.rs/chrono/latest/chrono/format/strftime/index.html)s are provided. Integers and unsigned integers are interpreted as microseconds since the unix epoch (`1970-01-01T00:00:00Z`) Returns the corresponding timestamp."
+scalar,trim,,,,"Trims the specified trim string from the start and end of a string. If no trim string is provided, all whitespace is removed from the start and end of the input string."
+scalar,empty,,,,Returns 1 for an empty array or 0 for a non-empty array.
+scalar,array_indexof,,,,Returns the position of the first occurrence of the specified element in the array.
+scalar,radians,,,,Converts degrees to radians.
+aggregate,bool_or,,,,"Returns true if all non-null input values are true, otherwise false."
+aggregate,regr_r2,,,,Computes the square of the correlation coefficient between the independent and dependent variables.
+aggregate,array_agg,,,,"Returns an array created from the expression elements. If ordering is required, elements are inserted in the specified order."
+window,nth_value,,,,Returns value evaluated at the row that is the nth row of the window frame (counting from 1); null if no such row.
+window,cume_dist,,,,Relative rank of the current row: (number of rows preceding or peer with current row) / (total rows).
+scalar,signum,,,,"Returns the sign of a number.
+Negative numbers return `-1`.
+Zero and positive numbers return `1`."
+scalar,to_local_time,,,,Converts a timestamp with a timezone to a timestamp without a timezone (with no offset or timezone information). This function handles daylight saving time changes.
+scalar,md5,,,,Computes an MD5 128-bit checksum for a string expression.
+scalar,list_replace,,,,Replaces the first occurrence of the specified element with another specified element.
+scalar,cosh,,,,Returns the hyperbolic cosine of a number.
+scalar,cardinality,,,,Returns the total number of elements in the array.
+scalar,cot,,,,Returns the cotangent of a number.
+scalar,reverse,,,,Reverses the character order of a string.
+scalar,array_concat,,,,Concatenates arrays.
+scalar,list_contains,,,,Returns true if the array contains the element.
+scalar,power,,,,Returns a base expression raised to the power of an exponent.
+scalar,list_remove_all,,,,Removes all elements from the array equal to the given value.
+scalar,array_length,,,,Returns the length of the array dimension.
+scalar,floor,,,,Returns the nearest integer less than or equal to a number.
+scalar,date_trunc,,,,Truncates a timestamp value to a specified precision.
+scalar,lower,,,,Converts a string to lower-case.
+scalar,date_bin,,,,"
+Calculates time intervals and returns the start of the interval nearest to the specified timestamp. Use `date_bin` to downsample time series data by grouping rows into time-based ""bins"" or ""windows"" and applying an aggregate or selector function to each window.
+
+For example, if you ""bin"" or ""window"" data into 15 minute intervals, an input timestamp of `2023-01-01T18:18:18Z` will be updated to the start time of the 15 minute bin it is in: `2023-01-01T18:15:00Z`.
+"
+scalar,list_has_all,,,,Returns true if all elements of sub-array exist in array.
+scalar,levenshtein,,,,Returns the [`Levenshtein distance`](https://en.wikipedia.org/wiki/Levenshtein_distance) between the two given strings.
+scalar,list_resize,,,,Resizes the list to contain size elements. Initializes new elements with value or empty if value is not set.
+scalar,list_join,,,,Converts each element to its text representation.
+scalar,chr,,,,Returns the character with the specified ASCII or Unicode code value.
+scalar,array_has,,,,Returns true if the array contains the element.
+scalar,greatest,,,,Returns the greatest value in a list of expressions. Returns _null_ if all expressions are _null_.
+scalar,length,,,,Returns the number of characters in a string.
+scalar,array_remove_n,,,,Removes the first `max` elements from the array equal to the given value.
+scalar,list_append,,,,Appends an element to the end of an array.
+scalar,make_date,,,,Make a date from year/month/day component parts.
+scalar,strpos,,,,"Returns the starting position of a specified substring in a string. Positions begin at 1. If the substring does not exist in the string, the function returns 0."
+scalar,tanh,,,,Returns the hyperbolic tangent of a number.
+scalar,array_repeat,,,,Returns an array containing element `count` times.
+scalar,list_prepend,,,,Prepends an element to the beginning of an array.
+aggregate,regr_slope,,,,"Returns the slope of the linear regression line for non-null pairs in aggregate columns. Given input column Y and X: regr_slope(Y, X) returns the slope (k in Y = k*X + b) using minimal RSS fitting."
+aggregate,sum,,,,Returns the sum of all values in the specified column.
+aggregate,regr_syy,,,,Computes the sum of squares of the dependent variable.
+aggregate,avg,,,,Returns the average of numeric values in the specified column.
+aggregate,var_population,,,,Returns the statistical population variance of a set of numbers.
+aggregate,stddev_samp,,,,Returns the standard deviation of a set of numbers.
+aggregate,bit_or,,,,Computes the bitwise OR of all non-null input values.
+aggregate,bit_xor,,,,Computes the bitwise exclusive OR of all non-null input values.
+aggregate,regr_avgx,,,,Computes the average of the independent variable (input) expression_x for the non-null paired data points.
+aggregate,min,,,,Returns the minimum value in the specified column.
+aggregate,median,,,,Returns the median value in the specified column.
+window,last_value,,,,Returns value evaluated at the row that is the last row of the window frame.
+scalar,list_remove,,,,Removes the first element from the array equal to the given value.
+scalar,list_concat,,,,Concatenates arrays.
+scalar,list_reverse,,,,Returns the array with the order of the elements reversed.
+scalar,array_dims,,,,Returns an array of the array's dimensions.
+scalar,gcd,,,,Returns the greatest common divisor of `expression_x` and `expression_y`. Returns 0 if both inputs are zero.
+scalar,list_sort,,,,Sort array.
+scalar,split_part,,,,Splits a string based on a specified delimiter and returns the substring in the specified position.
+scalar,date_format,,,,"Returns a string representation of a date, time, timestamp or duration based on a [Chrono format](https://docs.rs/chrono/latest/chrono/format/strftime/index.html). Unlike the PostgreSQL equivalent of this function numerical formatting is not supported."
+scalar,array_push_back,,,,Appends an element to the end of an array.
+scalar,array_remove_all,,,,Removes all elements from the array equal to the given value.
+scalar,make_array,,,,Returns an array using the specified input expressions.
+scalar,regexp_match,,,,Returns the first [regular expression](https://docs.rs/regex/latest/regex/#syntax) matches in a string.
+scalar,ascii,,,,Returns the Unicode character code of the first character in a string.
+scalar,from_unixtime,,,,Converts an integer to RFC3339 timestamp format (`YYYY-MM-DDT00:00:00.000000000Z`). Integers and unsigned integers are interpreted as nanoseconds since the unix epoch (`1970-01-01T00:00:00Z`) return the corresponding timestamp.
+scalar,list_replace_n,,,,Replaces the first `max` occurrences of the specified element with another specified element.
+scalar,array_distance,,,,Returns the Euclidean distance between two input arrays of equal length.
+scalar,array_has_all,,,,Returns true if all elements of sub-array exist in array.
+scalar,array_empty,,,,Returns 1 for an empty array or 0 for a non-empty array.
+scalar,translate,,,,Translates characters in a string to specified translation characters.
+scalar,starts_with,,,,Tests if a string starts with a substring.
+scalar,acosh,,,,Returns the area hyperbolic cosine or inverse hyperbolic cosine of a number.
+scalar,regexp_replace,,,,Replaces substrings in a string that match a [regular expression](https://docs.rs/regex/latest/regex/#syntax).
+scalar,list_intersect,,,,Returns an array of elements in the intersection of array1 and array2.
+scalar,nanvl,,,,"Returns the first argument if it's not _NaN_.
+Returns the second argument otherwise."
+scalar,character_length,,,,Returns the number of characters in a string.
+scalar,array_distinct,,,,Returns distinct values from the array after removing duplicates.
+scalar,list_pop_back,,,,Returns the array without the last element.
+scalar,array_push_front,,,,Prepends an element to the beginning of an array.
+scalar,substr,,,,Extracts a substring of a specified number of characters from a specific starting position in a string.
+aggregate,string_agg,,,,Concatenates the values of string expressions and places separator values between them.
+aggregate,var_pop,,,,Returns the statistical population variance of a set of numbers.
+aggregate,var_samp,,,,Returns the statistical sample variance of a set of numbers.
+scalar,abs,,,,Returns the absolute value of a number.
+scalar,list_replace_all,,,,Replaces all occurrences of the specified element with another specified element.
+scalar,bit_length,,,,Returns the bit length of a string.
+scalar,union_extract,,,,"Returns the value of the given field in the union when selected, or NULL otherwise."
+scalar,concat,,,,Concatenates multiple strings together.
+scalar,list_except,,,,Returns an array of the elements that appear in the first array but not in the second.
+scalar,ceil,,,,Returns the nearest integer greater than or equal to a number.
+scalar,list_has,,,,Returns true if the array contains the element.
+scalar,array_element,,,,Extracts the element with the index n from the array.
+scalar,array_remove,,,,Removes the first element from the array equal to the given value.
+scalar,rpad,,,,Pads the right side of a string with another string to a specified string length.
+scalar,random,,,,"Returns a random float value in the range [0, 1).
+The random seed is unique to each row."
+scalar,ltrim,,,,"Trims the specified trim string from the beginning of a string. If no trim string is provided, all whitespace is removed from the start of the input string."
+scalar,map_values,,,,Returns a list of all values in the map.
+scalar,coalesce,,,,Returns the first of its arguments that is not _null_. Returns _null_ if all arguments are _null_. This function is often used to substitute a default value for _null_ values.
+scalar,list_pop_front,,,,Returns the array without the first element.
+scalar,log2,,,,Returns the base-2 logarithm of a number.
+scalar,cos,,,,Returns the cosine of a number.
+scalar,version,,,,Returns the version of DataFusion.
+scalar,list_ndims,,,,Returns the number of dimensions of the array.
+scalar,rtrim,,,,"Trims the specified trim string from the end of a string. If no trim string is provided, all whitespace is removed from the end of the input string."
+scalar,generate_series,,,,"Similar to the range function, but it includes the upper bound."
+scalar,array_except,,,,Returns an array of the elements that appear in the first array but not in the second.
+scalar,list_push_back,,,,Appends an element to the end of an array.
+scalar,named_struct,,,,Returns an Arrow struct using the specified name and input expressions pairs.
+scalar,array_pop_front,,,,Returns the array without the first element.
+scalar,list_indexof,,,,Returns the position of the first occurrence of the specified element in the array.
+scalar,trunc,,,,Truncates a number to a whole number or truncated to the specified decimal places.
+scalar,instr,,,,"Returns the starting position of a specified substring in a string. Positions begin at 1. If the substring does not exist in the string, the function returns 0."
+scalar,to_timestamp_millis,,,,"Converts a value to a timestamp (`YYYY-MM-DDT00:00:00.000Z`). Supports strings, integer, and unsigned integer types as input. Strings are parsed as RFC3339 (e.g. '2023-07-20T05:44:00') if no [Chrono formats](https://docs.rs/chrono/latest/chrono/format/strftime/index.html) are provided. Integers and unsigned integers are interpreted as milliseconds since the unix epoch (`1970-01-01T00:00:00Z`). Returns the corresponding timestamp."
+scalar,list_remove_n,,,,Removes the first `max` elements from the array equal to the given value.
+scalar,array_replace,,,,Replaces the first occurrence of the specified element with another specified element.
+scalar,list_any_value,,,,Returns the first non-null element in the array.
+aggregate,regr_count,,,,Counts the number of non-null paired data points.
+aggregate,regr_sxx,,,,Computes the sum of squares of the independent variable.
+aggregate,corr,,,,Returns the coefficient of correlation between two numeric values.
+aggregate,max,,,,Returns the maximum value in the specified column.
+aggregate,covar_samp,,,,Returns the sample covariance of a set of number pairs.
+aggregate,count,,,,"Returns the number of non-null values in the specified column. To include null values in the total count, use `count(*)`."
+aggregate,regr_avgy,,,,Computes the average of the dependent variable (output) expression_y for the non-null paired data points.
+aggregate,bit_and,,,,Computes the bitwise AND of all non-null input values.
+aggregate,first_value,,,,"Returns the first element in an aggregation group according to the requested ordering. If no ordering is given, returns an arbitrary element from the group."
+aggregate,stddev_pop,,,,Returns the population standard deviation of a set of numbers.
+aggregate,stddev,,,,Returns the standard deviation of a set of numbers.
+window,lead,,,,"Returns value evaluated at the row that is offset rows after the current row within the partition; if there is no such row, instead return default (which must be of the same type as value)."
+window,rank,,,,"Returns the rank of the current row within its partition, allowing gaps between ranks. This function provides a ranking similar to `row_number`, but skips ranks for identical values."
+window,ntile,,,,"Integer ranging from 1 to the argument value, dividing the partition as equally as possible"
+window,percent_rank,,,,Returns the percentage rank of the current row within its partition. The value ranges from 0 to 1 and is computed as `(rank - 1) / (total_rows - 1)`.
+window,dense_rank,,,,"Returns the rank of the current row without gaps. This function ranks rows in a dense manner, meaning consecutive ranks are assigned even for identical values."
