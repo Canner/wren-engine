@@ -51,7 +51,7 @@ async def test_function_list(client):
     response = await client.get(url=f"{base_url}/functions")
     assert response.status_code == 200
     result = response.json()
-    assert len(result) == 347
+    assert len(result) == 346
     the_func = next(filter(lambda x: x["name"] == "extract", result))
     assert the_func == {
         "name": "extract",
