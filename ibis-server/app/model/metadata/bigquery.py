@@ -1,3 +1,5 @@
+from loguru import logger
+
 from app.model import BigQueryConnectionInfo
 from app.model.data_source import DataSource
 from app.model.metadata.dto import (
@@ -9,6 +11,23 @@ from app.model.metadata.dto import (
     TableProperties,
 )
 from app.model.metadata.metadata import Metadata
+
+# BigQuery-specific type mapping
+BIGQUERY_TYPE_MAPPING = {
+    # GEOGRAPHY and RANGE columns were filtered out
+    "bytes": RustWrenEngineColumnType.BYTES,
+    "date": RustWrenEngineColumnType.DATE,
+    "datetime": RustWrenEngineColumnType.DATETIME,
+    "interval": RustWrenEngineColumnType.INTERVAL,
+    "json": RustWrenEngineColumnType.JSON,
+    "int64": RustWrenEngineColumnType.INT64,
+    "numeric": RustWrenEngineColumnType.NUMERIC,
+    "bignumeric": RustWrenEngineColumnType.BIGNUMERIC,
+    "float64": RustWrenEngineColumnType.FLOAT64,
+    "string": RustWrenEngineColumnType.STRING,
+    "time": RustWrenEngineColumnType.TIME,
+    "timestamp": RustWrenEngineColumnType.TIMESTAMPTZ,
+}
 
 
 class BigQueryMetadata(Metadata):
@@ -173,29 +192,28 @@ class BigQueryMetadata(Metadata):
     def get_version(self) -> str:
         return "Follow BigQuery release version"
 
-    def _transform_column_type(self, data_type):
-        # lower case the data_type
-        data_type = data_type.lower()
+    def _transform_column_type(self, data_type: str) -> str | RustWrenEngineColumnType:
+        """Transform BigQuery data type to RustWrenEngineColumnType.
 
-        # if data_type start with "array" or "struct", by pass it
-        if data_type.startswith(("array", "struct")):
+        Args:
+            data_type: The BigQuery data type string
+
+        Returns:
+            The corresponding RustWrenEngineColumnType or original string for complex types
+        """
+        # Convert to lowercase for comparison
+        normalized_type = data_type.lower()
+
+        # Handle complex types (array, struct) by returning as-is
+        if normalized_type.startswith(("array", "struct")):
             return data_type
 
-        # Map BigQuery types to RustWrenEngineColumnType
-        switcher = {
-            # GEOGRAPHY and RANGE columns were filtered out
-            "bytes": RustWrenEngineColumnType.BYTES,
-            "date": RustWrenEngineColumnType.DATE,
-            "datetime": RustWrenEngineColumnType.DATETIME,
-            "interval": RustWrenEngineColumnType.INTERVAL,
-            "json": RustWrenEngineColumnType.JSON,
-            "int64": RustWrenEngineColumnType.INT64,
-            "numeric": RustWrenEngineColumnType.NUMERIC,
-            "bignumeric": RustWrenEngineColumnType.BIGNUMERIC,
-            "float64": RustWrenEngineColumnType.FLOAT64,
-            "string": RustWrenEngineColumnType.STRING,
-            "time": RustWrenEngineColumnType.TIME,
-            "timestamp": RustWrenEngineColumnType.TIMESTAMPTZ,
-        }
+        # Map to RustWrenEngineColumnType using module-level mapping
+        mapped_type = BIGQUERY_TYPE_MAPPING.get(
+            normalized_type, RustWrenEngineColumnType.UNKNOWN
+        )
 
-        return switcher.get(data_type, RustWrenEngineColumnType.UNKNOWN)
+        if mapped_type == RustWrenEngineColumnType.UNKNOWN:
+            logger.warning(f"Unknown BigQuery data type: {data_type}")
+
+        return mapped_type

@@ -2,6 +2,7 @@ import re
 from contextlib import closing
 
 import pandas as pd
+from loguru import logger
 
 from app.model import AthenaConnectionInfo
 from app.model.data_source import DataSource
@@ -13,6 +14,41 @@ from app.model.metadata.dto import (
     TableProperties,
 )
 from app.model.metadata.metadata import Metadata
+
+# Athena-specific type mapping
+ATHENA_TYPE_MAPPING = {
+    # String Types (ignore Binary and Spatial Types for now)
+    "char": RustWrenEngineColumnType.CHAR,
+    "varchar": RustWrenEngineColumnType.VARCHAR,
+    "tinytext": RustWrenEngineColumnType.TEXT,
+    "text": RustWrenEngineColumnType.TEXT,
+    "mediumtext": RustWrenEngineColumnType.TEXT,
+    "longtext": RustWrenEngineColumnType.TEXT,
+    "enum": RustWrenEngineColumnType.VARCHAR,
+    "set": RustWrenEngineColumnType.VARCHAR,
+    # Integer Types
+    "bit": RustWrenEngineColumnType.TINYINT,
+    "tinyint": RustWrenEngineColumnType.TINYINT,
+    "smallint": RustWrenEngineColumnType.SMALLINT,
+    "mediumint": RustWrenEngineColumnType.INTEGER,
+    "int": RustWrenEngineColumnType.INTEGER,
+    "integer": RustWrenEngineColumnType.INTEGER,
+    "bigint": RustWrenEngineColumnType.BIGINT,
+    # Boolean Types
+    "bool": RustWrenEngineColumnType.BOOL,
+    "boolean": RustWrenEngineColumnType.BOOL,
+    # Decimal Types
+    "float": RustWrenEngineColumnType.FLOAT4,
+    "double": RustWrenEngineColumnType.DOUBLE,
+    "decimal": RustWrenEngineColumnType.DECIMAL,
+    "numeric": RustWrenEngineColumnType.NUMERIC,
+    # Date/Time Types
+    "date": RustWrenEngineColumnType.DATE,
+    "datetime": RustWrenEngineColumnType.TIMESTAMP,
+    "timestamp": RustWrenEngineColumnType.TIMESTAMPTZ,
+    # JSON Type
+    "json": RustWrenEngineColumnType.JSON,
+}
 
 
 class AthenaMetadata(Metadata):
@@ -101,38 +137,24 @@ class AthenaMetadata(Metadata):
     def _format_athena_compact_table_name(self, schema: str, table: str) -> str:
         return f"{schema}.{table}"
 
-    def _transform_column_type(self, data_type):
-        data_type = re.sub(r"\(.*\)", "", data_type).strip()
-        switcher = {
-            # String Types (ignore Binary and Spatial Types for now)
-            "char": RustWrenEngineColumnType.CHAR,
-            "varchar": RustWrenEngineColumnType.VARCHAR,
-            "tinytext": RustWrenEngineColumnType.TEXT,
-            "text": RustWrenEngineColumnType.TEXT,
-            "mediumtext": RustWrenEngineColumnType.TEXT,
-            "longtext": RustWrenEngineColumnType.TEXT,
-            "enum": RustWrenEngineColumnType.VARCHAR,
-            "set": RustWrenEngineColumnType.VARCHAR,
-            "bit": RustWrenEngineColumnType.TINYINT,
-            "tinyint": RustWrenEngineColumnType.TINYINT,
-            "smallint": RustWrenEngineColumnType.SMALLINT,
-            "mediumint": RustWrenEngineColumnType.INTEGER,
-            "int": RustWrenEngineColumnType.INTEGER,
-            "integer": RustWrenEngineColumnType.INTEGER,
-            "bigint": RustWrenEngineColumnType.BIGINT,
-            # boolean
-            "bool": RustWrenEngineColumnType.BOOL,
-            "boolean": RustWrenEngineColumnType.BOOL,
-            # Decimal
-            "float": RustWrenEngineColumnType.FLOAT4,
-            "double": RustWrenEngineColumnType.DOUBLE,
-            "decimal": RustWrenEngineColumnType.DECIMAL,
-            "numeric": RustWrenEngineColumnType.NUMERIC,
-            "date": RustWrenEngineColumnType.DATE,
-            "datetime": RustWrenEngineColumnType.TIMESTAMP,
-            "timestamp": RustWrenEngineColumnType.TIMESTAMPTZ,
-            # JSON Type
-            "json": RustWrenEngineColumnType.JSON,
-        }
+    def _transform_column_type(self, data_type: str) -> RustWrenEngineColumnType:
+        """Transform Athena data type to RustWrenEngineColumnType.
 
-        return switcher.get(data_type.lower(), RustWrenEngineColumnType.UNKNOWN)
+        Args:
+            data_type: The Athena data type string
+
+        Returns:
+            The corresponding RustWrenEngineColumnType
+        """
+        # Remove parameter specifications like VARCHAR(255) -> VARCHAR
+        normalized_type = re.sub(r"\(.*\)", "", data_type).strip().lower()
+
+        # Use the module-level mapping table
+        mapped_type = ATHENA_TYPE_MAPPING.get(
+            normalized_type, RustWrenEngineColumnType.UNKNOWN
+        )
+
+        if mapped_type == RustWrenEngineColumnType.UNKNOWN:
+            logger.warning(f"Unknown Athena data type: {data_type}")
+
+        return mapped_type

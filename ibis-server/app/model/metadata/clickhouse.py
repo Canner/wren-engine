@@ -1,3 +1,5 @@
+from loguru import logger
+
 from app.model import ClickHouseConnectionInfo
 from app.model.data_source import DataSource
 from app.model.metadata.dto import (
@@ -8,6 +10,37 @@ from app.model.metadata.dto import (
     TableProperties,
 )
 from app.model.metadata.metadata import Metadata
+
+# ClickHouse-specific type mapping
+CLICKHOUSE_TYPE_MAPPING = {
+    # Boolean Types
+    "boolean": RustWrenEngineColumnType.BOOL,
+    # Integer Types
+    "int8": RustWrenEngineColumnType.TINYINT,
+    "uint8": RustWrenEngineColumnType.INT2,
+    "int16": RustWrenEngineColumnType.INT2,
+    "uint16": RustWrenEngineColumnType.INT2,
+    "int32": RustWrenEngineColumnType.INT4,
+    "uint32": RustWrenEngineColumnType.INT4,
+    "int64": RustWrenEngineColumnType.INT8,
+    "uint64": RustWrenEngineColumnType.INT8,
+    # Float Types
+    "float32": RustWrenEngineColumnType.FLOAT4,
+    "float64": RustWrenEngineColumnType.FLOAT8,
+    "decimal": RustWrenEngineColumnType.DECIMAL,
+    # Date/Time Types
+    "date": RustWrenEngineColumnType.DATE,
+    "datetime": RustWrenEngineColumnType.TIMESTAMP,
+    # String Types
+    "string": RustWrenEngineColumnType.VARCHAR,
+    "fixedstring": RustWrenEngineColumnType.CHAR,
+    # Special Types
+    "uuid": RustWrenEngineColumnType.UUID,
+    "enum8": RustWrenEngineColumnType.STRING,  # Enums can be mapped to strings
+    "enum16": RustWrenEngineColumnType.STRING,  # Enums can be mapped to strings
+    "ipv4": RustWrenEngineColumnType.INET,
+    "ipv6": RustWrenEngineColumnType.INET,
+}
 
 
 class ClickHouseMetadata(Metadata):
@@ -76,33 +109,24 @@ class ClickHouseMetadata(Metadata):
     def _format_compact_table_name(self, schema: str, table: str):
         return f"{schema}.{table}"
 
-    def _transform_column_type(self, data_type):
-        # lower case the data_type
-        data_type = data_type.lower()
+    def _transform_column_type(self, data_type: str) -> RustWrenEngineColumnType:
+        """Transform ClickHouse data type to RustWrenEngineColumnType.
 
-        # Map ClickHouse types to RustWrenEngineColumnType
-        switcher = {
-            "boolean": RustWrenEngineColumnType.BOOL,
-            "int8": RustWrenEngineColumnType.TINYINT,
-            "uint8": RustWrenEngineColumnType.INT2,
-            "int16": RustWrenEngineColumnType.INT2,
-            "uint16": RustWrenEngineColumnType.INT2,
-            "int32": RustWrenEngineColumnType.INT4,
-            "uint32": RustWrenEngineColumnType.INT4,
-            "int64": RustWrenEngineColumnType.INT8,
-            "uint64": RustWrenEngineColumnType.INT8,
-            "float32": RustWrenEngineColumnType.FLOAT4,
-            "float64": RustWrenEngineColumnType.FLOAT8,
-            "decimal": RustWrenEngineColumnType.DECIMAL,
-            "date": RustWrenEngineColumnType.DATE,
-            "datetime": RustWrenEngineColumnType.TIMESTAMP,
-            "string": RustWrenEngineColumnType.VARCHAR,
-            "fixedstring": RustWrenEngineColumnType.CHAR,
-            "uuid": RustWrenEngineColumnType.UUID,
-            "enum8": RustWrenEngineColumnType.STRING,  # Enums can be mapped to strings
-            "enum16": RustWrenEngineColumnType.STRING,  # Enums can be mapped to strings
-            "ipv4": RustWrenEngineColumnType.INET,
-            "ipv6": RustWrenEngineColumnType.INET,
-        }
+        Args:
+            data_type: The ClickHouse data type string
 
-        return switcher.get(data_type, RustWrenEngineColumnType.UNKNOWN)
+        Returns:
+            The corresponding RustWrenEngineColumnType
+        """
+        # Convert to lowercase for comparison
+        normalized_type = data_type.lower()
+
+        # Use the module-level mapping table
+        mapped_type = CLICKHOUSE_TYPE_MAPPING.get(
+            normalized_type, RustWrenEngineColumnType.UNKNOWN
+        )
+
+        if mapped_type == RustWrenEngineColumnType.UNKNOWN:
+            logger.warning(f"Unknown ClickHouse data type: {data_type}")
+
+        return mapped_type

@@ -22,6 +22,34 @@ from app.model.metadata.dto import (
 from app.model.metadata.metadata import Metadata
 from app.model.utils import init_duckdb_gcs, init_duckdb_minio, init_duckdb_s3
 
+DUCKDB_TYPE_MAPPING = {
+    "bigint": RustWrenEngineColumnType.INT64,
+    "bit": RustWrenEngineColumnType.INT2,
+    "blob": RustWrenEngineColumnType.BYTES,
+    "boolean": RustWrenEngineColumnType.BOOL,
+    "date": RustWrenEngineColumnType.DATE,
+    "double": RustWrenEngineColumnType.DOUBLE,
+    "float": RustWrenEngineColumnType.FLOAT,
+    "integer": RustWrenEngineColumnType.INT,
+    # TODO: Wren engine does not support HUGEINT. Map to INT64 for now.
+    "hugeint": RustWrenEngineColumnType.INT64,
+    "interval": RustWrenEngineColumnType.INTERVAL,
+    "json": RustWrenEngineColumnType.JSON,
+    "smallint": RustWrenEngineColumnType.INT2,
+    "time": RustWrenEngineColumnType.TIME,
+    "timestamp": RustWrenEngineColumnType.TIMESTAMP,
+    "timestamp with time zone": RustWrenEngineColumnType.TIMESTAMPTZ,
+    "tinyint": RustWrenEngineColumnType.INT2,
+    "ubigint": RustWrenEngineColumnType.INT64,
+    # TODO: Wren engine does not support UHUGEINT. Map to INT64 for now.
+    "uhugeint": RustWrenEngineColumnType.INT64,
+    "uinteger": RustWrenEngineColumnType.INT,
+    "usmallint": RustWrenEngineColumnType.INT2,
+    "utinyint": RustWrenEngineColumnType.INT2,
+    "uuid": RustWrenEngineColumnType.UUID,
+    "varchar": RustWrenEngineColumnType.STRING,
+}
+
 
 class ObjectStorageMetadata(Metadata):
     def __init__(self, connection_info):
@@ -121,6 +149,14 @@ class ObjectStorageMetadata(Metadata):
             )
 
     def _to_column_type(self, col_type: str) -> RustWrenEngineColumnType:
+        """Transform DuckDB data type to RustWrenEngineColumnType.
+
+        Args:
+            col_type: The DuckDB data type string
+
+        Returns:
+            The corresponding RustWrenEngineColumnType
+        """
         if col_type.startswith("DECIMAL"):
             return RustWrenEngineColumnType.DECIMAL
 
@@ -131,36 +167,18 @@ class ObjectStorageMetadata(Metadata):
         # TODO: support array
         if col_type.endswith("[]"):
             return RustWrenEngineColumnType.UNKNOWN
+        # Convert to lowercase for comparison
+        normalized_type = col_type.lower()
 
-        # refer to https://duckdb.org/docs/sql/data_types/overview#general-purpose-data-types
-        switcher = {
-            "BIGINT": RustWrenEngineColumnType.INT64,
-            "BIT": RustWrenEngineColumnType.INT2,
-            "BLOB": RustWrenEngineColumnType.BYTES,
-            "BOOLEAN": RustWrenEngineColumnType.BOOL,
-            "DATE": RustWrenEngineColumnType.DATE,
-            "DOUBLE": RustWrenEngineColumnType.DOUBLE,
-            "FLOAT": RustWrenEngineColumnType.FLOAT,
-            "INTEGER": RustWrenEngineColumnType.INT,
-            # TODO: Wren engine does not support HUGEINT. Map to INT64 for now.
-            "HUGEINT": RustWrenEngineColumnType.INT64,
-            "INTERVAL": RustWrenEngineColumnType.INTERVAL,
-            "JSON": RustWrenEngineColumnType.JSON,
-            "SMALLINT": RustWrenEngineColumnType.INT2,
-            "TIME": RustWrenEngineColumnType.TIME,
-            "TIMESTAMP": RustWrenEngineColumnType.TIMESTAMP,
-            "TIMESTAMP WITH TIME ZONE": RustWrenEngineColumnType.TIMESTAMPTZ,
-            "TINYINT": RustWrenEngineColumnType.INT2,
-            "UBIGINT": RustWrenEngineColumnType.INT64,
-            # TODO: Wren engine does not support UHUGEINT. Map to INT64 for now.
-            "UHUGEINT": RustWrenEngineColumnType.INT64,
-            "UINTEGER": RustWrenEngineColumnType.INT,
-            "USMALLINT": RustWrenEngineColumnType.INT2,
-            "UTINYINT": RustWrenEngineColumnType.INT2,
-            "UUID": RustWrenEngineColumnType.UUID,
-            "VARCHAR": RustWrenEngineColumnType.STRING,
-        }
-        return switcher.get(col_type, RustWrenEngineColumnType.UNKNOWN)
+        # Use the module-level mapping table
+        mapped_type = DUCKDB_TYPE_MAPPING.get(
+            normalized_type, RustWrenEngineColumnType.UNKNOWN
+        )
+
+        if mapped_type == RustWrenEngineColumnType.UNKNOWN:
+            logger.warning(f"Unknown DuckDB data type: {col_type}")
+
+        return mapped_type
 
     def _get_connection(self):
         return duckdb.connect()
