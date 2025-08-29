@@ -58,8 +58,8 @@ async def test_function_list(client):
         "description": "Get subfield from date/time",
         "function_type": "scalar",
         "param_names": None,
-        "param_types": None,
-        "return_type": None,
+        "param_types": "text,timestamp",
+        "return_type": "numeric",
     }
 
     config.set_remote_function_list_path(None)
