@@ -80,6 +80,7 @@ trino = ">=0.321,<1"
 psycopg2 = ">=2.8.4,<3"
 clickhouse-connect = "0.8.15"
 asgi-lifespan = "2.1.0"
+polars = ">=1.32.0"
 
 [tool.pytest.ini_options]
 addopts = ["--strict-markers"]
