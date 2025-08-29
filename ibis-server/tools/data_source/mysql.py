@@ -2,11 +2,13 @@
 # Following are the steps to run this script:
 #   docker pull --platform linux/amd64 mysql:5.7.44
 #   docker run --name test-mysql -e MYSQL_ROOT_PASSWORD=my-pwd -e MYSQL_DATABASE={database_name} --platform linux/amd64 -p 3306:3306 -d mysql:5.7.44
+# Or newer version
+#   docker pull --platform linux/amd64 mysql:latest
+#   docker run --name test-mysql -e MYSQL_ROOT_PASSWORD=my-pwd -e MYSQL_DATABASE={database_name} --platform linux/amd64 -p 3306:3306 -d mysql:latest
 
 import argparse
 import sqlalchemy
-from sqlalchemy import create_engine
-import pandas as pd
+import polars as pl
 import json
 import os
 
@@ -34,6 +36,8 @@ engine = sqlalchemy.create_engine(connection_url)
 
 for model in mdl["models"]:
     path = f"{args.dataset_path}/{model['name']}.parquet"
-    pd.read_parquet(path).to_sql(
-        model["tableReference"]["table"], engine, index=False, if_exists="replace"
+    pl.read_parquet(path).write_database(
+        table_name=model["tableReference"]["table"],
+        connection=connection_url,
+        if_table_exists="replace"
     )
