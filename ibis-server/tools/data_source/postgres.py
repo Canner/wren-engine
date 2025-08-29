@@ -12,7 +12,7 @@ import os
 from dotenv import load_dotenv
 
 # Set up argument parsing
-parser = argparse.ArgumentParser(description="import data to mysql")
+parser = argparse.ArgumentParser(description="import data to postgres")
 parser.add_argument("dataset_path", help="Path to the dataset")
 parser.add_argument("database_name", help="Name of the database")
 
