@@ -1315,6 +1315,23 @@ mod test {
         )
         .await?;
         assert_snapshot!(actual, @"SELECT CAST('2024-07-15 22:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2024-07-15 18:00:00\"\")\"");
+
+        let headers = HashMap::new();
+        let headers_ref = Arc::new(headers);
+        let ctx = SessionContext::new();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
+        let sql = "select timestamp with time zone '2011-01-01 18:00:00' - timestamp with time zone '2011-01-01 10:00:00'";
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            Arc::clone(&headers_ref),
+            sql,
+        )
+        .await?;
+        // TIMESTAMP doesn't have timezone, so the timezone will be ignored
+        assert_snapshot!(actual, @"SELECT CAST('2011-01-01 18:00:00' AS TIMESTAMP) - CAST('2011-01-01 10:00:00' AS TIMESTAMP)");
+
         Ok(())
     }
 
