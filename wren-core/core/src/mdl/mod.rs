@@ -379,8 +379,6 @@ pub fn transform_sql(
 }
 
 /// Transform the SQL based on the MDL with the SessionContext
-/// Wren engine will normalize the SQL to the lower case to solve the case-sensitive
-/// issue for the Wren view
 pub async fn transform_sql_with_ctx(
     ctx: &SessionContext,
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
@@ -736,7 +734,7 @@ mod test {
             Arc::new(HashMap::default()),
             Mode::Unparse,
         )?);
-        let sql = r#"select * from "CTest"."STest"."Customer""#;
+        let sql = r#"select * from CTest.STest.Customer"#;
         let actual = mdl::transform_sql_with_ctx(
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
@@ -786,7 +784,7 @@ mod test {
             Arc::clone(&analyzed_mdl),
             &functions,
             Arc::new(HashMap::new()),
-            r#"select add_two("Custkey") from "Customer""#,
+            r#"select add_two(Custkey) from Customer"#,
         )
         .await?;
         assert_snapshot!(actual, @"SELECT add_two(\"Customer\".\"Custkey\") FROM (SELECT \"Customer\".\"Custkey\" \
@@ -829,22 +827,22 @@ mod test {
                     .column(ColumnBuilder::new("名字", "string").build())
                     .column(
                         ColumnBuilder::new("name_append", "string")
-                            .expression(r#""名字" || "名字""#)
+                            .expression(r#"名字 || 名字"#)
                             .build(),
                     )
                     .column(
                         ColumnBuilder::new("group", "string")
-                            .expression(r#""組別""#)
+                            .expression(r#"組別"#)
                             .build(),
                     )
                     .column(
                         ColumnBuilder::new("subscribe", "int")
-                            .expression(r#""訂閱數""#)
+                            .expression(r#"訂閱數"#)
                             .build(),
                     )
                     .column(
                         ColumnBuilder::new("subscribe_plus", "int")
-                            .expression(r#""訂閱數" + 1"#)
+                            .expression(r#"訂閱數 + 1"#)
                             .build(),
                     )
                     .build(),
@@ -910,12 +908,12 @@ mod test {
                     .table_reference("artist")
                     .column(
                         ColumnBuilder::new("name_append", "string")
-                            .expression(r#""名字" || "名字""#)
+                            .expression(r#"名字 || 名字"#)
                             .build(),
                     )
                     .column(
                         ColumnBuilder::new("lower_name", "string")
-                            .expression(r#"lower("名字")"#)
+                            .expression(r#"lower(名字)"#)
                             .build(),
                     )
                     .build(),
@@ -974,7 +972,7 @@ mod test {
                     .column(ColumnBuilder::new("名字", "string").hidden(true).build())
                     .column(
                         ColumnBuilder::new("串接名字", "string")
-                            .expression(r#""名字" || "名字""#)
+                            .expression(r#"名字 || 名字"#)
                             .build(),
                     )
                     .build(),
@@ -986,7 +984,7 @@ mod test {
             Arc::new(HashMap::default()),
             Mode::Unparse,
         )?);
-        let sql = r#"select "串接名字" from wren.test.artist"#;
+        let sql = r#"select 串接名字 from wren.test.artist"#;
         let actual = transform_sql_with_ctx(
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
@@ -1059,7 +1057,7 @@ mod test {
             Arc::new(HashMap::default()),
             Mode::Unparse,
         )?);
-        let sql = r#"select * from wren.test.artist where "名字" in (SELECT "名字" FROM wren.test.artist)"#;
+        let sql = r#"select * from wren.test.artist where 名字 in (SELECT 名字 FROM wren.test.artist)"#;
         let actual = transform_sql_with_ctx(
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
@@ -1360,7 +1358,7 @@ mod test {
                     )
                     .column(
                         ColumnBuilder::new("cast_timestamptz", "timestamptz")
-                            .expression(r#"cast("出道時間" as timestamp with time zone)"#)
+                            .expression(r#"cast(出道時間 as timestamp with time zone)"#)
                             .build(),
                     )
                     .build(),
@@ -2622,7 +2620,7 @@ mod test {
                     .add_row_level_access_control(
                         "rule",
                         vec![SessionProperty::new_required("預定組別A")],
-                        "\"組別\" = @預定組別A",
+                        "組別 = @預定組別A",
                     )
                     .build(),
             )
@@ -2638,7 +2636,7 @@ mod test {
             Mode::Unparse,
         )?);
 
-        let sql = r#"SELECT "名字", "組別", "訂閱數" FROM "VTU藝人""#;
+        let sql = r#"SELECT 名字, 組別, 訂閱數 FROM VTU藝人"#;
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
                 .await?,
@@ -3461,6 +3459,69 @@ mod test {
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
             @"SELECT cte2.o_orderkey FROM (SELECT orders.o_orderkey FROM (SELECT orders.o_custkey, orders.o_orderkey FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders) AS orders WHERE orders.o_custkey IN (SELECT cte1.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer) AS cte1)) AS cte2"
         );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_ambiguous_table_name() -> Result<()> {
+        let ctx = SessionContext::new();
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_name", "int").build())
+                    .column(ColumnBuilder::new("C_name", "string").build())
+                    .build(),
+            )
+            .model(
+                ModelBuilder::new("Customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_name", "int").build())
+                    .column(ColumnBuilder::new("C_name", "string").build())
+                    .build(),
+            )
+            .build();
+
+        let headers = Arc::new(HashMap::default());
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest,
+            Arc::clone(&headers),
+            Mode::Unparse,
+        )?);
+
+        let sql = "select c_name, C_name from customer";
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
+            @r#"SELECT customer.c_name, customer."C_name" FROM (SELECT customer."C_name", customer.c_name FROM (SELECT __source."C_name" AS "C_name", __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer"#
+        );
+
+        let sql = "select c_name, C_name from Customer";
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
+            @r#"SELECT "Customer".c_name, "Customer"."C_name" FROM (SELECT "Customer"."C_name", "Customer".c_name FROM (SELECT __source."C_name" AS "C_name", __source.c_name AS c_name FROM customer AS __source) AS "Customer") AS "Customer""#
+        );
+
+        let sql = "select * from CUSTOMER";
+        match transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            Arc::clone(&headers),
+            sql,
+        )
+        .await
+        {
+            Ok(_) => {
+                panic!("Expected error, but got SQL");
+            }
+            Err(e) => assert_snapshot!(
+                e.to_string(),
+                @"Error during planning: table 'wren.test.CUSTOMER' not found"
+            ),
+        }
+
         Ok(())
     }
 
