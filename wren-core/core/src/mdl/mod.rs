@@ -3089,6 +3089,90 @@ mod test {
     }
 
     #[tokio::test]
+    async fn test_date_diff_bigquery() -> Result<()> {
+        let ctx = SessionContext::new();
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("date_table")
+                    .table_reference("date_table")
+                    .column(ColumnBuilder::new("date_1", "date").build())
+                    .column(ColumnBuilder::new("date_2", "date").build())
+                    .build(),
+            )
+            .model(
+                ModelBuilder::new("timestamp_table")
+                    .table_reference("timestamp_table")
+                    .column(ColumnBuilder::new("ts_1", "timestamp").build())
+                    .column(ColumnBuilder::new("ts_2", "timestamp").build())
+                    .build(),
+            )
+            .data_source(DataSource::BigQuery)
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest,
+            Arc::new(HashMap::default()),
+            Mode::Unparse,
+        )?);
+
+        let sql = "select date_diff(DAY, date_1, date_2) from date_table";
+        let headers: Arc<HashMap<String, Option<String>>> = Arc::new(HashMap::default());
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
+            @"SELECT DATE_DIFF(date_table.date_2, date_table.date_1, DAY) FROM (SELECT date_table.date_1, date_table.date_2 FROM (SELECT __source.date_1 AS date_1, __source.date_2 AS date_2 FROM date_table AS __source) AS date_table) AS date_table"
+        );
+
+        let sql = "select datediff(DAY, date_1, date_2) from date_table";
+        let headers: Arc<HashMap<String, Option<String>>> = Arc::new(HashMap::default());
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
+            @"SELECT DATE_DIFF(date_table.date_2, date_table.date_1, DAY) FROM (SELECT date_table.date_1, date_table.date_2 FROM (SELECT __source.date_1 AS date_1, __source.date_2 AS date_2 FROM date_table AS __source) AS date_table) AS date_table"
+        );
+        let sql = "select datediff('DAY', date_1, date_2) from date_table";
+        let headers: Arc<HashMap<String, Option<String>>> = Arc::new(HashMap::default());
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
+            @"SELECT DATE_DIFF(date_table.date_2, date_table.date_1, DAY) FROM (SELECT date_table.date_1, date_table.date_2 FROM (SELECT __source.date_1 AS date_1, __source.date_2 AS date_2 FROM date_table AS __source) AS date_table) AS date_table"
+        );
+
+        let sql = "select datediff(DAY, date_1, date_2) from date_table";
+        let headers: Arc<HashMap<String, Option<String>>> = Arc::new(HashMap::default());
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
+            @"SELECT DATE_DIFF(date_table.date_2, date_table.date_1, DAY) FROM (SELECT date_table.date_1, date_table.date_2 FROM (SELECT __source.date_1 AS date_1, __source.date_2 AS date_2 FROM date_table AS __source) AS date_table) AS date_table"
+        );
+
+        let sql = "select datediff('DAYS', date_1, date_2) from date_table";
+        let headers: Arc<HashMap<String, Option<String>>> = Arc::new(HashMap::default());
+        match transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            Arc::clone(&headers),
+            sql,
+        )
+        .await
+        {
+            Ok(_) => {
+                panic!("Expected error, but got SQL");
+            }
+            Err(e) => assert_snapshot!(
+                e.to_string(),
+                @"Error during planning: Unsupported date part 'DAYS' for BIGQUERY. Valid values are: WEEK, DAYOFWEEK, DAY, DAYOFYEAR, ISOWEEK, MONTH, QUARTER, YEAR, ISOYEAR, MICROSECOND, MILLISECOND, SECOND, MINUTE, HOUR"
+            ),
+        }
+
+        let sql = "select datediff(HOUR, ts_1, ts_2) from timestamp_table";
+        let headers: Arc<HashMap<String, Option<String>>> = Arc::new(HashMap::default());
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
+            @"SELECT DATE_DIFF(timestamp_table.ts_2, timestamp_table.ts_1, HOUR) FROM (SELECT timestamp_table.ts_1, timestamp_table.ts_2 FROM (SELECT __source.ts_1 AS ts_1, __source.ts_2 AS ts_2 FROM timestamp_table AS __source) AS timestamp_table) AS timestamp_table"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_window_functions_without_frame_bigquery() -> Result<()> {
         let ctx = SessionContext::new();
         let manifest = ManifestBuilder::new()

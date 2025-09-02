@@ -24,7 +24,9 @@ use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
 use datafusion::logical_expr::Expr;
 
 use datafusion::scalar::ScalarValue;
-use datafusion::sql::sqlparser::ast::{self, ExtractSyntax, Ident, WindowFrameBound};
+use datafusion::sql::sqlparser::ast::{
+    self, ExtractSyntax, Function, Ident, ObjectName, ObjectNamePart, WindowFrameBound,
+};
 use datafusion::sql::unparser::Unparser;
 use regex::Regex;
 
@@ -147,6 +149,50 @@ impl InnerDialect for BigQueryDialect {
                     expr: Box::new(unparser.expr_to_sql(&args[1])?),
                 }))
             }
+            "date_diff" => {
+                if args.len() != 3 {
+                    return plan_err!(
+                        "date_diff requires exactly 3 arguments, found {}",
+                        args.len()
+                    );
+                }
+                let Expr::Literal(ScalarValue::Utf8(Some(s)), _) = args[0].clone() else {
+                    return plan_err!(
+                        "date_diff requires a string literal as the third argument"
+                    );
+                };
+                let granularity = ast::Expr::Identifier(Ident::new(
+                    self.datetime_field_from_str(&s)?.to_string(),
+                ));
+                // DATE_DIFF(end_date, start_date, granularity)
+                // https://cloud.google.com/bigquery/docs/reference/standard-sql/date_functions#date_diff
+                Ok(Some(ast::Expr::Function(Function {
+                    name: ObjectName(vec![ObjectNamePart::Identifier(Ident::new(
+                        "DATE_DIFF",
+                    ))]),
+                    args: ast::FunctionArguments::List(ast::FunctionArgumentList {
+                        duplicate_treatment: None,
+                        args: vec![
+                            unparser.expr_to_sql(&args[2]).map(|e| {
+                                ast::FunctionArg::Unnamed(ast::FunctionArgExpr::Expr(e))
+                            })?,
+                            unparser.expr_to_sql(&args[1]).map(|e| {
+                                ast::FunctionArg::Unnamed(ast::FunctionArgExpr::Expr(e))
+                            })?,
+                            ast::FunctionArg::Unnamed(ast::FunctionArgExpr::Expr(
+                                granularity,
+                            )),
+                        ],
+                        clauses: vec![],
+                    }),
+                    filter: None,
+                    null_treatment: None,
+                    over: None,
+                    within_group: vec![],
+                    parameters: ast::FunctionArguments::None,
+                    uses_odbc_syntax: false,
+                })))
+            }
             "now" => {
                 scalar_function_to_sql_internal(unparser, None, "CURRENT_TIMESTAMP", args)
             }
@@ -227,8 +273,13 @@ impl BigQueryDialect {
             "QUARTER" => Ok(ast::DateTimeField::Quarter),
             "YEAR" => Ok(ast::DateTimeField::Year),
             "ISOYEAR" => Ok(ast::DateTimeField::Isoyear),
+            "MICROSECOND" => Ok(ast::DateTimeField::Microsecond),
+            "MILLISECOND" => Ok(ast::DateTimeField::Millisecond),
+            "SECOND" => Ok(ast::DateTimeField::Second),
+            "MINUTE" => Ok(ast::DateTimeField::Minute),
+            "HOUR" => Ok(ast::DateTimeField::Hour),
             _ => {
-                plan_err!("Unsupported date part '{}' for BigQuery", s)
+                plan_err!("Unsupported date part '{}' for BIGQUERY. Valid values are: WEEK, DAYOFWEEK, DAY, DAYOFYEAR, ISOWEEK, MONTH, QUARTER, YEAR, ISOYEAR, MICROSECOND, MILLISECOND, SECOND, MINUTE, HOUR", s)
             }
         }
     }

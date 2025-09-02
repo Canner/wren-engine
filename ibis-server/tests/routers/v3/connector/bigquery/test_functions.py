@@ -25,6 +25,7 @@ manifest = {
             },
             "columns": [
                 {"name": "o_orderkey", "type": "integer"},
+                {"name": "o_orderdate", "type": "date"},
             ],
         },
     ],
@@ -52,7 +53,7 @@ async def test_function_list(client):
     response = await client.get(url=f"{base_url}/functions")
     assert response.status_code == 200
     result = response.json()
-    assert len(result) == 175
+    assert len(result) == 176
     the_func = next(
         filter(
             lambda x: x["name"] == "string_agg",
@@ -159,4 +160,86 @@ async def test_datetime_function(client, manifest_str: str, connection_info):
         "columns": ["col"],
         "data": [["2001-01-01 00:11:11.000000"]],
         "dtypes": {"col": "timestamp[us]"},
+    }
+
+
+async def test_date_diff_function(client, manifest_str: str, connection_info):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT DATE_DIFF(DAY, CURRENT_DATE(), o_orderdate) AS col FROM orders LIMIT 1",
+        },
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result == {
+        "columns": ["col"],
+        "data": [[result["data"][0][0]]],
+        "dtypes": {"col": "int64"},
+    }
+
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT DATEDIFF(DAY, CURRENT_DATE(), o_orderdate) AS col FROM orders LIMIT 1",
+        },
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result == {
+        "columns": ["col"],
+        "data": [[result["data"][0][0]]],
+        "dtypes": {"col": "int64"},
+    }
+
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT DATEDIFF('DAY', CURRENT_DATE(), o_orderdate) AS col FROM orders LIMIT 1",
+        },
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result == {
+        "columns": ["col"],
+        "data": [[result["data"][0][0]]],
+        "dtypes": {"col": "int64"},
+    }
+
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT DATEDIFF('DAYS', CURRENT_DATE(), o_orderdate) AS col FROM orders LIMIT 1",
+        },
+    )
+
+    assert response.status_code == 422
+    assert "Unsupported date part 'DAYS' for BIGQUERY." in response.text
+
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT DATEDIFF('HOUR', CURRENT_TIMESTAMP(), TIMESTAMP WITH TIME ZONE '2025-01-01 00:00:00') AS col FROM orders LIMIT 1",
+        },
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result == {
+        "columns": ["col"],
+        "data": [[result["data"][0][0]]],
+        "dtypes": {"col": "int64"},
     }
