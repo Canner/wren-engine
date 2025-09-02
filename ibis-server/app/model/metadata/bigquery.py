@@ -15,6 +15,8 @@ from app.model.metadata.metadata import Metadata
 # BigQuery-specific type mapping
 BIGQUERY_TYPE_MAPPING = {
     # GEOGRAPHY and RANGE columns were filtered out
+    "bool": RustWrenEngineColumnType.BOOL,
+    "boolean": RustWrenEngineColumnType.BOOL,
     "bytes": RustWrenEngineColumnType.BYTES,
     "date": RustWrenEngineColumnType.DATE,
     "datetime": RustWrenEngineColumnType.DATETIME,

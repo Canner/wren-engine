@@ -246,6 +246,6 @@ class CannerMetadata(Metadata):
         )
 
         if mapped_type == RustWrenEngineColumnType.UNKNOWN:
-            logger.warning(f"Unknown ClickHouse data type: {data_type}")
+            logger.warning(f"Unknown Canner data type: {data_type}")
 
         return mapped_type
