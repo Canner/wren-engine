@@ -387,15 +387,15 @@ mod test {
 
     #[tokio::test]
     async fn test_by_pass_scalar_udf() -> Result<()> {
-        let udf = ByPassScalarUDF::new("date_diff", DataType::Int64);
+        let udf = ByPassScalarUDF::new("date_test", DataType::Int64);
         let ctx = SessionContext::new();
         ctx.register_udf(ScalarUDF::new_from_impl(udf));
 
         let plan = ctx
-            .sql("SELECT date_diff(1, 2)")
+            .sql("SELECT date_test(1, 2)")
             .await?
             .into_unoptimized_plan();
-        let expected = "Projection: date_diff(Int64(1), Int64(2))\n  EmptyRelation";
+        let expected = "Projection: date_test(Int64(1), Int64(2))\n  EmptyRelation";
         assert_eq!(format!("{plan}"), expected);
 
         ctx.register_udf(ScalarUDF::new_from_impl(ByPassScalarUDF::new(
