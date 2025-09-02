@@ -162,6 +162,7 @@ async def test_datetime_function(client, manifest_str: str, connection_info):
         "dtypes": {"col": "timestamp[us]"},
     }
 
+
 async def test_date_diff_function(client, manifest_str: str, connection_info):
     response = await client.post(
         url=f"{base_url}/query",
