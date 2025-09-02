@@ -25,6 +25,7 @@ manifest = {
             },
             "columns": [
                 {"name": "o_orderkey", "type": "integer"},
+                {"name": "o_orderdate", "type": "date"},
             ],
         },
     ],
@@ -52,7 +53,7 @@ async def test_function_list(client):
     response = await client.get(url=f"{base_url}/functions")
     assert response.status_code == 200
     result = response.json()
-    assert len(result) == 175
+    assert len(result) == 176
     the_func = next(
         filter(
             lambda x: x["name"] == "string_agg",
@@ -160,7 +161,6 @@ async def test_datetime_function(client, manifest_str: str, connection_info):
         "data": [["2001-01-01 00:11:11.000000"]],
         "dtypes": {"col": "timestamp[us]"},
     }
-
 
 async def test_date_diff_function(client, manifest_str: str, connection_info):
     response = await client.post(
