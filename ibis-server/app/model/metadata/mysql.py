@@ -1,3 +1,5 @@
+from loguru import logger
+
 from app.model import MySqlConnectionInfo
 from app.model.data_source import DataSource
 from app.model.metadata.dto import (
@@ -9,6 +11,42 @@ from app.model.metadata.dto import (
     TableProperties,
 )
 from app.model.metadata.metadata import Metadata
+
+# MySQL-specific type mapping
+# All possible types listed here: https://dev.mysql.com/doc/refman/8.4/en/data-types.html
+MYSQL_TYPE_MAPPING = {
+    # String Types (ignore Binary and Spatial Types for now)
+    "char": RustWrenEngineColumnType.CHAR,
+    "varchar": RustWrenEngineColumnType.VARCHAR,
+    "tinytext": RustWrenEngineColumnType.TEXT,
+    "text": RustWrenEngineColumnType.TEXT,
+    "mediumtext": RustWrenEngineColumnType.TEXT,
+    "longtext": RustWrenEngineColumnType.TEXT,
+    "enum": RustWrenEngineColumnType.VARCHAR,
+    "set": RustWrenEngineColumnType.VARCHAR,
+    # Numeric Types (https://dev.mysql.com/doc/refman/8.4/en/numeric-types.html)
+    "bit": RustWrenEngineColumnType.TINYINT,
+    "tinyint": RustWrenEngineColumnType.TINYINT,
+    "smallint": RustWrenEngineColumnType.SMALLINT,
+    "mediumint": RustWrenEngineColumnType.INTEGER,
+    "int": RustWrenEngineColumnType.INTEGER,
+    "integer": RustWrenEngineColumnType.INTEGER,
+    "bigint": RustWrenEngineColumnType.BIGINT,
+    # Boolean Types
+    "bool": RustWrenEngineColumnType.BOOL,
+    "boolean": RustWrenEngineColumnType.BOOL,
+    # Decimal Types
+    "float": RustWrenEngineColumnType.FLOAT8,
+    "double": RustWrenEngineColumnType.DOUBLE,
+    "decimal": RustWrenEngineColumnType.DECIMAL,
+    "numeric": RustWrenEngineColumnType.NUMERIC,
+    # Date and Time Types (https://dev.mysql.com/doc/refman/8.4/en/date-and-time-types.html)
+    "date": RustWrenEngineColumnType.DATE,
+    "datetime": RustWrenEngineColumnType.TIMESTAMP,
+    "timestamp": RustWrenEngineColumnType.TIMESTAMPTZ,
+    # JSON Type
+    "json": RustWrenEngineColumnType.JSON,
+}
 
 
 class MySQLMetadata(Metadata):
@@ -128,40 +166,24 @@ class MySQLMetadata(Metadata):
     ):
         return f"{table_name}_{column_name}_{referenced_table_name}_{referenced_column_name}"
 
-    def _transform_column_type(self, data_type):
-        # all possible types listed here: https://dev.mysql.com/doc/refman/8.4/en/data-types.html
-        switcher = {
-            # String Types (ignore Binary and Spatial Types for now)
-            "char": RustWrenEngineColumnType.CHAR,
-            "varchar": RustWrenEngineColumnType.VARCHAR,
-            "tinytext": RustWrenEngineColumnType.TEXT,
-            "text": RustWrenEngineColumnType.TEXT,
-            "mediumtext": RustWrenEngineColumnType.TEXT,
-            "longtext": RustWrenEngineColumnType.TEXT,
-            "enum": RustWrenEngineColumnType.VARCHAR,
-            "set": RustWrenEngineColumnType.VARCHAR,
-            # Numeric Types(https://dev.mysql.com/doc/refman/8.4/en/numeric-types.html)
-            "bit": RustWrenEngineColumnType.TINYINT,
-            "tinyint": RustWrenEngineColumnType.TINYINT,
-            "smallint": RustWrenEngineColumnType.SMALLINT,
-            "mediumint": RustWrenEngineColumnType.INTEGER,
-            "int": RustWrenEngineColumnType.INTEGER,
-            "integer": RustWrenEngineColumnType.INTEGER,
-            "bigint": RustWrenEngineColumnType.BIGINT,
-            # boolean
-            "bool": RustWrenEngineColumnType.BOOL,
-            "boolean": RustWrenEngineColumnType.BOOL,
-            # Decimal
-            "float": RustWrenEngineColumnType.FLOAT8,
-            "double": RustWrenEngineColumnType.DOUBLE,
-            "decimal": RustWrenEngineColumnType.DECIMAL,
-            "numeric": RustWrenEngineColumnType.NUMERIC,
-            # Date and Time Types(https://dev.mysql.com/doc/refman/8.4/en/date-and-time-types.html)
-            "date": RustWrenEngineColumnType.DATE,
-            "datetime": RustWrenEngineColumnType.TIMESTAMP,
-            "timestamp": RustWrenEngineColumnType.TIMESTAMPTZ,
-            # JSON Type
-            "json": RustWrenEngineColumnType.JSON,
-        }
+    def _transform_column_type(self, data_type: str) -> RustWrenEngineColumnType:
+        """Transform MySQL data type to RustWrenEngineColumnType.
 
-        return switcher.get(data_type.lower(), RustWrenEngineColumnType.UNKNOWN)
+        Args:
+            data_type: The MySQL data type string
+
+        Returns:
+            The corresponding RustWrenEngineColumnType
+        """
+        # Remove parameter specifications like VARCHAR(255) -> VARCHAR
+        normalized_type = data_type.strip().lower()
+
+        # Use the module-level mapping table
+        mapped_type = MYSQL_TYPE_MAPPING.get(
+            normalized_type, RustWrenEngineColumnType.UNKNOWN
+        )
+
+        if mapped_type == RustWrenEngineColumnType.UNKNOWN:
+            logger.warning(f"Unknown MySQL data type: {data_type}")
+
+        return mapped_type

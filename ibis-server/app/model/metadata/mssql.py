@@ -1,3 +1,5 @@
+from loguru import logger
+
 from app.model import MSSqlConnectionInfo
 from app.model.data_source import DataSource
 from app.model.metadata.dto import (
@@ -9,6 +11,42 @@ from app.model.metadata.dto import (
     TableProperties,
 )
 from app.model.metadata.metadata import Metadata
+
+# MSSQL-specific type mapping
+# Reference: https://learn.microsoft.com/en-us/sql/t-sql/data-types/data-types-transact-sql?view=sql-server-ver15#exact-numerics
+MSSQL_TYPE_MAPPING = {
+    # String Types
+    "char": RustWrenEngineColumnType.CHAR,
+    "varchar": RustWrenEngineColumnType.VARCHAR,
+    "text": RustWrenEngineColumnType.TEXT,
+    "nchar": RustWrenEngineColumnType.CHAR,
+    "nvarchar": RustWrenEngineColumnType.VARCHAR,
+    "ntext": RustWrenEngineColumnType.TEXT,
+    # Numeric Types
+    "bit": RustWrenEngineColumnType.TINYINT,
+    "tinyint": RustWrenEngineColumnType.TINYINT,
+    "smallint": RustWrenEngineColumnType.SMALLINT,
+    "int": RustWrenEngineColumnType.INTEGER,
+    "bigint": RustWrenEngineColumnType.BIGINT,
+    # Boolean
+    "boolean": RustWrenEngineColumnType.BOOL,
+    # Decimal
+    "float": RustWrenEngineColumnType.FLOAT8,
+    "real": RustWrenEngineColumnType.FLOAT8,
+    "decimal": RustWrenEngineColumnType.DECIMAL,
+    "numeric": RustWrenEngineColumnType.NUMERIC,
+    "money": RustWrenEngineColumnType.DECIMAL,
+    "smallmoney": RustWrenEngineColumnType.DECIMAL,
+    # Date and Time Types
+    "date": RustWrenEngineColumnType.DATE,
+    "datetime": RustWrenEngineColumnType.TIMESTAMP,
+    "datetime2": RustWrenEngineColumnType.TIMESTAMP,
+    "smalldatetime": RustWrenEngineColumnType.TIMESTAMP,
+    "time": RustWrenEngineColumnType.INTERVAL,
+    "datetimeoffset": RustWrenEngineColumnType.TIMESTAMPTZ,
+    # JSON Type (Note: MSSQL supports JSON natively as a string type)
+    "json": RustWrenEngineColumnType.JSON,
+}
 
 
 class MSSQLMetadata(Metadata):
@@ -172,41 +210,24 @@ class MSSQLMetadata(Metadata):
     ):
         return f"{table_name}_{column_name}_{referenced_table_name}_{referenced_column_name}"
 
-    def _transform_column_type(self, data_type):
-        # Define the mapping of MSSQL data types to RustWrenEngineColumnType
-        # ref: https://learn.microsoft.com/en-us/sql/t-sql/data-types/data-types-transact-sql?view=sql-server-ver15#exact-numerics
-        switcher = {
-            # String Types
-            "char": RustWrenEngineColumnType.CHAR,
-            "varchar": RustWrenEngineColumnType.VARCHAR,
-            "text": RustWrenEngineColumnType.TEXT,
-            "nchar": RustWrenEngineColumnType.CHAR,
-            "nvarchar": RustWrenEngineColumnType.VARCHAR,
-            "ntext": RustWrenEngineColumnType.TEXT,
-            # Numeric Types
-            "bit": RustWrenEngineColumnType.TINYINT,
-            "tinyint": RustWrenEngineColumnType.TINYINT,
-            "smallint": RustWrenEngineColumnType.SMALLINT,
-            "int": RustWrenEngineColumnType.INTEGER,
-            "bigint": RustWrenEngineColumnType.BIGINT,
-            # Boolean
-            "boolean": RustWrenEngineColumnType.BOOL,
-            # Decimal
-            "float": RustWrenEngineColumnType.FLOAT8,
-            "real": RustWrenEngineColumnType.FLOAT8,
-            "decimal": RustWrenEngineColumnType.DECIMAL,
-            "numeric": RustWrenEngineColumnType.NUMERIC,
-            "money": RustWrenEngineColumnType.DECIMAL,
-            "smallmoney": RustWrenEngineColumnType.DECIMAL,
-            # Date and Time Types
-            "date": RustWrenEngineColumnType.DATE,
-            "datetime": RustWrenEngineColumnType.TIMESTAMP,
-            "datetime2": RustWrenEngineColumnType.TIMESTAMP,
-            "smalldatetime": RustWrenEngineColumnType.TIMESTAMP,
-            "time": RustWrenEngineColumnType.INTERVAL,
-            "datetimeoffset": RustWrenEngineColumnType.TIMESTAMPTZ,
-            # JSON Type (Note: MSSQL supports JSON natively as a string type)
-            "json": RustWrenEngineColumnType.JSON,
-        }
+    def _transform_column_type(self, data_type: str) -> RustWrenEngineColumnType:
+        """Transform MSSQL data type to RustWrenEngineColumnType.
 
-        return switcher.get(data_type.lower(), RustWrenEngineColumnType.UNKNOWN)
+        Args:
+            data_type: The MSSQL data type string
+
+        Returns:
+            The corresponding RustWrenEngineColumnType
+        """
+        # Convert to lowercase for comparison
+        normalized_type = data_type.lower()
+
+        # Use the module-level mapping table
+        mapped_type = MSSQL_TYPE_MAPPING.get(
+            normalized_type, RustWrenEngineColumnType.UNKNOWN
+        )
+
+        if mapped_type == RustWrenEngineColumnType.UNKNOWN:
+            logger.warning(f"Unknown MSSQL data type: {data_type}")
+
+        return mapped_type
