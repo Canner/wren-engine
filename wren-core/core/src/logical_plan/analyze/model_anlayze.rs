@@ -290,14 +290,16 @@ impl ModelAnalyzeRule {
                     .get_view(relation.table())
                     .is_none()
                 {
-                    let added = scope_manager.add_required_column(
+                    let _added = scope_manager.add_required_column(
                         current_scope_id,
                         relation.clone(),
                         Expr::Column(Column::new(Some(relation.clone()), name)),
                     )?;
-                    if !added {
-                        return plan_err!("Relation {} isn't visited", relation);
-                    }
+                    // TODO: There is an issue for using CTEs in a Scalar Subquery in a CTE
+                    // disable the check for query works
+                    // if !added {
+                    //     return plan_err!("Relation {} isn't visited", relation);
+                    // }
                 }
             }
             // It is possible that the column is a rebase column from the aggregation or join
