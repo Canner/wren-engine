@@ -1486,7 +1486,7 @@ mod test {
             .await?;
             // assert the simplified literal will be casted to the timestamp tz
             assert_eq!(actual,
-              "SELECT timestamp_table.timestamptz_col > CAST(CAST('2011-01-01 18:00:00' AS TIMESTAMP WITH TIME ZONE) AS TIMESTAMP WITH TIME ZONE) FROM (SELECT timestamp_table.timestamptz_col FROM (SELECT __source.timestamptz_col AS timestamptz_col FROM datafusion.\"public\".timestamp_table AS __source) AS timestamp_table) AS timestamp_table"
+              "SELECT timestamp_table.timestamptz_col > CAST(CAST('2011-01-01 18:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE) FROM (SELECT timestamp_table.timestamptz_col FROM (SELECT __source.timestamptz_col AS timestamptz_col FROM datafusion.\"public\".timestamp_table AS __source) AS timestamp_table) AS timestamp_table"
 );
 
             let sql = r#"select timestamptz_col > '2011-01-01 18:00:00' from wren.test.timestamp_table"#;
@@ -1515,7 +1515,7 @@ mod test {
             .await?;
             // assert the simplified literal won't be casted to the timestamp tz
             assert_eq!(actual,
-                "SELECT CAST(timestamp_table.timestamp_col AS TIMESTAMP WITH TIME ZONE) > CAST('2011-01-01 18:00:00' AS TIMESTAMP WITH TIME ZONE) FROM (SELECT timestamp_table.timestamp_col FROM (SELECT __source.timestamp_col AS timestamp_col FROM datafusion.\"public\".timestamp_table AS __source) AS timestamp_table) AS timestamp_table");
+                "SELECT timestamp_table.timestamp_col > CAST('2011-01-01 18:00:00' AS TIMESTAMP) FROM (SELECT timestamp_table.timestamp_col FROM (SELECT __source.timestamp_col AS timestamp_col FROM datafusion.\"public\".timestamp_table AS __source) AS timestamp_table) AS timestamp_table");
         }
         Ok(())
     }
