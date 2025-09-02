@@ -57,6 +57,10 @@ pub async fn create_ctx_with_mdl(
             "datafusion.sql_parser.default_null_ordering",
             &ScalarValue::Utf8(Some("nulls_last".to_string())),
         )
+        .set(
+            "datafusion.sql_parser.enable_ident_normalization",
+            &ScalarValue::Utf8(Some("false".to_string())),
+        )
         .with_create_default_catalog_and_schema(false)
         .with_default_catalog_and_schema(
             analyzed_mdl.wren_mdl.catalog(),
