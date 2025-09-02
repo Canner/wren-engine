@@ -41,7 +41,9 @@ def postgres(request) -> PostgresContainer:
             )
         )
         conn.execute(sqlalchemy.text("CREATE TABLE 中文表 (欄位1 int, 欄位2 int)"))
-        conn.execute(sqlalchemy.text("INSERT INTO 中文表 (欄位1, 欄位2) VALUES (1, 2), (3, 4)"))
+        conn.execute(
+            sqlalchemy.text("INSERT INTO 中文表 (欄位1, 欄位2) VALUES (1, 2), (3, 4)")
+        )
 
     request.addfinalizer(pg.stop)
     return pg
