@@ -16,7 +16,7 @@ use datafusion::logical_expr::utils::find_aggregate_exprs;
 use datafusion::logical_expr::{
     col, Expr, Extension, LogicalPlan, UserDefinedLogicalNode, UserDefinedLogicalNodeCore,
 };
-use log::debug;
+use log::{debug, warn};
 use petgraph::Graph;
 
 use crate::logical_plan::analyze::access_control::validate_clac_rule;
@@ -151,13 +151,34 @@ impl ModelPlanNodeBuilder {
             // Actually, it's only be checked in PermissionAnalyze mode.
             // In Unparse or LocalRuntime mode, an invalid column won't be registered in the table provider.
             // A column accessing will be failed by the column not found error.
-            if !validate_clac_rule(&column, &self.properties)? {
-                return Err(DataFusionError::External(Box::new(
-                    WrenError::PermissionDenied(format!(
-                        r#"No permission to access "{}"."{}""#,
+            let (is_valid, rule_name) = validate_clac_rule(
+                model.name(),
+                &column,
+                &self.properties,
+                Some(Arc::clone(&self.analyzed_wren_mdl)),
+            )?;
+            if !is_valid {
+                let message = if let Some(rule_name) = rule_name {
+                    format!(
+                        r#"Access denied to column "{}"."{}": violates access control rule "{}""#,
                         model.name(),
-                        column.name
-                    )),
+                        column.name(),
+                        rule_name
+                    )
+                } else {
+                    warn!(
+                        "No rule name found for column access, {}.{}",
+                        model.name(),
+                        column.name()
+                    );
+                    format!(
+                        r#"Access denied to column "{}"."{}"#,
+                        model.name(),
+                        column.name(),
+                    )
+                };
+                return Err(DataFusionError::External(Box::new(
+                    WrenError::PermissionDenied(message),
                 )));
             }
 
@@ -699,13 +720,34 @@ fn get_remote_column_exp(
     // Actually, it's only be checked in PermissionAnalyze mode.
     // In Unparse or LocalRuntime mode, an invalid column won't be registered in the table provider.
     // A column accessing will be failed by the column not found error.
-    if !validate_clac_rule(column, &session_properties)? {
-        return Err(DataFusionError::External(Box::new(
-            WrenError::PermissionDenied(format!(
-                r#"No permission to access "{}"."{}""#,
+    let (is_valid, rule_name) = validate_clac_rule(
+        model.name(),
+        column,
+        &session_properties,
+        Some(Arc::clone(&analyzed_wren_mdl)),
+    )?;
+    if !is_valid {
+        let message = if let Some(rule_name) = rule_name {
+            format!(
+                r#"Access denied to column "{}"."{}": violates access control rule "{}""#,
                 model.name(),
-                column.name
-            )),
+                column.name(),
+                rule_name
+            )
+        } else {
+            warn!(
+                "No rule name found for column access, {}.{}",
+                model.name(),
+                column.name()
+            );
+            format!(
+                r#"Access denied to column "{}"."{}"#,
+                model.name(),
+                column.name(),
+            )
+        };
+        return Err(DataFusionError::External(Box::new(
+            WrenError::PermissionDenied(message),
         )));
     }
     let expr = if let Some(expression) = &column.expression {

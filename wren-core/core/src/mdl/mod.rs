@@ -202,7 +202,13 @@ impl WrenMDL {
                     .iter()
                     .map(|column| {
                         if mode.is_permission_analyze()
-                            || validate_clac_rule(column, &properties)?
+                            || validate_clac_rule(
+                                model.name(),
+                                column,
+                                &properties,
+                                None,
+                            )?
+                            .0
                         {
                             Ok(Some(Arc::clone(column)))
                         } else {
@@ -398,6 +404,7 @@ pub async fn transform_sql_with_ctx(
     let plan = match ctx.state().create_logical_plan(sql).await {
         Ok(plan) => plan,
         Err(e) => {
+            eprintln!("Failed to create logical plan: {e}");
             match permission_analyze(
                 analyzed_mdl.wren_mdl().manifest.clone(),
                 sql,
@@ -537,6 +544,7 @@ impl ColumnReference {
 
 #[cfg(test)]
 mod test {
+    use core::panic;
     use std::collections::HashMap;
     use std::fs;
     use std::path::PathBuf;
@@ -2707,7 +2715,7 @@ mod test {
                     @r#"
                 ModelAnalyzeRule
                 caused by
-                External error: Permission Denied: No permission to access "customer"."c_name"
+                External error: Permission Denied: Access denied to column "customer"."c_name": violates access control rule "cls rule"
                 "#
                 )
             }
@@ -2781,7 +2789,7 @@ mod test {
                     @r#"
                 ModelAnalyzeRule
                 caused by
-                External error: Permission Denied: No permission to access "customer"."c_name_2"
+                External error: Permission Denied: Access denied to column "customer"."c_name_2": violates access control rule "cls rule"
                 "#
                 )
             }
@@ -2997,8 +3005,14 @@ mod test {
             Mode::Unparse,
         )?);
 
-        match transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
-            .await
+        match transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            Arc::clone(&headers),
+            sql,
+        )
+        .await
         {
             Err(e) => {
                 assert_snapshot!(
@@ -3006,12 +3020,85 @@ mod test {
                     @r#"
                 ModelAnalyzeRule
                 caused by
-                External error: Permission Denied: No permission to access "customer"."c_name"
+                External error: Permission Denied: Access denied to column "customer"."c_name_upper": violates access control rule "cls rule"
                 "#
                 )
             }
             _ => panic!("Expected error"),
         }
+
+        let sql = "SELECT * FROM customer";
+
+        assert_snapshot!(transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
+            @"SELECT customer.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer"
+        );
+
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_custkey", "int").build())
+                    .column(
+                        ColumnBuilder::new("c_name", "string")
+                            .column_level_access_control(
+                                "cls rule",
+                                vec![SessionProperty::new_required("session_level")],
+                                ColumnLevelOperator::Equals,
+                                "1",
+                            )
+                            .build(),
+                    )
+                    .build(),
+            )
+            .model(
+                ModelBuilder::new("orders")
+                    .table_reference("orders")
+                    .column(ColumnBuilder::new("o_orderkey", "int").build())
+                    .column(ColumnBuilder::new("o_custkey", "int").build())
+                    .column(
+                        ColumnBuilder::new("customer", "customer")
+                            .relationship("customer_orders")
+                            .build(),
+                    )
+                    .column(
+                        ColumnBuilder::new_calculated("customer_name", "string")
+                            .expression("customer.c_name")
+                            .build(),
+                    )
+                    .build(),
+            )
+            .relationship(
+                RelationshipBuilder::new("customer_orders")
+                    .model("customer")
+                    .model("orders")
+                    .join_type(JoinType::OneToMany)
+                    .condition("customer.c_custkey = orders.o_custkey")
+                    .build(),
+            )
+            .build();
+
+        let headers = Arc::new(build_headers(&[(
+            "session_level".to_string(),
+            Some("0".to_string()),
+        )]));
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest.clone(),
+            headers.clone(),
+            Mode::Unparse,
+        )?);
+
+        let sql = "SELECT * FROM orders";
+        let headers = Arc::new(build_headers(&[(
+            "session_level".to_string(),
+            Some("0".to_string()),
+        )]));
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
+            @"SELECT orders.o_orderkey, orders.o_custkey FROM (SELECT orders.o_custkey, orders.o_orderkey FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders) AS orders"
+        );
+
         Ok(())
     }
 

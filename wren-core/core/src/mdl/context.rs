@@ -10,7 +10,7 @@ use crate::logical_plan::analyze::model_generation::ModelGenerationRule;
 use crate::logical_plan::optimize::simplify_timestamp::TimestampSimplify;
 use crate::logical_plan::utils::create_schema;
 use crate::mdl::manifest::Model;
-use crate::mdl::{AnalyzedWrenMDL, SessionStateRef, WrenMDL};
+use crate::mdl::{AnalyzedWrenMDL, SessionStateRef};
 use async_trait::async_trait;
 use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::catalog::memory::MemoryCatalogProvider;
@@ -101,7 +101,7 @@ pub async fn create_ctx_with_mdl(
 
     let new_state = new_state.with_config(config).build();
     let ctx = SessionContext::new_with_state(new_state);
-    register_table_with_mdl(&ctx, analyzed_mdl.wren_mdl(), properties, mode).await?;
+    register_table_with_mdl(&ctx, analyzed_mdl, properties, mode).await?;
     Ok(ctx)
 }
 
@@ -282,18 +282,23 @@ fn analyze_rule_for_permission(
 
 pub async fn register_table_with_mdl(
     ctx: &SessionContext,
-    wren_mdl: Arc<WrenMDL>,
+    analyzed_mdl: Arc<AnalyzedWrenMDL>,
     properties: SessionPropertiesRef,
     mode: Mode,
 ) -> Result<()> {
     let catalog = MemoryCatalogProvider::new();
     let schema = MemorySchemaProvider::new();
-
+    let wren_mdl = analyzed_mdl.wren_mdl();
     catalog.register_schema(&wren_mdl.manifest.schema, Arc::new(schema))?;
     ctx.register_catalog(&wren_mdl.manifest.catalog, Arc::new(catalog));
 
     for model in wren_mdl.manifest.models.iter() {
-        let table = WrenDataSource::new(Arc::clone(model), &properties, &mode)?;
+        let table = WrenDataSource::new(
+            Arc::clone(model),
+            &properties,
+            Arc::clone(&analyzed_mdl),
+            &mode,
+        )?;
         ctx.register_table(
             TableReference::full(wren_mdl.catalog(), wren_mdl.schema(), model.name()),
             Arc::new(table),
@@ -319,13 +324,21 @@ impl WrenDataSource {
     pub fn new(
         model: Arc<Model>,
         properties: &SessionPropertiesRef,
+        analyzed_mdl: Arc<AnalyzedWrenMDL>,
         mode: &Mode,
     ) -> Result<Self> {
         let available_columns = model
             .get_physical_columns()
             .iter()
             .map(|column| {
-                if mode.is_permission_analyze() || validate_clac_rule(column, properties)?
+                if mode.is_permission_analyze()
+                    || validate_clac_rule(
+                        model.name(),
+                        column,
+                        properties,
+                        Some(Arc::clone(&analyzed_mdl)),
+                    )?
+                    .0
                 {
                     Ok(Some(Arc::clone(column)))
                 } else {

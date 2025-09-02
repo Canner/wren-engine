@@ -23,7 +23,11 @@ use datafusion::{
 use wren_core_base::mdl::RowLevelAccessControl;
 use wren_core_base::mdl::{Column, Model, SessionProperty};
 
-use crate::mdl::{context::SessionPropertiesRef, Dataset, SessionStateRef};
+use crate::{
+    logical_plan::utils::from_qualified_name,
+    mdl::{context::SessionPropertiesRef, Dataset, SessionStateRef},
+    AnalyzedWrenMDL,
+};
 
 /// Collect the required field from the condition of row level access control rules.
 pub fn collect_condition(
@@ -281,37 +285,78 @@ pub fn validate_rule(
 }
 
 pub(crate) fn validate_clac_rule(
+    model_name: &str,
     column: &Column,
     properties: &SessionPropertiesRef,
-) -> Result<bool> {
-    let Some(clac) = column.column_level_access_control() else {
-        return Ok(true);
+    analyzed_mdl: Option<Arc<AnalyzedWrenMDL>>,
+) -> Result<(bool, Option<String>)> {
+    let (is_valid, rule_name) = if let Some(clac) = column.column_level_access_control() {
+        if !validate_rule(&clac.name, &clac.required_properties, properties)? {
+            return Ok((true, None));
+        }
+
+        if clac.required_properties.len() > 1 {
+            return plan_err!(
+                "Only support one required property for column access-control level rule: {}",
+                clac.name
+            );
+        }
+
+        let property = &clac.required_properties[0];
+        let value_opt = properties.get(&property.name);
+
+        match value_opt {
+            Some(Some(value)) => (clac.eval(value), Some(clac.name.clone())),
+            Some(None) | None => {
+                if let Some(default) = &property.default_expr {
+                    (clac.eval(default), Some(clac.name.clone()))
+                } else {
+                    (true, None)
+                }
+            }
+        }
+    } else {
+        (true, None)
     };
 
-    if !validate_rule(&clac.name, &clac.required_properties, properties)? {
-        return Ok(true);
-    }
-
-    if clac.required_properties.len() > 1 {
-        return plan_err!(
-            "Only support one required property for column access-control level rule: {}",
-            clac.name
-        );
-    }
-
-    let property = &clac.required_properties[0];
-    let value_opt = properties.get(&property.name);
-
-    match value_opt {
-        Some(Some(value)) => Ok(clac.eval(value)),
-        Some(None) | None => {
-            if let Some(default) = &property.default_expr {
-                Ok(clac.eval(default))
-            } else {
-                Ok(true)
+    if is_valid && column.is_calculated {
+        if let Some(analyzed_mdl) = analyzed_mdl {
+            let qualified_col =
+                from_qualified_name(&analyzed_mdl.wren_mdl, model_name, column.name());
+            let Some(required_fields) =
+                analyzed_mdl.lineage.required_fields_map.get(&qualified_col)
+            else {
+                return plan_err!("Required fields not found for {}", qualified_col);
+            };
+            for field in required_fields {
+                let Some(model_name) = &field.relation else {
+                    return plan_err!("Model name not found for {}", field);
+                };
+                let Some(ref_model) = analyzed_mdl.wren_mdl.get_model(model_name.table())
+                else {
+                    return plan_err!("Model {} not found", model_name.table());
+                };
+                let Some(ref_column) = ref_model.get_column(field.name()) else {
+                    return plan_err!(
+                        "Column {}.{} not found",
+                        model_name.table(),
+                        field.name()
+                    );
+                };
+                let (valid_result, rule_name) = validate_clac_rule(
+                    ref_model.name(),
+                    &ref_column,
+                    properties,
+                    Some(Arc::clone(&analyzed_mdl)),
+                )?;
+                if !valid_result {
+                    return Ok((false, rule_name));
+                }
             }
         }
     }
+
+    Ok((is_valid, rule_name))
 }
 
 /// Check if the property is present in the headers and not empty
