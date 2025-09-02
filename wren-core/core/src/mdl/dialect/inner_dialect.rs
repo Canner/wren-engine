@@ -24,7 +24,9 @@ use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
 use datafusion::logical_expr::Expr;
 
 use datafusion::scalar::ScalarValue;
-use datafusion::sql::sqlparser::ast::{self, ExtractSyntax, Function, Ident, ObjectName, ObjectNamePart, WindowFrameBound};
+use datafusion::sql::sqlparser::ast::{
+    self, ExtractSyntax, Function, Ident, ObjectName, ObjectNamePart, WindowFrameBound,
+};
 use datafusion::sql::unparser::Unparser;
 use regex::Regex;
 
