@@ -16,7 +16,7 @@ use datafusion::logical_expr::utils::find_aggregate_exprs;
 use datafusion::logical_expr::{
     col, Expr, Extension, LogicalPlan, UserDefinedLogicalNode, UserDefinedLogicalNodeCore,
 };
-use log::debug;
+use log::{debug, warn};
 use petgraph::Graph;
 
 use crate::logical_plan::analyze::access_control::validate_clac_rule;
@@ -151,13 +151,34 @@ impl ModelPlanNodeBuilder {
             // Actually, it's only be checked in PermissionAnalyze mode.
             // In Unparse or LocalRuntime mode, an invalid column won't be registered in the table provider.
             // A column accessing will be failed by the column not found error.
-            if !validate_clac_rule(&column, &self.properties)? {
-                return Err(DataFusionError::External(Box::new(
-                    WrenError::PermissionDenied(format!(
-                        r#"No permission to access "{}"."{}""#,
+            let (is_valid, rule_name) = validate_clac_rule(
+                model.name(),
+                &column,
+                &self.properties,
+                Some(Arc::clone(&self.analyzed_wren_mdl)),
+            )?;
+            if !is_valid {
+                let message = if let Some(rule_name) = rule_name {
+                    format!(
+                        r#"Access denied to column "{}"."{}": violates access control rule "{}""#,
                         model.name(),
-                        column.name
-                    )),
+                        column.name(),
+                        rule_name
+                    )
+                } else {
+                    warn!(
+                        "No rule name found for column access, {}.{}",
+                        model.name(),
+                        column.name()
+                    );
+                    format!(
+                        r#"Access denied to column "{}"."{}"#,
+                        model.name(),
+                        column.name(),
+                    )
+                };
+                return Err(DataFusionError::External(Box::new(
+                    WrenError::PermissionDenied(message),
                 )));
             }
 
@@ -211,6 +232,30 @@ impl ModelPlanNodeBuilder {
                         expr,
                     )?;
                     self.required_calculation.push(calculation);
+                    // insert the primary key to the required fields for join with the calculation
+
+                    let Some(pk_column) =
+                        model.primary_key().and_then(|pk| model.get_column(pk))
+                    else {
+                        return plan_err!(
+                            "Primary key not found for model {}. To use `TO_MANY` relationship, the primary key is required for the base model.",
+                            model.name()
+                        );
+                    };
+                    self.model_required_fields
+                        .entry(TableReference::full(
+                            self.analyzed_wren_mdl.wren_mdl().catalog(),
+                            self.analyzed_wren_mdl.wren_mdl().schema(),
+                            model.name(),
+                        ))
+                        .or_default()
+                        .insert(OrdExpr::new(Expr::Column(
+                            DFColumn::from_qualified_name(format!(
+                                "{}.{}",
+                                quoted(model.name()),
+                                quoted(pk_column.name()),
+                            )),
+                        )));
                 } else {
                     merge_graph(&mut self.directed_graph, column_graph)?;
                     if self.is_contain_calculation_source(&qualified_column) {
@@ -234,6 +279,7 @@ impl ModelPlanNodeBuilder {
                     collect_model_required_fields(
                         Arc::clone(&self.analyzed_wren_mdl),
                         Arc::clone(&self.session_state),
+                        Arc::clone(&self.properties),
                         &qualified_column,
                         &mut self.model_required_fields,
                     )?;
@@ -244,6 +290,7 @@ impl ModelPlanNodeBuilder {
                     Arc::clone(&model),
                     Arc::clone(&self.analyzed_wren_mdl),
                     Arc::clone(&self.session_state),
+                    Arc::clone(&self.properties),
                 )?;
                 self.model_required_fields
                     .entry(model_ref.clone())
@@ -289,30 +336,6 @@ impl ModelPlanNodeBuilder {
             return internal_err!("Dataset not found");
         };
 
-        // insert the primary key to the required fields for join with the calculation
-        let keys = self
-            .model_required_fields
-            .keys()
-            .cloned()
-            .collect::<Vec<_>>();
-        for model in keys {
-            let Some(pk_column) = self
-                .analyzed_wren_mdl
-                .wren_mdl()
-                .get_model(model.table())
-                .and_then(|m| m.primary_key().and_then(|pk| m.get_column(pk)))
-            else {
-                debug!("Primary key not found for model {model}");
-                continue;
-            };
-            self.model_required_fields
-                .entry(model.clone())
-                .or_default()
-                .insert(OrdExpr::new(Expr::Column(DFColumn::from_qualified_name(
-                    format!("{}.{}", quoted(model.table()), quoted(pk_column.name()),),
-                ))));
-        }
-
         let mut source_required_fields: Vec<Expr> = self
             .model_required_fields
             .get(&model_ref)
@@ -337,6 +360,7 @@ impl ModelPlanNodeBuilder {
                     source_required_fields,
                     Arc::clone(&self.analyzed_wren_mdl),
                     Arc::clone(&self.session_state),
+                    Arc::clone(&self.properties),
                 )?
             } else {
                 let Some(first_calculation) = calculate_iter.next() else {
@@ -491,6 +515,7 @@ impl ModelPlanNodeBuilder {
             source_required_fields,
             Arc::clone(&self.analyzed_wren_mdl),
             Arc::clone(&self.session_state),
+            Arc::clone(&self.properties),
         )?;
 
         let partial_chain = RelationChain::with_chain(
@@ -621,6 +646,7 @@ fn collect_partial_model_required_fields(
 fn collect_model_required_fields(
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
     session_state_ref: SessionStateRef,
+    session_properties: SessionPropertiesRef,
     qualified_column: &DFColumn,
     required_fields: &mut HashMap<TableReference, BTreeSet<OrdExpr>>,
 ) -> Result<()> {
@@ -669,6 +695,7 @@ fn collect_model_required_fields(
                     Arc::clone(&m),
                     Arc::clone(&analyzed_wren_mdl),
                     Arc::clone(&session_state_ref),
+                    Arc::clone(&session_properties),
                 )?;
                 debug!("Required field: {}", &expr_plan);
                 required_fields
@@ -688,7 +715,41 @@ fn get_remote_column_exp(
     model: Arc<Model>,
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
     session_state_ref: SessionStateRef,
+    session_properties: SessionPropertiesRef,
 ) -> Result<Expr> {
+    // Actually, it's only be checked in PermissionAnalyze mode.
+    // In Unparse or LocalRuntime mode, an invalid column won't be registered in the table provider.
+    // A column accessing will be failed by the column not found error.
+    let (is_valid, rule_name) = validate_clac_rule(
+        model.name(),
+        column,
+        &session_properties,
+        Some(Arc::clone(&analyzed_wren_mdl)),
+    )?;
+    if !is_valid {
+        let message = if let Some(rule_name) = rule_name {
+            format!(
+                r#"Access denied to column "{}"."{}": violates access control rule "{}""#,
+                model.name(),
+                column.name(),
+                rule_name
+            )
+        } else {
+            warn!(
+                "No rule name found for column access, {}.{}",
+                model.name(),
+                column.name()
+            );
+            format!(
+                r#"Access denied to column "{}"."{}"#,
+                model.name(),
+                column.name(),
+            )
+        };
+        return Err(DataFusionError::External(Box::new(
+            WrenError::PermissionDenied(message),
+        )));
+    }
     let expr = if let Some(expression) = &column.expression {
         create_remote_expr_for_model(
             expression,
@@ -836,6 +897,7 @@ impl ModelSourceNode {
         required_exprs: Vec<Expr>,
         analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
         session_state_ref: SessionStateRef,
+        session_properties: SessionPropertiesRef,
         original_table_scan: Option<LogicalPlan>,
     ) -> Result<Self> {
         let mut required_exprs_buffer = BTreeSet::new();
@@ -872,6 +934,7 @@ impl ModelSourceNode {
                         Arc::clone(&model),
                         Arc::clone(&analyzed_wren_mdl),
                         Arc::clone(&session_state_ref),
+                        Arc::clone(&session_properties),
                     )?));
                 }
             } else {
@@ -895,6 +958,7 @@ impl ModelSourceNode {
                         Arc::clone(&model),
                         Arc::clone(&analyzed_wren_mdl),
                         Arc::clone(&session_state_ref),
+                        Arc::clone(&session_properties),
                     )?;
                     required_exprs_buffer.insert(OrdExpr::new(expr_plan.clone()));
                 }

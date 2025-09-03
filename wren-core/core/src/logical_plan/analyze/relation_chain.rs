@@ -45,6 +45,7 @@ impl RelationChain {
         required_fields: Vec<Expr>,
         analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
         session_state_ref: SessionStateRef,
+        session_properties: SessionPropertiesRef,
     ) -> Result<Self> {
         match dataset {
             Dataset::Model(source_model) => {
@@ -54,6 +55,7 @@ impl RelationChain {
                         required_fields,
                         analyzed_wren_mdl,
                         session_state_ref,
+                        session_properties,
                         None,
                     )?),
                 })))

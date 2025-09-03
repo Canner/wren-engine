@@ -290,14 +290,11 @@ impl ModelAnalyzeRule {
                     .get_view(relation.table())
                     .is_none()
                 {
-                    let added = scope_manager.add_required_column(
+                    scope_manager.add_required_column(
                         current_scope_id,
                         relation.clone(),
                         Expr::Column(Column::new(Some(relation.clone()), name)),
                     )?;
-                    if !added {
-                        return plan_err!("Relation {} isn't visited", relation);
-                    }
                 }
             }
             // It is possible that the column is a rebase column from the aggregation or join

@@ -135,7 +135,7 @@ impl ScopeManager {
         scope_id: ScopeId,
         table_ref: TableReference,
         expr: Expr,
-    ) -> Result<bool> {
+    ) -> Result<()> {
         // check if the current scope has visited the table
         if let Some(scope) = self.scopes.get_mut(&scope_id) {
             if scope.visited_dataset.contains_key(&table_ref) {
@@ -144,24 +144,29 @@ impl ScopeManager {
                     .entry(table_ref.clone())
                     .or_default()
                     .insert(expr);
-                return Ok(true);
+                return Ok(());
             }
         }
 
         // if the current scope does not have the table, check the parent scope
         if let Some(scope) = self.scopes.get(&scope_id) {
             if let Some(parent_id) = scope.parent_id {
-                return self.add_required_column(parent_id, table_ref, expr);
+                if self
+                    .add_required_column(parent_id, table_ref.clone(), expr)
+                    .is_ok()
+                {
+                    return Ok(());
+                }
             }
         }
 
         if self.is_table_visited(scope_id, &table_ref) {
             // If the table is visited but the dataset is not found, it could be a subquery alias
-            Ok(true)
-        } else {
-            // the table is not visited by both the parent and the current scope
-            Ok(false)
+            return Ok(());
         }
+
+        // the table is not visited by both the parent and the current scope
+        internal_err!("Relation {} isn't visited", table_ref)
     }
 
     pub fn is_table_visited(

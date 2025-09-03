@@ -386,7 +386,8 @@ def test_clac():
         session_context.transform_sql(sql)
     except Exception as e:
         assert (
-            str(e) == 'Permission Denied: No permission to access "customer"."c_name"'
+            str(e)
+            == 'Permission Denied: Access denied to column "customer"."c_name": violates access control rule "c_name_access"'
         )
 
 
@@ -440,7 +441,8 @@ def test_opt_clac():
         session_context.transform_sql(sql)
     except Exception as e:
         assert (
-            str(e) == 'Permission Denied: No permission to access "orders"."o_orderkey"'
+            str(e)
+            == 'Permission Denied: Access denied to column "orders"."o_orderkey": violates access control rule "o_orderkey_access"'
         )
 
 

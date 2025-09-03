@@ -202,7 +202,13 @@ impl WrenMDL {
                     .iter()
                     .map(|column| {
                         if mode.is_permission_analyze()
-                            || validate_clac_rule(column, &properties)?
+                            || validate_clac_rule(
+                                model.name(),
+                                column,
+                                &properties,
+                                None,
+                            )?
+                            .0
                         {
                             Ok(Some(Arc::clone(column)))
                         } else {
@@ -398,6 +404,7 @@ pub async fn transform_sql_with_ctx(
     let plan = match ctx.state().create_logical_plan(sql).await {
         Ok(plan) => plan,
         Err(e) => {
+            eprintln!("Failed to create logical plan: {e}");
             match permission_analyze(
                 analyzed_mdl.wren_mdl().manifest.clone(),
                 sql,
@@ -537,6 +544,7 @@ impl ColumnReference {
 
 #[cfg(test)]
 mod test {
+    use core::panic;
     use std::collections::HashMap;
     use std::fs;
     use std::path::PathBuf;
@@ -692,7 +700,7 @@ mod test {
             sql,
         )
         .await?;
-        assert_snapshot!(result, @r#"SELECT "profile".totalcost FROM (SELECT totalcost.totalcost FROM (SELECT __relation__2.p_custkey AS p_custkey, sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost FROM (SELECT __relation__1.c_custkey, orders.o_custkey, orders.o_totalprice, __relation__1.p_custkey FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey, __source.o_totalprice AS o_totalprice FROM orders AS __source) AS orders) AS orders) AS orders RIGHT OUTER JOIN (SELECT customer.c_custkey, "profile".p_custkey FROM (SELECT customer.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer) AS customer RIGHT OUTER JOIN (SELECT __source.p_custkey AS p_custkey FROM "profile" AS __source) AS "profile" ON customer.c_custkey = "profile".p_custkey) AS __relation__1 ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost) AS "profile""#);
+        assert_snapshot!(result, @r#"SELECT "profile".totalcost FROM (SELECT __relation__1.totalcost FROM (SELECT totalcost.p_custkey, totalcost.totalcost FROM (SELECT __relation__2.p_custkey AS p_custkey, sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost FROM (SELECT __relation__1.c_custkey, orders.o_custkey, orders.o_totalprice, __relation__1.p_custkey FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT __source.o_custkey AS o_custkey, __source.o_totalprice AS o_totalprice FROM orders AS __source) AS orders) AS orders) AS orders RIGHT OUTER JOIN (SELECT customer.c_custkey, "profile".p_custkey FROM (SELECT customer.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer) AS customer RIGHT OUTER JOIN (SELECT __source.p_custkey AS p_custkey FROM "profile" AS __source) AS "profile" ON customer.c_custkey = "profile".p_custkey) AS __relation__1 ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost RIGHT OUTER JOIN (SELECT __source.p_custkey AS p_custkey FROM "profile" AS __source) AS "profile" ON totalcost.p_custkey = "profile".p_custkey) AS __relation__1) AS "profile""#);
 
         let sql = "select totalcost from profile where p_sex = 'M'";
         let result = transform_sql_with_ctx(
@@ -704,7 +712,7 @@ mod test {
         )
         .await?;
         assert_snapshot!(result,
-          @r#"SELECT "profile".totalcost FROM (SELECT __relation__1.p_sex, __relation__1.totalcost FROM (SELECT totalcost.p_custkey, "profile".p_sex, totalcost.totalcost FROM (SELECT __relation__2.p_custkey AS p_custkey, sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost FROM (SELECT __relation__1.c_custkey, orders.o_custkey, orders.o_totalprice, __relation__1.p_custkey FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey, __source.o_totalprice AS o_totalprice FROM orders AS __source) AS orders) AS orders) AS orders RIGHT OUTER JOIN (SELECT customer.c_custkey, "profile".p_custkey FROM (SELECT customer.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer) AS customer RIGHT OUTER JOIN (SELECT __source.p_custkey AS p_custkey FROM "profile" AS __source) AS "profile" ON customer.c_custkey = "profile".p_custkey) AS __relation__1 ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost RIGHT OUTER JOIN (SELECT __source.p_custkey AS p_custkey, __source.p_sex AS p_sex FROM "profile" AS __source) AS "profile" ON totalcost.p_custkey = "profile".p_custkey) AS __relation__1) AS "profile" WHERE "profile".p_sex = 'M'"#);
+          @r#"SELECT "profile".totalcost FROM (SELECT __relation__1.p_sex, __relation__1.totalcost FROM (SELECT totalcost.p_custkey, "profile".p_sex, totalcost.totalcost FROM (SELECT __relation__2.p_custkey AS p_custkey, sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost FROM (SELECT __relation__1.c_custkey, orders.o_custkey, orders.o_totalprice, __relation__1.p_custkey FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT __source.o_custkey AS o_custkey, __source.o_totalprice AS o_totalprice FROM orders AS __source) AS orders) AS orders) AS orders RIGHT OUTER JOIN (SELECT customer.c_custkey, "profile".p_custkey FROM (SELECT customer.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer) AS customer RIGHT OUTER JOIN (SELECT __source.p_custkey AS p_custkey FROM "profile" AS __source) AS "profile" ON customer.c_custkey = "profile".p_custkey) AS __relation__1 ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost RIGHT OUTER JOIN (SELECT __source.p_custkey AS p_custkey, __source.p_sex AS p_sex FROM "profile" AS __source) AS "profile" ON totalcost.p_custkey = "profile".p_custkey) AS __relation__1) AS "profile" WHERE "profile".p_sex = 'M'"#);
         Ok(())
     }
 
@@ -2497,7 +2505,7 @@ mod test {
         // test custoer model used by customer_name should be filtered by nation rule.
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
-            @"SELECT orders.customer_name FROM (SELECT __relation__1.c_name AS customer_name FROM (SELECT customer.c_custkey, customer.c_name, orders.o_custkey, orders.o_orderkey FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE CAST(customer.c_nationkey AS BIGINT) = 1) AS customer) AS customer RIGHT OUTER JOIN (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders ON customer.c_custkey = orders.o_custkey) AS __relation__1) AS orders"
+            @"SELECT orders.customer_name FROM (SELECT __relation__1.c_name AS customer_name FROM (SELECT customer.c_custkey, customer.c_name, orders.o_custkey FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT customer.c_custkey, customer.c_name, customer.c_nationkey FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer WHERE CAST(customer.c_nationkey AS BIGINT) = 1) AS customer) AS customer RIGHT OUTER JOIN (SELECT __source.o_custkey AS o_custkey FROM orders AS __source) AS orders ON customer.c_custkey = orders.o_custkey) AS __relation__1) AS orders"
         );
         let headers = Arc::new(build_headers(&[(
             "session_user".to_string(),
@@ -2507,14 +2515,14 @@ mod test {
         // test orders model used by totalprice should be filtered by user rule.
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
-            @"SELECT customer.totalprice FROM (SELECT totalprice.totalprice FROM (SELECT __relation__1.c_custkey AS c_custkey, sum(CAST(__relation__1.o_totalprice AS BIGINT)) AS totalprice FROM (SELECT customer.c_custkey, orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey, __source.o_totalprice AS o_totalprice FROM orders AS __source) AS orders) AS orders WHERE CAST(orders.o_custkey AS BIGINT) = 1) AS orders) AS orders RIGHT OUTER JOIN (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer ON orders.o_custkey = customer.c_custkey) AS __relation__1 GROUP BY __relation__1.c_custkey) AS totalprice) AS customer",
+            @"SELECT customer.totalprice FROM (SELECT __relation__1.totalprice FROM (SELECT totalprice.c_custkey, totalprice.totalprice FROM (SELECT __relation__1.c_custkey AS c_custkey, sum(CAST(__relation__1.o_totalprice AS BIGINT)) AS totalprice FROM (SELECT customer.c_custkey, orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT __source.o_custkey AS o_custkey, __source.o_totalprice AS o_totalprice FROM orders AS __source) AS orders) AS orders WHERE CAST(orders.o_custkey AS BIGINT) = 1) AS orders) AS orders RIGHT OUTER JOIN (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer ON orders.o_custkey = customer.c_custkey) AS __relation__1 GROUP BY __relation__1.c_custkey) AS totalprice RIGHT OUTER JOIN (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer ON totalprice.c_custkey = customer.c_custkey) AS __relation__1) AS customer",
         );
 
         let sql = "SELECT totalprice FROM customer c";
         // test orders model used by totalprice should be filtered by user rule.
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
-            @"SELECT c.totalprice FROM (SELECT totalprice.totalprice FROM (SELECT __relation__1.c_custkey AS c_custkey, sum(CAST(__relation__1.o_totalprice AS BIGINT)) AS totalprice FROM (SELECT customer.c_custkey, orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey, __source.o_totalprice AS o_totalprice FROM orders AS __source) AS orders) AS orders WHERE CAST(orders.o_custkey AS BIGINT) = 1) AS orders) AS orders RIGHT OUTER JOIN (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer ON orders.o_custkey = customer.c_custkey) AS __relation__1 GROUP BY __relation__1.c_custkey) AS totalprice) AS c",
+            @"SELECT c.totalprice FROM (SELECT __relation__1.totalprice FROM (SELECT totalprice.c_custkey, totalprice.totalprice FROM (SELECT __relation__1.c_custkey AS c_custkey, sum(CAST(__relation__1.o_totalprice AS BIGINT)) AS totalprice FROM (SELECT customer.c_custkey, orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT orders.o_custkey, orders.o_totalprice FROM (SELECT __source.o_custkey AS o_custkey, __source.o_totalprice AS o_totalprice FROM orders AS __source) AS orders) AS orders WHERE CAST(orders.o_custkey AS BIGINT) = 1) AS orders) AS orders RIGHT OUTER JOIN (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer ON orders.o_custkey = customer.c_custkey) AS __relation__1 GROUP BY __relation__1.c_custkey) AS totalprice RIGHT OUTER JOIN (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer ON totalprice.c_custkey = customer.c_custkey) AS __relation__1) AS c",
         );
         Ok(())
     }
@@ -2707,7 +2715,7 @@ mod test {
                     @r#"
                 ModelAnalyzeRule
                 caused by
-                External error: Permission Denied: No permission to access "customer"."c_name"
+                External error: Permission Denied: Access denied to column "customer"."c_name": violates access control rule "cls rule"
                 "#
                 )
             }
@@ -2716,6 +2724,121 @@ mod test {
             }
         }
 
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_clac_permission_denied() -> Result<()> {
+        let ctx = SessionContext::new();
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_custkey", "int").build())
+                    .column(
+                        ColumnBuilder::new("c_name", "string")
+                            .column_level_access_control(
+                                "cls rule",
+                                vec![SessionProperty::new_required("session_level")],
+                                ColumnLevelOperator::Equals,
+                                "1",
+                            )
+                            .build(),
+                    )
+                    .column(
+                        ColumnBuilder::new("c_name_2", "string")
+                            .column_level_access_control(
+                                "cls rule",
+                                vec![SessionProperty::new_required("session_level")],
+                                ColumnLevelOperator::Equals,
+                                "2",
+                            )
+                            .build(),
+                    )
+                    .add_row_level_access_control(
+                        "rls",
+                        vec![SessionProperty::new_optional(
+                            "session_role",
+                            Some("'member'".to_string()),
+                        )],
+                        "@session_role = c_name_2",
+                    )
+                    .build(),
+            )
+            .build();
+
+        let headers = Arc::new(build_headers(&[(
+            "session_level".to_string(),
+            Some("1".to_string()),
+        )]));
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest.clone(),
+            headers.clone(),
+            Mode::Unparse,
+        )?);
+        let sql = "SELECT c_name FROM customer";
+
+        match transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
+            .await
+        {
+            Err(e) => {
+                assert_snapshot!(
+                    e.to_string(),
+                    @r#"
+                ModelAnalyzeRule
+                caused by
+                External error: Permission Denied: Access denied to column "customer"."c_name_2": violates access control rule "cls rule"
+                "#
+                )
+            }
+            Ok(sql) => {
+                panic!("Expected error, but got SQL: {sql}");
+            }
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_calc_primary_key() -> Result<()> {
+        let ctx = SessionContext::new();
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_custkey", "int").build())
+                    .column(
+                        ColumnBuilder::new("c_name", "string")
+                            .column_level_access_control(
+                                "cls rule",
+                                vec![SessionProperty::new_required("session_level")],
+                                ColumnLevelOperator::Equals,
+                                "1",
+                            )
+                            .build(),
+                    )
+                    .primary_key("c_name")
+                    .build(),
+            )
+            .build();
+        let headers = Arc::new(build_headers(&[(
+            "session_level".to_string(),
+            Some("0".to_string()),
+        )]));
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest.clone(),
+            headers.clone(),
+            Mode::Unparse,
+        )?);
+        let sql = "SELECT c_custkey FROM customer";
+
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
+            @"SELECT customer.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer"
+        );
         Ok(())
     }
 
@@ -2882,21 +3005,100 @@ mod test {
             Mode::Unparse,
         )?);
 
-        match transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql)
-            .await
+        match transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            Arc::clone(&headers),
+            sql,
+        )
+        .await
         {
             Err(e) => {
                 assert_snapshot!(
                     e.to_string(),
-                    @r"
+                    @r#"
                 ModelAnalyzeRule
                 caused by
-                Schema error: No field named c_name. Valid fields are customer.c_custkey.
-                "
+                External error: Permission Denied: Access denied to column "customer"."c_name_upper": violates access control rule "cls rule"
+                "#
                 )
             }
             _ => panic!("Expected error"),
         }
+
+        let sql = "SELECT * FROM customer";
+
+        assert_snapshot!(transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
+            @"SELECT customer.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer"
+        );
+
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_custkey", "int").build())
+                    .column(
+                        ColumnBuilder::new("c_name", "string")
+                            .column_level_access_control(
+                                "cls rule",
+                                vec![SessionProperty::new_required("session_level")],
+                                ColumnLevelOperator::Equals,
+                                "1",
+                            )
+                            .build(),
+                    )
+                    .build(),
+            )
+            .model(
+                ModelBuilder::new("orders")
+                    .table_reference("orders")
+                    .column(ColumnBuilder::new("o_orderkey", "int").build())
+                    .column(ColumnBuilder::new("o_custkey", "int").build())
+                    .column(
+                        ColumnBuilder::new("customer", "customer")
+                            .relationship("customer_orders")
+                            .build(),
+                    )
+                    .column(
+                        ColumnBuilder::new_calculated("customer_name", "string")
+                            .expression("customer.c_name")
+                            .build(),
+                    )
+                    .build(),
+            )
+            .relationship(
+                RelationshipBuilder::new("customer_orders")
+                    .model("customer")
+                    .model("orders")
+                    .join_type(JoinType::OneToMany)
+                    .condition("customer.c_custkey = orders.o_custkey")
+                    .build(),
+            )
+            .build();
+
+        let headers = Arc::new(build_headers(&[(
+            "session_level".to_string(),
+            Some("0".to_string()),
+        )]));
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest.clone(),
+            headers.clone(),
+            Mode::Unparse,
+        )?);
+
+        let sql = "SELECT * FROM orders";
+        let headers = Arc::new(build_headers(&[(
+            "session_level".to_string(),
+            Some("0".to_string()),
+        )]));
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
+            @"SELECT orders.o_orderkey, orders.o_custkey FROM (SELECT orders.o_custkey, orders.o_orderkey FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders) AS orders"
+        );
+
         Ok(())
     }
 
@@ -3198,6 +3400,49 @@ mod test {
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
             @"SELECT rank() OVER (PARTITION BY orders.o_custkey ORDER BY orders.o_orderdate ASC NULLS LAST) FROM (SELECT orders.o_custkey, orders.o_orderdate FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderdate AS o_orderdate FROM orders AS __source) AS orders) AS orders"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_cte_used_in_scalar_subquery() -> Result<()> {
+        let ctx = SessionContext::new();
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("orders")
+                    .table_reference("orders")
+                    .column(ColumnBuilder::new("o_orderkey", "int").build())
+                    .column(ColumnBuilder::new("o_custkey", "int").build())
+                    .build(),
+            )
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_custkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest,
+            Arc::new(HashMap::default()),
+            Mode::Unparse,
+        )?);
+        let headers = Arc::new(HashMap::default());
+        let sql = r#"
+        with cte1 as (
+            select c_custkey from customer
+        ),
+        cte2 as (
+            select o_orderkey from orders where o_custkey in (select c_custkey from cte1)
+        )
+        select * from cte2
+        "#;
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
+            @"SELECT cte2.o_orderkey FROM (SELECT orders.o_orderkey FROM (SELECT orders.o_custkey, orders.o_orderkey FROM (SELECT __source.o_custkey AS o_custkey, __source.o_orderkey AS o_orderkey FROM orders AS __source) AS orders) AS orders WHERE orders.o_custkey IN (SELECT cte1.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer) AS cte1)) AS cte2"
         );
         Ok(())
     }
