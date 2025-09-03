@@ -51,12 +51,8 @@ pub async fn create_ctx_with_mdl(
         .get("x-wren-timezone")
         .map(|v| v.as_ref().map(|s| s.as_str()).unwrap_or("UTC").to_string());
 
-    let config = ctx
+    let mut config = ctx
         .copied_config()
-        .set(
-            "datafusion.execution.time_zone",
-            &ScalarValue::Utf8(session_timezone),
-        )
         .set(
             "datafusion.sql_parser.default_null_ordering",
             &ScalarValue::Utf8(Some("nulls_last".to_string())),
@@ -67,6 +63,13 @@ pub async fn create_ctx_with_mdl(
             analyzed_mdl.wren_mdl.schema(),
         )
         .with_information_schema(true);
+
+    if let Some(session_timezone) = session_timezone {
+        config
+            .options_mut()
+            .set("datafusion.execution.time_zone", &session_timezone)?;
+    }
+
     let reset_default_catalog_schema = Arc::new(RwLock::new(
         SessionStateBuilder::new_from_existing(ctx.state())
             .with_config(config.clone())
