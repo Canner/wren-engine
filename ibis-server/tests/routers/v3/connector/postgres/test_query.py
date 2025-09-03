@@ -1181,3 +1181,41 @@ async def test_cache_with_mixed_relevant_irrelevant_headers(
     assert (
         response3.headers["X-Cache-Hit"] == "false"
     )  # Should miss cache due to changed relevant header
+
+
+async def test_query_unicode_table(client, connection_info):
+    manifest = {
+        "catalog": "wrenai",
+        "schema": "public",
+        "models": [
+            {
+                "name": "中文表",
+                "tableReference": {"schema": "public", "table": "中文表"},
+                "columns": [
+                    {"name": "欄位1", "type": "int"},
+                    {"name": "欄位2", "type": "int"},
+                ],
+            }
+        ],
+        "dataSource": "postgres",
+    }
+
+    manifest_str = base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
+
+    response = await client.post(
+        url=f"{base_url}/query?cacheEnable=true",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT 欄位1, 欄位2 FROM 中文表 LIMIT 1",
+        },
+        headers={X_WREN_FALLBACK_DISABLE: "true"},
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["data"][0] == [1, 2]
+    assert result["dtypes"] == {
+        "欄位1": "int32",
+        "欄位2": "int32",
+    }
