@@ -21,6 +21,7 @@ def pytest_collection_modifyitems(items):
 
 
 function_list_path = file_path("../resources/function_list")
+white_function_list_path = file_path("../resources/white_function_list")
 
 
 @pytest.fixture(scope="module")
@@ -66,5 +67,7 @@ def connection_url(connection_info: dict[str, str]):
 def set_remote_function_list_path():
     config = get_config()
     config.set_remote_function_list_path(function_list_path)
+    config.set_remote_white_function_list_path(white_function_list_path)
     yield
     config.set_remote_function_list_path(None)
+    config.set_remote_white_function_list_path(None)
