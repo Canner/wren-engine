@@ -54,15 +54,15 @@ async def test_function_list(client):
     response = await client.get(url=f"{base_url}/functions")
     assert response.status_code == 200
     result = response.json()
-    assert len(result) == DATAFUSION_FUNCTION_COUNT + 24
+    assert len(result) == 135
     the_func = next(filter(lambda x: x["name"] == "lcase", result))
     assert the_func == {
         "name": "lcase",
         "description": "Synonym for LOWER()",
         "function_type": "scalar",
         "param_names": None,
-        "param_types": None,
-        "return_type": None,
+        "param_types": "varchar",
+        "return_type": "varchar",
     }
 
     config.set_remote_function_list_path(None)

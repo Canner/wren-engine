@@ -89,7 +89,7 @@ class Config:
         if not self.remote_white_function_list_path:
             return False
 
-        return data_source in {"bigquery", "postgres"}
+        return data_source in {"bigquery", "postgres", "mysql"}
 
 
 config = Config()
