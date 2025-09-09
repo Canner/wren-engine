@@ -4,6 +4,7 @@ import orjson
 import pytest
 
 from app.config import get_config
+from app.dependencies import X_WREN_FALLBACK_DISABLE
 from tests.conftest import DATAFUSION_FUNCTION_COUNT
 from tests.routers.v3.connector.bigquery.conftest import (
     base_url,
@@ -243,3 +244,19 @@ async def test_date_diff_function(client, manifest_str: str, connection_info):
         "data": [[result["data"][0][0]]],
         "dtypes": {"col": "int64"},
     }
+
+
+async def test_query_safe_divide(client, manifest_str, connection_info):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT safe_divide(10.0, 2.0) as result",
+        },
+        headers={X_WREN_FALLBACK_DISABLE: "true"},
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 1
+    assert result["data"][0][0] == 5.0
