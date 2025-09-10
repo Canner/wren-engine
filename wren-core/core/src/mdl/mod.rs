@@ -562,7 +562,6 @@ mod test {
     use datafusion::common::format::DEFAULT_FORMAT_OPTIONS;
     use datafusion::common::not_impl_err;
     use datafusion::common::Result;
-    use datafusion::parquet::file::properties;
     use datafusion::prelude::SessionContext;
     use datafusion::sql::unparser::plan_to_sql;
     use insta::assert_snapshot;
