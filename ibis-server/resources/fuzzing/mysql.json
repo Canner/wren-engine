@@ -1,0 +1,1402 @@
+[
+  {
+    "id": 1,
+    "function_name": "array_max",
+    "sql": "SELECT array_max([1, 2, 3, 4, 5]) AS result"
+  },
+  {
+    "id": 2,
+    "function_name": "decode",
+    "sql": "SELECT decode('aGVsbG8=', 'base64') AS result"
+  },
+  {
+    "id": 3,
+    "function_name": "list_extract",
+    "sql": "SELECT list_extract([1, 2, 3], 2) AS result"
+  },
+  {
+    "id": 4,
+    "function_name": "array_join",
+    "sql": "SELECT array_join([1, 2, 3], ',') AS result"
+  },
+  {
+    "id": 5,
+    "function_name": "atan",
+    "sql": "SELECT atan(1.0) AS result"
+  },
+  {
+    "id": 6,
+    "function_name": "regexp_count",
+    "sql": "SELECT regexp_count('hello world hello', 'hello') AS result"
+  },
+  {
+    "id": 7,
+    "function_name": "contains",
+    "sql": "SELECT contains('hello world', 'world') AS result"
+  },
+  {
+    "id": 8,
+    "function_name": "list_distance",
+    "sql": "SELECT list_distance([1, 2, 3], [4, 5, 6]) AS result"
+  },
+  {
+    "id": 9,
+    "function_name": "array_union",
+    "sql": "SELECT array_union([1, 2, 3], [3, 4, 5]) AS result"
+  },
+  {
+    "id": 10,
+    "function_name": "degrees",
+    "sql": "SELECT degrees(3.14159) AS result"
+  },
+  {
+    "id": 11,
+    "function_name": "array_position",
+    "sql": "SELECT array_position([1, 2, 3, 2], 2) AS result"
+  },
+  {
+    "id": 12,
+    "function_name": "substr_index",
+    "sql": "SELECT substr_index('www.example.com', '.', 2) AS result"
+  },
+  {
+    "id": 13,
+    "function_name": "log",
+    "sql": "SELECT log(10, 100) AS result"
+  },
+  {
+    "id": 14,
+    "function_name": "sin",
+    "sql": "SELECT sin(1.57079632679) AS result"
+  },
+  {
+    "id": 15,
+    "function_name": "uuid",
+    "sql": "SELECT uuid() AS result"
+  },
+  {
+    "id": 16,
+    "function_name": "ends_with",
+    "sql": "SELECT ends_with('hello world', 'world') AS result"
+  },
+  {
+    "id": 17,
+    "function_name": "least",
+    "sql": "SELECT least(1, 2, 3) AS result"
+  },
+  {
+    "id": 18,
+    "function_name": "now",
+    "sql": "SELECT now() AS result"
+  },
+  {
+    "id": 19,
+    "function_name": "current_time",
+    "sql": "SELECT current_time() AS result"
+  },
+  {
+    "id": 20,
+    "function_name": "iszero",
+    "sql": "SELECT iszero(0.0) AS result"
+  },
+  {
+    "id": 21,
+    "function_name": "approx_distinct",
+    "sql": "SELECT approx_distinct(value) FROM (VALUES (1), (2), (3), (1), (2)) AS t(value)"
+  },
+  {
+    "id": 22,
+    "function_name": "var",
+    "sql": "SELECT var(value) FROM (VALUES (1), (2), (3), (4), (5)) AS t(value)"
+  },
+  {
+    "id": 23,
+    "function_name": "arrow_cast",
+    "sql": "SELECT arrow_cast(123, 'Utf8') AS result"
+  },
+  {
+    "id": 24,
+    "function_name": "char_length",
+    "sql": "SELECT char_length('hello') AS result"
+  },
+  {
+    "id": 25,
+    "function_name": "to_timestamp_micros",
+    "sql": "SELECT to_timestamp_micros('2023-01-01T12:00:00') AS result"
+  },
+  {
+    "id": 26,
+    "function_name": "tan",
+    "sql": "SELECT tan(0.7853981633974483) AS result"
+  },
+  {
+    "id": 27,
+    "function_name": "digest",
+    "sql": "SELECT digest('hello', 'md5') AS result"
+  },
+  {
+    "id": 28,
+    "function_name": "to_timestamp",
+    "sql": "SELECT to_timestamp('2023-01-01T12:00:00') AS result"
+  },
+  {
+    "id": 29,
+    "function_name": "list_element",
+    "sql": "SELECT list_element([1, 2, 3], 2) AS result"
+  },
+  {
+    "id": 30,
+    "function_name": "sqrt",
+    "sql": "SELECT sqrt(16) AS result"
+  },
+  {
+    "id": 31,
+    "function_name": "nvl",
+    "sql": "SELECT nvl(NULL, 'default') AS result"
+  },
+  {
+    "id": 32,
+    "function_name": "array_indexof",
+    "sql": "SELECT array_indexof([1, 2, 3, 2], 2) AS result"
+  },
+  {
+    "id": 33,
+    "function_name": "map",
+    "sql": "SELECT map(['key1', 'key2'], ['value1', 'value2']) AS result"
+  },
+  {
+    "id": 34,
+    "function_name": "array_replace_all",
+    "sql": "SELECT array_replace_all([1, 2, 2, 3], 2, 9) AS result"
+  },
+  {
+    "id": 35,
+    "function_name": "log10",
+    "sql": "SELECT log10(100) AS result"
+  },
+  {
+    "id": 36,
+    "function_name": "overlay",
+    "sql": "SELECT overlay('hello world' PLACING 'HELLO' FROM 1 FOR 5) AS result"
+  },
+  {
+    "id": 37,
+    "function_name": "ln",
+    "sql": "SELECT ln(2.718281828) AS result"
+  },
+  {
+    "id": 38,
+    "function_name": "trim",
+    "sql": "SELECT trim('  hello world  ') AS result"
+  },
+  {
+    "id": 39,
+    "function_name": "radians",
+    "sql": "SELECT radians(180) AS result"
+  },
+  {
+    "id": 40,
+    "function_name": "make_list",
+    "sql": "SELECT make_list(1, 2, 3) AS result"
+  },
+  {
+    "id": 41,
+    "function_name": "empty",
+    "sql": "SELECT empty([]) AS result"
+  },
+  {
+    "id": 42,
+    "function_name": "array_to_string",
+    "sql": "SELECT array_to_string([1, 2, 3], ',') AS result"
+  },
+  {
+    "id": 43,
+    "function_name": "arrow_typeof",
+    "sql": "SELECT arrow_typeof(123) AS result"
+  },
+  {
+    "id": 44,
+    "function_name": "encode",
+    "sql": "SELECT encode('hello', 'base64') AS result"
+  },
+  {
+    "id": 45,
+    "function_name": "element_at",
+    "sql": "SELECT element_at(map(['key1'], ['value1']), 'key1') AS result"
+  },
+  {
+    "id": 46,
+    "function_name": "array_extract",
+    "sql": "SELECT array_extract([1, 2, 3], 2) AS result"
+  },
+  {
+    "id": 47,
+    "function_name": "map_extract",
+    "sql": "SELECT map_extract(map(['key1'], ['value1']), 'key1') AS result"
+  },
+  {
+    "id": 48,
+    "function_name": "regr_r2",
+    "sql": "SELECT regr_r2(y, x) FROM (VALUES (1, 2), (2, 4), (3, 6)) AS t(y, x)"
+  },
+  {
+    "id": 49,
+    "function_name": "bool_or",
+    "sql": "SELECT bool_or(value) FROM (VALUES (true), (false), (true)) AS t(value)"
+  },
+  {
+    "id": 50,
+    "function_name": "nth_value",
+    "sql": "SELECT nth_value(value, 2) OVER (ORDER BY id) FROM (VALUES (1, 10), (2, 20), (3, 30)) AS t(id, value)"
+  },
+  {
+    "id": 51,
+    "function_name": "regexp_replace",
+    "sql": "SELECT regexp_replace('hello world', 'world', 'universe') AS result"
+  },
+  {
+    "id": 52,
+    "function_name": "character_length",
+    "sql": "SELECT character_length('hello') AS result"
+  },
+  {
+    "id": 53,
+    "function_name": "regexp_instr",
+    "sql": "SELECT regexp_instr('hello world', 'world') AS result"
+  },
+  {
+    "id": 54,
+    "function_name": "date_format",
+    "sql": "SELECT date_format(now(), '%Y-%m-%d') AS result"
+  },
+  {
+    "id": 55,
+    "function_name": "array_dims",
+    "sql": "SELECT array_dims([[1, 2], [3, 4]]) AS result"
+  },
+  {
+    "id": 56,
+    "function_name": "acosh",
+    "sql": "SELECT acosh(1.5) AS result"
+  },
+  {
+    "id": 57,
+    "function_name": "list_replace_n",
+    "sql": "SELECT list_replace_n([1, 2, 2, 3], 2, 9, 1) AS result"
+  },
+  {
+    "id": 58,
+    "function_name": "nanvl",
+    "sql": "SELECT nanvl(CAST('NaN' AS DOUBLE), 0) AS result"
+  },
+  {
+    "id": 59,
+    "function_name": "substr",
+    "sql": "SELECT substr('hello world', 7, 5) AS result"
+  },
+  {
+    "id": 60,
+    "function_name": "array_distance",
+    "sql": "SELECT array_distance([1, 2, 3], [4, 5, 6]) AS result"
+  },
+  {
+    "id": 61,
+    "function_name": "array_empty",
+    "sql": "SELECT array_empty([]) AS result"
+  },
+  {
+    "id": 62,
+    "function_name": "split_part",
+    "sql": "SELECT split_part('a,b,c', ',', 2) AS result"
+  },
+  {
+    "id": 63,
+    "function_name": "array_remove_all",
+    "sql": "SELECT array_remove_all([1, 2, 2, 3], 2) AS result"
+  },
+  {
+    "id": 64,
+    "function_name": "gcd",
+    "sql": "SELECT gcd(12, 18) AS result"
+  },
+  {
+    "id": 65,
+    "function_name": "ascii",
+    "sql": "SELECT ascii('A') AS result"
+  },
+  {
+    "id": 66,
+    "function_name": "list_pop_back",
+    "sql": "SELECT list_pop_back([1, 2, 3]) AS result"
+  },
+  {
+    "id": 67,
+    "function_name": "translate",
+    "sql": "SELECT translate('hello', 'el', 'XY') AS result"
+  },
+  {
+    "id": 68,
+    "function_name": "array_distinct",
+    "sql": "SELECT array_distinct([1, 2, 2, 3, 1]) AS result"
+  },
+  {
+    "id": 69,
+    "function_name": "list_intersect",
+    "sql": "SELECT list_intersect([1, 2, 3], [2, 3, 4]) AS result"
+  },
+  {
+    "id": 70,
+    "function_name": "starts_with",
+    "sql": "SELECT starts_with('hello world', 'hello') AS result"
+  },
+  {
+    "id": 71,
+    "function_name": "array_push_back",
+    "sql": "SELECT array_push_back([1, 2, 3], 4) AS result"
+  },
+  {
+    "id": 72,
+    "function_name": "regexp_match",
+    "sql": "SELECT regexp_match('hello 123', '[0-9]+') AS result"
+  },
+  {
+    "id": 73,
+    "function_name": "make_array",
+    "sql": "SELECT make_array(1, 2, 3) AS result"
+  },
+  {
+    "id": 74,
+    "function_name": "list_sort",
+    "sql": "SELECT list_sort([3, 1, 2]) AS result"
+  },
+  {
+    "id": 75,
+    "function_name": "list_reverse",
+    "sql": "SELECT list_reverse([1, 2, 3]) AS result"
+  },
+  {
+    "id": 76,
+    "function_name": "array_push_front",
+    "sql": "SELECT array_push_front([1, 2, 3], 0) AS result"
+  },
+  {
+    "id": 77,
+    "function_name": "list_remove",
+    "sql": "SELECT list_remove([1, 2, 3], 2) AS result"
+  },
+  {
+    "id": 78,
+    "function_name": "array_has_all",
+    "sql": "SELECT array_has_all([1, 2, 3, 4], [2, 3]) AS result"
+  },
+  {
+    "id": 79,
+    "function_name": "list_concat",
+    "sql": "SELECT list_concat([1, 2], [3, 4]) AS result"
+  },
+  {
+    "id": 80,
+    "function_name": "array_agg",
+    "sql": "SELECT array_agg(value) FROM (VALUES (1), (2), (3)) AS t(value)"
+  },
+  {
+    "id": 81,
+    "function_name": "var_samp",
+    "sql": "SELECT var_samp(value) FROM (VALUES (1), (2), (3), (4), (5)) AS t(value)"
+  },
+  {
+    "id": 82,
+    "function_name": "var_pop",
+    "sql": "SELECT var_pop(value) FROM (VALUES (1), (2), (3), (4), (5)) AS t(value)"
+  },
+  {
+    "id": 83,
+    "function_name": "array_repeat",
+    "sql": "SELECT array_repeat(5, 3) AS result"
+  },
+  {
+    "id": 84,
+    "function_name": "lower",
+    "sql": "SELECT lower('HELLO WORLD') AS result"
+  },
+  {
+    "id": 85,
+    "function_name": "list_prepend",
+    "sql": "SELECT list_prepend([1, 2, 3], 0) AS result"
+  },
+  {
+    "id": 86,
+    "function_name": "make_date",
+    "sql": "SELECT make_date(2023, 1, 15) AS result"
+  },
+  {
+    "id": 87,
+    "function_name": "date_trunc",
+    "sql": "SELECT date_trunc('day', now()) AS result"
+  },
+  {
+    "id": 88,
+    "function_name": "list_join",
+    "sql": "SELECT list_join([1, 2, 3], ',') AS result"
+  },
+  {
+    "id": 89,
+    "function_name": "array_remove_n",
+    "sql": "SELECT array_remove_n([1, 2, 2, 3], 2, 1) AS result"
+  },
+  {
+    "id": 90,
+    "function_name": "levenshtein",
+    "sql": "SELECT levenshtein('hello', 'hallo') AS result"
+  },
+  {
+    "id": 91,
+    "function_name": "tanh",
+    "sql": "SELECT tanh(1.0) AS result"
+  },
+  {
+    "id": 92,
+    "function_name": "list_remove_all",
+    "sql": "SELECT list_remove_all([1, 2, 2, 3], 2) AS result"
+  },
+  {
+    "id": 93,
+    "function_name": "cardinality",
+    "sql": "SELECT cardinality([1, 2, 3]) AS result"
+  },
+  {
+    "id": 94,
+    "function_name": "list_has_all",
+    "sql": "SELECT list_has_all([1, 2, 3, 4], [2, 3]) AS result"
+  },
+  {
+    "id": 95,
+    "function_name": "power",
+    "sql": "SELECT power(2, 3) AS result"
+  },
+  {
+    "id": 96,
+    "function_name": "array_has",
+    "sql": "SELECT array_has([1, 2, 3], 2) AS result"
+  },
+  {
+    "id": 97,
+    "function_name": "length",
+    "sql": "SELECT length('hello') AS result"
+  },
+  {
+    "id": 98,
+    "function_name": "md5",
+    "sql": "SELECT md5('hello') AS result"
+  },
+  {
+    "id": 99,
+    "function_name": "signum",
+    "sql": "SELECT signum(-5) AS result"
+  },
+  {
+    "id": 100,
+    "function_name": "reverse",
+    "sql": "SELECT reverse('hello') AS result"
+  },
+  {
+    "id": 101,
+    "function_name": "list_replace",
+    "sql": "SELECT list_replace([1, 2, 3], 2, 9) AS result"
+  },
+  {
+    "id": 102,
+    "function_name": "chr",
+    "sql": "SELECT chr(65) AS result"
+  },
+  {
+    "id": 103,
+    "function_name": "list_resize",
+    "sql": "SELECT list_resize([1, 2, 3], 5, 0) AS result"
+  },
+  {
+    "id": 104,
+    "function_name": "cot",
+    "sql": "SELECT cot(0.7853981633974483) AS result"
+  },
+  {
+    "id": 105,
+    "function_name": "array_concat",
+    "sql": "SELECT array_concat([1, 2], [3, 4]) AS result"
+  },
+  {
+    "id": 106,
+    "function_name": "date_bin",
+    "sql": "SELECT date_bin(INTERVAL '1 hour', now(), now()) AS result"
+  },
+  {
+    "id": 107,
+    "function_name": "strpos",
+    "sql": "SELECT strpos('hello world', 'world') AS result"
+  },
+  {
+    "id": 108,
+    "function_name": "cosh",
+    "sql": "SELECT cosh(1.0) AS result"
+  },
+  {
+    "id": 109,
+    "function_name": "floor",
+    "sql": "SELECT floor(3.7) AS result"
+  },
+  {
+    "id": 110,
+    "function_name": "greatest",
+    "sql": "SELECT greatest(1, 2, 3) AS result"
+  },
+  {
+    "id": 111,
+    "function_name": "array_length",
+    "sql": "SELECT array_length([1, 2, 3]) AS result"
+  },
+  {
+    "id": 112,
+    "function_name": "list_append",
+    "sql": "SELECT list_append([1, 2, 3], 4) AS result"
+  },
+  {
+    "id": 113,
+    "function_name": "list_contains",
+    "sql": "SELECT list_contains([1, 2, 3], 2) AS result"
+  },
+  {
+    "id": 114,
+    "function_name": "to_local_time",
+    "sql": "SELECT to_local_time(now()) AS result"
+  },
+  {
+    "id": 115,
+    "function_name": "regr_slope",
+    "sql": "SELECT regr_slope(y, x) FROM (VALUES (1, 2), (2, 4), (3, 6)) AS t(y, x)"
+  },
+  {
+    "id": 116,
+    "function_name": "median",
+    "sql": "SELECT median(value) FROM (VALUES (1), (2), (3), (4), (5)) AS t(value)"
+  },
+  {
+    "id": 117,
+    "function_name": "min",
+    "sql": "SELECT min(value) FROM (VALUES (1), (2), (3)) AS t(value)"
+  },
+  {
+    "id": 118,
+    "function_name": "var_population",
+    "sql": "SELECT var_population(value) FROM (VALUES (1), (2), (3), (4), (5)) AS t(value)"
+  },
+  {
+    "id": 119,
+    "function_name": "bit_or",
+    "sql": "SELECT bit_or(value) FROM (VALUES (1), (2), (4)) AS t(value)"
+  },
+  {
+    "id": 120,
+    "function_name": "sum",
+    "sql": "SELECT sum(value) FROM (VALUES (1), (2), (3)) AS t(value)"
+  },
+  {
+    "id": 121,
+    "function_name": "regr_avgx",
+    "sql": "SELECT regr_avgx(y, x) FROM (VALUES (1, 2), (2, 4), (3, 6)) AS t(y, x)"
+  },
+  {
+    "id": 122,
+    "function_name": "regr_syy",
+    "sql": "SELECT regr_syy(y, x) FROM (VALUES (1, 2), (2, 4), (3, 6)) AS t(y, x)"
+  },
+  {
+    "id": 123,
+    "function_name": "bit_xor",
+    "sql": "SELECT bit_xor(value) FROM (VALUES (1), (2), (4)) AS t(value)"
+  },
+  {
+    "id": 124,
+    "function_name": "avg",
+    "sql": "SELECT avg(value) FROM (VALUES (1), (2), (3)) AS t(value)"
+  },
+  {
+    "id": 125,
+    "function_name": "stddev_samp",
+    "sql": "SELECT stddev_samp(value) FROM (VALUES (1), (2), (3), (4), (5)) AS t(value)"
+  },
+  {
+    "id": 126,
+    "function_name": "last_value",
+    "sql": "SELECT last_value(value) OVER (ORDER BY id) FROM (VALUES (1, 10), (2, 20), (3, 30)) AS t(id, value)"
+  },
+  {
+    "id": 127,
+    "function_name": "list_has_any",
+    "sql": "SELECT list_has_any([1, 2, 3], [3, 4, 5]) AS result"
+  },
+  {
+    "id": 128,
+    "function_name": "list_repeat",
+    "sql": "SELECT list_repeat(5, 3) AS result"
+  },
+  {
+    "id": 129,
+    "function_name": "to_timestamp_seconds",
+    "sql": "SELECT to_timestamp_seconds('2023-01-01T12:00:00') AS result"
+  },
+  {
+    "id": 130,
+    "function_name": "flatten",
+    "sql": "SELECT flatten([[1, 2], [3, 4], [5]]) AS result"
+  },
+  {
+    "id": 131,
+    "function_name": "array_slice",
+    "sql": "SELECT array_slice([1, 2, 3, 4, 5], 2, 4) AS result"
+  },
+  {
+    "id": 132,
+    "function_name": "today",
+    "sql": "SELECT today() AS result"
+  },
+  {
+    "id": 133,
+    "function_name": "replace",
+    "sql": "SELECT replace('hello world', 'world', 'universe') AS result"
+  },
+  {
+    "id": 134,
+    "function_name": "datetrunc",
+    "sql": "SELECT datetrunc('day', now()) AS result"
+  },
+  {
+    "id": 135,
+    "function_name": "substring",
+    "sql": "SELECT substring('hello world', 7, 5) AS result"
+  },
+  {
+    "id": 136,
+    "function_name": "to_unixtime",
+    "sql": "SELECT to_unixtime('2023-01-01T12:00:00') AS result"
+  },
+  {
+    "id": 137,
+    "function_name": "array_sort",
+    "sql": "SELECT array_sort([3, 1, 2]) AS result"
+  },
+  {
+    "id": 138,
+    "function_name": "btrim",
+    "sql": "SELECT btrim('  hello world  ') AS result"
+  },
+  {
+    "id": 139,
+    "function_name": "row",
+    "sql": "SELECT row(1, 'hello', true) AS result"
+  },
+  {
+    "id": 140,
+    "function_name": "array_contains",
+    "sql": "SELECT array_contains([1, 2, 3], 2) AS result"
+  },
+  {
+    "id": 141,
+    "function_name": "array_positions",
+    "sql": "SELECT array_positions([1, 2, 2, 3], 2) AS result"
+  },
+  {
+    "id": 142,
+    "function_name": "octet_length",
+    "sql": "SELECT octet_length('hello') AS result"
+  },
+  {
+    "id": 143,
+    "function_name": "list_distinct",
+    "sql": "SELECT list_distinct([1, 2, 2, 3, 1]) AS result"
+  },
+  {
+    "id": 144,
+    "function_name": "datepart",
+    "sql": "SELECT datepart('year', now()) AS result"
+  },
+  {
+    "id": 145,
+    "function_name": "current_timestamp",
+    "sql": "SELECT current_timestamp() AS result"
+  },
+  {
+    "id": 146,
+    "function_name": "nullif",
+    "sql": "SELECT nullif(5, 5) AS result"
+  },
+  {
+    "id": 147,
+    "function_name": "union_tag",
+    "sql": "SELECT union_tag(CAST(ROW(1) AS UNION(INT, VARCHAR))) AS result"
+  },
+  {
+    "id": 148,
+    "function_name": "struct",
+    "sql": "SELECT struct(1, 'hello', true) AS result"
+  },
+  {
+    "id": 149,
+    "function_name": "array_ndims",
+    "sql": "SELECT array_ndims([[1, 2], [3, 4]]) AS result"
+  },
+  {
+    "id": 150,
+    "function_name": "factorial",
+    "sql": "SELECT factorial(5) AS result"
+  },
+  {
+    "id": 151,
+    "function_name": "to_hex",
+    "sql": "SELECT to_hex(255) AS result"
+  },
+  {
+    "id": 152,
+    "function_name": "find_in_set",
+    "sql": "SELECT find_in_set('world', 'hello,world,test') AS result"
+  },
+  {
+    "id": 153,
+    "function_name": "regr_intercept",
+    "sql": "SELECT regr_intercept(y, x) FROM (VALUES (1, 2), (2, 4), (3, 6)) AS t(y, x)"
+  },
+  {
+    "id": 154,
+    "function_name": "regr_sxy",
+    "sql": "SELECT regr_sxy(y, x) FROM (VALUES (1, 2), (2, 4), (3, 6)) AS t(y, x)"
+  },
+  {
+    "id": 155,
+    "function_name": "sinh",
+    "sql": "SELECT sinh(1.0) AS result"
+  },
+  {
+    "id": 156,
+    "function_name": "asin",
+    "sql": "SELECT asin(0.5) AS result"
+  },
+  {
+    "id": 157,
+    "function_name": "left",
+    "sql": "SELECT left('hello world', 5) AS result"
+  },
+  {
+    "id": 158,
+    "function_name": "list_position",
+    "sql": "SELECT list_position([1, 2, 3, 2], 2) AS result"
+  },
+  {
+    "id": 159,
+    "function_name": "string_to_list",
+    "sql": "SELECT string_to_list('a,b,c', ',') AS result"
+  },
+  {
+    "id": 160,
+    "function_name": "acos",
+    "sql": "SELECT acos(0.5) AS result"
+  },
+  {
+    "id": 161,
+    "function_name": "list_length",
+    "sql": "SELECT list_length([1, 2, 3]) AS result"
+  },
+  {
+    "id": 162,
+    "function_name": "list_union",
+    "sql": "SELECT list_union([1, 2, 3], [3, 4, 5]) AS result"
+  },
+  {
+    "id": 163,
+    "function_name": "range",
+    "sql": "SELECT range(1, 10, 2) AS result"
+  },
+  {
+    "id": 164,
+    "function_name": "array_pop_back",
+    "sql": "SELECT array_pop_back([1, 2, 3]) AS result"
+  },
+  {
+    "id": 165,
+    "function_name": "string_to_array",
+    "sql": "SELECT string_to_array('a,b,c', ',') AS result"
+  },
+  {
+    "id": 166,
+    "function_name": "array_replace_n",
+    "sql": "SELECT array_replace_n([1, 2, 2, 3], 2, 9, 1) AS result"
+  },
+  {
+    "id": 167,
+    "function_name": "list_push_front",
+    "sql": "SELECT list_push_front([1, 2, 3], 0) AS result"
+  },
+  {
+    "id": 168,
+    "function_name": "array_any_value",
+    "sql": "SELECT array_any_value([NULL, 2, NULL, 4]) AS result"
+  },
+  {
+    "id": 169,
+    "function_name": "list_cat",
+    "sql": "SELECT list_cat([1, 2], [3, 4]) AS result"
+  },
+  {
+    "id": 170,
+    "function_name": "round",
+    "sql": "SELECT round(3.14159, 2) AS result"
+  },
+  {
+    "id": 171,
+    "function_name": "right",
+    "sql": "SELECT right('hello world', 5) AS result"
+  },
+  {
+    "id": 172,
+    "function_name": "list_to_string",
+    "sql": "SELECT list_to_string([1, 2, 3], ',') AS result"
+  },
+  {
+    "id": 173,
+    "function_name": "upper",
+    "sql": "SELECT upper('hello world') AS result"
+  },
+  {
+    "id": 174,
+    "function_name": "map_keys",
+    "sql": "SELECT map_keys(map(['key1', 'key2'], ['value1', 'value2'])) AS result"
+  },
+  {
+    "id": 175,
+    "function_name": "atan2",
+    "sql": "SELECT atan2(1, 1) AS result"
+  },
+  {
+    "id": 176,
+    "function_name": "array_reverse",
+    "sql": "SELECT array_reverse([1, 2, 3]) AS result"
+  },
+  {
+    "id": 177,
+    "function_name": "initcap",
+    "sql": "SELECT initcap('hello world') AS result"
+  },
+  {
+    "id": 178,
+    "function_name": "position",
+    "sql": "SELECT position('world' IN 'hello world') AS result"
+  },
+  {
+    "id": 179,
+    "function_name": "array_intersect",
+    "sql": "SELECT array_intersect([1, 2, 3], [2, 3, 4]) AS result"
+  },
+  {
+    "id": 180,
+    "function_name": "to_timestamp_nanos",
+    "sql": "SELECT to_timestamp_nanos('2023-01-01T12:00:00') AS result"
+  },
+  {
+    "id": 181,
+    "function_name": "var_sample",
+    "sql": "SELECT var_sample(value) FROM (VALUES (1), (2), (3), (4), (5)) AS t(value)"
+  },
+  {
+    "id": 182,
+    "function_name": "mean",
+    "sql": "SELECT mean(value) FROM (VALUES (1), (2), (3)) AS t(value)"
+  },
+  {
+    "id": 183,
+    "function_name": "approx_percentile_cont",
+    "sql": "SELECT approx_percentile_cont(0.5) WITHIN GROUP (ORDER BY value) FROM (VALUES (1), (2), (3), (4), (5)) AS t(value)"
+  },
+  {
+    "id": 184,
+    "function_name": "approx_median",
+    "sql": "SELECT approx_median(value) FROM (VALUES (1), (2), (3), (4), (5)) AS t(value)"
+  },
+  {
+    "id": 185,
+    "function_name": "first_value",
+    "sql": "SELECT first_value(value) OVER (ORDER BY id) FROM (VALUES (1, 10), (2, 20), (3, 30)) AS t(id, value)"
+  },
+  {
+    "id": 186,
+    "function_name": "array_replace",
+    "sql": "SELECT array_replace([1, 2, 3], 2, 9) AS result"
+  },
+  {
+    "id": 187,
+    "function_name": "list_has",
+    "sql": "SELECT list_has([1, 2, 3], 2) AS result"
+  },
+  {
+    "id": 188,
+    "function_name": "list_ndims",
+    "sql": "SELECT list_ndims([[1, 2], [3, 4]]) AS result"
+  },
+  {
+    "id": 189,
+    "function_name": "named_struct",
+    "sql": "SELECT named_struct('name', 'John', 'age', 30) AS result"
+  },
+  {
+    "id": 190,
+    "function_name": "array_min",
+    "sql": "SELECT array_min([1, 2, 3, 4, 5]) AS result"
+  },
+  {
+    "id": 191,
+    "function_name": "list_replace_all",
+    "sql": "SELECT list_replace_all([1, 2, 2, 3], 2, 9) AS result"
+  },
+  {
+    "id": 192,
+    "function_name": "list_max",
+    "sql": "SELECT list_max([1, 2, 3, 4, 5]) AS result"
+  },
+  {
+    "id": 193,
+    "function_name": "concat",
+    "sql": "SELECT concat('hello', ' ', 'world') AS result"
+  },
+  {
+    "id": 194,
+    "function_name": "cos",
+    "sql": "SELECT cos(0) AS result"
+  },
+  {
+    "id": 195,
+    "function_name": "map_values",
+    "sql": "SELECT map_values(map(['key1', 'key2'], ['value1', 'value2'])) AS result"
+  },
+  {
+    "id": 196,
+    "function_name": "coalesce",
+    "sql": "SELECT coalesce(NULL, NULL, 'default') AS result"
+  },
+  {
+    "id": 197,
+    "function_name": "abs",
+    "sql": "SELECT abs(-5) AS result"
+  },
+  {
+    "id": 198,
+    "function_name": "rpad",
+    "sql": "SELECT rpad('hello', 10, '*') AS result"
+  },
+  {
+    "id": 199,
+    "function_name": "list_remove_n",
+    "sql": "SELECT list_remove_n([1, 2, 2, 3], 2, 1) AS result"
+  },
+  {
+    "id": 200,
+    "function_name": "bit_length",
+    "sql": "SELECT bit_length('hello') AS result"
+  },
+  {
+    "id": 201,
+    "function_name": "instr",
+    "sql": "SELECT instr('hello world', 'world') AS result"
+  },
+  {
+    "id": 202,
+    "function_name": "array_remove",
+    "sql": "SELECT array_remove([1, 2, 3], 2) AS result"
+  },
+  {
+    "id": 203,
+    "function_name": "list_push_back",
+    "sql": "SELECT list_push_back([1, 2, 3], 4) AS result"
+  },
+  {
+    "id": 204,
+    "function_name": "list_indexof",
+    "sql": "SELECT list_indexof([1, 2, 3, 2], 2) AS result"
+  },
+  {
+    "id": 205,
+    "function_name": "ltrim",
+    "sql": "SELECT ltrim('  hello world') AS result"
+  },
+  {
+    "id": 206,
+    "function_name": "log2",
+    "sql": "SELECT log2(8) AS result"
+  },
+  {
+    "id": 207,
+    "function_name": "array_element",
+    "sql": "SELECT array_element([1, 2, 3], 2) AS result"
+  },
+  {
+    "id": 208,
+    "function_name": "union_extract",
+    "sql": "SELECT union_extract(CAST(ROW(1) AS UNION(INT, VARCHAR)), 'field1') AS result"
+  },
+  {
+    "id": 209,
+    "function_name": "list_except",
+    "sql": "SELECT list_except([1, 2, 3], [2, 4]) AS result"
+  },
+  {
+    "id": 210,
+    "function_name": "generate_series",
+    "sql": "SELECT generate_series(1, 10, 2) AS result"
+  },
+  {
+    "id": 211,
+    "function_name": "list_pop_front",
+    "sql": "SELECT list_pop_front([1, 2, 3]) AS result"
+  },
+  {
+    "id": 212,
+    "function_name": "array_except",
+    "sql": "SELECT array_except([1, 2, 3], [2, 4]) AS result"
+  },
+  {
+    "id": 213,
+    "function_name": "list_any_value",
+    "sql": "SELECT list_any_value([NULL, 2, NULL, 4]) AS result"
+  },
+  {
+    "id": 214,
+    "function_name": "to_timestamp_millis",
+    "sql": "SELECT to_timestamp_millis('2023-01-01T12:00:00') AS result"
+  },
+  {
+    "id": 215,
+    "function_name": "trunc",
+    "sql": "SELECT trunc(3.14159, 2) AS result"
+  },
+  {
+    "id": 216,
+    "function_name": "from_unixtime",
+    "sql": "SELECT from_unixtime(1672574400) AS result"
+  },
+  {
+    "id": 217,
+    "function_name": "rtrim",
+    "sql": "SELECT rtrim('hello world  ') AS result"
+  },
+  {
+    "id": 218,
+    "function_name": "random",
+    "sql": "SELECT random() AS result"
+  },
+  {
+    "id": 219,
+    "function_name": "array_pop_front",
+    "sql": "SELECT array_pop_front([1, 2, 3]) AS result"
+  },
+  {
+    "id": 220,
+    "function_name": "map_entries",
+    "sql": "SELECT map_entries(map(['key1', 'key2'], ['value1', 'value2'])) AS result"
+  },
+  {
+    "id": 221,
+    "function_name": "ceil",
+    "sql": "SELECT ceil(3.14) AS result"
+  },
+  {
+    "id": 222,
+    "function_name": "version",
+    "sql": "SELECT version() AS result"
+  },
+  {
+    "id": 223,
+    "function_name": "count",
+    "sql": "SELECT count(*) FROM (VALUES (1), (2), (3)) AS t(value)"
+  },
+  {
+    "id": 224,
+    "function_name": "corr",
+    "sql": "SELECT corr(x, y) FROM (VALUES (1, 2), (2, 4), (3, 6)) AS t(x, y)"
+  },
+  {
+    "id": 225,
+    "function_name": "regr_avgy",
+    "sql": "SELECT regr_avgy(y, x) FROM (VALUES (1, 2), (2, 4), (3, 6)) AS t(y, x)"
+  },
+  {
+    "id": 226,
+    "function_name": "covar_samp",
+    "sql": "SELECT covar_samp(x, y) FROM (VALUES (1, 2), (2, 4), (3, 6)) AS t(x, y)"
+  },
+  {
+    "id": 227,
+    "function_name": "bit_and",
+    "sql": "SELECT bit_and(value) FROM (VALUES (7), (3), (1)) AS t(value)"
+  },
+  {
+    "id": 228,
+    "function_name": "max",
+    "sql": "SELECT max(value) FROM (VALUES (1), (2), (3)) AS t(value)"
+  },
+  {
+    "id": 229,
+    "function_name": "regr_count",
+    "sql": "SELECT regr_count(y, x) FROM (VALUES (1, 2), (2, 4), (3, 6)) AS t(y, x)"
+  },
+  {
+    "id": 230,
+    "function_name": "stddev",
+    "sql": "SELECT stddev(value) FROM (VALUES (1), (2), (3), (4), (5)) AS t(value)"
+  },
+  {
+    "id": 231,
+    "function_name": "regr_sxx",
+    "sql": "SELECT regr_sxx(y, x) FROM (VALUES (1, 2), (2, 4), (3, 6)) AS t(y, x)"
+  },
+  {
+    "id": 232,
+    "function_name": "stddev_pop",
+    "sql": "SELECT stddev_pop(value) FROM (VALUES (1), (2), (3), (4), (5)) AS t(value)"
+  },
+  {
+    "id": 233,
+    "function_name": "ntile",
+    "sql": "SELECT ntile(4) OVER (ORDER BY value) FROM (VALUES (1), (2), (3), (4), (5), (6), (7), (8)) AS t(value)"
+  },
+  {
+    "id": 234,
+    "function_name": "dense_rank",
+    "sql": "SELECT dense_rank() OVER (ORDER BY value) FROM (VALUES (1), (2), (2), (3)) AS t(value)"
+  },
+  {
+    "id": 235,
+    "function_name": "percent_rank",
+    "sql": "SELECT percent_rank() OVER (ORDER BY value) FROM (VALUES (1), (2), (3), (4)) AS t(value)"
+  },
+  {
+    "id": 236,
+    "function_name": "lead",
+    "sql": "SELECT lead(value, 1) OVER (ORDER BY id) FROM (VALUES (1, 10), (2, 20), (3, 30)) AS t(id, value)"
+  },
+  {
+    "id": 237,
+    "function_name": "rank",
+    "sql": "SELECT rank() OVER (ORDER BY value) FROM (VALUES (1), (2), (2), (3)) AS t(value)"
+  },
+  {
+    "id": 238,
+    "function_name": "array_resize",
+    "sql": "SELECT array_resize([1, 2, 3], 5, 0) AS result"
+  },
+  {
+    "id": 239,
+    "function_name": "array_cat",
+    "sql": "SELECT array_cat([1, 2], [3, 4]) AS result"
+  },
+  {
+    "id": 240,
+    "function_name": "lpad",
+    "sql": "SELECT lpad('hello', 10, '*') AS result"
+  },
+  {
+    "id": 241,
+    "function_name": "cbrt",
+    "sql": "SELECT cbrt(8) AS result"
+  },
+  {
+    "id": 242,
+    "function_name": "list_dims",
+    "sql": "SELECT list_dims([[1, 2], [3, 4]]) AS result"
+  },
+  {
+    "id": 243,
+    "function_name": "asinh",
+    "sql": "SELECT asinh(1.0) AS result"
+  },
+  {
+    "id": 244,
+    "function_name": "ifnull",
+    "sql": "SELECT ifnull(NULL, 'default') AS result"
+  },
+  {
+    "id": 245,
+    "function_name": "to_char",
+    "sql": "SELECT to_char(now(), '%Y-%m-%d') AS result"
+  },
+  {
+    "id": 246,
+    "function_name": "atanh",
+    "sql": "SELECT atanh(0.5) AS result"
+  },
+  {
+    "id": 247,
+    "function_name": "list_slice",
+    "sql": "SELECT list_slice([1, 2, 3, 4, 5], 2, 4) AS result"
+  },
+  {
+    "id": 248,
+    "function_name": "sha512",
+    "sql": "SELECT sha512('hello') AS result"
+  },
+  {
+    "id": 249,
+    "function_name": "nvl2",
+    "sql": "SELECT nvl2(NULL, 'not_null', 'is_null') AS result"
+  },
+  {
+    "id": 250,
+    "function_name": "exp",
+    "sql": "SELECT exp(1) AS result"
+  },
+  {
+    "id": 251,
+    "function_name": "sha256",
+    "sql": "SELECT sha256('hello') AS result"
+  },
+  {
+    "id": 252,
+    "function_name": "sha384",
+    "sql": "SELECT sha384('hello') AS result"
+  },
+  {
+    "id": 253,
+    "function_name": "list_empty",
+    "sql": "SELECT list_empty([]) AS result"
+  },
+  {
+    "id": 254,
+    "function_name": "regexp_like",
+    "sql": "SELECT regexp_like('hello123', '[0-9]+') AS result"
+  },
+  {
+    "id": 255,
+    "function_name": "pow",
+    "sql": "SELECT pow(2, 3) AS result"
+  },
+  {
+    "id": 256,
+    "function_name": "array_append",
+    "sql": "SELECT array_append([1, 2, 3], 4) AS result"
+  },
+  {
+    "id": 257,
+    "function_name": "array_has_any",
+    "sql": "SELECT array_has_any([1, 2, 3], [3, 4, 5]) AS result"
+  },
+  {
+    "id": 258,
+    "function_name": "array_prepend",
+    "sql": "SELECT array_prepend([1, 2, 3], 0) AS result"
+  },
+  {
+    "id": 259,
+    "function_name": "isnan",
+    "sql": "SELECT isnan(CAST('NaN' AS DOUBLE)) AS result"
+  },
+  {
+    "id": 260,
+    "function_name": "sha224",
+    "sql": "SELECT sha224('hello') AS result"
+  },
+  {
+    "id": 261,
+    "function_name": "concat_ws",
+    "sql": "SELECT concat_ws(',', 'a', 'b', 'c') AS result"
+  },
+  {
+    "id": 262,
+    "function_name": "to_date",
+    "sql": "SELECT to_date('2023-01-15') AS result"
+  },
+  {
+    "id": 263,
+    "function_name": "arrays_overlap",
+    "sql": "SELECT arrays_overlap([1, 2, 3], [3, 4, 5]) AS result"
+  },
+  {
+    "id": 264,
+    "function_name": "pi",
+    "sql": "SELECT pi() AS result"
+  },
+  {
+    "id": 265,
+    "function_name": "get_field",
+    "sql": "SELECT get_field(struct(1, 'hello'), 'c1') AS result"
+  },
+  {
+    "id": 266,
+    "function_name": "current_date",
+    "sql": "SELECT current_date() AS result"
+  },
+  {
+    "id": 267,
+    "function_name": "date_part",
+    "sql": "SELECT date_part('year', now()) AS result"
+  },
+  {
+    "id": 268,
+    "function_name": "lcm",
+    "sql": "SELECT lcm(12, 18) AS result"
+  },
+  {
+    "id": 269,
+    "function_name": "list_positions",
+    "sql": "SELECT list_positions([1, 2, 2, 3], 2) AS result"
+  },
+  {
+    "id": 270,
+    "function_name": "repeat",
+    "sql": "SELECT repeat('abc', 3) AS result"
+  },
+  {
+    "id": 271,
+    "function_name": "substring_index",
+    "sql": "SELECT substring_index('www.example.com', '.', 2) AS result"
+  },
+  {
+    "id": 272,
+    "function_name": "covar_pop",
+    "sql": "SELECT covar_pop(x, y) FROM (VALUES (1, 2), (2, 4), (3, 6)) AS t(x, y)"
+  },
+  {
+    "id": 273,
+    "function_name": "approx_percentile_cont_with_weight",
+    "sql": "SELECT approx_percentile_cont_with_weight(0.5, 1) WITHIN GROUP (ORDER BY value) FROM (VALUES (1), (2), (3), (4), (5)) AS t(value)"
+  },
+  {
+    "id": 274,
+    "function_name": "covar",
+    "sql": "SELECT covar(x, y) FROM (VALUES (1, 2), (2, 4), (3, 6)) AS t(x, y)"
+  },
+  {
+    "id": 275,
+    "function_name": "bool_and",
+    "sql": "SELECT bool_and(value) FROM (VALUES (true), (true), (false)) AS t(value)"
+  },
+  {
+    "id": 276,
+    "function_name": "grouping",
+    "sql": "SELECT grouping(category) FROM (VALUES ('A'), ('B')) AS t(category) GROUP BY ROLLUP(category)"
+  },
+  {
+    "id": 277,
+    "function_name": "string_agg",
+    "sql": "SELECT string_agg(value, ',') FROM (VALUES ('a'), ('b'), ('c')) AS t(value)"
+  },
+  {
+    "id": 278,
+    "function_name": "row_number",
+    "sql": "SELECT row_number() OVER (ORDER BY value) FROM (VALUES (1), (2), (3)) AS t(value)"
+  },
+  {
+    "id": 279,
+    "function_name": "lag",
+    "sql": "SELECT lag(value, 1) OVER (ORDER BY id) FROM (VALUES (1, 10), (2, 20), (3, 30)) AS t(id, value)"
+  },
+  {
+    "id": 280,
+    "function_name": "cume_dist",
+    "sql": "SELECT cume_dist() OVER (ORDER BY value) FROM (VALUES (1), (2), (3), (4)) AS t(value)"
+  }
+]
