@@ -10,6 +10,7 @@ use crate::logical_plan::analyze::model_generation::ModelGenerationRule;
 use crate::logical_plan::optimize::simplify_timestamp::TimestampSimplify;
 use crate::logical_plan::utils::create_schema;
 use crate::mdl::manifest::Model;
+use crate::mdl::type_planner::WrenTypePlanner;
 use crate::mdl::{AnalyzedWrenMDL, SessionStateRef};
 use async_trait::async_trait;
 use datafusion::arrow::datatypes::SchemaRef;
@@ -74,9 +75,11 @@ pub async fn create_ctx_with_mdl(
             .set("datafusion.execution.time_zone", &session_timezone)?;
     }
 
+    let type_planner = Arc::new(WrenTypePlanner::default());
     let reset_default_catalog_schema = Arc::new(RwLock::new(
         SessionStateBuilder::new_from_existing(ctx.state())
             .with_config(config.clone())
+            .with_type_planner(type_planner)
             .build(),
     ));
 
