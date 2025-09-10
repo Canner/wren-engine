@@ -1,141 +1,114 @@
 function_type,name,return_type,param_names,param_types,description
-scalar,tan,,,,Returns the tangent of a number.
-scalar,sqrt,,,,Returns the square root of a number.
-scalar,trim,,,,"Trims the specified trim string from the start and end of a string. If no trim string is provided, all whitespace is removed from the start and end of the input string."
-scalar,log10,,,,Returns the base-10 logarithm of a number.
-scalar,nvl,,,,Returns _expression2_ if _expression1_ is NULL otherwise it returns _expression1_.
-scalar,char_length,,,,Returns the number of characters in a string.
-scalar,radians,,,,Converts degrees to radians.
-scalar,ln,,,,Returns the natural logarithm of a number.
-aggregate,bool_or,,,,"Returns true if all non-null input values are true, otherwise false."
-window,nth_value,,,,Returns the value evaluated at the nth row of the window frame (counting from 1). Returns NULL if no such row exists.
-scalar,regexp_replace,,,,Replaces substrings in a string that match a [regular expression](https://docs.rs/regex/latest/regex/#syntax).
-scalar,date_format,,,,"Returns a string representation of a date, time, timestamp or duration based on a [Chrono format](https://docs.rs/chrono/latest/chrono/format/strftime/index.html). Unlike the PostgreSQL equivalent of this function numerical formatting is not supported."
-scalar,substr,,,,Extracts a substring of a specified number of characters from a specific starting position in a string.
-scalar,ascii,,,,Returns the Unicode character code of the first character in a string.
-scalar,regexp_instr,,,,Returns the position in a string where the specified occurrence of a POSIX regular expression is located.
-scalar,character_length,,,,Returns the number of characters in a string.
-aggregate,var_samp,,,,Returns the statistical sample variance of a set of numbers.
-aggregate,var_pop,,,,Returns the statistical population variance of a set of numbers.
-aggregate,array_agg,,,,"Returns an array created from the expression elements. If ordering is required, elements are inserted in the specified order.
-This aggregation function can only mix DISTINCT and ORDER BY if the ordering expression is exactly the same as the argument expression."
-scalar,floor,,,,Returns the nearest integer less than or equal to a number.
-scalar,strpos,,,,"Returns the starting position of a specified substring in a string. Positions begin at 1. If the substring does not exist in the string, the function returns 0."
-scalar,md5,,,,Computes an MD5 128-bit checksum for a string expression.
-scalar,signum,,,,"Returns the sign of a number.
-Negative numbers return `-1`.
-Zero and positive numbers return `1`."
-scalar,date_trunc,,,,Truncates a timestamp value to a specified precision.
-scalar,lower,,,,Converts a string to lower-case.
-scalar,length,,,,Returns the number of characters in a string.
-scalar,chr,,,,Returns the character with the specified ASCII or Unicode code value.
-scalar,greatest,,,,Returns the greatest value in a list of expressions. Returns _null_ if all expressions are _null_.
-scalar,reverse,,,,Reverses the character order of a string.
-scalar,cot,,,,Returns the cotangent of a number.
-scalar,power,,,,Returns a base expression raised to the power of an exponent.
-aggregate,min,,,,Returns the minimum value in the specified column.
-aggregate,bit_xor,,,,Computes the bitwise exclusive OR of all non-null input values.
-aggregate,avg,,,,Returns the average of numeric values in the specified column.
-aggregate,stddev_samp,,,,Returns the standard deviation of a set of numbers.
-aggregate,sum,,,,Returns the sum of all values in the specified column.
-aggregate,bit_or,,,,Computes the bitwise OR of all non-null input values.
-window,last_value,,,,Returns value evaluated at the row that is the last row of the window frame.
-scalar,round,,,,Rounds a number to the nearest integer.
-scalar,asin,,,,Returns the arc sine or inverse sine of a number.
-scalar,upper,,,,Converts a string to upper-case.
-scalar,position,,,,"Returns the starting position of a specified substring in a string. Positions begin at 1. If the substring does not exist in the string, the function returns 0."
-scalar,atan2,,,,Returns the arc tangent or inverse tangent of `expression_y / expression_x`.
-scalar,acos,,,,Returns the arc cosine or inverse cosine of a number.
-scalar,right,,,,Returns a specified number of characters from the right side of a string.
-scalar,left,,,,Returns a specified number of characters from the left side of a string.
-window,first_value,,,,Returns value evaluated at the row that is the first row of the window frame.
-scalar,datetrunc,,,,Truncates a timestamp value to a specified precision.
-scalar,current_timestamp,,,,"
-Returns the current UTC timestamp.
-
-The `now()` return value is determined at query time and will return the same timestamp, no matter when in the query plan the function executes.
-"
-scalar,find_in_set,,,,Returns a value in the range of 1 to N if the string str is in the string list strlist consisting of N substrings.
-scalar,to_hex,,,,Converts an integer to a hexadecimal string.
-scalar,octet_length,,,,Returns the length of a string in bytes.
-scalar,nullif,,,,"Returns _null_ if _expression1_ equals _expression2_; otherwise it returns _expression1_.
-This can be used to perform the inverse operation of [`coalesce`](#coalesce)."
-scalar,replace,,,,Replaces all occurrences of a specified substring in a string with a new substring.
-scalar,today,,,,"
-Returns the current UTC date.
-
-The `current_date()` return value is determined at query time and will return the same date, no matter when in the query plan the function executes.
-"
-scalar,substring,,,,Extracts a substring of a specified number of characters from a specific starting position in a string.
-aggregate,last_value,,,,"Returns the last element in an aggregation group according to the requested ordering. If no ordering is given, returns an arbitrary element from the group."
-aggregate,nth_value,,,,Returns the nth value in a group of values.
-scalar,instr,,,,"Returns the starting position of a specified substring in a string. Positions begin at 1. If the substring does not exist in the string, the function returns 0."
-scalar,coalesce,,,,Returns the first of its arguments that is not _null_. Returns _null_ if all arguments are _null_. This function is often used to substitute a default value for _null_ values.
-scalar,concat,,,,Concatenates multiple strings together.
-scalar,from_unixtime,,,,Converts an integer to RFC3339 timestamp format (`YYYY-MM-DDT00:00:00.000000000Z`). Integers and unsigned integers are interpreted as seconds since the unix epoch (`1970-01-01T00:00:00Z`) return the corresponding timestamp.
-scalar,log2,,,,Returns the base-2 logarithm of a number.
-scalar,ltrim,,,,"Trims the specified trim string from the beginning of a string. If no trim string is provided, all whitespace is removed from the start of the input string."
-scalar,bit_length,,,,Returns the bit length of a string.
-scalar,abs,,,,Returns the absolute value of a number.
-scalar,ceil,,,,Returns the nearest integer greater than or equal to a number.
-scalar,cos,,,,Returns the cosine of a number.
-scalar,random,,,,"Returns a random float value in the range [0, 1).
-The random seed is unique to each row."
-scalar,version,,,,Returns the version of DataFusion.
-scalar,rpad,,,,Pads the right side of a string with another string to a specified string length.
-scalar,rtrim,,,,"Trims the specified trim string from the end of a string. If no trim string is provided, all whitespace is removed from the end of the input string."
-aggregate,count,,,,"Returns the number of non-null values in the specified column. To include null values in the total count, use `count(*)`."
-aggregate,bit_and,,,,Computes the bitwise AND of all non-null input values.
-aggregate,stddev_pop,,,,Returns the population standard deviation of a set of numbers.
-aggregate,first_value,,,,"Returns the first element in an aggregation group according to the requested ordering. If no ordering is given, returns an arbitrary element from the group."
-aggregate,max,,,,Returns the maximum value in the specified column.
-aggregate,stddev,,,,Returns the standard deviation of a set of numbers.
-window,percent_rank,,,,Returns the percentage rank of the current row within its partition. The value ranges from 0 to 1 and is computed as `(rank - 1) / (total_rows - 1)`.
-window,rank,,,,"Returns the rank of the current row within its partition, allowing gaps between ranks. This function provides a ranking similar to `row_number`, but skips ranks for identical values."
-window,dense_rank,,,,"Returns the rank of the current row without gaps. This function ranks rows in a dense manner, meaning consecutive ranks are assigned even for identical values."
-window,lead,,,,"Returns value evaluated at the row that is offset rows after the current row within the partition; if there is no such row, instead return default (which must be of the same type as value)."
-window,ntile,,,,"Integer ranging from 1 to the argument value, dividing the partition as equally as possible"
-scalar,atan,,,,Returns the arc tangent or inverse tangent of a number.
-scalar,uuid,,,,Returns [`UUID v4`](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random)) string value which is unique per row.
-scalar,degrees,,,,Converts radians to degrees.
-scalar,sin,,,,Returns the sine of a number.
-scalar,now,,,,"
-Returns the current UTC timestamp.
-
-The `now()` return value is determined at query time and will return the same timestamp, no matter when in the query plan the function executes.
-"
-scalar,log,,,,"Returns the base-x logarithm of a number. Can either provide a specified base, or if omitted then takes the base-10 of a number."
-scalar,least,,,,Returns the smallest value in a list of expressions. Returns _null_ if all expressions are _null_.
-scalar,current_time,,,,"
-Returns the current UTC time.
-
-The `current_time()` return value is determined at query time and will return the same time, no matter when in the query plan the function executes.
-"
-scalar,concat_ws,,,,Concatenates multiple strings together with a specified separator.
-scalar,pi,,,,Returns an approximate value of π.
-scalar,substring_index,,,,"Returns the substring from str before count occurrences of the delimiter delim.
-If count is positive, everything to the left of the final delimiter (counting from the left) is returned.
-If count is negative, everything to the right of the final delimiter (counting from the right) is returned."
-scalar,nvl2,,,,Returns _expression2_ if _expression1_ is not NULL; otherwise it returns _expression3_.
-scalar,sha256,,,,Computes the SHA-256 hash of a binary string.
-scalar,sha512,,,,Computes the SHA-512 hash of a binary string.
-scalar,ifnull,,,,Returns _expression2_ if _expression1_ is NULL otherwise it returns _expression1_.
-scalar,regexp_like,,,,"Returns true if a [regular expression](https://docs.rs/regex/latest/regex/#syntax) has at least one match in a string, false otherwise."
-scalar,exp,,,,Returns the base-e exponential of a number.
-scalar,lpad,,,,Pads the left side of a string with another string to a specified string length.
-scalar,repeat,,,,Returns a string with an input string repeated a specified number.
-scalar,to_char,,,,"Returns a string representation of a date, time, timestamp or duration based on a [Chrono format](https://docs.rs/chrono/latest/chrono/format/strftime/index.html). Unlike the PostgreSQL equivalent of this function numerical formatting is not supported."
-scalar,pow,,,,Returns a base expression raised to the power of an exponent.
-scalar,current_date,,,,"
-Returns the current UTC date.
-
-The `current_date()` return value is determined at query time and will return the same date, no matter when in the query plan the function executes.
-"
-aggregate,string_agg,,,,"Concatenates the values of string expressions and places separator values between them. If ordering is required, strings are concatenated in the specified order. This aggregation function can only mix DISTINCT and ORDER BY if the ordering expression is exactly the same as the first argument expression."
-aggregate,bool_and,,,,"Returns true if all non-null input values are true, otherwise false."
-window,lag,,,,"Returns value evaluated at the row that is offset rows before the current row within the partition; if there is no such row, instead return default (which must be of the same type as value)."
-window,cume_dist,,,,Relative rank of the current row: (number of rows preceding or peer with the current row) / (total rows).
-window,row_number,,,,"Number of the current row within its partition, counting from 1."
+scalar,tan,double,,,"Returns the tangent of a number."
+scalar,sqrt,double,,,"Returns the square root of a number."
+scalar,trim,varchar,,,"Trims the specified trim string from the start and end of a string. If no trim string is provided, all whitespace is removed from the start and end of the input string."
+scalar,log10,double,,,"Returns the base-10 logarithm of a number."
+scalar,nvl,varchar,,,"Returns _expression2_ if _expression1_ is NULL otherwise it returns _expression1_."
+scalar,char_length,bigint,,,"Returns the number of characters in a string."
+scalar,radians,double,,,"Converts degrees to radians."
+scalar,ln,double,,,"Returns the natural logarithm of a number."
+aggregate,bool_or,boolean,,,"Returns true if all non-null input values are true, otherwise false."
+window,nth_value,same_as_input,,,"Returns the value evaluated at the nth row of the window frame (counting from 1). Returns NULL if no such row exists."
+scalar,regexp_replace,varchar,,,"Replaces substrings in a string that match a regular expression."
+scalar,date_format,varchar,,,"Returns a string representation of a date, time, timestamp or duration based on a format."
+scalar,substr,varchar,,,"Extracts a substring of a specified number of characters from a specific starting position in a string."
+scalar,ascii,int,,,"Returns the Unicode character code of the first character in a string."
+scalar,regexp_instr,bigint,,,"Returns the position in a string where the specified occurrence of a POSIX regular expression is located."
+scalar,character_length,bigint,,,"Returns the number of characters in a string."
+aggregate,var_samp,double,,,"Returns the statistical sample variance of a set of numbers."
+aggregate,var_pop,double,,,"Returns the statistical population variance of a set of numbers."
+aggregate,array_agg,same_as_input_first_array_element,,,"Returns an array created from the expression elements."
+scalar,floor,double,,,"Returns the nearest integer less than or equal to a number."
+scalar,strpos,bigint,,,"Returns the starting position of a specified substring in a string. Positions begin at 1. If the substring does not exist in the string, the function returns 0."
+scalar,md5,varchar,,,"Computes an MD5 128-bit checksum for a string expression."
+scalar,signum,int,,,"Returns the sign of a number."
+scalar,date_trunc,datetime,,,"Truncates a timestamp value to a specified precision."
+scalar,lower,varchar,,,"Converts a string to lower-case."
+scalar,length,bigint,,,"Returns the number of characters in a string."
+scalar,chr,varchar,,,"Returns the character with the specified ASCII code value."
+scalar,greatest,same-as-input,,,"Returns the greatest value in a list of expressions."
+scalar,reverse,varchar,,,"Reverses the character order of a string."
+scalar,cot,double,,,"Returns the cotangent of a number."
+scalar,power,double,,,"Returns a base expression raised to the power of an exponent."
+aggregate,min,same-as-input,,,"Returns the minimum value in the specified column."
+aggregate,bit_xor,bigint,,,"Computes the bitwise exclusive OR of all non-null input values."
+aggregate,avg,decimal,,,"Returns the average of numeric values in the specified column."
+aggregate,stddev_samp,decimal,,,"Returns the sample standard deviation of a set of numbers."
+aggregate,sum,decimal,,,"Returns the sum of all values in the specified column."
+aggregate,bit_or,bigint,,,"Computes the bitwise OR of all non-null input values."
+window,last_value,same-as-input,,,"Returns value evaluated at the row that is the last row of the window frame."
+scalar,round,double,,,"Rounds a number to the nearest integer."
+scalar,asin,double,,,"Returns the arc sine or inverse sine of a number."
+scalar,upper,varchar,,,"Converts a string to upper-case."
+scalar,position,bigint,,,"Returns the starting position of a specified substring in a string."
+scalar,atan2,double,,,"Returns the arc tangent or inverse tangent of `expression_y / expression_x`."
+scalar,acos,double,,,"Returns the arc cosine or inverse cosine of a number."
+scalar,right,varchar,,,"Returns a specified number of characters from the right side of a string."
+scalar,left,varchar,,,"Returns a specified number of characters from the left side of a string."
+window,first_value,same-as-input,,,"Returns value evaluated at the row that is the first row of the window frame."
+scalar,datetrunc,datetime,,,"Truncates a timestamp value to a specified precision."
+scalar,current_timestamp,datetime,,,"Returns the current UTC timestamp."
+scalar,find_in_set,bigint,,,"Returns a value in the range of 1 to N if the string str is in the string list strlist consisting of N substrings."
+scalar,to_hex,varchar,,,"Converts an integer to a hexadecimal string."
+scalar,octet_length,bigint,,,"Returns the length of a string in bytes."
+scalar,nullif,same-as-input,,,"Returns _null_ if _expression1_ equals _expression2_; otherwise it returns _expression1_."
+scalar,replace,varchar,,,"Replaces all occurrences of a specified substring in a string with a new substring."
+scalar,today,date,,,"Returns the current UTC date."
+scalar,substring,varchar,,,"Extracts a substring of a specified number of characters from a specific starting position in a string."
+aggregate,last_value,same-as-input,,,"Returns the last element in an aggregation group according to the requested ordering."
+aggregate,nth_value,same-as-input,,,"Returns the nth value in a group of values."
+scalar,instr,bigint,,,"Returns the starting position of a specified substring in a string."
+scalar,coalesce,same-as-input,,,"Returns the first of its arguments that is not _null_."
+scalar,concat,varchar,,,"Concatenates multiple strings together."
+scalar,from_unixtime,datetime,,,"Converts an integer to RFC3339 timestamp format."
+scalar,log2,double,,,"Returns the base-2 logarithm of a number."
+scalar,ltrim,varchar,,,"Trims the specified trim string from the beginning of a string."
+scalar,bit_length,bigint,,,"Returns the bit length of a string."
+scalar,abs,same-as-input,,,"Returns the absolute value of a number."
+scalar,ceil,double,,,"Returns the nearest integer greater than or equal to a number."
+scalar,cos,double,,,"Returns the cosine of a number."
+scalar,random,double,,,"Returns a random float value in the range [0, 1)."
+scalar,version,varchar,,,"Returns the version of MySQL."
+scalar,rpad,varchar,,,"Pads the right side of a string with another string to a specified string length."
+scalar,rtrim,varchar,,,"Trims the specified trim string from the end of a string."
+aggregate,count,bigint,,,"Returns the number of non-null values in the specified column."
+aggregate,bit_and,bigint,,,"Computes the bitwise AND of all non-null input values."
+aggregate,stddev_pop,double,,,"Returns the population standard deviation of a set of numbers."
+aggregate,first_value,same-as-input,,,"Returns the first element in an aggregation group."
+aggregate,max,same-as-input,,,"Returns the maximum value in the specified column."
+aggregate,stddev,double,,,"Returns the standard deviation of a set of numbers."
+window,percent_rank,double,,,"Returns the percentage rank of the current row within its partition."
+window,rank,bigint,,,"Returns the rank of the current row within its partition."
+window,dense_rank,bigint,,,"Returns the rank of the current row without gaps."
+window,lead,same-as-input,,,"Returns value evaluated at the row that is offset rows after the current row."
+window,ntile,int,,,"Integer ranging from 1 to the argument value, dividing the partition as equally as possible."
+scalar,atan,double,,,"Returns the arc tangent or inverse tangent of a number."
+scalar,uuid,varchar,,,"Returns uuid v4 string value."
+scalar,degrees,double,,,"Converts radians to degrees."
+scalar,sin,double,,,"Returns the sine of a number."
+scalar,now,datetime,,,"Returns the current UTC timestamp."
+scalar,log,double,,,"Returns the base-x logarithm of a number."
+scalar,least,same-as-args,,,"Returns the smallest value in a list of expressions."
+scalar,current_time,time,,,"Returns the current UTC time."
+scalar,concat_ws,varchar,,,"Concatenates multiple strings together with a specified separator."
+scalar,pi,double,,,"Returns an approximate value of π."
+scalar,substring_index,varchar,,,"Returns the substring from str before count occurrences of the delimiter."
+scalar,nvl2,varchar,,,"Returns _expression2_ if _expression1_ is not NULL; otherwise it returns _expression3_."
+scalar,sha256,varchar,,,"Computes the SHA-256 hash of a binary string."
+scalar,sha512,varchar,,,"Computes the SHA-512 hash of a binary string."
+scalar,ifnull,same-as-input,,,"Returns _expression2_ if _expression1_ is NULL otherwise it returns _expression1_."
+scalar,regexp_like,boolean,,,"Returns true if a regular expression has at least one match in a string."
+scalar,exp,double,,,"Returns the base-e exponential of a number."
+scalar,lpad,varchar,,,"Pads the left side of a string with another string to a specified string length."
+scalar,repeat,varchar,,,"Returns a string with an input string repeated a specified number."
+scalar,to_char,varchar,,,"Returns a string representation of a date, time, timestamp or duration based on a format."
+scalar,pow,double,,,"Returns a base expression raised to the power of an exponent."
+scalar,current_date,date,,,"Returns the current UTC date."
+aggregate,string_agg,varchar,,,"Concatenates the values of string expressions with separator values."
+aggregate,bool_and,boolean,,,"Returns true if all non-null input values are true, otherwise false."
+window,lag,same-as-input,,,"Returns value evaluated at the row that is offset rows before the current row."
+window,cume_dist,double,,,"Relative rank of the current row."
+window,row_number,bigint,,,"Number of the current row within its partition, counting from 1."
 scalar,if,bool,,"boolean,any,any","Returns one value if a condition is TRUE, or another value if a condition is FALSE"
 scalar,ceiling,int,,"decimal","Returns the smallest integer value greater than or equal to a number"
 scalar,datediff,int,,"date,date","Returns the number of days between two dates"
