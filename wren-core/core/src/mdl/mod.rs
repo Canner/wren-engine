@@ -3527,7 +3527,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_compitable_type() -> Result<()> {
+    async fn test_compatible_type() -> Result<()> {
         let ctx = SessionContext::new();
 
         let manifest = ManifestBuilder::default().build();
