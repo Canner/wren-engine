@@ -43,6 +43,7 @@ pub mod lineage;
 pub mod manifest {
     pub use wren_core_base::mdl::manifest::*;
 }
+pub mod type_planner;
 pub mod utils;
 
 pub type SessionStateRef = Arc<RwLock<SessionState>>;
@@ -549,7 +550,7 @@ mod test {
     use std::sync::Arc;
 
     use crate::mdl::builder::{ColumnBuilder, ManifestBuilder, ModelBuilder};
-    use crate::mdl::context::{create_ctx_with_mdl, Mode};
+    use crate::mdl::context::{create_ctx_with_mdl, Mode, SessionPropertiesRef};
     use crate::mdl::function::RemoteFunction;
     use crate::mdl::manifest::DataSource::MySQL;
     use crate::mdl::manifest::Manifest;
@@ -3522,6 +3523,25 @@ mod test {
             ),
         }
 
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_compatible_type() -> Result<()> {
+        let ctx = SessionContext::new();
+
+        let manifest = ManifestBuilder::default().build();
+        let properties = SessionPropertiesRef::default();
+        let mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest,
+            Arc::clone(&properties),
+            Mode::Unparse,
+        )?);
+        let sql = "select cast(1 as int64)";
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&mdl), &[], Arc::clone(&properties), sql).await?,
+            @"SELECT CAST(1 AS BIGINT)"
+        );
         Ok(())
     }
 
