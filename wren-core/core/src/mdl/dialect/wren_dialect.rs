@@ -84,11 +84,17 @@ impl Dialect for WrenDialect {
         start_bound: &WindowFrameBound,
         end_bound: &WindowFrameBound,
     ) -> bool {
-        self.inner_dialect.window_func_support_window_frame(
-            func_name,
-            start_bound,
-            end_bound,
-        )
+        if matches!(start_bound, WindowFrameBound::Preceding(None))
+            && matches!(end_bound, WindowFrameBound::CurrentRow)
+        {
+            false
+        } else {
+            self.inner_dialect.window_func_support_window_frame(
+                func_name,
+                start_bound,
+                end_bound,
+            )
+        }
     }
 }
 
