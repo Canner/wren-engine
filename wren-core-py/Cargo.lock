@@ -3614,6 +3614,7 @@ dependencies = [
  "csv",
  "datafusion",
  "env_logger",
+ "itertools",
  "log",
  "parking_lot",
  "petgraph 0.7.1",
