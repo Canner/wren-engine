@@ -30,7 +30,7 @@ geopandas = "^1.0.1"
 geoalchemy2 = "^0.17.1"
 sqlglot = { extras = [
   "rs",
-], version = "27.8.0" } # the version should follow the ibis-framework
+], version = ">=27.8.0, <28.0.0" } # the version should follow the ibis-framework
 loguru = "0.7.3"
 asgi-correlation-id = "4.3.4"
 gql = { extras = ["aiohttp"], version = "3.5.2" }
