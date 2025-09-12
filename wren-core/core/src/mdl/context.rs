@@ -8,6 +8,7 @@ use crate::logical_plan::analyze::expand_view::ExpandWrenViewRule;
 use crate::logical_plan::analyze::model_anlayze::ModelAnalyzeRule;
 use crate::logical_plan::analyze::model_generation::ModelGenerationRule;
 use crate::logical_plan::optimize::simplify_timestamp::TimestampSimplify;
+use crate::logical_plan::optimize::type_coercion::TypeCoercion as WrenTypeCoercion;
 use crate::logical_plan::utils::create_schema;
 use crate::mdl::manifest::Model;
 use crate::mdl::{AnalyzedWrenMDL, SessionStateRef};
@@ -188,7 +189,7 @@ fn analyze_rule_for_local_runtime(
             session_state_ref,
             properties,
         )),
-        // [Expr::Wildcard] should be expanded before [TypeCoercion]
+        // Use DataFusion TypeCoercion for the executing purpose
         Arc::new(TypeCoercion::new()),
     ]
 }
@@ -218,7 +219,8 @@ fn analyze_rule_for_unparsing(
         // TimestampSimplify should be placed before TypeCoercion because the simplified timestamp should
         // be casted to the target type if needed
         Arc::new(TimestampSimplify::new()),
-        Arc::new(TypeCoercion::new()),
+        // Use WrenTypeCoercion for the unparsing purpose
+        Arc::new(WrenTypeCoercion::new()),
     ]
 }
 

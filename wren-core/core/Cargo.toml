@@ -34,6 +34,7 @@ serde_json = { workspace = true }
 serde_with = { workspace = true }
 tokio = { workspace = true, features = ["rt", "rt-multi-thread", "macros"] }
 wren-core-base = { workspace = true }
+itertools = "0.14.0"
 
 [dev-dependencies]
 insta = { workspace = true }
