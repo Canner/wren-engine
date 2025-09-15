@@ -1219,3 +1219,46 @@ async def test_query_unicode_table(client, connection_info):
         "欄位1": "int32",
         "欄位2": "int32",
     }
+
+
+async def test_case_sensitive_without_quote(client, connection_info):
+    manifest = {
+        "catalog": "wren",
+        "schema": "public",
+        "models": [
+            {
+                "name": "Orders",
+                "tableReference": {
+                    "schema": "public",
+                    "table": "orders",
+                },
+                "columns": [
+                    {
+                        "name": "O_orderkey",
+                        "type": "integer",
+                        "expression": "o_orderkey",
+                    },
+                    {"name": "O_custkey", "type": "integer", "expression": "o_custkey"},
+                ],
+            }
+        ],
+    }
+
+    manifest_str = base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
+
+    response = await client.post(
+        url=f"{base_url}/query?cacheEnable=true",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT O_orderkey, O_custkey FROM Orders LIMIT 1",
+        },
+        headers={X_WREN_FALLBACK_DISABLE: "true"},
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["dtypes"] == {
+        "O_orderkey": "int32",
+        "O_custkey": "int32",
+    }
