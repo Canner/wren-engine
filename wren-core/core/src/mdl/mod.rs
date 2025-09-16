@@ -3582,6 +3582,11 @@ mod test {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_dummy() -> Result<()> {
+        Ok(())
+    }
+
     /// Return a RecordBatch with made up data about customer
     fn customer() -> RecordBatch {
         let custkey: ArrayRef = Arc::new(Int64Array::from(vec![1, 2, 3]));
