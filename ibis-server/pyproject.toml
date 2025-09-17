@@ -8,8 +8,8 @@ packages = [{ include = "app" }, { include = "wren" }]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-fastapi = { version = "0.116.1", extras = ["standard"] }
-pydantic = "2.10.6"
+fastapi = { version = "0.116.2", extras = ["standard"] }
+pydantic = "2.11.9"
 ibis-framework = { git = "https://github.com/Canner/ibis.git", branch = "canner/10.8.1", extras = [
   "athena",
   "bigquery",
@@ -21,21 +21,21 @@ ibis-framework = { git = "https://github.com/Canner/ibis.git", branch = "canner/
   "snowflake",
   "trino",
 ] }
-google-auth = "2.38.0"
+google-auth = "2.40.3"
 httpx = "0.28.1"
-python-dotenv = "1.0.1"
-orjson = "3.10.16"
-pandas = "2.2.3"
+python-dotenv = "1.1.1"
+orjson = "3.11.3"
+pandas = "2.3.2"
 geopandas = "^1.0.1"
-geoalchemy2 = "^0.17.1"
+geoalchemy2 = "^0.18.0"
 sqlglot = { extras = [
   "rs",
 ], version = ">=27.8.0, <28.0.0" } # the version should follow the ibis-framework
 loguru = "0.7.3"
 asgi-correlation-id = "4.3.4"
-gql = { extras = ["aiohttp"], version = "3.5.2" }
+gql = { extras = ["aiohttp"], version = "4.0.0" }
 anyio = "4.10.0"
-duckdb = "1.3.2"
+duckdb = "1.4.0"
 opendal = ">=0.45"
 oracledb = "3.3.0"
 mysqlclient = { version = ">=2.2.4,<3", optional = true }
@@ -45,8 +45,8 @@ uvicorn = "^0.35.0"
 gunicorn = "^23.0.0"
 uvicorn-worker = "^0.3.0"
 jinja2 = ">=3.1.6"
-redshift_connector = "2.1.7"
-datafusion = "^47.0.0, <49.0.0"
+redshift_connector = "2.1.8"
+datafusion = "^49.0.0"
 
 [tool.poetry.group.jupyter]
 optional = true
@@ -64,8 +64,8 @@ plotly = ">=5.0.0"
 optional = true
 
 [tool.poetry.group.dev.dependencies]
-pytest = "8.3.5"
-testcontainers = { version = "4.9.2", extras = [
+pytest = "8.4.2"
+testcontainers = { version = "4.13.0", extras = [
   "clickhouse",
   "mssql",
   "mysql",
@@ -73,12 +73,12 @@ testcontainers = { version = "4.9.2", extras = [
   "trino",
   "minio",
 ] }
-sqlalchemy = "2.0.39"
-pre-commit = "4.2.0"
-ruff = "0.11.2"
+sqlalchemy = "2.0.43"
+pre-commit = "4.3.0"
+ruff = "0.13.0"
 trino = ">=0.321,<1"
 psycopg2 = ">=2.8.4,<3"
-clickhouse-connect = "0.8.15"
+clickhouse-connect = "0.9.1"
 asgi-lifespan = "2.1.0"
 polars = ">=1.32.0"
 
