@@ -389,9 +389,11 @@ mod test {
         RemoteFunction,
     };
     use datafusion::arrow::datatypes::{DataType, Field};
+    use datafusion::common::types::logical_string;
     use datafusion::common::Result;
-    use datafusion::logical_expr::TypeSignature;
+    use datafusion::logical_expr::TypeSignatureClass;
     use datafusion::logical_expr::{AggregateUDF, ScalarUDF, ScalarUDFImpl, WindowUDF};
+    use datafusion::logical_expr::{Coercion, TypeSignature};
     use datafusion::prelude::SessionContext;
 
     #[tokio::test]
@@ -499,9 +501,9 @@ mod test {
         );
         assert_eq!(
             udf.signature.type_signature,
-            TypeSignature::OneOf(vec![TypeSignature::Exact(vec![
-                DataType::Int32,
-                DataType::Utf8
+            TypeSignature::OneOf(vec![TypeSignature::Coercible(vec![
+                Coercion::new_exact(TypeSignatureClass::Integer),
+                Coercion::new_exact(TypeSignatureClass::Native(logical_string())),
             ])])
         );
         let doc = udf.documentation().unwrap().clone();
@@ -532,9 +534,9 @@ mod test {
         );
         assert_eq!(
             udf.signature.type_signature,
-            TypeSignature::OneOf(vec![TypeSignature::Exact(vec![
-                DataType::Int32,
-                DataType::Utf8
+            TypeSignature::OneOf(vec![TypeSignature::Coercible(vec![
+                Coercion::new_exact(TypeSignatureClass::Integer),
+                Coercion::new_exact(TypeSignatureClass::Native(logical_string())),
             ])])
         );
         let doc = udf.documentation().unwrap().clone();
@@ -591,7 +593,9 @@ mod test {
         );
         assert_eq!(
             udf.signature.type_signature,
-            TypeSignature::OneOf(vec![TypeSignature::Exact(vec![DataType::Int32])])
+            TypeSignature::OneOf(vec![TypeSignature::Coercible(vec![
+                Coercion::new_exact(TypeSignatureClass::Integer)
+            ])])
         );
         let doc = udf.documentation().unwrap().clone();
         assert_eq!(doc.description, "test function");
