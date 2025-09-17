@@ -54,7 +54,7 @@ async def test_function_list(client):
     response = await client.get(url=f"{base_url}/functions")
     assert response.status_code == 200
     result = response.json()
-    assert len(result) == 176
+    assert len(result) == 178
     the_func = next(
         filter(
             lambda x: x["name"] == "string_agg",
@@ -100,7 +100,7 @@ async def test_scalar_function(client, manifest_str: str, connection_info):
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": "SELECT date_add(CAST('2024-01-01' AS DATE), 1) as col",
+            "sql": "SELECT date_add(CAST('2024-01-01' AS DATE), INTERVAL 1 DAY) as col",
         },
     )
     assert response.status_code == 200
@@ -260,3 +260,47 @@ async def test_query_safe_divide(client, manifest_str, connection_info):
     result = response.json()
     assert len(result["data"]) == 1
     assert result["data"][0][0] == 5.0
+
+
+# Using pytest.mark.parametrize to refactor the temporal function test
+@pytest.mark.parametrize(
+    "sql,expected_column",
+    [
+        (
+            "SELECT date_add(CURRENT_DATE(), INTERVAL 30 DAY) as future_date",
+            "future_date",
+        ),
+        ("SELECT date_sub(CURRENT_DATE(), INTERVAL 30 DAY) as past_date", "past_date"),
+        (
+            "SELECT datetime_add(CAST('2024-01-01 10:00:00' AS TIMESTAMP), INTERVAL 5 DAY) as future_datetime",
+            "future_datetime",
+        ),
+        (
+            "SELECT datetime_sub(CAST('2024-01-01 10:00:00' AS TIMESTAMP), INTERVAL 5 DAY) as past_datetime",
+            "past_datetime",
+        ),
+        (
+            "SELECT timestamp_add(CAST('2024-01-01 10:00:00+00' AS TIMESTAMP WITH TIME ZONE), INTERVAL 5 DAY) as future_timestamp",
+            "future_timestamp",
+        ),
+        (
+            "SELECT timestamp_sub(CAST('2024-01-01 10:00:00+00' AS TIMESTAMP WITH TIME ZONE), INTERVAL 5 DAY) as past_timestamp",
+            "past_timestamp",
+        ),
+    ],
+)
+async def test_temporal_functions(
+    client, manifest_str, connection_info, sql, expected_column
+):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": sql,
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 1
+    assert expected_column in result["columns"]
