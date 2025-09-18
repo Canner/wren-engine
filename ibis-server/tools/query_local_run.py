@@ -14,6 +14,7 @@
 import base64
 import json
 import os
+from app.custom_sqlglot.dialects.wren import Wren
 from app.model import MySqlConnectionInfo, OracleConnectionInfo, PostgresConnectionInfo
 from app.util import to_json
 import sqlglot
@@ -81,7 +82,7 @@ planned_sql = session_context.transform_sql(sql)
 print("# Planned SQL:\n", planned_sql)
 
 # Transpile the planned SQL
-dialect_sql = sqlglot.transpile(planned_sql, read=None, write=data_source)[0]
+dialect_sql = sqlglot.transpile(planned_sql, read=Wren, write=data_source)[0]
 print("# Dialect SQL:\n", dialect_sql)
 print("#")
 
