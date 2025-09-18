@@ -43,7 +43,9 @@ impl PyManifestExtractor {
 }
 
 fn resolve_used_table_names(mdl: &WrenMDL, sql: &str) -> Result<Vec<String>, CoreError> {
-    let ctx_state = wren_core::SessionContext::new().state();
+    let mut config = wren_core::SessionConfig::new();
+    config.options_mut().sql_parser.enable_ident_normalization = false;
+    let ctx_state = wren_core::SessionContext::new_with_config(config).state();
     ctx_state
         .sql_to_statement(sql, "generic")
         .map_err(CoreError::from)

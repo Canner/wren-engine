@@ -549,3 +549,42 @@ def test_backward_compatible_check():
         json.dumps(manifest_backward).encode("utf-8")
     ).decode("utf-8")
     assert is_backward_compatible(manifest_backward_str)
+
+
+def test_case_sensitive_without_quote():
+    manifest = {
+        "catalog": "my_catalog",
+        "schema": "my_schema",
+        "dataSource": "mysql",
+        "models": [
+            {
+                "name": "Orders",
+                "tableReference": {
+                    "schema": "main",
+                    "table": "orders",
+                },
+                "columns": [
+                    {"name": "O_orderkey", "type": "integer"},
+                    {"name": "O_custkey", "type": "integer"},
+                    {"name": "O_orderdate", "type": "date"},
+                ],
+            },
+        ],
+    }
+    manifest_str = base64.b64encode(json.dumps(manifest).encode("utf-8")).decode(
+        "utf-8"
+    )
+    sql = "select O_orderkey, O_custkey, O_orderdate from Orders"
+    extractor = ManifestExtractor(manifest_str)
+    tables = extractor.resolve_used_table_names(sql)
+    assert tables == ["Orders"]
+
+    extracted_manifest = extractor.extract_by(tables)
+    encoded_str = to_json_base64(extracted_manifest)
+
+    session_context = SessionContext(encoded_str, None)
+    actual = session_context.transform_sql(sql)
+    assert (
+        actual
+        == 'SELECT "Orders"."O_orderkey", "Orders"."O_custkey", "Orders"."O_orderdate" FROM (SELECT "Orders"."O_custkey", "Orders"."O_orderdate", "Orders"."O_orderkey" FROM (SELECT __source."O_custkey" AS "O_custkey", __source."O_orderdate" AS "O_orderdate", __source."O_orderkey" AS "O_orderkey" FROM main.orders AS __source) AS "Orders") AS "Orders"'
+    )
