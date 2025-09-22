@@ -10,11 +10,16 @@ use datafusion::common::plan_err;
 use datafusion::common::tree_node::{
     Transformed, TransformedResult, TreeNode, TreeNodeRecursion,
 };
+use datafusion::common::types::{
+    logical_binary, logical_boolean, logical_date, logical_float16, logical_float32,
+    logical_float64, logical_string,
+};
 use datafusion::datasource::DefaultTableSource;
 use datafusion::error::Result;
 use datafusion::logical_expr::sqlparser::ast::ArrayElemTypeDef;
 use datafusion::logical_expr::sqlparser::dialect::GenericDialect;
 use datafusion::logical_expr::{builder::LogicalTableSource, Expr, TableSource};
+use datafusion::logical_expr::{Coercion, TypeSignatureClass};
 use datafusion::sql::sqlparser::ast;
 use datafusion::sql::sqlparser::parser::Parser;
 use datafusion::sql::TableReference;
@@ -184,6 +189,49 @@ pub fn map_data_type(data_type: &str) -> Result<DataType> {
         }
     };
     Ok(result)
+}
+
+pub fn get_coercion_type_signature(data_type: &DataType) -> Result<Coercion> {
+    match data_type {
+        DataType::Boolean => Ok(Coercion::new_exact(TypeSignatureClass::Native(
+            logical_boolean(),
+        ))),
+        DataType::Int8
+        | DataType::Int16
+        | DataType::Int32
+        | DataType::Int64
+        | DataType::UInt8
+        | DataType::UInt16
+        | DataType::UInt32
+        | DataType::UInt64 => Ok(Coercion::new_exact(TypeSignatureClass::Integer)),
+        DataType::Timestamp(_, _) => {
+            Ok(Coercion::new_exact(TypeSignatureClass::Timestamp))
+        }
+        DataType::Time32(_) | DataType::Time64(_) => {
+            Ok(Coercion::new_exact(TypeSignatureClass::Time))
+        }
+        DataType::Duration(_) => Ok(Coercion::new_exact(TypeSignatureClass::Duration)),
+        DataType::Interval(_) => Ok(Coercion::new_exact(TypeSignatureClass::Interval)),
+        DataType::Binary | DataType::BinaryView | DataType::LargeBinary => Ok(
+            Coercion::new_exact(TypeSignatureClass::Native(logical_binary())),
+        ),
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => Ok(
+            Coercion::new_exact(TypeSignatureClass::Native(logical_string())),
+        ),
+        DataType::Date32 | DataType::Date64 => Ok(Coercion::new_exact(
+            TypeSignatureClass::Native(logical_date()),
+        )),
+        DataType::Float16 => Ok(Coercion::new_exact(TypeSignatureClass::Native(
+            logical_float16(),
+        ))),
+        DataType::Float32 => Ok(Coercion::new_exact(TypeSignatureClass::Native(
+            logical_float32(),
+        ))),
+        DataType::Float64 => Ok(Coercion::new_exact(TypeSignatureClass::Native(
+            logical_float64(),
+        ))),
+        _ => plan_err!("Unsupported data type for coercion: {data_type}"),
+    }
 }
 
 pub fn create_schema(columns: Vec<Arc<Column>>) -> Result<SchemaRef> {

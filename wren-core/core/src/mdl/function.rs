@@ -14,7 +14,7 @@ use std::any::Any;
 use std::fmt::Display;
 use std::str::FromStr;
 
-use crate::logical_plan::utils::map_data_type;
+use crate::logical_plan::utils::{get_coercion_type_signature, map_data_type};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 pub struct RemoteFunction {
@@ -31,7 +31,16 @@ impl RemoteFunction {
         let mut signatures = vec![];
         if let Some(param_types) = &self.param_types {
             if let Some(types) = Self::transform_param_type(param_types.as_slice()) {
-                signatures.push(TypeSignature::Exact(types));
+                let coercions = types
+                    .iter()
+                    .map(get_coercion_type_signature)
+                    .collect::<Vec<_>>();
+                if coercions.iter().any(|r| r.is_err()) {
+                    signatures.push(TypeSignature::Exact(types.clone()));
+                } else {
+                    let coercions = coercions.into_iter().map(|r| r.unwrap()).collect();
+                    signatures.push(TypeSignature::Coercible(coercions));
+                }
             }
         }
         // If the function has no siganture, we will add two default signatures: nullary and variadic any
@@ -380,9 +389,11 @@ mod test {
         RemoteFunction,
     };
     use datafusion::arrow::datatypes::{DataType, Field};
+    use datafusion::common::types::logical_string;
     use datafusion::common::Result;
-    use datafusion::logical_expr::TypeSignature;
+    use datafusion::logical_expr::TypeSignatureClass;
     use datafusion::logical_expr::{AggregateUDF, ScalarUDF, ScalarUDFImpl, WindowUDF};
+    use datafusion::logical_expr::{Coercion, TypeSignature};
     use datafusion::prelude::SessionContext;
 
     #[tokio::test]
@@ -490,9 +501,9 @@ mod test {
         );
         assert_eq!(
             udf.signature.type_signature,
-            TypeSignature::OneOf(vec![TypeSignature::Exact(vec![
-                DataType::Int32,
-                DataType::Utf8
+            TypeSignature::OneOf(vec![TypeSignature::Coercible(vec![
+                Coercion::new_exact(TypeSignatureClass::Integer),
+                Coercion::new_exact(TypeSignatureClass::Native(logical_string())),
             ])])
         );
         let doc = udf.documentation().unwrap().clone();
@@ -523,9 +534,9 @@ mod test {
         );
         assert_eq!(
             udf.signature.type_signature,
-            TypeSignature::OneOf(vec![TypeSignature::Exact(vec![
-                DataType::Int32,
-                DataType::Utf8
+            TypeSignature::OneOf(vec![TypeSignature::Coercible(vec![
+                Coercion::new_exact(TypeSignatureClass::Integer),
+                Coercion::new_exact(TypeSignatureClass::Native(logical_string())),
             ])])
         );
         let doc = udf.documentation().unwrap().clone();
@@ -582,7 +593,9 @@ mod test {
         );
         assert_eq!(
             udf.signature.type_signature,
-            TypeSignature::OneOf(vec![TypeSignature::Exact(vec![DataType::Int32])])
+            TypeSignature::OneOf(vec![TypeSignature::Coercible(vec![
+                Coercion::new_exact(TypeSignatureClass::Integer)
+            ])])
         );
         let doc = udf.documentation().unwrap().clone();
         assert_eq!(doc.description, "test function");

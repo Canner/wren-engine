@@ -7,6 +7,7 @@ from loguru import logger
 from opentelemetry import trace
 
 from app.config import get_config
+from app.custom_sqlglot.dialects.wren import Wren
 from app.dependencies import X_WREN_VARIABLE_PREFIX
 from app.mdl.core import (
     get_manifest_extractor,
@@ -82,8 +83,8 @@ class Rewriter:
             self._rewriter.handle_extract_exception(e)
 
     @classmethod
-    def _get_read_dialect(cls, experiment) -> str | None:
-        return None if experiment else "trino"
+    def _get_read_dialect(cls, experiment) -> str | sqlglot.Dialect:
+        return Wren if experiment else "trino"
 
     @classmethod
     def _get_write_dialect(cls, data_source: DataSource) -> str:
