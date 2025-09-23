@@ -69,6 +69,9 @@ impl sqllogictest::AsyncDB for DataFusion {
     async fn sleep(dur: Duration) {
         tokio::time::sleep(dur).await;
     }
+
+    /// Shutdown the connection gracefully.
+    async fn shutdown(&mut self) {}
 }
 
 async fn run_query(ctx: &SessionContext, sql: impl Into<String>) -> Result<DFOutput> {

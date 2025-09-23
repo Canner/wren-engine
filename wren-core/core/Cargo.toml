@@ -27,7 +27,7 @@ env_logger = { workspace = true }
 itertools = "0.14.0"
 log = { workspace = true }
 parking_lot = "0.12.3"
-petgraph = "0.7.1"
+petgraph = "0.8.2"
 petgraph-evcxr = "*"
 regex = "1.10.5"
 serde = { workspace = true }
