@@ -9,7 +9,7 @@ name = "wren_core_py"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.25.0", features = ["extension-module"] }
+pyo3 = { version = "0.26.0", features = ["extension-module"] }
 wren-core = { path = "../wren-core/core" }
 wren-core-base = { path = "../wren-core-base", features = ["python-binding"] }
 base64 = "0.22.1"

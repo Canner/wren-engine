@@ -20,8 +20,8 @@ use crate::manifest::to_manifest;
 use crate::remote_functions::PyRemoteFunction;
 use log::debug;
 use pyo3::types::{PyAnyMethods, PyFrozenSet, PyFrozenSetMethods, PyTuple};
-use pyo3::{pyclass, pymethods, PyErr, PyResult};
-use pyo3::{PyObject, Python};
+use pyo3::Python;
+use pyo3::{pyclass, pymethods, Py, PyAny, PyErr, PyResult};
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::ops::ControlFlow;
@@ -81,7 +81,7 @@ impl PySessionContext {
     pub fn new(
         mdl_base64: Option<&str>,
         remote_functions_path: Option<&str>,
-        properties: Option<PyObject>,
+        properties: Option<Py<PyAny>>,
     ) -> PyResult<Self> {
         let remote_functions = Self::read_remote_function_list(remote_functions_path)
             .map_err(CoreError::from)?;
@@ -125,7 +125,7 @@ impl PySessionContext {
             });
         };
 
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let properties_map = if let Some(obj) = properties {
                 let obj = obj.as_ref();
                 if obj.is_none(py) {
