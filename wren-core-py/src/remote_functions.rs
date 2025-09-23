@@ -17,7 +17,7 @@
 
 use pyo3::prelude::PyDictMethods;
 use pyo3::types::PyDict;
-use pyo3::{pyclass, pymethods, PyObject, Python};
+use pyo3::{pyclass, pymethods, Py, PyAny, Python};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
@@ -44,7 +44,7 @@ pub struct PyRemoteFunction {
 
 #[pymethods]
 impl PyRemoteFunction {
-    pub fn to_dict(&self, py: Python) -> PyObject {
+    pub fn to_dict(&self, py: Python) -> Py<PyAny> {
         let dict = PyDict::new(py);
         dict.set_item("function_type", self.function_type.clone())
             .unwrap();
