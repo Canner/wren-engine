@@ -117,6 +117,7 @@ exclude = [
 
 [tool.ruff.lint]
 select = [
+  "B",   # flake8-bugbear (Cython compatible)
   "C4",  # comprehensions
   "D",   # pydocstyle
   "E",   # pycodestyle
@@ -138,7 +139,7 @@ select = [
   "T10", # flake8-debugger
   "T20", # flake8-print
   "TID", # flake8-tidy-imports
-  "UP",  # pyupgrade
+  "UP",  # pyupgrade (check the modern python usage)
   "YTT", # flake8-2020
 ]
 ignore = [
@@ -191,6 +192,7 @@ ignore = [
   "SIM300",  # yoda conditions
   "UP007",   # Optional[str] -> str | None
   "UP038",   # non-pep604-isinstance, results in slower code
+  "UP045",   # non-pep604-annotation-optional
   "W191",    # indentation contains tabs
 ]
 # none of these codes will be automatically fixed by ruff

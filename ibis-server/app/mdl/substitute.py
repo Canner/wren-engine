@@ -27,7 +27,7 @@ class ModelSubstitute:
         root = build_scope(ast)
 
         for scope in root.traverse():
-            for alias, (node, source) in scope.selected_sources.items():
+            for alias, (_node, source) in scope.selected_sources.items():
                 if not isinstance(source, exp.Table):
                     continue
 
