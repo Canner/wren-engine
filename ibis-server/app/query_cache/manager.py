@@ -170,6 +170,7 @@ class QueryCacheImpl:
         _set_utc_timezone(con)
         return con
 
+
 def _set_utc_timezone(con: DuckDBPyConnection) -> None:
     try:
         con.execute("SET TimeZone = 'UTC'")

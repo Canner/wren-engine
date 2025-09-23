@@ -191,7 +191,6 @@ ignore = [
   "SIM118",  # remove .keys() calls from dictionaries
   "SIM300",  # yoda conditions
   "UP007",   # Optional[str] -> str | None
-  "UP038",   # non-pep604-isinstance, results in slower code
   "UP045",   # non-pep604-annotation-optional
   "W191",    # indentation contains tabs
 ]
