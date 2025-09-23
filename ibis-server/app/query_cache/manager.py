@@ -166,4 +166,13 @@ class QueryCacheImpl:
         return opendal.Operator("fs", root=self.root)
 
     def _get_duckdb_connection(self) -> DuckDBPyConnection:
-        return connect()
+        con = connect()
+        _set_utc_timezone(con)
+        return con
+
+def _set_utc_timezone(con: DuckDBPyConnection) -> None:
+    try:
+        con.execute("SET TimeZone = 'UTC'")
+    except Exception as e:
+        logger.error("Failed to set UTC timezone: {}", e)
+        raise
