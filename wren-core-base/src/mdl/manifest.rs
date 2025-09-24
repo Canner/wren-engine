@@ -270,7 +270,7 @@ impl Model {
     pub fn get_column(&self, column_name: &str) -> Option<Arc<Column>> {
         self.get_visible_columns()
             .find(|c| c.name == column_name)
-            .map(Arc::clone)
+            .map(|c| Arc::clone(&c))
     }
 
     /// Return the primary key of the model
