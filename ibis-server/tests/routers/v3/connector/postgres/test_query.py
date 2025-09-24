@@ -78,7 +78,8 @@ manifest = {
                         "name": "c_name_access",
                         "requiredProperties": [
                             {
-                                "name": "session_level",
+                                # To test the name is case insensitive
+                                "name": "Session_level",
                                 "required": False,
                             }
                         ],
@@ -672,13 +673,29 @@ async def test_clac_query(client, manifest_str, connection_info):
             "sql": "SELECT * FROM customer limit 1",
         },
         headers={
-            X_WREN_VARIABLE_PREFIX + "session_level": "2",
+            X_WREN_VARIABLE_PREFIX + "session_level": "1",
         },
     )
     assert response.status_code == 200
     result = response.json()
     assert len(result["data"]) == 1
     assert len(result["data"][0]) == 2
+
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": base64_manifest_with_required_properties,
+            "sql": "SELECT * FROM customer limit 1",
+        },
+        headers={
+            X_WREN_VARIABLE_PREFIX + "session_level": "2",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 1
+    assert len(result["data"][0]) == 1
 
 
 async def test_connection_timeout(

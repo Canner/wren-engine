@@ -270,7 +270,7 @@ impl Model {
     pub fn get_column(&self, column_name: &str) -> Option<Arc<Column>> {
         self.get_visible_columns()
             .find(|c| c.name == column_name)
-            .map(|c| Arc::clone(&c))
+            .map(Arc::clone)
     }
 
     /// Return the primary key of the model
@@ -329,6 +329,12 @@ impl Metric {
 impl View {
     pub fn name(&self) -> &str {
         &self.name
+    }
+}
+
+impl SessionProperty {
+    pub fn normalized_name(&self) -> &str {
+        &self.normalized_name
     }
 }
 

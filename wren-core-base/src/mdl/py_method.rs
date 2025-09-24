@@ -73,8 +73,9 @@ mod manifest_python_impl {
     impl SessionProperty {
         #[new]
         #[pyo3(signature = (name, required = false, default_expr = None))]
-        fn new(name: String, required: bool, default_expr: Option<String>) -> Self {
+        pub fn new(name: String, required: bool, default_expr: Option<String>) -> Self {
             Self {
+                normalized_name: name.to_lowercase(),
                 name,
                 required,
                 default_expr,
