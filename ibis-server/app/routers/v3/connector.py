@@ -147,33 +147,45 @@ async def query(
                 # headers for all non-hit cases
                 cache_headers[X_CACHE_HIT] = "false"
 
-                match (cache_enable, cache_hit, override_cache):
+                if cache_enable and cache_hit and override_cache:
                     # case 2: override existing cache
-                    case (True, True, True):
-                        cache_headers[X_CACHE_CREATE_AT] = str(
-                            query_cache_manager.get_cache_file_timestamp(
-                                data_source, dto.sql, connection_info, headers_dict
-                            )
+                    cache_headers[X_CACHE_CREATE_AT] = str(
+                        query_cache_manager.get_cache_file_timestamp(
+                            data_source,
+                            dto.sql,
+                            connection_info,
+                            headers_dict,
                         )
-                        query_cache_manager.set(
-                            data_source, dto.sql, result, connection_info, headers_dict
+                    )
+                    query_cache_manager.set(
+                        data_source,
+                        dto.sql,
+                        result,
+                        connection_info,
+                        headers_dict,
+                    )
+                    cache_headers[X_CACHE_OVERRIDE] = "true"
+                    cache_headers[X_CACHE_OVERRIDE_AT] = str(
+                        query_cache_manager.get_cache_file_timestamp(
+                            data_source,
+                            dto.sql,
+                            connection_info,
+                            headers_dict,
                         )
-
-                        cache_headers[X_CACHE_OVERRIDE] = "true"
-                        cache_headers[X_CACHE_OVERRIDE_AT] = str(
-                            query_cache_manager.get_cache_file_timestamp(
-                                data_source, dto.sql, connection_info, headers_dict
-                            )
-                        )
+                    )
+                elif cache_enable and not cache_hit:
                     # case 3/4: cache miss but enabled (need to create cache)
                     # no matter the cache override or not, we need to create cache
-                    case (True, False, _):
-                        query_cache_manager.set(
-                            data_source, dto.sql, result, connection_info, headers_dict
-                        )
+                    query_cache_manager.set(
+                        data_source,
+                        dto.sql,
+                        result,
+                        connection_info,
+                        headers_dict,
+                    )
+                elif not cache_enable:
                     # case 5~8 Other cases (cache is not enabled)
-                    case (False, _, _):
-                        pass
+                    pass
 
             response = ORJSONResponse(to_json(result, headers, data_source=data_source))
             update_response_headers(response, cache_headers)

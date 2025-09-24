@@ -1,5 +1,5 @@
 import re
-from abc import ABC
+from abc import ABC, abstractmethod
 
 from tests.model import Function
 
@@ -79,12 +79,15 @@ class SqlTestGenerator:
 
 
 class SqlGenerator(ABC):
+    @abstractmethod
     def generate_aggregate_sql(self, function: Function) -> str:
         raise NotImplementedError
 
+    @abstractmethod
     def generate_scalar_sql(self, function: Function) -> str:
         raise NotImplementedError
 
+    @abstractmethod
     def generate_window_sql(self, function: Function) -> str:
         raise NotImplementedError
 
