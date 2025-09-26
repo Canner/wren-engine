@@ -130,7 +130,7 @@ pub fn create_wren_calculated_field_expr(
         .map(|m| analyzed_wren_mdl.wren_mdl().get_model(&m))
         .filter(|m| m.is_some())
         .map(|m| Dataset::Model(m.unwrap()))
-        .map(|m| m.to_qualified_schema())
+        .map(|m| m.to_qualified_schema(true))
         .reduce(|acc, schema| acc?.join(&schema?))
         .transpose()?
     else {
@@ -163,7 +163,7 @@ pub(crate) fn create_wren_expr_for_model(
     session_state: SessionStateRef,
 ) -> Result<Expr> {
     let dataset = Dataset::Model(model);
-    let schema = dataset.to_qualified_schema()?;
+    let schema = dataset.to_qualified_schema(true)?;
     let session_state = session_state.read();
     session_state.create_logical_expr(
         qualified_expr(expr, &schema, &session_state)?.as_str(),

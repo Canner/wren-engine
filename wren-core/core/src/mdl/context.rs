@@ -340,7 +340,7 @@ impl WrenDataSource {
         mode: &Mode,
     ) -> Result<Self> {
         let available_columns = model
-            .get_physical_columns()
+            .get_physical_columns(true)
             .iter()
             .map(|column| {
                 if mode.is_permission_analyze()

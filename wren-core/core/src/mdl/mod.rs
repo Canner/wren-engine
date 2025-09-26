@@ -2645,6 +2645,54 @@ mod test {
     }
 
     #[tokio::test]
+    async fn test_ralc_condition_contain_hidden() -> Result<()> {
+        let ctx = SessionContext::new();
+
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_custkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").hidden(true).build())
+                    .add_row_level_access_control(
+                        "hidden condition",
+                        vec![],
+                        "c_name = 'Peko'",
+                    )
+                    .build(),
+            )
+            .build();
+
+        let headers = SessionPropertiesRef::default();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest.clone(),
+            headers.clone(),
+            Mode::Unparse,
+        )?);
+        let sql = "SELECT * FROM customer";
+
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
+            @"SELECT customer.c_custkey FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer WHERE customer.c_name = 'Peko') AS customer"
+        );
+
+        // assert the hidden column can't be used directly
+        let sql = "SELECT c_name FROm customer";
+        match transform_sql_with_ctx(&ctx, analyzed_mdl, &[], headers, sql).await {
+            Ok(_) => panic!("Expected error"),
+            Err(e) => {
+                assert_snapshot!(
+                    e.to_string(),
+                    @"Schema error: No field named c_name. Valid fields are customer.c_custkey."
+                )
+            }
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_clac_with_required_properties() -> Result<()> {
         let ctx = SessionContext::new();
 

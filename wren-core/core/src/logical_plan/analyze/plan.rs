@@ -141,12 +141,16 @@ impl ModelPlanNodeBuilder {
         let required_fields =
             self.add_required_columns_from_session_properties(&model, required_fields)?;
 
+        // `required_fields` could contain the hidden columns, so we need to get from all physical columns.
         let required_columns =
-            model.get_physical_columns().into_iter().filter(|column| {
-                required_fields
-                    .iter()
-                    .any(|expr| is_required_column(expr, column.name()))
-            });
+            model
+                .get_physical_columns(false)
+                .into_iter()
+                .filter(|column| {
+                    required_fields
+                        .iter()
+                        .any(|expr| is_required_column(expr, column.name()))
+                });
         for column in required_columns {
             // Actually, it's only be checked in PermissionAnalyze mode.
             // In Unparse or LocalRuntime mode, an invalid column won't be registered in the table provider.
@@ -234,8 +238,9 @@ impl ModelPlanNodeBuilder {
                     self.required_calculation.push(calculation);
                     // insert the primary key to the required fields for join with the calculation
 
-                    let Some(pk_column) =
-                        model.primary_key().and_then(|pk| model.get_column(pk))
+                    let Some(pk_column) = model
+                        .primary_key()
+                        .and_then(|pk| model.get_visible_column(pk))
                     else {
                         return plan_err!(
                             "Primary key not found for model {}. To use `TO_MANY` relationship, the primary key is required for the base model.",
@@ -916,7 +921,7 @@ impl ModelSourceNode {
                 } else {
                     Arc::clone(&model)
                 };
-                for column in model.get_physical_columns().into_iter() {
+                for column in model.get_physical_columns(false).into_iter() {
                     // skip the calculated field
                     if column.is_calculated {
                         continue;
@@ -938,16 +943,13 @@ impl ModelSourceNode {
                     )?));
                 }
             } else {
-                let Some(column) =
-                    model
-                        .get_physical_columns()
-                        .into_iter()
-                        .find(|column| match expr {
-                            Expr::Column(c) => c.name.as_str() == column.name(),
-                            Expr::Alias(alias) => alias.name.as_str() == column.name(),
-                            _ => false,
-                        })
-                else {
+                let Some(column) = model.get_physical_columns(false).into_iter().find(
+                    |column| match expr {
+                        Expr::Column(c) => c.name.as_str() == column.name(),
+                        Expr::Alias(alias) => alias.name.as_str() == column.name(),
+                        _ => false,
+                    },
+                ) else {
                     return plan_err!("Field not found {}", expr);
                 };
                 if column.is_calculated {
@@ -1052,7 +1054,9 @@ impl CalculationPlanNode {
         let Some(model) = calculation.dataset.try_as_model() else {
             return plan_err!("Only support model as source dataset");
         };
-        let Some(pk_column) = model.primary_key().and_then(|pk| model.get_column(pk))
+        let Some(pk_column) = model
+            .primary_key()
+            .and_then(|pk| model.get_visible_column(pk))
         else {
             return plan_err!("Primary key not found");
         };

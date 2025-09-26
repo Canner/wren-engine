@@ -198,7 +198,8 @@ pub fn build_filter_expression(
     if let Some(error) = error {
         return error;
     }
-    let df_schema = Dataset::Model(Arc::clone(&model)).to_qualified_schema()?;
+    // The condition could contains the hidden columns, so we need to build the shcmea with hidden columns
+    let df_schema = Dataset::Model(Arc::clone(&model)).to_qualified_schema(false)?;
     session_state
         .read()
         .create_logical_expr(&expr.to_string(), &df_schema)
@@ -253,6 +254,10 @@ pub fn validate_rule(
     required_properties: &[SessionProperty],
     headers: &HashMap<String, Option<String>>,
 ) -> Result<bool> {
+    if required_properties.is_empty() {
+        return Ok(true);
+    }
+
     let exists = required_properties
         .iter()
         .map(|property| {
@@ -336,7 +341,7 @@ pub(crate) fn validate_clac_rule(
                 else {
                     return plan_err!("Model {} not found", model_name.table());
                 };
-                let Some(ref_column) = ref_model.get_column(field.name()) else {
+                let Some(ref_column) = ref_model.get_visible_column(field.name()) else {
                     return plan_err!(
                         "Column {}.{} not found",
                         model_name.table(),

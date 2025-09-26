@@ -249,11 +249,19 @@ impl Model {
     /// Physical columns are columns that can be selected from the model.
     /// All physical columns are visible columns, but not all visible columns are physical columns
     /// e.g. columns that are not a relationship column
-    pub fn get_physical_columns(&self) -> Vec<Arc<Column>> {
-        self.get_visible_columns()
-            .filter(|c| c.relationship.is_none())
-            .map(|c| Arc::clone(&c))
-            .collect()
+    pub fn get_physical_columns(&self, show_visible_only: bool) -> Vec<Arc<Column>> {
+        if show_visible_only {
+            self.get_visible_columns()
+                .filter(|c| c.relationship.is_none())
+                .map(|c| Arc::clone(&c))
+                .collect()
+        } else {
+            self.columns
+                .iter()
+                .filter(|c| c.relationship.is_none())
+                .map(|c| Arc::clone(&c))
+                .collect()
+        }
     }
 
     /// Return the name of the model
@@ -267,8 +275,15 @@ impl Model {
     }
 
     /// Get the specified visible column by name
-    pub fn get_column(&self, column_name: &str) -> Option<Arc<Column>> {
+    pub fn get_visible_column(&self, column_name: &str) -> Option<Arc<Column>> {
         self.get_visible_columns()
+            .find(|c| c.name == column_name)
+            .map(|c| Arc::clone(&c))
+    }
+
+    pub fn get_column(&self, column_name: &str) -> Option<Arc<Column>> {
+        self.columns
+            .iter()
             .find(|c| c.name == column_name)
             .map(|c| Arc::clone(&c))
     }

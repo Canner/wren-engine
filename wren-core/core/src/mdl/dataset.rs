@@ -28,11 +28,11 @@ impl Dataset {
         }
     }
 
-    pub fn to_qualified_schema(&self) -> Result<DFSchema> {
+    pub fn to_qualified_schema(&self, show_visible_only: bool) -> Result<DFSchema> {
         match self {
             Dataset::Model(model) => {
                 let fields: Vec<_> = model
-                    .get_physical_columns()
+                    .get_physical_columns(show_visible_only)
                     .iter()
                     .map(|c| to_field(c))
                     .collect::<Result<_>>()?;
@@ -60,7 +60,7 @@ impl Dataset {
                     DFSchema::try_from_qualified_schema(model.table_reference(), &schema)
                 } else {
                     let fields: Vec<Field> = model
-                        .get_physical_columns()
+                        .get_physical_columns(true)
                         .iter()
                         .filter(|c| !c.is_calculated)
                         .map(|c| to_remote_field(c, Arc::clone(&session_state)))
