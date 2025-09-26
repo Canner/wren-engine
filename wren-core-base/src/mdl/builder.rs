@@ -175,18 +175,10 @@ impl ModelBuilder {
 
 impl SessionProperty {
     pub fn new_required(name: &str) -> Self {
-        SessionProperty {
-            name: name.to_string(),
-            required: true,
-            default_expr: None,
-        }
+        SessionProperty::new(name.to_string(), true, None)
     }
     pub fn new_optional(name: &str, default_expr: Option<String>) -> Self {
-        SessionProperty {
-            name: name.to_string(),
-            required: false,
-            default_expr,
-        }
+        SessionProperty::new(name.to_string(), false, default_expr)
     }
 }
 pub struct ColumnBuilder {
@@ -844,5 +836,16 @@ mod test {
             )
             .data_source(MySQL);
         assert_eq!(mdl, expected.build());
+    }
+
+    #[test]
+    fn test_session_property_roundtrip() {
+        let expected = SessionProperty::new_optional("session_id", Some("1".to_string()));
+
+        let json_str = serde_json::to_string(&expected).unwrap();
+        assert!(!json_str.contains(r#"normalizedName"#));
+        let actual: SessionProperty = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(actual.normalized_name(), actual.name.to_lowercase());
+        assert_eq!(actual, expected)
     }
 }
