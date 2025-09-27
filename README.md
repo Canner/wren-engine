@@ -75,7 +75,7 @@ We believe the future of enterprise AI lies in **context-aware, composable syste
 - 🔐 **Governance-ready**, respecting roles, access controls, and definitions
 
 <p align="center">
-  <img width="1280" height="720" alt="with_wren_engine" src="https://github.com/user-attachments/assets/e3557629-077b-4149-9dc6-5c0e01a4d46a" />
+  <img width="1267" height="705" alt="with_wren_engine" src="https://github.com/user-attachments/assets/3a6531fe-4731-4f21-ae9a-786b219f3c0e" />
 </p>
 
 With Wren Engine, you can scale AI adoption across teams — not just with better automation, but with better understanding.
