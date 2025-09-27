@@ -53,11 +53,13 @@ Enterprises need:
 - Clarity on business terms, like "active customer," "net revenue," or "churn rate"
 - User-based permissions and access control
 
+<p align="center">
+  <img width="920" height="638" alt="without_wren_engine" src="https://github.com/user-attachments/assets/3295dde5-ce41-4e56-a8ad-daff6a0c3459" />
+</p>
+
 Natural language alone isn't enough to drive complex workflows across enterprise data systems. You need a layer that interprets intent, maps it to the correct data, applies calculations accurately, and ensures security.
 
 ## 🎯 Our Mission
-
-<img src="./misc/mcp_wren_engine.webp">
 
 Wren Engine is on a mission to power the future of MCP clients and AI agents through the Model Context Protocol (MCP) — a new open standard that connects LLMs with tools, databases, and enterprise systems.
 
@@ -71,6 +73,10 @@ We believe the future of enterprise AI lies in **context-aware, composable syste
 - 🔄 **Interoperable** with modern data stacks (PostgreSQL, MySQL, Snowflake, etc.)
 - 🧠 **Semantic-first**, enabling AI to “understand” your data model and business logic
 - 🔐 **Governance-ready**, respecting roles, access controls, and definitions
+
+<p align="center">
+  <img width="1267" height="705" alt="with_wren_engine" src="https://github.com/user-attachments/assets/3a6531fe-4731-4f21-ae9a-786b219f3c0e" />
+</p>
 
 With Wren Engine, you can scale AI adoption across teams — not just with better automation, but with better understanding.
 
