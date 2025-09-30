@@ -404,12 +404,51 @@ pub fn session_property(python_binding: proc_macro::TokenStream) -> proc_macro::
     };
     let expanded = quote! {
         #python_binding
-        #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
+        #[derive(Serialize, Debug, PartialEq, Eq, Hash, Clone)]
         #[serde(rename_all = "camelCase")]
         pub struct SessionProperty {
             pub name: String,
             pub required: bool,
             pub default_expr: Option<String>,
+            // To avoid duplicate clone for normalized name(to_lowercase), we store it here
+            #[serde(skip_serializing, default = "String::new")]
+            pub normalized_name: String,
+        }
+
+        impl SessionProperty {
+            #[cfg(not(feature = "python-binding"))]
+            pub fn new(name: String, required: bool, default_expr: Option<String>) -> Self {
+                let normalized_name = name.to_lowercase();
+                Self {
+                    name,
+                    required,
+                    default_expr,
+                    normalized_name,
+                }
+            }
+        }
+
+        impl<'de> serde::Deserialize<'de> for SessionProperty {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                #[derive(Deserialize)]
+                #[serde(rename_all = "camelCase")]
+                struct SessionPropertyHelper {
+                    name: String,
+                    required: bool,
+                    default_expr: Option<String>,
+                }
+
+                let helper = SessionPropertyHelper::deserialize(deserializer)?;
+                Ok(SessionProperty {
+                    normalized_name: helper.name.to_lowercase(),
+                    name: helper.name,
+                    required: helper.required,
+                    default_expr: helper.default_expr,
+                })
+            }
         }
     };
     proc_macro::TokenStream::from(expanded)

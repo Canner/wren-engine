@@ -2707,7 +2707,7 @@ mod test {
                         ColumnBuilder::new("c_name", "string")
                             .column_level_access_control(
                                 "cls rule",
-                                vec![SessionProperty::new_required("session_level")],
+                                vec![SessionProperty::new_required("Session_level")],
                                 ColumnLevelOperator::Equals,
                                 "1",
                             )
@@ -2751,7 +2751,7 @@ mod test {
             Err(e) => {
                 assert_snapshot!(
                     e.to_string(),
-                    @"Error during planning: session property session_level is required for `cls rule` rule but not found in headers"
+                    @"Error during planning: session property Session_level is required for `cls rule` rule but not found in headers"
                 )
             }
             _ => panic!("Expected error"),
@@ -3710,7 +3710,7 @@ mod test {
     ) -> HashMap<String, Option<String>> {
         let mut headers = HashMap::new();
         for (key, value) in field {
-            headers.insert(key.clone(), value.clone());
+            headers.insert(key.to_lowercase(), value.clone());
         }
         headers
     }

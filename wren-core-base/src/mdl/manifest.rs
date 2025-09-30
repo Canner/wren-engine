@@ -347,6 +347,12 @@ impl View {
     }
 }
 
+impl SessionProperty {
+    pub fn normalized_name(&self) -> &str {
+        &self.normalized_name
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::mdl::manifest::table_reference;
