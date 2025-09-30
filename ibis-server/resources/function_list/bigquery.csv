@@ -40,3 +40,5 @@ scalar,regexp_contains,boolean,,"text,text","Returns TRUE if value is a partial 
 scalar,datetime,timestamp,,"text","Converts a string to a DATETIME."
 scalar,datetime_add,datetime,,"datetime,interval","Adds a specified interval to a datetime."
 scalar,datetime_sub,datetime,,"datetime,interval","Subtracts a specified interval from a datetime."
+scalar,date_add,date,,"date,interval","Adds a specified interval to a date."
+aggregate,group_concat,string,,"any","(backward compatible)(deprecated) Concatenates multiple strings into a single string, where each value is separated by the optional separator parameter. If separator is omitted, BigQuery returns a comma-separated string. This function has been deprecated in favor of STRING_AGG."
