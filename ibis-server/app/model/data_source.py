@@ -274,6 +274,7 @@ class DataSourceExtension(Enum):
             project=info.project_id.get_secret_value(), credentials=credentials
         )
         job_config = bigquery.QueryJobConfig()
+        job_config.job_timeout_ms = info.job_timeout_ms
         bq_client.default_query_job_config = job_config
         backend = ibis.bigquery.connect(client=bq_client, credentials=credentials)
         return backend
