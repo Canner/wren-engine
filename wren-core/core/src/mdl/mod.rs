@@ -3610,6 +3610,40 @@ mod test {
     }
 
     #[tokio::test]
+    async fn test_unicode_literal() -> Result<()> {
+        let ctx = SessionContext::new();
+
+        let manifest = ManifestBuilder::default().build();
+        let properties = SessionPropertiesRef::default();
+        let mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest,
+            Arc::clone(&properties),
+            Mode::Unparse,
+        )?);
+        let sql = "select 'ZUTOMAYO', '永遠是深夜有多好'";
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&mdl), &[], Arc::clone(&properties), sql).await?,
+            @"SELECT 'ZUTOMAYO', '永遠是深夜有多好'"
+        );
+
+        let manifest = ManifestBuilder::default()
+            .data_source(DataSource::MSSQL)
+            .build();
+        let properties = SessionPropertiesRef::default();
+        let mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest,
+            Arc::clone(&properties),
+            Mode::Unparse,
+        )?);
+        let sql = "select 'ZUTOMAYO', '永遠是深夜有多好'";
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&mdl), &[], Arc::clone(&properties), sql).await?,
+            @"SELECT 'ZUTOMAYO', N'永遠是深夜有多好'"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_compatible_type() -> Result<()> {
         let ctx = SessionContext::new();
 

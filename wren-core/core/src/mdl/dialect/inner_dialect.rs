@@ -64,6 +64,10 @@ pub trait InnerDialect: Send + Sync {
     ) -> bool {
         true
     }
+
+    fn to_unicode_string_literal(&self, _s: &str) -> Option<ast::Expr> {
+        None
+    }
 }
 
 /// [get_inner_dialect] returns the suitable InnerDialect for the given data source.
@@ -72,6 +76,7 @@ pub fn get_inner_dialect(data_source: &DataSource) -> Box<dyn InnerDialect> {
         DataSource::MySQL => Box::new(MySQLDialect {}),
         DataSource::BigQuery => Box::new(BigQueryDialect {}),
         DataSource::Oracle => Box::new(OracleDialect {}),
+        DataSource::MSSQL => Box::new(MsSqlDialect {}),
         _ => Box::new(GenericDialect {}),
     }
 }
@@ -305,4 +310,18 @@ impl InnerDialect for OracleDialect {
 fn non_uppercase(sql: &str) -> bool {
     let uppsercase = sql.to_uppercase();
     uppsercase != sql
+}
+
+pub struct MsSqlDialect {}
+
+impl InnerDialect for MsSqlDialect {
+    fn to_unicode_string_literal(&self, s: &str) -> Option<ast::Expr> {
+        if !s.is_ascii() {
+            Some(ast::Expr::value(ast::Value::NationalStringLiteral(
+                s.to_string(),
+            )))
+        } else {
+            None
+        }
+    }
 }

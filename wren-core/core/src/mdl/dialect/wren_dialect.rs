@@ -96,6 +96,10 @@ impl Dialect for WrenDialect {
             )
         }
     }
+
+    fn to_unicode_string_literal(&self, s: &str) -> Option<ast::Expr> {
+        self.inner_dialect.to_unicode_string_literal(s)
+    }
 }
 
 impl Default for WrenDialect {
