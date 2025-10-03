@@ -15,7 +15,7 @@ import base64
 import json
 import os
 from app.custom_sqlglot.dialects.wren import Wren
-from app.model import MySqlConnectionInfo, OracleConnectionInfo, PostgresConnectionInfo
+from app.model import MSSqlConnectionInfo, MySqlConnectionInfo, OracleConnectionInfo, PostgresConnectionInfo
 from app.util import to_json
 import sqlglot
 import sys
@@ -82,7 +82,11 @@ planned_sql = session_context.transform_sql(sql)
 print("# Planned SQL:\n", planned_sql)
 
 # Transpile the planned SQL
-dialect_sql = sqlglot.transpile(planned_sql, read=Wren, write=data_source)[0]
+if data_source == "mssql":
+    # For mssql, we need to use the "tsql" dialect for reading
+    dialect_sql = sqlglot.transpile(planned_sql, read=Wren, write="tsql")[0]
+else:
+    dialect_sql = sqlglot.transpile(planned_sql, read=Wren, write=data_source)[0]
 print("# Dialect SQL:\n", dialect_sql)
 print("#")
 
@@ -98,6 +102,9 @@ elif data_source == "postgres":
 elif data_source == "oracle":
     connection_info = OracleConnectionInfo.model_validate_json(json.dumps(connection_info))
     connection = DataSourceExtension.get_oracle_connection(connection_info)
+elif data_source == "mssql":
+    connection_info = MSSqlConnectionInfo.model_validate_json(json.dumps(connection_info))
+    connection = DataSourceExtension.get_mssql_connection(connection_info)
 else:
     raise Exception("Unsupported data source:", data_source)
 
