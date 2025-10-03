@@ -1,7 +1,12 @@
 import pathlib
 
+import pandas as pd
 import pytest
+import sqlalchemy
+from sqlalchemy import text
 from testcontainers.mssql import SqlServerContainer
+
+from tests.conftest import file_path
 
 pytestmark = pytest.mark.mssql
 
@@ -20,6 +25,21 @@ def mssql(request) -> SqlServerContainer:
     mssql = SqlServerContainer(
         "mcr.microsoft.com/mssql/server:2019-CU27-ubuntu-20.04", dialect="mssql+pyodbc"
     ).start()
+    engine = sqlalchemy.create_engine(
+        f"{mssql.get_connection_url()}?driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=YES"
+    )
+    pd.read_parquet(file_path("resource/tpch/data/orders.parquet")).to_sql(
+        "orders", engine, index=False
+    )
+    with engine.begin() as conn:
+        conn.execute(text("CREATE TABLE unicode_test (id INT, letter NVARCHAR(10))"))
+        conn.execute(
+            text("INSERT INTO unicode_test (id, letter) VALUES (1, N'真夜中')")
+        )
+        conn.execute(
+            text("INSERT INTO unicode_test (id, letter) VALUES (2, 'ZUTOMAYO')")
+        )
+
     request.addfinalizer(mssql.stop)
     return mssql
 
