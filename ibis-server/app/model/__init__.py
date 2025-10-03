@@ -103,6 +103,10 @@ class BigQueryConnectionInfo(BaseConnectionInfo):
     credentials: SecretStr = Field(
         description="Base64 encode `credentials.json`", examples=["eyJ..."]
     )
+    job_timeout_ms: int | None = Field(
+        description="Job timeout in milliseconds. If the job is not complete within the specified time, it will be cancelled.",
+        default=None,
+    )
 
 
 class AthenaConnectionInfo(BaseConnectionInfo):

@@ -233,6 +233,9 @@ class SimpleConnector:
             elif hasattr(self.connection, "close"):
                 # Try to close the connection directly if it has a close method
                 self.connection.close()
+            elif hasattr(self.connection, "disconnect"):
+                # Some backends use disconnect instead of close
+                self.connection.disconnect()
             else:
                 logger.warning(
                     f"Closing connection for {self.data_source.value} is not implemented."

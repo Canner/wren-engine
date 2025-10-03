@@ -9,6 +9,7 @@ from typing import Any
 from urllib.parse import unquote_plus
 
 import ibis
+from google.cloud import bigquery
 from google.oauth2 import service_account
 from ibis import BaseBackend
 
@@ -124,6 +125,10 @@ class DataSource(StrEnum):
                         f"{session_timeout}s"
                     )
                 info.kwargs["session_properties"] = session_properties
+            case DataSource.bigquery:
+                session_timeout = headers.get(X_WREN_DB_STATEMENT_TIMEOUT, 180)
+                if not hasattr(info, "job_timeout_ms") or info.job_timeout_ms is None:
+                    info.job_timeout_ms = int(session_timeout) * 1000
         return info
 
     def _build_connection_info(self, data: dict) -> ConnectionInfo:
@@ -265,11 +270,14 @@ class DataSourceExtension(Enum):
                 "https://www.googleapis.com/auth/cloud-platform",
             ]
         )
-        return ibis.bigquery.connect(
-            project_id=info.project_id.get_secret_value(),
-            dataset_id=info.dataset_id.get_secret_value(),
-            credentials=credentials,
+        bq_client = bigquery.Client(
+            project=info.project_id.get_secret_value(), credentials=credentials
         )
+        job_config = bigquery.QueryJobConfig()
+        job_config.job_timeout_ms = info.job_timeout_ms
+        bq_client.default_query_job_config = job_config
+        backend = ibis.bigquery.connect(client=bq_client, credentials=credentials)
+        return backend
 
     @staticmethod
     def get_canner_connection(info: CannerConnectionInfo) -> BaseBackend:
