@@ -196,6 +196,7 @@ impl InnerDialect for BigQueryDialect {
             "now" => {
                 scalar_function_to_sql_internal(unparser, None, "CURRENT_TIMESTAMP", args)
             }
+            "btrim" => scalar_function_to_sql_internal(unparser, None, "trim", args),
             _ => Ok(None),
         }
     }
