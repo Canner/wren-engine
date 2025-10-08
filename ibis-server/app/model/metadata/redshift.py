@@ -58,35 +58,25 @@ class RedshiftMetadata(Metadata):
 
     def get_table_list(self) -> list[Table]:
         sql = """
-        SELECT
-            t.table_catalog,
-            t.table_schema,
-            t.table_name,
-            c.column_name,
-            c.data_type,
-            c.is_nullable,
-            c.ordinal_position,
-            obj_description(cls.oid) AS table_comment,
-            col_description(cls.oid, a.attnum) AS column_comment
-        FROM
-            information_schema.tables t
-        JOIN
-            information_schema.columns c
-            ON t.table_schema = c.table_schema
-            AND t.table_name = c.table_name
-        LEFT JOIN
-            pg_class cls
-            ON cls.relname = t.table_name
-            AND cls.relnamespace = (
-                SELECT oid FROM pg_namespace WHERE nspname = t.table_schema
-            )
-        LEFT JOIN
-            pg_attribute a
-            ON a.attrelid = cls.oid
-            AND a.attname = c.column_name
-        WHERE
-            t.table_type IN ('BASE TABLE', 'VIEW')
-            AND t.table_schema NOT IN ('information_schema', 'pg_catalog');
+        SELECT 
+            current_database() AS table_catalog,
+            n.nspname AS table_schema,
+            c.relname AS table_name,
+            a.attname AS column_name,
+            format_type(a.atttypid, a.atttypmod) AS data_type,
+            CASE WHEN a.attnotnull THEN 'NO' ELSE 'YES' END AS is_nullable,
+            a.attnum AS ordinal_position,
+            obj_description(c.oid) AS table_comment,
+            col_description(c.oid, a.attnum) AS column_comment
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        JOIN pg_attribute a ON a.attrelid = c.oid
+        WHERE c.relkind IN ('r', 'v')  -- r = table, v = view
+            AND a.attnum > 0           -- exclude system columns
+            AND NOT a.attisdropped     -- exclude dropped columns
+            AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_internal')
+            AND has_schema_privilege(n.nspname, 'USAGE')
+        ORDER BY n.nspname, c.relname, a.attnum;
         """
         response = self.connector.query(sql).to_pylist()
 
