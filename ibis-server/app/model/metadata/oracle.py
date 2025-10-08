@@ -14,12 +14,30 @@ from app.model.metadata.metadata import Metadata
 
 
 class OracleMetadata(Metadata):
+    """
+    Oracle metadata extraction for WrenAI.
+    
+    VIEWS-ONLY ARCHITECTURE:
+    This implementation discovers Oracle VIEWS exclusively, not tables.
+    - Optimized for view-based reporting databases
+    - Tables are internal implementation details and not exposed
+    - Relationships defined via manual configuration (YAML)
+    
+    Key features:
+    - Dynamic user extraction (not hardcoded 'SYSTEM')
+    - Quoted identifier support for view names with spaces
+    - Permission-safe version detection
+    """
+    
     def __init__(self, connection_info: OracleConnectionInfo):
         super().__init__(connection_info)
         self.connection = DataSource.oracle.get_connection(connection_info)
 
     def get_table_list(self) -> list[Table]:
-        sql = """
+        # Get dynamic user from connection info (not hardcoded 'SYSTEM')
+        user = self.connection_info.user.get_secret_value()
+        
+        sql = f"""
             SELECT
                 t.owner AS TABLE_CATALOG,
                 t.owner AS TABLE_SCHEMA,
@@ -31,24 +49,24 @@ class OracleMetadata(Metadata):
                 tc.comments AS TABLE_COMMENT,
                 cc.comments AS COLUMN_COMMENT
             FROM
-                all_tables t
+                all_views v
             JOIN
                 all_tab_columns c
-                ON t.owner = c.owner
-                AND t.table_name = c.table_name
+                ON v.owner = c.owner
+                AND v.view_name = c.table_name
             LEFT JOIN
                 all_tab_comments tc
-                ON tc.owner = t.owner
-                AND tc.table_name = t.table_name
+                ON tc.owner = v.owner
+                AND tc.table_name = v.view_name
             LEFT JOIN
                 all_col_comments cc
                 ON cc.owner = c.owner
                 AND cc.table_name = c.table_name
                 AND cc.column_name = c.column_name
             WHERE
-                t.owner = 'SYSTEM'
+                v.owner = '{user}'
             ORDER BY
-                t.table_name, c.column_id;
+                v.view_name, c.column_id;
         """
         #  Provide the pre-build schema explicitly with uppercase column names
         #  To avoid potential ibis get schema error:
@@ -174,14 +192,50 @@ class OracleMetadata(Metadata):
         return constraints
 
     def get_version(self) -> str:
-        schema = ibis.schema({"VERSION": "string"})
-        return (
-            self.connection.sql("SELECT version FROM v$instance", schema=schema)
-            .to_pandas()
-            .iloc[0, 0]
-        )
+        """
+        Get Oracle database version.
+        
+        Uses fallback approach to avoid permission issues with v$instance.
+        Many Oracle users don't have SELECT privileges on v$instance system view.
+        
+        Returns:
+            Oracle version string (defaults to "19.0.0.0.0" for Oracle ADB 19c)
+        """
+        try:
+            # Try v$instance first (requires permissions)
+            schema = ibis.schema({"VERSION": "string"})
+            return (
+                self.connection.sql("SELECT version FROM v$instance", schema=schema)
+                .to_pandas()
+                .iloc[0, 0]
+            )
+        except Exception:
+            # Fallback: Return hardcoded version for Oracle ADB 19c
+            # This ensures metadata discovery never fails on version check
+            return "19.0.0.0.0"
 
     def _format_compact_table_name(self, schema: str, table: str):
+        """
+        Format Oracle view names, adding quotes for names with spaces.
+        
+        Oracle requires double quotes around object names containing spaces:
+        - CORRECT: SCHEMA."RT Customer"
+        - INCORRECT: SCHEMA.RT Customer (causes ORA-00923)
+        
+        This is critical for views-only architecture where views often have spaces.
+        
+        Args:
+            schema: Oracle schema/owner name
+            table: View name (method kept as 'table' for WrenAI compatibility)
+        
+        Returns:
+            Formatted object reference for use in SQL
+        """
+        if ' ' in table:
+            # Escape any internal quotes (although rare in Oracle view names)
+            escaped_table = table.replace('"', '""')
+            return f'{schema}."{escaped_table}"'
+        
         return f"{schema}.{table}"
 
     def _format_constraint_name(
