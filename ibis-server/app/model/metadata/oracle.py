@@ -122,74 +122,159 @@ class OracleMetadata(Metadata):
         return list(unique_tables.values())
 
     def get_constraints(self) -> list[Constraint]:
-        schema = ibis.schema(
-            {
-                "TABLE_SCHEMA": "string",
+        """
+        Auto-detect view-to-view relationships for views-only architecture.
+        
+        STRATEGY:
+        Since views don't have FK constraints, we discover relationships by:
+        1. Query all_dependencies to find base tables each view depends on
+        2. Query all_constraints to get FK relationships from those base tables
+        3. Map table FKs to view-to-view relationships when multiple views share tables
+        
+        This provides automatic relationship detection with zero configuration!
+        
+        Returns:
+            List of view-to-view relationships based on underlying table FKs
+        """
+        user = self.connection_info.user.get_secret_value()
+        constraints = []
+        
+        try:
+            # Step 1: Get all views in this schema
+            views_schema = ibis.schema({"VIEW_NAME": "string"})
+            views_sql = f"""
+                SELECT view_name
+                FROM all_views
+                WHERE owner = '{user}'
+                ORDER BY view_name
+            """
+            views_df = self.connection.sql(views_sql, schema=views_schema).to_pandas()
+            views = views_df['VIEW_NAME'].tolist()
+            
+            if not views:
+                return []
+            
+            # Step 2: Map each view to its base tables using all_dependencies
+            view_to_tables = {}
+            table_to_owner = {}
+            
+            deps_schema = ibis.schema({
+                "VIEW_NAME": "string",
+                "BASE_TABLE": "string", 
+                "BASE_OWNER": "string"
+            })
+            
+            for view in views:
+                deps_sql = f"""
+                    SELECT 
+                        name AS VIEW_NAME,
+                        referenced_name AS BASE_TABLE,
+                        referenced_owner AS BASE_OWNER
+                    FROM all_dependencies
+                    WHERE owner = '{user}'
+                    AND name = '{view}'
+                    AND type = 'VIEW'
+                    AND referenced_type = 'TABLE'
+                """
+                try:
+                    deps_df = self.connection.sql(deps_sql, schema=deps_schema).to_pandas()
+                    if not deps_df.empty:
+                        tables = [(row['BASE_TABLE'], row['BASE_OWNER']) 
+                                 for _, row in deps_df.iterrows()]
+                        view_to_tables[view] = tables
+                        
+                        # Track table ownership for FK queries
+                        for table, owner in tables:
+                            if table not in table_to_owner:
+                                table_to_owner[table] = owner
+                except Exception:
+                    # View may not have dependencies or permission issues
+                    continue
+            
+            if not table_to_owner:
+                return []
+            
+            # Step 3: Get FK constraints from all base tables
+            table_fks = {}
+            fk_schema = ibis.schema({
                 "TABLE_NAME": "string",
                 "COLUMN_NAME": "string",
-                "REFERENCED_TABLE_SCHEMA": "string",
-                "REFERENCED_TABLE_NAME": "string",
-                "REFERENCED_COLUMN_NAME": "string",
-            }
-        )
-
-        sql = """
-            SELECT 
-                a.owner AS TABLE_SCHEMA,
-                a.table_name AS TABLE_NAME,
-                a.column_name AS COLUMN_NAME,
-                a_pk.owner AS REFERENCED_TABLE_SCHEMA,
-                a_pk.table_name AS REFERENCED_TABLE_NAME,
-                a_pk.column_name AS REFERENCED_COLUMN_NAME
-            FROM 
-                dba_cons_columns a
-            JOIN 
-                dba_constraints c 
-                ON a.owner = c.owner
-                AND a.constraint_name = c.constraint_name
-            JOIN 
-                dba_constraints c_pk 
-                ON c.r_owner = c_pk.owner
-                AND c.r_constraint_name = c_pk.constraint_name
-            JOIN 
-                dba_cons_columns a_pk
-                ON c_pk.owner = a_pk.owner
-                AND c_pk.constraint_name = a_pk.constraint_name
-            WHERE 
-                c.constraint_type = 'R'
-            ORDER BY 
-                a.owner,
-                a.table_name,
-                a.column_name
-        """
-        res = (
-            self.connection.sql(sql, schema=schema)
-            .to_pandas()
-            .to_dict(orient="records")
-        )
-
-        constraints = []
-        for row in res:
-            constraints.append(
-                Constraint(
-                    constraintName=self._format_constraint_name(
-                        row["TABLE_NAME"],
-                        row["COLUMN_NAME"],
-                        row["REFERENCED_TABLE_NAME"],
-                        row["REFERENCED_COLUMN_NAME"],
-                    ),
-                    constraintTable=self._format_compact_table_name(
-                        row["TABLE_SCHEMA"], row["TABLE_NAME"]
-                    ),
-                    constraintColumn=row["COLUMN_NAME"],
-                    constraintedTable=self._format_compact_table_name(
-                        row["REFERENCED_TABLE_SCHEMA"], row["REFERENCED_TABLE_NAME"]
-                    ),
-                    constraintedColumn=row["REFERENCED_COLUMN_NAME"],
-                    constraintType=ConstraintType.FOREIGN_KEY,
-                )
-            )
-        return constraints
+                "REF_TABLE": "string",
+                "REF_COLUMN": "string"
+            })
+            
+            for table, owner in table_to_owner.items():
+                fk_sql = f"""
+                    SELECT 
+                        c.table_name AS TABLE_NAME,
+                        cc.column_name AS COLUMN_NAME,
+                        rc.table_name AS REF_TABLE,
+                        rcc.column_name AS REF_COLUMN
+                    FROM all_constraints c
+                    JOIN all_cons_columns cc 
+                        ON c.constraint_name = cc.constraint_name 
+                        AND c.owner = cc.owner
+                    JOIN all_constraints rc 
+                        ON c.r_constraint_name = rc.constraint_name
+                    JOIN all_cons_columns rcc 
+                        ON rc.constraint_name = rcc.constraint_name 
+                        AND rc.owner = rcc.owner
+                    WHERE c.constraint_type = 'R'
+                    AND c.owner = '{owner}'
+                    AND c.table_name = '{table}'
+                """
+                try:
+                    fk_df = self.connection.sql(fk_sql, schema=fk_schema).to_pandas()
+                    if not fk_df.empty:
+                        table_fks[table] = fk_df.to_dict('records')
+                except Exception:
+                    # Table might not be accessible or have no FKs
+                    continue
+            
+            # Step 4: Map table FKs to view-to-view relationships
+            # For each view, check if its base tables have FKs to tables used by other views
+            for view1 in views:
+                if view1 not in view_to_tables:
+                    continue
+                    
+                view1_tables = {t[0] for t in view_to_tables[view1]}
+                
+                # Check FKs from this view's base tables
+                for table in view1_tables:
+                    if table not in table_fks:
+                        continue
+                    
+                    for fk in table_fks[table]:
+                        ref_table = fk['REF_TABLE']
+                        
+                        # Find other views that use the referenced table
+                        for view2 in views:
+                            if view2 == view1 or view2 not in view_to_tables:
+                                continue
+                            
+                            view2_tables = {t[0] for t in view_to_tables[view2]}
+                            if ref_table in view2_tables:
+                                # Found a relationship! Create constraint
+                                constraint_name = f"VIEW_FK_{view1}_{view2}_{fk['COLUMN_NAME']}".replace(" ", "_")
+                                
+                                constraints.append(
+                                    Constraint(
+                                        constraintName=constraint_name[:128],  # Oracle name limit
+                                        constraintTable=self._format_compact_table_name(user, view1),
+                                        constraintColumn=fk['COLUMN_NAME'],
+                                        constraintedTable=self._format_compact_table_name(user, view2),
+                                        constraintedColumn=fk['REF_COLUMN'],
+                                        constraintType=ConstraintType.FOREIGN_KEY,
+                                    )
+                                )
+            
+            return constraints
+            
+        except Exception as e:
+            # If auto-detection fails, return empty list rather than breaking WrenAI
+            # This ensures the system remains functional even with permission issues
+            print(f"Warning: Could not auto-detect view relationships: {e}")
+            return []
 
     def get_version(self) -> str:
         """
