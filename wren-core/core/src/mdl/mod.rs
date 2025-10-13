@@ -2,7 +2,7 @@ use crate::logical_plan::analyze::access_control::validate_clac_rule;
 use crate::logical_plan::error::WrenError;
 use crate::logical_plan::utils::{from_qualified_name_str, try_map_data_type};
 use crate::mdl::builder::ManifestBuilder;
-use crate::mdl::context::{create_ctx_with_mdl, Mode, WrenDataSource};
+use crate::mdl::context::{apply_wren_on_ctx, Mode, WrenDataSource};
 use crate::mdl::function::{
     ByPassAggregateUDF, ByPassScalarUDF, ByPassWindowFunction, FunctionType,
     RemoteFunction,
@@ -412,7 +412,7 @@ pub async fn transform_sql_with_ctx(
         register_remote_function(ctx, remote_function)?;
         Ok::<_, DataFusionError>(())
     })?;
-    let ctx = create_ctx_with_mdl(
+    let ctx = apply_wren_on_ctx(
         ctx,
         Arc::clone(&analyzed_mdl),
         Arc::clone(&properties),
@@ -483,9 +483,8 @@ async fn permission_analyze(
         register_remote_function(&ctx, remote_function)?;
         Ok::<_, DataFusionError>(())
     })?;
-    let ctx =
-        create_ctx_with_mdl(&ctx, analyzed_mdl, properties, Mode::PermissionAnalyze)
-            .await?;
+    let ctx = apply_wren_on_ctx(&ctx, analyzed_mdl, properties, Mode::PermissionAnalyze)
+        .await?;
 
     let plan = match ctx.state().create_logical_plan(sql).await {
         Ok(plan) => plan,
@@ -569,7 +568,7 @@ mod test {
     use std::sync::Arc;
 
     use crate::mdl::builder::{ColumnBuilder, ManifestBuilder, ModelBuilder};
-    use crate::mdl::context::{create_ctx_with_mdl, Mode, SessionPropertiesRef};
+    use crate::mdl::context::{apply_wren_on_ctx, Mode, SessionPropertiesRef};
     use crate::mdl::function::RemoteFunction;
     use crate::mdl::manifest::DataSource::MySQL;
     use crate::mdl::manifest::Manifest;
@@ -1437,7 +1436,7 @@ mod test {
         let analyzed_mdl =
             Arc::new(AnalyzedWrenMDL::analyze_with_tables(manifest, registers)?);
         let properties_ref = Arc::new(HashMap::new());
-        let ctx = create_ctx_with_mdl(
+        let ctx = apply_wren_on_ctx(
             &ctx,
             Arc::clone(&analyzed_mdl),
             properties_ref,
