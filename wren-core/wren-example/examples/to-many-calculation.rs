@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use datafusion::error::Result;
-use datafusion::prelude::{CsvReadOptions, SessionContext};
+use datafusion::prelude::CsvReadOptions;
 
 use wren_core::mdl::builder::{
     ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder,
