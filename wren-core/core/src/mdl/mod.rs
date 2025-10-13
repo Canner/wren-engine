@@ -3628,7 +3628,7 @@ mod test {
 
     #[tokio::test]
     async fn test_unicode_literal() -> Result<()> {
-        let ctx = SessionContext::new();
+        let ctx = create_wren_ctx(None);
 
         let manifest = ManifestBuilder::default().build();
         let properties = SessionPropertiesRef::default();
@@ -3681,7 +3681,7 @@ mod test {
 
     #[tokio::test]
     async fn test_trim_function_bigquery() -> Result<()> {
-        let ctx = SessionContext::new();
+        let ctx = create_wren_ctx(None);
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
