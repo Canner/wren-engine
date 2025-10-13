@@ -32,7 +32,7 @@ use tokio::runtime::Runtime;
 use wren_core::array::AsArray;
 use wren_core::ast::{visit_statements_mut, Expr, Statement, Value, ValueWithSpan};
 use wren_core::dialect::GenericDialect;
-use wren_core::mdl::context::create_ctx_with_mdl;
+use wren_core::mdl::context::apply_wren_on_ctx;
 use wren_core::mdl::function::{
     ByPassAggregateUDF, ByPassScalarUDF, ByPassWindowFunction, FunctionType,
     RemoteFunction,
@@ -169,7 +169,7 @@ impl PySessionContext {
                 Ok(analyzed_mdl) => {
                     let analyzed_mdl = Arc::new(analyzed_mdl);
                     let unparser_ctx = runtime
-                        .block_on(create_ctx_with_mdl(
+                        .block_on(apply_wren_on_ctx(
                             &ctx,
                             Arc::clone(&analyzed_mdl),
                             Arc::clone(&properties_ref),
@@ -178,7 +178,7 @@ impl PySessionContext {
                         .map_err(CoreError::from)?;
 
                     let exec_ctx = runtime
-                        .block_on(create_ctx_with_mdl(
+                        .block_on(apply_wren_on_ctx(
                             &ctx,
                             Arc::clone(&analyzed_mdl),
                             Arc::clone(&properties_ref),
