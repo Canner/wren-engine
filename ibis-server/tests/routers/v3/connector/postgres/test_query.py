@@ -1279,3 +1279,23 @@ async def test_case_sensitive_without_quote(client, connection_info):
         "O_orderkey": "int32",
         "O_custkey": "int32",
     }
+
+
+async def test_to_char_numeric(client, manifest_str, connection_info):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT to_char(1234, '9999') AS formatted_number, to_char(1234.567, '0000.00') AS formatted_double",
+        },
+        headers={X_WREN_FALLBACK_DISABLE: "true"},
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert result["data"][0][0] == " 1234"
+    assert result["data"][0][1] == " 1234.57"
+    assert result["dtypes"] == {
+        "formatted_number": "string",
+        "formatted_double": "string",
+    }
