@@ -3732,6 +3732,48 @@ mod test {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_to_char() -> Result<()> {
+        let ctx = create_wren_ctx(None);
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_date", "date").build())
+                    .column(ColumnBuilder::new("c_timestamp", "timestamp").build())
+                    .column(ColumnBuilder::new("c_timestamptz", "timestamptz").build())
+                    .column(ColumnBuilder::new("c_int", "int").build())
+                    .column(ColumnBuilder::new("c_bigint", "bigint").build())
+                    .column(ColumnBuilder::new("c_float", "float").build())
+                    .column(ColumnBuilder::new("c_double", "double").build())
+                    .column(ColumnBuilder::new("c_decimal", "decimal").build())
+                    .build(),
+            )
+            .data_source(DataSource::BigQuery)
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest,
+            Arc::new(HashMap::default()),
+            Mode::Unparse,
+        )?);
+        let headers = Arc::new(HashMap::default());
+        let sql = "SELECT to_char(c_date, '%Y-%m-%d'), to_char(c_timestamp, '%Y-%m-%d'), to_char(c_timestamptz, '%Y-%m-%d') FROM customer";
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
+            @"SELECT to_char(customer.c_date, '%Y-%m-%d'), to_char(customer.c_timestamp, '%Y-%m-%d'), to_char(customer.c_timestamptz, '%Y-%m-%d') FROM (SELECT customer.c_date, customer.c_timestamp, customer.c_timestamptz FROM (SELECT __source.c_date AS c_date, __source.c_timestamp AS c_timestamp, __source.c_timestamptz AS c_timestamptz FROM customer AS __source) AS customer) AS customer"
+        );
+        
+        let sql = "SELECT to_char(c_int, '999'), to_char(c_bigint, '999'), to_char(c_float, '999.99'), to_char(c_double, '999.99'), to_char(c_decimal, '999.99') FROM customer";
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
+            @"SELECT to_char(customer.c_int, '999'), to_char(customer.c_bigint, '999'), to_char(customer.c_float, '999.99'), to_char(customer.c_double, '999.99'), to_char(customer.c_decimal, '999.99') FROM (SELECT customer.c_bigint, customer.c_decimal, customer.c_double, customer.c_float, customer.c_int FROM (SELECT __source.c_bigint AS c_bigint, __source.c_decimal AS c_decimal, __source.c_double AS c_double, __source.c_float AS c_float, __source.c_int AS c_int FROM customer AS __source) AS customer) AS customer"
+        );
+
+        Ok(())
+    }
+
     /// Return a RecordBatch with made up data about customer
     fn customer() -> RecordBatch {
         let custkey: ArrayRef = Arc::new(Int64Array::from(vec![1, 2, 3]));
