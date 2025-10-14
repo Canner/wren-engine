@@ -3764,7 +3764,7 @@ mod test {
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
             @"SELECT to_char(customer.c_date, '%Y-%m-%d'), to_char(customer.c_timestamp, '%Y-%m-%d'), to_char(customer.c_timestamptz, '%Y-%m-%d') FROM (SELECT customer.c_date, customer.c_timestamp, customer.c_timestamptz FROM (SELECT __source.c_date AS c_date, __source.c_timestamp AS c_timestamp, __source.c_timestamptz AS c_timestamptz FROM customer AS __source) AS customer) AS customer"
         );
-        
+
         let sql = "SELECT to_char(c_int, '999'), to_char(c_bigint, '999'), to_char(c_float, '999.99'), to_char(c_double, '999.99'), to_char(c_decimal, '999.99') FROM customer";
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,

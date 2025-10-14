@@ -1,8 +1,10 @@
 use std::any::Any;
 
-use datafusion::arrow::datatypes::{DataType, Decimal128Type};
+use datafusion::arrow::datatypes::DataType;
 use datafusion::common::not_impl_err;
-use datafusion::common::types::{logical_date, logical_float32, logical_float64, logical_string};
+use datafusion::common::types::{
+    logical_date, logical_float32, logical_float64, logical_string,
+};
 use datafusion::error::Result;
 use datafusion::logical_expr::TypeSignatureClass;
 use datafusion::logical_expr::{
