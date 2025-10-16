@@ -15,7 +15,7 @@ import base64
 import json
 import os
 from app.custom_sqlglot.dialects.wren import Wren
-from app.model import MSSqlConnectionInfo, MySqlConnectionInfo, OracleConnectionInfo, PostgresConnectionInfo
+from app.model import MSSqlConnectionInfo, MySqlConnectionInfo, OracleConnectionInfo, PostgresConnectionInfo, SnowflakeConnectionInfo
 from app.util import to_json
 import sqlglot
 import sys
@@ -105,6 +105,9 @@ elif data_source == "oracle":
 elif data_source == "mssql":
     connection_info = MSSqlConnectionInfo.model_validate_json(json.dumps(connection_info))
     connection = DataSourceExtension.get_mssql_connection(connection_info)
+elif data_source == "snowflake":
+    connection_info = SnowflakeConnectionInfo.model_validate_json(json.dumps(connection_info))
+    connection = DataSourceExtension.get_snowflake_connection(connection_info)
 else:
     raise Exception("Unsupported data source:", data_source)
 

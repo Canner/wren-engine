@@ -48,6 +48,8 @@ SNOWFLAKE_TYPE_MAPPING = {
     "timestamp": RustWrenEngineColumnType.TIMESTAMP,
     "timestamp_ntz": RustWrenEngineColumnType.TIMESTAMP,
     "timestamp_tz": RustWrenEngineColumnType.TIMESTAMPTZ,
+    "variant": RustWrenEngineColumnType.VARIANT,
+    "object": RustWrenEngineColumnType.JSON,
 }
 
 

@@ -187,7 +187,8 @@ impl ByPassScalarUDF {
 impl From<RemoteFunction> for ByPassScalarUDF {
     fn from(func: RemoteFunction) -> Self {
         // just panic if the return type is not valid to avoid we input invalid type
-        let return_type = ReturnType::from_str(&func.return_type).unwrap();
+        let return_type = ReturnType::from_str(&func.return_type)
+            .unwrap_or(ReturnType::Specific(DataType::Utf8));
         ByPassScalarUDF {
             return_type,
             signature: func.get_signature(),
