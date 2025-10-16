@@ -32,7 +32,7 @@ use tokio::runtime::Runtime;
 use wren_core::array::AsArray;
 use wren_core::ast::{visit_statements_mut, Expr, Statement, Value, ValueWithSpan};
 use wren_core::dialect::GenericDialect;
-use wren_core::mdl::context::create_ctx_with_mdl;
+use wren_core::mdl::context::apply_wren_on_ctx;
 use wren_core::mdl::function::{
     ByPassAggregateUDF, ByPassScalarUDF, ByPassWindowFunction, FunctionType,
     RemoteFunction,
@@ -91,11 +91,11 @@ impl PySessionContext {
             .collect::<Vec<_>>();
 
         let config = SessionConfig::default().with_information_schema(true);
-        let ctx = wren_core::SessionContext::new_with_config(config);
+        let ctx = wren_core::mdl::create_wren_ctx(Some(config));
         let runtime = Runtime::new().map_err(CoreError::from)?;
 
         let registered_functions = runtime
-            .block_on(Self::get_regietered_functions(&ctx))
+            .block_on(Self::get_registered_functions(&ctx))
             .map(|functions| {
                 functions
                     .into_iter()
@@ -169,7 +169,7 @@ impl PySessionContext {
                 Ok(analyzed_mdl) => {
                     let analyzed_mdl = Arc::new(analyzed_mdl);
                     let unparser_ctx = runtime
-                        .block_on(create_ctx_with_mdl(
+                        .block_on(apply_wren_on_ctx(
                             &ctx,
                             Arc::clone(&analyzed_mdl),
                             Arc::clone(&properties_ref),
@@ -178,7 +178,7 @@ impl PySessionContext {
                         .map_err(CoreError::from)?;
 
                     let exec_ctx = runtime
-                        .block_on(create_ctx_with_mdl(
+                        .block_on(apply_wren_on_ctx(
                             &ctx,
                             Arc::clone(&analyzed_mdl),
                             Arc::clone(&properties_ref),
@@ -226,7 +226,7 @@ impl PySessionContext {
     pub fn get_available_functions(&self) -> PyResult<Vec<PyRemoteFunction>> {
         let registered_functions: Vec<PyRemoteFunction> = self
             .runtime
-            .block_on(Self::get_regietered_functions(&self.exec_ctx))
+            .block_on(Self::get_registered_functions(&self.exec_ctx))
             .map_err(CoreError::from)?
             .into_iter()
             .map(|f| f.into())
@@ -321,7 +321,7 @@ impl PySessionContext {
     /// The `name` is the name of the function.
     /// The `function_type` is the type of the function. (e.g. scalar, aggregate, window)
     /// The `description` is the description of the function.
-    async fn get_regietered_functions(
+    async fn get_registered_functions(
         ctx: &wren_core::SessionContext,
     ) -> PyResult<Vec<RemoteFunctionDto>> {
         let sql = r#"

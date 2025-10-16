@@ -2,14 +2,14 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use datafusion::error::Result;
-use datafusion::prelude::{CsvReadOptions, SessionContext};
+use datafusion::prelude::CsvReadOptions;
 
 use wren_core::mdl::builder::{
     ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder,
 };
-use wren_core::mdl::context::{create_ctx_with_mdl, Mode};
+use wren_core::mdl::context::{apply_wren_on_ctx, Mode};
 use wren_core::mdl::manifest::{JoinType, Manifest};
-use wren_core::mdl::AnalyzedWrenMDL;
+use wren_core::mdl::{create_wren_ctx, AnalyzedWrenMDL};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -17,7 +17,7 @@ async fn main() -> Result<()> {
     let manifest = init_manifest();
 
     // register the table
-    let ctx = SessionContext::new();
+    let ctx = create_wren_ctx(None);
     ctx.register_csv(
         "orders",
         "sqllogictest/tests/resources/ecommerce/orders.csv",
@@ -76,7 +76,7 @@ async fn main() -> Result<()> {
     ]);
     let analyzed_mdl =
         Arc::new(AnalyzedWrenMDL::analyze_with_tables(manifest, register)?);
-    let ctx = create_ctx_with_mdl(
+    let ctx = apply_wren_on_ctx(
         &ctx,
         analyzed_mdl,
         Arc::new(HashMap::new()),

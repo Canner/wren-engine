@@ -28,9 +28,9 @@ use tempfile::TempDir;
 use wren_core::mdl::builder::{
     ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder, ViewBuilder,
 };
-use wren_core::mdl::context::{create_ctx_with_mdl, Mode, SessionPropertiesRef};
+use wren_core::mdl::context::{apply_wren_on_ctx, Mode, SessionPropertiesRef};
 use wren_core::mdl::manifest::JoinType;
-use wren_core::mdl::AnalyzedWrenMDL;
+use wren_core::mdl::{create_wren_ctx, AnalyzedWrenMDL};
 
 const TEST_RESOURCES: &str = "tests/resources";
 
@@ -63,7 +63,7 @@ impl TestContext {
             .with_target_partitions(4)
             .with_information_schema(true);
 
-        let ctx = SessionContext::new_with_config(config);
+        let ctx = create_wren_ctx(Some(config));
 
         let file_name = relative_path.file_name().unwrap().to_str().unwrap();
         match file_name {
@@ -78,7 +78,7 @@ impl TestContext {
             _ => {
                 info!("Using default SessionContext");
                 let mdl = Arc::new(AnalyzedWrenMDL::default());
-                let ctx = create_ctx_with_mdl(
+                let ctx = apply_wren_on_ctx(
                     &ctx,
                     mdl.clone(),
                     SessionPropertiesRef::default(),
@@ -311,7 +311,7 @@ async fn register_ecommerce_mdl(
         manifest,
         register_tables,
     )?);
-    let ctx = create_ctx_with_mdl(
+    let ctx = apply_wren_on_ctx(
         ctx,
         Arc::clone(&analyzed_mdl),
         Arc::new(HashMap::new()),
@@ -547,7 +547,7 @@ async fn register_tpch_mdl(
         manifest,
         register_tables,
     )?);
-    let ctx = create_ctx_with_mdl(
+    let ctx = apply_wren_on_ctx(
         ctx,
         Arc::clone(&analyzed_mdl),
         Arc::new(HashMap::new()),

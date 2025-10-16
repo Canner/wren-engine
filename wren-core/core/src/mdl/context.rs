@@ -43,7 +43,7 @@ use parking_lot::RwLock;
 pub type SessionPropertiesRef = Arc<HashMap<String, Option<String>>>;
 
 /// Apply Wren Rules to the context for sql generation.
-pub async fn create_ctx_with_mdl(
+pub async fn apply_wren_on_ctx(
     ctx: &SessionContext,
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
     properties: SessionPropertiesRef,
