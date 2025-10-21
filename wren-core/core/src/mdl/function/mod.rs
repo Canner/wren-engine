@@ -1,4 +1,5 @@
 mod aggregate;
+mod macros;
 mod remote_function;
 mod scalar;
 mod table;
