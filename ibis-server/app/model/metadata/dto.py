@@ -50,6 +50,7 @@ class RustWrenEngineColumnType(Enum):
     INT64 = "INT64"
     TIME = "TIME"
     NULL = "NULL"
+    VARIANT = "VARIANT"
 
     # Extension types
     ## PostGIS
