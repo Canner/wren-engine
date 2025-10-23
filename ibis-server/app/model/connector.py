@@ -216,6 +216,52 @@ class SimpleConnector:
         rounded_col = col.cast(decimal_type).round(scale)
         return result_table.mutate(**{col_name: rounded_col})
 
+    def _transpile_limit_to_top(
+        self, sql_query: str, input_dialect: str = "tsql"
+    ) -> str:
+        try:
+            # Parse the SQL query
+            parsed = sge.parse_one(sql_query, dialect=input_dialect)
+
+            def process_select(node):
+                if isinstance(node, sge.Select):
+                    # Check if this select has a LIMIT
+                    limit_expr = node.args.get("limit")
+
+                    if limit_expr:
+                        # Get the limit value
+                        limit_value = limit_expr.expression
+
+                        # Remove the LIMIT from the select
+                        node.args.pop("limit", None)
+
+                        # Add TOP to the select
+                        node.set(
+                            "limit", sge.Limit(expression=limit_value, dialect="tsql")
+                        )
+
+                    # Process nested queries
+                    for _key, value in node.args.items():
+                        if isinstance(value, list):
+                            for item in value:
+                                if hasattr(item, "walk"):
+                                    for subnode in item.walk():
+                                        process_select(subnode)
+                        elif hasattr(value, "walk"):
+                            for subnode in value.walk():
+                                process_select(subnode)
+
+                return node
+
+            processed = process_select(parsed)
+
+            result = processed.sql(dialect="tsql")
+
+            return result
+
+        except Exception as e:
+            return f"Error: {e!s}"
+
     @tracer.start_as_current_span("connector_dry_run", kind=trace.SpanKind.CLIENT)
     def dry_run(self, sql: str) -> None:
         self.connection.sql(sql)
@@ -300,6 +346,7 @@ class MSSqlConnector(SimpleConnector):
 
     @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
     def query(self, sql: str, limit: int | None = None) -> pa.Table:
+        sql = self._transpile_limit_to_top(sql)
         ibis_table = self.connection.sql(sql)
         if limit is not None:
             ibis_table = ibis_table.limit(limit)
