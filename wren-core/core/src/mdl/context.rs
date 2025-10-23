@@ -23,7 +23,6 @@ use datafusion::datasource::{TableProvider, TableType, ViewTable};
 use datafusion::execution::session_state::SessionStateBuilder;
 use datafusion::logical_expr::Expr;
 use datafusion::optimizer::analyzer::type_coercion::TypeCoercion;
-use datafusion::optimizer::eliminate_cross_join::EliminateCrossJoin;
 use datafusion::optimizer::eliminate_duplicated_expr::EliminateDuplicatedExpr;
 use datafusion::optimizer::eliminate_filter::EliminateFilter;
 use datafusion::optimizer::eliminate_group_by_constant::EliminateGroupByConstant;
@@ -247,7 +246,8 @@ fn optimize_rule_for_unparsing() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
         // Arc::new(SimplifyExpressions::new()),
         Arc::new(EliminateDuplicatedExpr::new()),
         Arc::new(EliminateFilter::new()),
-        Arc::new(EliminateCrossJoin::new()),
+        // Disable EliminateCrossJoin to avoid generate invalid sql (expression should be rebased manually)
+        // Arc::new(EliminateCrossJoin::new()),
         // Disable CommonSubexprEliminate to avoid generate invalid projection plan
         // Arc::new(CommonSubexprEliminate::new()),
         // Arc::new(EliminateLimit::new()),

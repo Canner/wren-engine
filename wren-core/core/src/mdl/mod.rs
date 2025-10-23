@@ -3774,6 +3774,43 @@ mod test {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_disable_eliminate_cross_join() -> Result<()> {
+        let ctx = create_wren_ctx(None);
+
+        // test required property
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_nationkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .build(),
+            )
+            .model(
+                ModelBuilder::new("nation")
+                    .table_reference("nation")
+                    .column(ColumnBuilder::new("n_nationkey", "int").build())
+                    .column(ColumnBuilder::new("n_name", "string").build())
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest,
+            Arc::new(HashMap::default()),
+            Mode::Unparse,
+        )?);
+        let sql = "SELECT * FROM customer, nation WHERE customer.c_nationkey = nation.n_nationkey";
+        let headers = Arc::new(HashMap::default());
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], headers, sql).await?,
+            @"SELECT customer.c_nationkey, customer.c_name, nation.n_nationkey, nation.n_name FROM (SELECT customer.c_name, customer.c_nationkey FROM (SELECT __source.c_name AS c_name, __source.c_nationkey AS c_nationkey FROM customer AS __source) AS customer) AS customer CROSS JOIN (SELECT nation.n_name, nation.n_nationkey FROM (SELECT __source.n_name AS n_name, __source.n_nationkey AS n_nationkey FROM nation AS __source) AS nation) AS nation WHERE customer.c_nationkey = nation.n_nationkey"
+        );
+        Ok(())
+    }
+
     /// Return a RecordBatch with made up data about customer
     fn customer() -> RecordBatch {
         let custkey: ArrayRef = Arc::new(Int64Array::from(vec![1, 2, 3]));
