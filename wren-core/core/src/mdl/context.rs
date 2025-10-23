@@ -247,7 +247,8 @@ fn optimize_rule_for_unparsing() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
         // Arc::new(SimplifyExpressions::new()),
         Arc::new(EliminateDuplicatedExpr::new()),
         Arc::new(EliminateFilter::new()),
-        Arc::new(EliminateCrossJoin::new()),
+        // Disable EliminateCrossJoin to avoid generate invalid sql (expression should be rebased manually)
+        // Arc::new(EliminateCrossJoin::new()),
         // Disable CommonSubexprEliminate to avoid generate invalid projection plan
         // Arc::new(CommonSubexprEliminate::new()),
         // Arc::new(EliminateLimit::new()),
