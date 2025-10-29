@@ -100,6 +100,25 @@ impl Dialect for WrenDialect {
     fn to_unicode_string_literal(&self, s: &str) -> Option<ast::Expr> {
         self.inner_dialect.to_unicode_string_literal(s)
     }
+
+    fn unparse_unnest_table_factor(
+        &self,
+        _unnest: &datafusion::logical_expr::Unnest,
+        _columns: &[ast::Ident],
+        _unparser: &Unparser,
+    ) -> Result<Option<datafusion::sql::unparser::ast::TableFactorBuilder>> {
+        self.inner_dialect
+            .unparse_unnest_table_factor(_unnest, _columns, _unparser)
+    }
+
+    fn relation_alias_overrides(
+        &self,
+        _relation_builder: &mut datafusion::sql::unparser::ast::RelationBuilder,
+        _alias: Option<&ast::TableAlias>,
+    ) -> bool {
+        self.inner_dialect
+            .relation_alias_overrides(_relation_builder, _alias)
+    }
 }
 
 impl Default for WrenDialect {

@@ -71,11 +71,11 @@ async def test_function_list(client):
     assert len(result) == DATAFUSION_FUNCTION_COUNT
 
 
-async def test_scalar_function(client, manifest_str: str, connection_info):
+async def test_scalar_function(client, manifest_str: str, tpch_connection_info):
     response = await client.post(
         url=f"{base_url}/query",
         json={
-            "connectionInfo": connection_info,
+            "connectionInfo": tpch_connection_info,
             "manifestStr": manifest_str,
             "sql": "SELECT ABS(-1) AS col",
         },
@@ -89,11 +89,11 @@ async def test_scalar_function(client, manifest_str: str, connection_info):
     }
 
 
-async def test_aggregate_function(client, manifest_str: str, connection_info):
+async def test_aggregate_function(client, manifest_str: str, tpch_connection_info):
     response = await client.post(
         url=f"{base_url}/query",
         json={
-            "connectionInfo": connection_info,
+            "connectionInfo": tpch_connection_info,
             "manifestStr": manifest_str,
             "sql": "SELECT COUNT(*) AS col FROM (SELECT 1) AS temp_table",
         },
