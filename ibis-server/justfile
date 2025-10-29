@@ -21,7 +21,7 @@ pre-commit-install:
 port := "8000"
 
 run:
-    poetry run fastapi run --port {{ port }}
+    poetry run python -m fastapi run --port {{ port }}
 
 workers := "2"
 

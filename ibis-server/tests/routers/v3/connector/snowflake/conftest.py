@@ -4,9 +4,13 @@ import pathlib
 import pytest
 import snowflake.connector
 
+from app.config import get_config
+from tests.conftest import file_path
+
 pytestmark = pytest.mark.snowflake
 
 base_url = "/v3/connector/snowflake"
+function_list_path = file_path("../resources/function_list")
 
 
 def pytest_collection_modifyitems(items):
@@ -85,6 +89,14 @@ def init_snowflake():
     finally:
         cs.close()
         conn.close()
+
+
+@pytest.fixture(scope="module", autouse=True)
+def set_remote_function_list_path():
+    config = get_config()
+    config.set_remote_function_list_path(function_list_path)
+    yield
+    config.set_remote_function_list_path(None)
 
 
 @pytest.fixture(scope="module")
