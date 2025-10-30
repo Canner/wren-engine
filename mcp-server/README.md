@@ -70,7 +70,10 @@ You would see that the MDL and connection info are loaded. Then, you can use `Ct
 
 ### 3. Set Environment Variables
 
+There are two ways to set the required environment variables:
+- Set up `.env` file in the root directory of the MCP server.
 Make sure all required environment variables are properly configured, either in your system or within a `.env` file.
+- Set up system environment variables in MCP configuration. See the next step.
 
 ### 4. Configure the MCP Server
 
@@ -87,6 +90,11 @@ Create a configuration file with the following structure:
                 "run",
                 "app/wren.py"
             ],
+            "env": {
+                "WREN_URL": "localhost:8000",
+                "CONNECTION_INFO_FILE": "/path-to-connection-info/connection.json",
+                "MDL_PATH": "/path-to-mdl/mdl.json"
+            },
             "autoApprove": [],
             "disabled": false
         }
@@ -107,6 +115,7 @@ The following AI agents are compatible with Wren MCP Server and deploy the MCP c
 
 - **[Claude Desktop](https://modelcontextprotocol.io/quickstart/user)**  
 - **[Cline](https://docs.cline.bot/mcp-servers/mcp-quickstart)**  
+- **[VsCode MCP Extension](https://code.visualstudio.com/docs/copilot/customization/mcp-servers)**
 
 ### 6. Check the Wren Engine is Connected
 
