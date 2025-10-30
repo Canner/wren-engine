@@ -326,7 +326,7 @@ async def get_wren_guide() -> str:
     Here are some tips to use {data_source.capitalize()} effectively:
     """
 
-    if data_source is "snowflake":
+    if data_source == "snowflake":
         tips += """
         1. Snowflake supports semi-structured data types like VARIANT, OBJECT, and ARRAY. You can use these data types to store and query JSON data.
         2. Snowflake has a rich set of built-in functions to process semi-structured data. You can use functions like GET_PATH, TO_VARIANT, TO_ARRAY, etc.
