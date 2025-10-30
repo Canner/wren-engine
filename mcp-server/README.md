@@ -115,6 +115,18 @@ You can ask the AI agent to perform a health check for Wren Engine.
 ### 7. Start the Conversation
 
 Now, you can start asking questions through your AI agent and interact with Wren Engine.
+Tip: prime your agent with a short instruction so it knows how to use the Wren MCP tools.
+
+Recommended prompt:
+```
+Use the get_wren_guide() tool to learn how to use Wren Engine and discover available tools and examples.
+```
+
+Optional follow-ups:
+- "Open the Wren guide."
+- "What Wren MCP tools are available?"
+- "Show me the available tables in Wren Engine."
+- "Query Wren Engine to get ... (your question here)."
 
 ---
 
