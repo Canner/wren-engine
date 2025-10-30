@@ -3811,6 +3811,34 @@ mod test {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_snowflake_unnest() -> Result<()> {
+        let ctx = create_wren_ctx(None);
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("orders")
+                    .table_reference("orders")
+                    .column(ColumnBuilder::new("o_items", "array<string>").build())
+                    .build(),
+            )
+            .data_source(DataSource::Snowflake)
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest,
+            Arc::new(HashMap::default()),
+            Mode::Unparse,
+        )?);
+        let headers = Arc::new(HashMap::default());
+        let sql = "SELECT item FROM orders o, unnest(o.o_items) as t(item)";
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
+            @r#"SELECT t.item FROM (SELECT orders.o_items FROM (SELECT __source.o_items AS o_items FROM orders AS __source) AS orders) AS o CROSS JOIN TABLE(FLATTEN(o.o_items)) AS t ("SEQ", "KEY", "PATH", "INDEX", item, "THIS")"#
+        );
+        Ok(())
+    }
+
     /// Return a RecordBatch with made up data about customer
     fn customer() -> RecordBatch {
         let custkey: ArrayRef = Arc::new(Int64Array::from(vec![1, 2, 3]));

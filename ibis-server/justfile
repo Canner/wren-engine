@@ -21,7 +21,7 @@ pre-commit-install:
 port := "8000"
 
 run:
-    poetry run fastapi run --port {{ port }}
+    poetry run python -m fastapi run --port {{ port }}
 
 workers := "2"
 
@@ -45,7 +45,7 @@ run-trace-otlp:
         --service_name wren-engine \
         fastapi run --port {{ port }}
 dev:
-    poetry run fastapi dev --port {{ port }}
+    poetry run python -m fastapi dev --port {{ port }}
 
 # run the pytest tests for the given marker
 test MARKER:
