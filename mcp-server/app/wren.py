@@ -312,6 +312,8 @@ async def get_current_data_source_type() -> str:
     """
     Get the current data source type
     """
+    if data_source is None:
+        return "No data source connected. Please deploy the MDL first and assign `dataSource` field."
     return data_source
 
 @mcp.tool()
