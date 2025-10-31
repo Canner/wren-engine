@@ -112,11 +112,14 @@ class DatabricksMetadata(Metadata):
             FROM information_schema.table_constraints AS tc
             JOIN information_schema.key_column_usage AS kcu
                 ON tc.constraint_name = kcu.constraint_name
+                AND tc.constraint_schema = kcu.constraint_schema
                 AND tc.table_catalog = kcu.table_catalog
                 AND tc.table_schema = kcu.table_schema
+                AND tc.table_name = kcu.table_name
             JOIN information_schema.constraint_column_usage AS ccu
                 ON ccu.constraint_name = tc.constraint_name
                 AND ccu.constraint_catalog = tc.constraint_catalog
+                AND ccu.constraint_schema = tc.constraint_schema
             WHERE tc.constraint_type = 'FOREIGN KEY'
             """
         res = self.connection.sql(sql).to_pandas().to_dict(orient="records")
