@@ -108,6 +108,8 @@ pub fn data_source(python_binding: proc_macro::TokenStream) -> proc_macro::Token
             Athena,
             #[serde(alias = "redshift")]
             Redshift,
+            #[serde(alias = "databricks")]
+            Databricks,
         }
     };
     proc_macro::TokenStream::from(expanded)

@@ -20,6 +20,7 @@ from app.model import (
     ClickHouseConnectionInfo,
     ConnectionInfo,
     ConnectionUrl,
+    DatabricksConnectionInfo,
     GcsFileConnectionInfo,
     LocalFileConnectionInfo,
     MinioFileConnectionInfo,
@@ -31,6 +32,7 @@ from app.model import (
     QueryBigQueryDTO,
     QueryCannerDTO,
     QueryClickHouseDTO,
+    QueryDatabricksDTO,
     QueryDTO,
     QueryGcsFileDTO,
     QueryLocalFileDTO,
@@ -71,6 +73,7 @@ class DataSource(StrEnum):
     s3_file = auto()
     minio_file = auto()
     gcs_file = auto()
+    databricks = auto()
 
     def get_connection(self, info: ConnectionInfo) -> BaseBackend:
         try:
@@ -176,6 +179,8 @@ class DataSource(StrEnum):
                 return MinioFileConnectionInfo.model_validate(data)
             case DataSource.gcs_file:
                 return GcsFileConnectionInfo.model_validate(data)
+            case DataSource.databricks:
+                return DatabricksConnectionInfo.model_validate(data)
             case _:
                 raise NotImplementedError(f"Unsupported data source: {self}")
 
@@ -225,6 +230,7 @@ class DataSourceExtension(Enum):
     s3_file = QueryS3FileDTO
     minio_file = QueryMinioFileDTO
     gcs_file = QueryGcsFileDTO
+    databricks = QueryDatabricksDTO
 
     def __init__(self, dto: QueryDTO):
         self.dto = dto
@@ -406,6 +412,14 @@ class DataSourceExtension(Enum):
             user=(info.user and info.user.get_secret_value()),
             password=(info.password and info.password.get_secret_value()),
             **info.kwargs if info.kwargs else dict(),
+        )
+
+    @staticmethod
+    def get_databricks_connection(info: DatabricksConnectionInfo) -> BaseBackend:
+        return ibis.databricks.connect(
+            server_hostname=info.server_hostname.get_secret_value(),
+            http_path=info.http_path.get_secret_value(),
+            access_token=info.access_token.get_secret_value(),
         )
 
     @staticmethod

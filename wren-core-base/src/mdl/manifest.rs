@@ -119,6 +119,7 @@ impl Display for DataSource {
             DataSource::Oracle => write!(f, "ORACLE"),
             DataSource::Athena => write!(f, "ATHENA"),
             DataSource::Redshift => write!(f, "REDSHIFT"),
+            DataSource::Databricks => write!(f, "DATABRICKS"),
         }
     }
 }

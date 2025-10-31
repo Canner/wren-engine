@@ -20,6 +20,7 @@ ibis-framework = { git = "https://github.com/Canner/ibis.git", branch = "canner/
   "postgres",
   "snowflake",
   "trino",
+  "databricks",
 ] }
 google-auth = "2.38.0"
 httpx = "0.28.1"
@@ -98,6 +99,7 @@ markers = [
   "redshift: mark a test as a redshift test",
   "snowflake: mark a test as a snowflake test",
   "trino: mark a test as a trino test",
+  "databricks: mark a test as a databricks test",
   "local_file: mark a test as a local file test",
   "s3_file: mark a test as a s3 file test",
   "minio_file: mark a test as a minio file test",
