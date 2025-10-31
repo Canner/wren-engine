@@ -182,6 +182,7 @@ pub fn map_data_type(data_type: &str) -> Result<DataType> {
         "uhugeint" => DataType::UInt64, // we don't have a UHUINT type, so we map it to UInt64
         "bit" => DataType::Boolean, // we don't have a BIT type, so we map it to Boolean
         "timestamp_ns" => DataType::Timestamp(TimeUnit::Nanosecond, None),
+        "any" => DataType::Utf8, // we don't have an ANY type, so we map it to Utf8
         _ => {
             debug!("try parse by arrow {lower_data_type}");
             // the from_str is case sensitive, so we need to use the original string

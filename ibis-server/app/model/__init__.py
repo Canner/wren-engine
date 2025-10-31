@@ -67,6 +67,10 @@ class QuerySnowflakeDTO(QueryDTO):
     connection_info: SnowflakeConnectionInfo = connection_info_field
 
 
+class QueryDatabricksDTO(QueryDTO):
+    connection_info: DatabricksConnectionInfo = connection_info_field
+
+
 class QueryTrinoDTO(QueryDTO):
     connection_info: ConnectionUrl | TrinoConnectionInfo = connection_info_field
 
@@ -360,6 +364,24 @@ class SnowflakeConnectionInfo(BaseConnectionInfo):
     )
 
 
+class DatabricksConnectionInfo(BaseConnectionInfo):
+    server_hostname: SecretStr = Field(
+        alias="serverHostname",
+        description="the server hostname of your Databricks instance",
+        examples=["dbc-xxxxxxxx-xxxx.cloud.databricks.com"],
+    )
+    http_path: SecretStr = Field(
+        alias="httpPath",
+        description="the HTTP path of your Databricks SQL warehouse",
+        examples=["/sql/1.0/warehouses/xxxxxxxx"],
+    )
+    access_token: SecretStr = Field(
+        alias="accessToken",
+        description="the access token for your Databricks instance",
+        examples=["XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"],
+    )
+
+
 class TrinoConnectionInfo(BaseConnectionInfo):
     host: SecretStr = Field(
         description="the hostname of your database", examples=["localhost"]
@@ -485,6 +507,7 @@ ConnectionInfo = (
     | RedshiftConnectionInfo
     | RedshiftIAMConnectionInfo
     | SnowflakeConnectionInfo
+    | DatabricksConnectionInfo
     | TrinoConnectionInfo
     | LocalFileConnectionInfo
     | S3FileConnectionInfo

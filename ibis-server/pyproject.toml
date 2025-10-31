@@ -20,6 +20,7 @@ ibis-framework = { git = "https://github.com/Canner/ibis.git", branch = "canner/
   "postgres",
   "snowflake",
   "trino",
+  "databricks",
 ] }
 google-auth = "2.38.0"
 httpx = "0.28.1"
@@ -48,6 +49,7 @@ jinja2 = ">=3.1.6"
 redshift_connector = "2.1.7"
 datafusion = "^47.0.0, <49.0.0"
 starlette = "^0.49.1"
+databricks-sql-connector = { version = "^4.0.1", extras = ["pyarrow"] }
 
 [tool.poetry.group.jupyter]
 optional = true
@@ -98,6 +100,7 @@ markers = [
   "redshift: mark a test as a redshift test",
   "snowflake: mark a test as a snowflake test",
   "trino: mark a test as a trino test",
+  "databricks: mark a test as a databricks test",
   "local_file: mark a test as a local file test",
   "s3_file: mark a test as a s3 file test",
   "minio_file: mark a test as a minio file test",
