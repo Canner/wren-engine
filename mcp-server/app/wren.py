@@ -37,11 +37,11 @@ else:
 
 
 async def make_query_request(sql: str, dry_run: bool = False):
-    headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
+    headers = {"User-Agent": USER_AGENT, "Accept": "application/json", "x-wren-fallback_disable": "true"}
     async with httpx.AsyncClient() as client:
         try:
             response = await client.post(
-                f"http://{WREN_URL}/v3/connector/{data_source}/query?dry_run={dry_run}",
+                f"http://{WREN_URL}/v3/connector/{data_source}/query?dryRun={dry_run}",
                 headers=headers,
                 json={
                     "sql": sql,
@@ -82,6 +82,17 @@ async def make_constraints_list_request():
         except Exception as e:
             return e
 
+async def make_get_available_functions_request():
+    headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(
+                f"http://{WREN_URL}/v3/connector/{data_source}/functions",
+                headers=headers,
+            )
+            return response.text
+        except Exception as e:
+            return e
 
 @mcp.resource("resource://mdl_json_schema")
 async def get_mdl_json_schema() -> str:
@@ -148,8 +159,8 @@ async def dry_run(sql: str) -> str:
     dry run before running the actual query.
     """
     try:
-        await make_query_request(sql, True)
-        return "Query is valid"
+        response = await make_query_request(sql, True)
+        return response.text
     except Exception as e:
         return e
 
@@ -183,13 +194,13 @@ async def get_available_tables_resource() -> str:
 
 
 @mcp.tool()
-async def get_available_tables() -> str:
+async def get_available_tables() -> list[str]:
     """
     Get the available tables in Wren Engine
     """
     mdl = orjson.loads(base64.b64decode(mdl_base64).decode("utf-8"))
     # return only table name
-    return [table["name"] for table in mdl["models"]]
+    return [table["name"] for table in mdl["models"]]   
 
 
 @mcp.tool()
@@ -288,11 +299,69 @@ async def get_relationships() -> str:
     return orjson.dumps(mdl["relationships"]).decode("utf-8")
 
 
-# TODO: implement this tool
-# @mcp.tool()
-# async def get_available_functions() -> str:
-#     pass
+@mcp.tool()
+async def get_available_functions() -> str:
+    """
+    Get the available functions of connected DataSource Type
+    """
+    response = await make_get_available_functions_request()
+    return response
 
+@mcp.tool()
+async def get_current_data_source_type() -> str:
+    """
+    Get the current data source type
+    """
+    if data_source is None:
+        return "No data source connected. Please deploy the MDL first and assign `dataSource` field."
+    return data_source
+
+@mcp.tool()
+async def get_wren_guide() -> str:
+    """
+    Understand how to use Wren Engine effectively to query your database
+    """
+
+    tips = f"""
+    ## Tips for using Wren Engine with {data_source.capitalize()}
+    You are connected to a {data_source.capitalize()} database via Wren Engine.
+    Here are some tips to use {data_source.capitalize()} effectively:
+    """
+
+    if data_source == "snowflake":
+        tips += """
+        1. Snowflake supports semi-structured data types like VARIANT, OBJECT, and ARRAY. You can use these data types to store and query JSON data.
+        2. Snowflake has a rich set of built-in functions to process semi-structured data. You can use functions like GET_PATH, TO_VARIANT, TO_ARRAY, etc.
+        3. For process semi-structure data type (e.g. `VARIANT`), you can use `get_path` function to extract the value from the semi-structure data.
+        4. For process array data type (e.g. `ARRAY`), you can use `UNNEST` function to flatten the array data. `UNNEST` only accepts array column as input. If you extract an array value by `get_path` function, you need to cast it to array type (by `to_array` function) before using `UNNEST`.
+        """
+    else:
+        tips += f"""
+        1. Use {data_source.capitalize()}'s specific functions and features to optimize your queries.
+        2. Refer to {data_source.capitalize()}'s documentation for more details on how to use its features effectively.
+        """
+
+    return f"""
+    Wren Engine is a semantic layer to help you query your database easily using SQL. It supports ANSI SQL to query your database.
+    Wren SQL doesn't equal to your database SQL. Wren Engine translates your Wren SQL to your database SQL internally.
+    Avoid to use database specific SQL syntax in your Wren SQL.
+    The models you can access are defined in the MDL (Model Definition Language) schema you deployed.
+
+    Here are some tips to use Wren Engine effectively:
+    1. Use simple SQL queries to get data from your tables. You can use SELECT, WHERE, JOIN, GROUP BY, ORDER BY, etc.
+    2. Use table and column names as defined in the MDL schema.
+    3. Use aliases to make your queries more readable.
+    4. Use functions supported by your data source type. You can get the list of available functions using the `get_available_functions` tool.
+    5. Avoid to use `LATERAL` statement in your queries, as Wren Engine may not support it well. Use normal `JOIN` or `CROSS JOIN UNNEST` instead.
+    6. Check the tips below for some general tips and some tips specific to the connected DataSource Type.
+    {tips}
+
+    ## General Tips
+    1. If you encounter any issues, please check the health of Wren Engine using the `health_check` tool.
+    2. You can also get the deployed MDL schema using the `get_manifest` tool.
+    3. If the number of deployed tables and columns is huge, you can use `get_available_tables`, `get_table_info`, and `get_column_info` tools to get only the required table and column info.
+    4. You can validate your SQL query using the `dry_run` tool before running the actual query.
+    """
 
 @mcp.tool()
 async def health_check() -> str:

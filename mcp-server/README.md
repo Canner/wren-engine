@@ -70,7 +70,10 @@ You would see that the MDL and connection info are loaded. Then, you can use `Ct
 
 ### 3. Set Environment Variables
 
+There are two ways to set the required environment variables:
+- Set up `.env` file in the root directory of the MCP server.
 Make sure all required environment variables are properly configured, either in your system or within a `.env` file.
+- Set up system environment variables in MCP configuration. See the next step.
 
 ### 4. Configure the MCP Server
 
@@ -87,6 +90,11 @@ Create a configuration file with the following structure:
                 "run",
                 "app/wren.py"
             ],
+            "env": {
+                "WREN_URL": "localhost:8000",
+                "CONNECTION_INFO_FILE": "/path-to-connection-info/connection.json",
+                "MDL_PATH": "/path-to-mdl/mdl.json"
+            },
             "autoApprove": [],
             "disabled": false
         }
@@ -107,6 +115,7 @@ The following AI agents are compatible with Wren MCP Server and deploy the MCP c
 
 - **[Claude Desktop](https://modelcontextprotocol.io/quickstart/user)**  
 - **[Cline](https://docs.cline.bot/mcp-servers/mcp-quickstart)**  
+- **[VsCode MCP Extension](https://code.visualstudio.com/docs/copilot/customization/mcp-servers)**
 
 ### 6. Check the Wren Engine is Connected
 
@@ -115,6 +124,18 @@ You can ask the AI agent to perform a health check for Wren Engine.
 ### 7. Start the Conversation
 
 Now, you can start asking questions through your AI agent and interact with Wren Engine.
+Tip: prime your agent with a short instruction so it knows how to use the Wren MCP tools.
+
+Recommended prompt:
+```
+Use the get_wren_guide() tool to learn how to use Wren Engine and discover available tools and examples.
+```
+
+Optional follow-ups:
+- "Open the Wren guide."
+- "What Wren MCP tools are available?"
+- "Show me the available tables in Wren Engine."
+- "Query Wren Engine to get ... (your question here)."
 
 ---
 
