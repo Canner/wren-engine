@@ -54,6 +54,7 @@ class DatabricksMetadata(Metadata):
                 INFORMATION_SCHEMA.TABLES t
                 ON c.TABLE_SCHEMA = t.TABLE_SCHEMA
                 AND c.TABLE_NAME = t.TABLE_NAME
+                AND c.TABLE_CATALOG = t.TABLE_CATALOG
             WHERE
                 c.TABLE_SCHEMA NOT IN ('information_schema')
         """
@@ -111,9 +112,11 @@ class DatabricksMetadata(Metadata):
             FROM information_schema.table_constraints AS tc
             JOIN information_schema.key_column_usage AS kcu
                 ON tc.constraint_name = kcu.constraint_name
+                AND tc.table_catalog = kcu.table_catalog
                 AND tc.table_schema = kcu.table_schema
             JOIN information_schema.constraint_column_usage AS ccu
                 ON ccu.constraint_name = tc.constraint_name
+                AND ccu.constraint_catalog = tc.constraint_catalog
             WHERE tc.constraint_type = 'FOREIGN KEY'
             """
         res = self.connection.sql(sql).to_pandas().to_dict(orient="records")
