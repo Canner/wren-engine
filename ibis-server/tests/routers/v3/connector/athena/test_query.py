@@ -211,3 +211,23 @@ async def test_query_with_dry_run_and_invalid_sql(
     )
     assert response.status_code == 422
     assert response.text is not None
+
+
+@pytest.mark.parametrize(
+    "conn_fixture", ["connection_info_static", "connection_info_oidc"]
+)
+async def test_query_athena_modes(client, manifest_str, request, conn_fixture):
+    connection_info = request.getfixturevalue(conn_fixture)
+
+    response = await client.post(
+        url="/v3/connector/athena/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT 1",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert "columns" in result
+    assert "data" in result

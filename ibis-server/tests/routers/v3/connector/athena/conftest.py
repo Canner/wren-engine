@@ -21,13 +21,24 @@ def pytest_collection_modifyitems(items):
 
 
 @pytest.fixture(scope="session")
-def connection_info():
+def connection_info_oidc():
+    """Use web identity token (OIDC → AssumeRoleWithWebIdentity) authentication."""
+    token_path = os.getenv("TEST_ATHENA_WEB_IDENTITY_TOKEN_PATH")
+    role_arn = os.getenv("TEST_ATHENA_ROLE_ARN")
+
+    if not token_path or not role_arn:
+        pytest.skip("Skipping OIDC test: web identity token or role ARN not set")
+
+    with open(token_path, encoding="utf-8") as f:
+        web_identity_token = f.read().strip()
+
     return {
         "s3_staging_dir": os.getenv("TEST_ATHENA_S3_STAGING_DIR"),
-        "aws_access_key_id": os.getenv("TEST_ATHENA_AWS_ACCESS_KEY_ID"),
-        "aws_secret_access_key": os.getenv("TEST_ATHENA_AWS_SECRET_ACCESS_KEY"),
         "region_name": os.getenv("TEST_ATHENA_REGION_NAME", "ap-northeast-1"),
         "schema_name": "test",
+        "role_arn": role_arn,
+        "role_session_name": "pytest-session",
+        "web_identity_token": web_identity_token,
     }
 
 

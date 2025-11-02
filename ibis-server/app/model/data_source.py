@@ -254,13 +254,47 @@ class DataSourceExtension(Enum):
 
     @staticmethod
     def get_athena_connection(info: AthenaConnectionInfo) -> BaseBackend:
-        return ibis.athena.connect(
-            s3_staging_dir=info.s3_staging_dir.get_secret_value(),
-            aws_access_key_id=info.aws_access_key_id.get_secret_value(),
-            aws_secret_access_key=info.aws_secret_access_key.get_secret_value(),
-            region_name=info.region_name.get_secret_value(),
-            schema_name=info.schema_name.get_secret_value(),
-        )
+        kwargs: dict[str, Any] = {
+            "s3_staging_dir": info.s3_staging_dir.get_secret_value(),
+            "schema_name": info.schema_name.get_secret_value(),
+        }
+
+        # ── Region ────────────────────────────────────────────────
+        if info.region_name:
+            kwargs["region_name"] = info.region_name.get_secret_value()
+
+        # ── Optional WorkGroup & Result Reuse ─────────────────────
+        if info.work_group:
+            kwargs["work_group"] = info.work_group.get_secret_value()
+        if info.result_reuse_enable is not None:
+            kwargs["result_reuse_enable"] = info.result_reuse_enable
+        if info.result_reuse_minutes is not None:
+            kwargs["result_reuse_minutes"] = info.result_reuse_minutes
+
+        # ── 1️⃣ Web Identity Token flow (Google OIDC → AWS STS) ───
+        if info.web_identity_token and info.role_arn:
+            kwargs["web_identity_token"] = info.web_identity_token.get_secret_value()
+            kwargs["role_arn"] = info.role_arn.get_secret_value()
+            if info.role_session_name:
+                kwargs["role_session_name"] = info.role_session_name.get_secret_value()
+
+        # ── 2️⃣ Standard Access/Secret Keys ───────────────────────
+        elif info.aws_access_key_id and info.aws_secret_access_key:
+            kwargs["aws_access_key_id"] = info.aws_access_key_id.get_secret_value()
+            kwargs["aws_secret_access_key"] = (
+                info.aws_secret_access_key.get_secret_value()
+            )
+            if info.aws_session_token:
+                kwargs["aws_session_token"] = info.aws_session_token.get_secret_value()
+
+        # ── 3️⃣ Default AWS credential chain ───────────────────────
+        # Nothing needed — PyAthena automatically falls back to:
+        #   - Environment variables
+        #   - ~/.aws/credentials
+        #   - IAM Role (EC2, ECS, Lambda)
+
+        # Now connect via Ibis wrapper
+        return ibis.athena.connect(**kwargs)
 
     @staticmethod
     def get_bigquery_connection(info: BigQueryConnectionInfo) -> BaseBackend:

@@ -118,19 +118,55 @@ class AthenaConnectionInfo(BaseConnectionInfo):
         description="S3 staging directory for Athena queries",
         examples=["s3://my-bucket/athena-staging/"],
     )
-    aws_access_key_id: SecretStr = Field(
-        description="AWS access key ID", examples=["AKIA..."]
+
+    # ── Standard AWS credential chain (optional) ─────────────
+    aws_access_key_id: SecretStr | None = Field(
+        description="AWS access key ID. Optional if using IAM role, web identity token, or default credential chain.",
+        examples=["AKIA..."],
+        default=None,
     )
-    aws_secret_access_key: SecretStr = Field(
-        description="AWS secret access key", examples=["my-secret-key"]
+    aws_secret_access_key: SecretStr | None = Field(
+        description="AWS secret access key. Optional if using IAM role, web identity token, or default credential chain.",
+        examples=["my-secret-key"],
+        default=None,
     )
-    region_name: SecretStr = Field(
-        description="AWS region for Athena", examples=["us-west-2", "us-east-1"]
+    aws_session_token: SecretStr | None = Field(
+        description="AWS session token (used for temporary credentials)",
+        examples=["IQoJb3JpZ2luX2VjEJz//////////wEaCXVzLWVhc3QtMSJHMEUCIQD..."],
+        default=None,
     )
-    schema_name: SecretStr = Field(
+
+    # ── Web identity federation (OIDC/JWT-based) ─────────────
+    web_identity_token: SecretStr | None = Field(
+        description=(
+            "OIDC web identity token (JWT) used for AssumeRoleWithWebIdentity authentication. "
+            "If provided, PyAthena will call STS to exchange it for temporary credentials."
+        ),
+        examples=["eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."],
+        default=None,
+    )
+    role_arn: SecretStr | None = Field(
+        description="The ARN of the role to assume with the web identity token.",
+        examples=["arn:aws:iam::123456789012:role/YourAthenaRole"],
+        default=None,
+    )
+    role_session_name: SecretStr | None = Field(
+        description="The session name when assuming a role (optional).",
+        examples=["PyAthena-session"],
+        default=None,
+    )
+
+    # ── Regional and database settings ───────────────────────
+    region_name: SecretStr | None = Field(
+        description="AWS region for Athena. Optional; will use default region if not provided.",
+        examples=["us-west-2", "us-east-1"],
+        default=None,
+    )
+    schema_name: SecretStr | None = Field(
         alias="schema_name",
-        description="The database name in Athena",
+        description="The database name in Athena. Defaults to 'default'.",
         examples=["default"],
+        default=SecretStr("default"),
     )
 
 
