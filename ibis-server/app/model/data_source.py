@@ -263,14 +263,6 @@ class DataSourceExtension(Enum):
         if info.region_name:
             kwargs["region_name"] = info.region_name.get_secret_value()
 
-        # ── Optional WorkGroup & Result Reuse ─────────────────────
-        if info.work_group:
-            kwargs["work_group"] = info.work_group.get_secret_value()
-        if info.result_reuse_enable is not None:
-            kwargs["result_reuse_enable"] = info.result_reuse_enable
-        if info.result_reuse_minutes is not None:
-            kwargs["result_reuse_minutes"] = info.result_reuse_minutes
-
         # ── 1️⃣ Web Identity Token flow (Google OIDC → AWS STS) ───
         if info.web_identity_token and info.role_arn:
             kwargs["web_identity_token"] = info.web_identity_token.get_secret_value()

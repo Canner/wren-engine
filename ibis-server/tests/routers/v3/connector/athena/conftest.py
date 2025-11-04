@@ -21,6 +21,33 @@ def pytest_collection_modifyitems(items):
 
 
 @pytest.fixture(scope="session")
+def connection_info():
+    return {
+        "s3_staging_dir": os.getenv("TEST_ATHENA_S3_STAGING_DIR"),
+        "aws_access_key_id": os.getenv("TEST_ATHENA_AWS_ACCESS_KEY_ID"),
+        "aws_secret_access_key": os.getenv("TEST_ATHENA_AWS_SECRET_ACCESS_KEY"),
+        "region_name": os.getenv("TEST_ATHENA_REGION_NAME", "ap-northeast-1"),
+        "schema_name": "test",
+    }
+
+
+@pytest.fixture(scope="session")
+def connection_info_default_credential_chain():
+    # Use default authentication (e.g., from environment variables, shared config file, or EC2 instance profile)
+    access_key = os.getenv("AWS_ACCESS_KEY_ID")
+    secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+    if not access_key or not secret_key:
+        pytest.skip(
+            "Skipping default credential chain test: AWS credentials not set in environment"
+        )
+    return {
+        "s3_staging_dir": os.getenv("TEST_ATHENA_S3_STAGING_DIR"),
+        "region_name": os.getenv("TEST_ATHENA_REGION_NAME", "ap-northeast-1"),
+        "schema_name": "test",
+    }
+
+
+@pytest.fixture(scope="session")
 def connection_info_oidc():
     """Use web identity token (OIDC → AssumeRoleWithWebIdentity) authentication."""
     token_path = os.getenv("TEST_ATHENA_WEB_IDENTITY_TOKEN_PATH")
@@ -37,7 +64,6 @@ def connection_info_oidc():
         "region_name": os.getenv("TEST_ATHENA_REGION_NAME", "ap-northeast-1"),
         "schema_name": "test",
         "role_arn": role_arn,
-        "role_session_name": "pytest-session",
         "web_identity_token": web_identity_token,
     }
 

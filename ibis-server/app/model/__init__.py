@@ -157,7 +157,7 @@ class AthenaConnectionInfo(BaseConnectionInfo):
     )
 
     # ── Regional and database settings ───────────────────────
-    region_name: SecretStr | None = Field(
+    region_name: SecretStr = Field(
         description="AWS region for Athena. Optional; will use default region if not provided.",
         examples=["us-west-2", "us-east-1"],
         default=None,

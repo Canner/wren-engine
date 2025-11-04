@@ -90,7 +90,7 @@ async def test_query(client, manifest_str, connection_info):
         "orderkey": "int64",
         "custkey": "int64",
         "orderstatus": "string",
-        "totalprice": "decimal128(15, 2)",
+        "totalprice": "decimal128(38, 9)",
         "orderdate": "date32[day]",
         "order_cust_key": "string",
         "timestamp": "timestamp[us]",
@@ -214,7 +214,7 @@ async def test_query_with_dry_run_and_invalid_sql(
 
 
 @pytest.mark.parametrize(
-    "conn_fixture", ["connection_info_static", "connection_info_oidc"]
+    "conn_fixture", ["connection_info", "connection_info_default_credential_chain"]
 )
 async def test_query_athena_modes(client, manifest_str, request, conn_fixture):
     connection_info = request.getfixturevalue(conn_fixture)
@@ -224,7 +224,7 @@ async def test_query_athena_modes(client, manifest_str, request, conn_fixture):
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": "SELECT 1",
+            "sql": "SELECT * FROM wren.public.orders LIMIT 1",
         },
     )
     assert response.status_code == 200

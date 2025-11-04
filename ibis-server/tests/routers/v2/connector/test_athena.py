@@ -59,7 +59,7 @@ manifest = {
                 },
                 {
                     "name": "timestamptz",
-                    "expression": "TIMESTAMP '2024-01-01 23:59:59 UTC'",
+                    "expression": "CAST(TIMESTAMP '2024-01-01 23:59:59 UTC' AS timestamp)",
                     "type": "timestamp",
                 },
                 {
@@ -113,7 +113,7 @@ async def test_query(client, manifest_str):
         "orderkey": "int64",
         "custkey": "int64",
         "orderstatus": "string",
-        "totalprice": "decimal128(15, 2)",
+        "totalprice": "decimal128(38, 9)",
         "orderdate": "date32[day]",
         "order_cust_key": "string",
         "timestamp": "timestamp[us]",
@@ -153,7 +153,7 @@ async def test_query_glue_database(client, manifest_str):
         "orderkey": "int64",
         "custkey": "int64",
         "orderstatus": "string",
-        "totalprice": "decimal128(15, 2)",
+        "totalprice": "decimal128(38, 9)",
         "orderdate": "date32[day]",
         "order_cust_key": "string",
         "timestamp": "timestamp[us]",
