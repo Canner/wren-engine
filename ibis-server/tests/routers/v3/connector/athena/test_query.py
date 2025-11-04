@@ -229,5 +229,29 @@ async def test_query_athena_modes(client, manifest_str, request, conn_fixture):
     )
     assert response.status_code == 200
     result = response.json()
-    assert "columns" in result
-    assert "data" in result
+    assert len(result["columns"]) == len(manifest["models"][0]["columns"])
+    assert len(result["data"]) == 1
+
+    assert result["data"][0] == [
+        1,
+        36901,
+        "O",
+        "173665.47",
+        "1996-01-02",
+        "1_36901",
+        "2024-01-01 23:59:59.000000",
+        "2024-01-01 23:59:59.000000",
+        None,
+    ]
+
+    assert result["dtypes"] == {
+        "orderkey": "int64",
+        "custkey": "int64",
+        "orderstatus": "string",
+        "totalprice": "decimal128(38, 9)",
+        "orderdate": "date32[day]",
+        "order_cust_key": "string",
+        "timestamp": "timestamp[us]",
+        "timestamptz": "timestamp[us]",
+        "test_null_time": "timestamp[us]",
+    }
