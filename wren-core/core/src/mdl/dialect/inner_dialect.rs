@@ -270,7 +270,7 @@ impl BigQueryDialect {
         }
         let Expr::Literal(ScalarValue::Utf8(Some(s)), _) = args[0].clone() else {
             return plan_err!(
-                "{} requires a string literal as the third argument",
+                "{} requires a string literal as the third argument (granularity)",
                 func_name
             );
         };
