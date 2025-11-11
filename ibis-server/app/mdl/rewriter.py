@@ -157,12 +157,19 @@ class EmbeddedEngineRewriter:
 
     @tracer.start_as_current_span("embedded_rewrite", kind=trace.SpanKind.INTERNAL)
     def rewrite_sync(
-        self, manifest_str: str, sql: str, properties: dict | None = None
+        self,
+        manifest_str: str,
+        sql: str,
+        properties: dict | None = None,
+        data_source: DataSource = None,
     ) -> str:
         try:
             processed_properties = self.get_session_properties(properties)
             session_context = get_session_context(
-                manifest_str, self.function_path, processed_properties
+                manifest_str,
+                self.function_path,
+                processed_properties,
+                data_source.name if data_source else None,
             )
             return session_context.transform_sql(sql)
         except Exception as e:
