@@ -63,7 +63,7 @@ impl TestContext {
             .with_target_partitions(4)
             .with_information_schema(true);
 
-        let ctx = create_wren_ctx(Some(config));
+        let ctx = create_wren_ctx(Some(config), None);
 
         let file_name = relative_path.file_name().unwrap().to_str().unwrap();
         match file_name {

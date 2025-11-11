@@ -9,11 +9,11 @@ use datafusion::{
     logical_expr::ScalarUDF,
 };
 
-use crate::make_udf_function;
+use crate::make_datafusion_udf_function;
 
 mod to_char;
 
-make_udf_function!(to_char::ToCharFunc, to_char);
+make_datafusion_udf_function!(to_char::ToCharFunc, to_char);
 
 pub fn scalar_functions() -> Vec<Arc<ScalarUDF>> {
     vec![

@@ -3,6 +3,7 @@ use crate::logical_plan::error::WrenError;
 use crate::logical_plan::utils::{from_qualified_name_str, try_map_data_type};
 use crate::mdl::builder::ManifestBuilder;
 use crate::mdl::context::{apply_wren_on_ctx, Mode, WrenDataSource};
+use crate::mdl::dialect::inner_dialect::get_inner_dialect;
 use crate::mdl::function::{
     ByPassAggregateUDF, ByPassScalarUDF, ByPassWindowFunction, FunctionType,
     RemoteFunction,
@@ -364,13 +365,26 @@ impl WrenMDL {
 }
 
 /// Create a SessionContext with the default functions registered
-pub fn create_wren_ctx(config: Option<SessionConfig>) -> SessionContext {
+pub fn create_wren_ctx(
+    config: Option<SessionConfig>,
+    data_source: Option<&DataSource>,
+) -> SessionContext {
     let builder = SessionStateBuilder::new()
         .with_expr_planners(SessionStateDefaults::default_expr_planners())
-        .with_scalar_functions(crate::mdl::function::scalar_functions())
-        .with_aggregate_functions(crate::mdl::function::aggregate_functions())
-        .with_window_functions(crate::mdl::function::window_functions())
         .with_table_function_list(crate::mdl::function::table_functions());
+
+    let builder = if let Some(data_source) = data_source {
+        let dialect = get_inner_dialect(data_source);
+        builder
+            .with_scalar_functions(dialect.supported_udfs())
+            .with_aggregate_functions(dialect.supported_udafs())
+            .with_window_functions(dialect.supported_udwfs())
+    } else {
+        builder
+            .with_scalar_functions(crate::mdl::function::scalar_functions())
+            .with_aggregate_functions(crate::mdl::function::aggregate_functions())
+            .with_window_functions(crate::mdl::function::window_functions())
+    };
 
     let builder = if let Some(config) = config {
         builder.with_config(config)
@@ -390,7 +404,7 @@ pub fn transform_sql(
 ) -> Result<String> {
     let runtime = tokio::runtime::Runtime::new().unwrap();
     runtime.block_on(transform_sql_with_ctx(
-        &create_wren_ctx(None),
+        &create_wren_ctx(None, analyzed_mdl.wren_mdl().data_source().as_ref()),
         analyzed_mdl,
         remote_functions,
         Arc::new(properties),
@@ -472,12 +486,12 @@ async fn permission_analyze(
     remote_functions: &[RemoteFunction],
     properties: SessionPropertiesRef,
 ) -> Result<()> {
+    let ctx = create_wren_ctx(None, manifest.data_source.as_ref());
     let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
         manifest,
         Arc::clone(&properties),
         Mode::PermissionAnalyze,
     )?);
-    let ctx = create_wren_ctx(None);
     remote_functions.iter().try_for_each(|remote_function| {
         debug!("Registering remote function: {remote_function:?}");
         register_remote_function(&ctx, remote_function)?;
@@ -517,24 +531,24 @@ fn register_remote_function(
     remote_function: &RemoteFunction,
 ) -> Result<()> {
     match &remote_function.function_type {
-        FunctionType::Scalar => {
-            ctx.register_udf(ScalarUDF::new_from_impl(ByPassScalarUDF::new(
+        FunctionType::Scalar => ctx.register_udf(ScalarUDF::new_from_impl(
+            ByPassScalarUDF::new_with_return_type(
                 &remote_function.name,
                 try_map_data_type(&remote_function.return_type)?,
-            )))
-        }
-        FunctionType::Aggregate => {
-            ctx.register_udaf(AggregateUDF::new_from_impl(ByPassAggregateUDF::new(
+            ),
+        )),
+        FunctionType::Aggregate => ctx.register_udaf(AggregateUDF::new_from_impl(
+            ByPassAggregateUDF::new_with_return_type(
                 &remote_function.name,
                 try_map_data_type(&remote_function.return_type)?,
-            )))
-        }
-        FunctionType::Window => {
-            ctx.register_udwf(WindowUDF::new_from_impl(ByPassWindowFunction::new(
+            ),
+        )),
+        FunctionType::Window => ctx.register_udwf(WindowUDF::new_from_impl(
+            ByPassWindowFunction::new_with_return_type(
                 &remote_function.name,
                 try_map_data_type(&remote_function.return_type)?,
-            )))
-        }
+            ),
+        )),
     };
     Ok(())
 }
@@ -644,7 +658,7 @@ mod test {
         for sql in tests {
             println!("Original: {sql}");
             let actual = mdl::transform_sql_with_ctx(
-                &create_wren_ctx(None),
+                &create_wren_ctx(None, analyzed_mdl.wren_mdl().data_source().as_ref()),
                 Arc::clone(&analyzed_mdl),
                 &[],
                 Arc::new(HashMap::new()),
@@ -677,7 +691,7 @@ mod test {
         let sql = "select * from test.test.customer_view";
         println!("Original: {sql}");
         let _ = transform_sql_with_ctx(
-            &create_wren_ctx(None),
+            &create_wren_ctx(None, analyzed_mdl.wren_mdl().data_source().as_ref()),
             Arc::clone(&analyzed_mdl),
             &[],
             Arc::new(HashMap::new()),
@@ -709,7 +723,7 @@ mod test {
         )?);
         let sql = "select totalcost from profile";
         let result = transform_sql_with_ctx(
-            &create_wren_ctx(None),
+            &create_wren_ctx(None, analyzed_mdl.wren_mdl().data_source().as_ref()),
             Arc::clone(&analyzed_mdl),
             &[],
             Arc::new(HashMap::new()),
@@ -720,7 +734,7 @@ mod test {
 
         let sql = "select totalcost from profile where p_sex = 'M'";
         let result = transform_sql_with_ctx(
-            &create_wren_ctx(None),
+            &create_wren_ctx(None, analyzed_mdl.wren_mdl().data_source().as_ref()),
             Arc::clone(&analyzed_mdl),
             &[],
             Arc::new(HashMap::new()),
@@ -734,8 +748,6 @@ mod test {
 
     #[tokio::test]
     async fn test_uppercase_catalog_schema() -> Result<()> {
-        let ctx = create_wren_ctx(None);
-        ctx.register_batch("customer", customer())?;
         let manifest = ManifestBuilder::new()
             .catalog("CTest")
             .schema("STest")
@@ -754,7 +766,7 @@ mod test {
         )?);
         let sql = r#"select * from CTest.STest.Customer"#;
         let actual = mdl::transform_sql_with_ctx(
-            &create_wren_ctx(None),
+            &create_wren_ctx(None, analyzed_mdl.wren_mdl().data_source().as_ref()),
             Arc::clone(&analyzed_mdl),
             &[],
             Arc::new(HashMap::new()),
@@ -775,7 +787,6 @@ mod test {
             [env!("CARGO_MANIFEST_DIR"), "tests", "data", "functions.csv"]
                 .iter()
                 .collect();
-        let ctx = create_wren_ctx(None);
         let functions = csv::Reader::from_path(test_data)
             .unwrap()
             .into_deserialize::<RemoteFunction>()
@@ -797,6 +808,7 @@ mod test {
             Arc::new(HashMap::default()),
             Mode::Unparse,
         )?);
+        let ctx = create_wren_ctx(None, analyzed_mdl.wren_mdl().data_source().as_ref());
         let actual = transform_sql_with_ctx(
             &ctx,
             Arc::clone(&analyzed_mdl),
@@ -834,7 +846,7 @@ mod test {
 
     #[tokio::test]
     async fn test_unicode_remote_column_name() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         ctx.register_batch("artist", artist())?;
         let manifest = ManifestBuilder::new()
             .catalog("wren")
@@ -873,7 +885,7 @@ mod test {
         )?);
         let sql = r#"select * from wren.test.artist"#;
         let actual = transform_sql_with_ctx(
-            &create_wren_ctx(None),
+            &create_wren_ctx(None, None),
             Arc::clone(&analyzed_mdl),
             &[],
             Arc::new(HashMap::new()),
@@ -887,7 +899,7 @@ mod test {
 
         let sql = r#"select group from wren.test.artist"#;
         let actual = transform_sql_with_ctx(
-            &create_wren_ctx(None),
+            &create_wren_ctx(None, None),
             Arc::clone(&analyzed_mdl),
             &[],
             Arc::new(HashMap::new()),
@@ -900,7 +912,7 @@ mod test {
 
         let sql = r#"select subscribe_plus from wren.test.artist"#;
         let actual = mdl::transform_sql_with_ctx(
-            &create_wren_ctx(None),
+            &create_wren_ctx(None, None),
             Arc::clone(&analyzed_mdl),
             &[],
             Arc::new(HashMap::new()),
@@ -914,7 +926,7 @@ mod test {
 
     #[tokio::test]
     async fn test_invalid_infer_remote_table() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         ctx.register_batch("artist", artist())?;
         let manifest = ManifestBuilder::new()
             .catalog("wren")
@@ -943,7 +955,7 @@ mod test {
         )?);
         let sql = r#"select name_append from wren.test.artist"#;
         let _ = transform_sql_with_ctx(
-            &create_wren_ctx(None),
+            &create_wren_ctx(None, None),
             Arc::clone(&analyzed_mdl),
             &[],
             Arc::new(HashMap::new()),
@@ -959,7 +971,7 @@ mod test {
 
         let sql = r#"select lower_name from wren.test.artist"#;
         let _ = transform_sql_with_ctx(
-            &create_wren_ctx(None),
+            &create_wren_ctx(None, None),
             Arc::clone(&analyzed_mdl),
             &[],
             Arc::new(HashMap::new()),
@@ -977,7 +989,7 @@ mod test {
 
     #[tokio::test]
     async fn test_query_hidden_column() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         ctx.register_batch("artist", artist())?;
         let manifest = ManifestBuilder::new()
             .catalog("wren")
@@ -1002,7 +1014,7 @@ mod test {
         )?);
         let sql = r#"select 串接名字 from wren.test.artist"#;
         let actual = transform_sql_with_ctx(
-            &create_wren_ctx(None),
+            &create_wren_ctx(None, None),
             Arc::clone(&analyzed_mdl),
             &[],
             Arc::new(HashMap::new()),
@@ -1013,7 +1025,7 @@ mod test {
                    @"SELECT artist.\"串接名字\" FROM (SELECT artist.\"串接名字\" FROM (SELECT __source.\"名字\" || __source.\"名字\" AS \"串接名字\" FROM artist AS __source) AS artist) AS artist");
         let sql = r#"select * from wren.test.artist"#;
         let actual = transform_sql_with_ctx(
-            &create_wren_ctx(None),
+            &create_wren_ctx(None, None),
             Arc::clone(&analyzed_mdl),
             &[],
             Arc::new(HashMap::new()),
@@ -1025,7 +1037,7 @@ mod test {
 
         let sql = r#"select "名字" from wren.test.artist"#;
         let _ = transform_sql_with_ctx(
-            &create_wren_ctx(None),
+            &create_wren_ctx(None, None),
             Arc::clone(&analyzed_mdl),
             &[],
             Arc::new(HashMap::new()),
@@ -1044,7 +1056,7 @@ mod test {
     async fn test_disable_simplify_expression() -> Result<()> {
         let sql = "select current_date";
         let actual = transform_sql_with_ctx(
-            &create_wren_ctx(None),
+            &create_wren_ctx(None, None),
             Arc::new(AnalyzedWrenMDL::default()),
             &[],
             Arc::new(HashMap::new()),
@@ -1075,7 +1087,7 @@ mod test {
         )?);
         let sql = r#"select * from wren.test.artist where 名字 in (SELECT 名字 FROM wren.test.artist)"#;
         let actual = transform_sql_with_ctx(
-            &create_wren_ctx(None),
+            &create_wren_ctx(None, None),
             Arc::clone(&analyzed_mdl),
             &[],
             Arc::new(HashMap::new()),
@@ -1090,7 +1102,7 @@ mod test {
     /// This test will be failed if the `出道時間` is not inferred as a timestamp column correctly.
     #[tokio::test]
     async fn test_infer_timestamp_column() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         ctx.register_batch("artist", artist())?;
         let manifest = ManifestBuilder::new()
             .catalog("wren")
@@ -1110,7 +1122,7 @@ mod test {
         )?);
         let sql = r#"select current_date > "出道時間" from wren.test.artist"#;
         let actual = transform_sql_with_ctx(
-            &create_wren_ctx(None),
+            &create_wren_ctx(None, None),
             Arc::clone(&analyzed_mdl),
             &[],
             Arc::new(HashMap::new()),
@@ -1125,7 +1137,7 @@ mod test {
 
     #[tokio::test]
     async fn test_disable_count_wildcard_rule() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
 
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
         let sql = "select count(*) from (select 1)";
@@ -1144,7 +1156,7 @@ mod test {
     }
 
     async fn assert_sql_valid_executable(sql: &str) -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         // To roundtrip testing, we should register the mock table for the planned sql.
         ctx.register_batch("orders", orders())?;
         ctx.register_batch("customer", customer())?;
@@ -1166,7 +1178,7 @@ mod test {
 
     #[tokio::test]
     async fn test_mysql_style_interval() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, Some(&DataSource::MySQL));
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
         let sql = "select interval 1 day";
         let actual = transform_sql_with_ctx(
@@ -1208,7 +1220,7 @@ mod test {
 
     #[tokio::test]
     async fn test_unnest_as_table_factor() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let manifest = ManifestBuilder::new().build();
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
@@ -1249,7 +1261,7 @@ mod test {
 
     #[tokio::test]
     async fn test_simplify_timestamp() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
         let sql = "select timestamp '2011-01-01 18:00:00 +08:00'";
         let actual = transform_sql_with_ctx(
@@ -1280,7 +1292,7 @@ mod test {
         let mut headers = HashMap::new();
         headers.insert("x-wren-timezone".to_string(), Some("+08:00".to_string()));
         let headers_ref = Arc::new(headers);
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
         let sql = "select timestamp '2011-01-01 18:00:00'";
         let actual = transform_sql_with_ctx(
@@ -1306,7 +1318,7 @@ mod test {
         // TIMESTAMP WITH TIME ZONE will be converted to the session timezone
         assert_snapshot!(actual, @"SELECT CAST('2011-01-01 10:00:00' AS TIMESTAMP) AS \"Utf8(\"\"2011-01-01 18:00:00\"\")\"");
 
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let mut headers = HashMap::new();
         headers.insert(
             "x-wren-timezone".to_string(),
@@ -1340,7 +1352,7 @@ mod test {
 
         let headers = HashMap::new();
         let headers_ref = Arc::new(headers);
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
         let sql = "select timestamp with time zone '2011-01-01 18:00:00' - timestamp with time zone '2011-01-01 10:00:00'";
         let actual = transform_sql_with_ctx(
@@ -1359,7 +1371,7 @@ mod test {
 
     #[tokio::test]
     async fn test_disable_pushdown_filter() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         ctx.register_batch("artist", artist())?;
         let manifest = ManifestBuilder::new()
             .catalog("wren")
@@ -1388,7 +1400,7 @@ mod test {
         )?);
         let sql = r#"select count(*) from wren.test.artist where cast(cast_timestamptz as timestamp) > timestamp '2011-01-01 21:00:00'"#;
         let actual = transform_sql_with_ctx(
-            &create_wren_ctx(None),
+            &create_wren_ctx(None, None),
             Arc::clone(&analyzed_mdl),
             &[],
             Arc::new(HashMap::new()),
@@ -1406,7 +1418,7 @@ mod test {
 
     #[tokio::test]
     async fn test_register_timestamptz() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         ctx.register_batch("timestamp_table", timestamp_table())?;
         let provider = ctx
             .catalog("datafusion")
@@ -1457,7 +1469,7 @@ mod test {
 
     #[tokio::test]
     async fn test_coercion_timestamptz() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         ctx.register_batch("timestamp_table", timestamp_table())?;
         for timezone_type in [
             "timestamptz",
@@ -1484,7 +1496,7 @@ mod test {
             )?);
             let sql = r#"select timestamp_col = timestamptz_col from wren.test.timestamp_table"#;
             let actual = transform_sql_with_ctx(
-                &create_wren_ctx(None),
+                &create_wren_ctx(None, None),
                 Arc::clone(&analyzed_mdl),
                 &[],
                 Arc::new(HashMap::new()),
@@ -1499,7 +1511,7 @@ mod test {
 
             let sql = r#"select timestamptz_col > cast('2011-01-01 18:00:00' as TIMESTAMP WITH TIME ZONE) from wren.test.timestamp_table"#;
             let actual = transform_sql_with_ctx(
-                &create_wren_ctx(None),
+                &create_wren_ctx(None, None),
                 Arc::clone(&analyzed_mdl),
                 &[],
                 Arc::new(HashMap::new()),
@@ -1513,7 +1525,7 @@ mod test {
 
             let sql = r#"select timestamptz_col > '2011-01-01 18:00:00' from wren.test.timestamp_table"#;
             let actual = transform_sql_with_ctx(
-                &create_wren_ctx(None),
+                &create_wren_ctx(None, None),
                 Arc::clone(&analyzed_mdl),
                 &[],
                 Arc::new(HashMap::new()),
@@ -1528,7 +1540,7 @@ mod test {
 
             let sql = r#"select timestamp_col > cast('2011-01-01 18:00:00' as TIMESTAMP WITH TIME ZONE) from wren.test.timestamp_table"#;
             let actual = transform_sql_with_ctx(
-                &create_wren_ctx(None),
+                &create_wren_ctx(None, None),
                 Arc::clone(&analyzed_mdl),
                 &[],
                 Arc::new(HashMap::new()),
@@ -1544,7 +1556,7 @@ mod test {
 
     #[tokio::test]
     async fn test_list() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
@@ -1576,7 +1588,7 @@ mod test {
 
     #[tokio::test]
     async fn test_struct() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
@@ -1675,7 +1687,7 @@ mod test {
 
     #[tokio::test]
     async fn test_disable_common_expression_eliminate() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let sql =
             "SELECT CAST(TIMESTAMP '2021-01-01 00:00:00' as TIMESTAMP WITH TIME ZONE) = \
         CAST(TIMESTAMP '2021-01-01 00:00:00' as TIMESTAMP WITH TIME ZONE)";
@@ -1694,7 +1706,7 @@ mod test {
 
     #[tokio::test]
     async fn test_disable_eliminate_nested_union() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let sql = r#"SELECT * FROM (SELECT 1 x, 'a' y UNION ALL
     SELECT 1 x, 'b' y UNION ALL
     SELECT 2 x, 'a' y UNION ALL
@@ -1725,7 +1737,7 @@ mod test {
             Arc::new(HashMap::default()),
             Mode::Unparse,
         )?);
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let sql = "SELECT trim(' abc')";
         let actual = transform_sql_with_ctx(
             &ctx,
@@ -1741,7 +1753,7 @@ mod test {
 
     #[tokio::test]
     async fn test_disable_single_distinct_to_group_by() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
@@ -1779,7 +1791,7 @@ mod test {
 
     #[tokio::test]
     async fn test_disable_distinct_to_group_by() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
@@ -1814,7 +1826,7 @@ mod test {
 
     #[tokio::test]
     async fn test_disable_scalar_subquery() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
@@ -1849,7 +1861,7 @@ mod test {
 
     #[tokio::test]
     async fn test_wildcard_where() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
@@ -1911,7 +1923,7 @@ mod test {
         }
         "#;
         let manifest: Manifest = serde_json::from_str(mdl_json).unwrap();
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let sql = r#"SELECT * FROM customer WHERE c_custkey = 1"#;
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
@@ -1962,7 +1974,7 @@ mod test {
         }
         "#;
         let manifest: Manifest = serde_json::from_str(mdl_json).unwrap();
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let sql = r#"SELECT * FROM customer WHERE c_custkey = 1"#;
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
             manifest,
@@ -1986,7 +1998,7 @@ mod test {
 
     #[tokio::test]
     async fn test_rlac_with_requried_properties() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
 
         // test required property
         let manifest = ManifestBuilder::new()
@@ -2198,7 +2210,7 @@ mod test {
 
     #[tokio::test]
     async fn test_rlac_with_optional_properties() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
 
         // test required property
         let manifest = ManifestBuilder::new()
@@ -2389,7 +2401,7 @@ mod test {
 
     #[tokio::test]
     async fn test_rlac_on_calculated_field() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
 
         let manifest = ManifestBuilder::new()
             .catalog("wren")
@@ -2560,7 +2572,7 @@ mod test {
 
     #[tokio::test]
     async fn test_rlac_alias_model() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
@@ -2623,7 +2635,7 @@ mod test {
 
     #[tokio::test]
     async fn test_rlac_unicode_model_column_name() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
@@ -2663,7 +2675,7 @@ mod test {
 
     #[tokio::test]
     async fn test_ralc_condition_contain_hidden() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
 
         let manifest = ManifestBuilder::new()
             .catalog("wren")
@@ -2711,7 +2723,7 @@ mod test {
 
     #[tokio::test]
     async fn test_clac_with_required_properties() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
 
         let manifest = ManifestBuilder::new()
             .catalog("wren")
@@ -2808,7 +2820,7 @@ mod test {
 
     #[tokio::test]
     async fn test_clac_permission_denied() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
@@ -2881,7 +2893,7 @@ mod test {
 
     #[tokio::test]
     async fn test_calc_primary_key() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
@@ -2923,7 +2935,7 @@ mod test {
 
     #[tokio::test]
     async fn test_clac_with_optional_properties() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
 
         let manifest = ManifestBuilder::new()
             .catalog("wren")
@@ -3031,7 +3043,7 @@ mod test {
 
     #[tokio::test]
     async fn test_clac_on_calculated_field() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
 
         let manifest = ManifestBuilder::new()
             .catalog("wren")
@@ -3183,7 +3195,7 @@ mod test {
 
     #[tokio::test]
     async fn test_rlac_case_insensitive() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
 
         // test required property
         let manifest = ManifestBuilder::new()
@@ -3221,7 +3233,7 @@ mod test {
 
     #[tokio::test]
     async fn test_disable_eliminate_limit() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
 
         // test required property
         let manifest = ManifestBuilder::new()
@@ -3251,7 +3263,7 @@ mod test {
 
     #[tokio::test]
     async fn test_default_nulls_last() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
 
         // test required property
         let manifest = ManifestBuilder::new()
@@ -3312,7 +3324,7 @@ mod test {
 
     #[tokio::test]
     async fn test_extract_roundtrip_bigquery() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, Some(&DataSource::BigQuery));
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
@@ -3371,7 +3383,7 @@ mod test {
 
     #[tokio::test]
     async fn test_date_diff_bigquery() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, Some(&DataSource::BigQuery));
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
@@ -3455,7 +3467,7 @@ mod test {
 
     #[tokio::test]
     async fn test_window_function_frame() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
@@ -3492,7 +3504,7 @@ mod test {
 
     #[tokio::test]
     async fn test_window_functions_without_frame_bigquery() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
@@ -3522,7 +3534,7 @@ mod test {
 
     #[tokio::test]
     async fn test_cte_used_in_scalar_subquery() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
@@ -3565,7 +3577,7 @@ mod test {
 
     #[tokio::test]
     async fn test_ambiguous_table_name() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
@@ -3628,7 +3640,7 @@ mod test {
 
     #[tokio::test]
     async fn test_unicode_literal() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
 
         let manifest = ManifestBuilder::default().build();
         let properties = SessionPropertiesRef::default();
@@ -3662,7 +3674,7 @@ mod test {
 
     #[tokio::test]
     async fn test_compatible_type() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
 
         let manifest = ManifestBuilder::default().build();
         let properties = SessionPropertiesRef::default();
@@ -3681,7 +3693,7 @@ mod test {
 
     #[tokio::test]
     async fn test_trim_function_bigquery() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, Some(DataSource::BigQuery));
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
@@ -3734,7 +3746,7 @@ mod test {
 
     #[tokio::test]
     async fn test_to_char() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
@@ -3776,7 +3788,7 @@ mod test {
 
     #[tokio::test]
     async fn test_disable_eliminate_cross_join() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, None);
 
         // test required property
         let manifest = ManifestBuilder::new()
@@ -3813,7 +3825,7 @@ mod test {
 
     #[tokio::test]
     async fn test_snowflake_unnest() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, Some(DataSource::Snowflake));
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
