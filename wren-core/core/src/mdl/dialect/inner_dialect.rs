@@ -210,13 +210,13 @@ impl InnerDialect for BigQueryDialect {
             }
             // DATE_DIFF(end_date, start_date, granularity)
             // https://cloud.google.com/bigquery/docs/reference/standard-sql/date_functions#date_diff
-            "date_diff" => self.transfrom_diff_function("DATE_DIFF", args, unparser),
-            "time_diff" => self.transfrom_diff_function("TIME_DIFF", args, unparser),
+            "date_diff" => self.transform_diff_function("DATE_DIFF", args, unparser),
+            "time_diff" => self.transform_diff_function("TIME_DIFF", args, unparser),
             "timestamp_diff" => {
-                self.transfrom_diff_function("TIMESTAMP_DIFF", args, unparser)
+                self.transform_diff_function("TIMESTAMP_DIFF", args, unparser)
             }
             "datetime_diff" => {
-                self.transfrom_diff_function("DATETIME_DIFF", args, unparser)
+                self.transform_diff_function("DATETIME_DIFF", args, unparser)
             }
             "now" => {
                 scalar_function_to_sql_internal(unparser, None, "CURRENT_TIMESTAMP", args)
@@ -255,7 +255,7 @@ impl InnerDialect for BigQueryDialect {
 }
 
 impl BigQueryDialect {
-    fn transfrom_diff_function(
+    fn transform_diff_function(
         &self,
         func_name: &str,
         args: &[Expr],
