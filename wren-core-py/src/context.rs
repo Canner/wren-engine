@@ -88,8 +88,17 @@ impl PySessionContext {
         let runtime = Runtime::new().map_err(CoreError::from)?;
 
         let Some(mdl_base64) = mdl_base64 else {
+            let data_source = data_source
+                .map(|ds| DataSource::from_str(ds).map_err(CoreError::from))
+                .transpose()?;
             let config = SessionConfig::default().with_information_schema(true);
-            let ctx = wren_core::mdl::create_wren_ctx(Some(config), None);
+            let ctx = wren_core::mdl::create_wren_ctx(Some(config), data_source.as_ref());
+            Self::register_function_by_data_source(
+                data_source.as_ref(),
+                remote_functions_path,
+                &runtime,
+                &ctx,
+            )?;
             return Ok(Self {
                 ctx: ctx.clone(),
                 exec_ctx: ctx,
@@ -115,39 +124,12 @@ impl PySessionContext {
         let config = SessionConfig::default().with_information_schema(true);
         let ctx = wren_core::mdl::create_wren_ctx(Some(config), data_source.as_ref());
 
-        match data_source {
-            Some(DataSource::BigQuery) => {}
-            _ => {
-                let remote_functions =
-                    Self::read_remote_function_list(remote_functions_path)
-                        .map_err(CoreError::from)?;
-                let remote_functions: Vec<RemoteFunction> = remote_functions
-                    .into_iter()
-                    .map(|f| f.into())
-                    .collect::<Vec<_>>();
-
-                let registered_functions = runtime
-                    .block_on(Self::get_registered_functions(&ctx))
-                    .map(|functions| {
-                        functions
-                            .into_iter()
-                            .map(|f| f.name)
-                            .collect::<std::collections::HashSet<String>>()
-                    })
-                    .map_err(CoreError::from)?;
-
-                remote_functions
-                    .into_iter()
-                    .try_for_each(|remote_function| {
-                        debug!("Registering remote function: {:?}", remote_function);
-                        // TODO: check not only the name but also the return type and the parameter types
-                        if !registered_functions.contains(&remote_function.name) {
-                            Self::register_remote_function(&ctx, remote_function)?;
-                        }
-                        Ok::<(), CoreError>(())
-                    })?;
-            }
-        }
+        Self::register_function_by_data_source(
+            data_source.as_ref(),
+            remote_functions_path,
+            &runtime,
+            &ctx,
+        )?;
 
         Python::attach(|py: Python<'_>| {
             let properties_map = if let Some(obj) = properties {
@@ -382,6 +364,48 @@ impl PySessionContext {
             }
         }
         Ok(functions)
+    }
+
+    fn register_function_by_data_source(
+        data_source: Option<&DataSource>,
+        remote_functions_path: Option<&str>,
+        runtime: &Runtime,
+        ctx: &wren_core::SessionContext,
+    ) -> PyResult<()> {
+        match data_source {
+            Some(DataSource::BigQuery) => {}
+            _ => {
+                let remote_functions =
+                    Self::read_remote_function_list(remote_functions_path)
+                        .map_err(CoreError::from)?;
+                let remote_functions: Vec<RemoteFunction> = remote_functions
+                    .into_iter()
+                    .map(|f| f.into())
+                    .collect::<Vec<_>>();
+
+                let registered_functions = runtime
+                    .block_on(Self::get_registered_functions(ctx))
+                    .map(|functions| {
+                        functions
+                            .into_iter()
+                            .map(|f| f.name)
+                            .collect::<std::collections::HashSet<String>>()
+                    })
+                    .map_err(CoreError::from)?;
+
+                remote_functions
+                    .into_iter()
+                    .try_for_each(|remote_function| {
+                        debug!("Registering remote function: {:?}", remote_function);
+                        // TODO: check not only the name but also the return type and the parameter types
+                        if !registered_functions.contains(&remote_function.name) {
+                            Self::register_remote_function(ctx, remote_function)?;
+                        }
+                        Ok::<(), CoreError>(())
+                    })?;
+            }
+        }
+        Ok(())
     }
 }
 
