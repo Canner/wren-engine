@@ -5,7 +5,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 from starlette.status import (
     HTTP_404_NOT_FOUND,
-    HTTP_422_UNPROCESSABLE_ENTITY,
+    HTTP_422_UNPROCESSABLE_CONTENT,
     HTTP_500_INTERNAL_SERVER_ERROR,
     HTTP_501_NOT_IMPLEMENTED,
     HTTP_502_BAD_GATEWAY,
@@ -109,7 +109,7 @@ class WrenError(Exception):
                 return HTTP_504_GATEWAY_TIMEOUT
             case e:
                 if e.value < 100:
-                    return HTTP_422_UNPROCESSABLE_ENTITY
+                    return HTTP_422_UNPROCESSABLE_CONTENT
                 return HTTP_500_INTERNAL_SERVER_ERROR
 
 

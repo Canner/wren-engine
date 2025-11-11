@@ -1,4 +1,3 @@
-use datafusion::prelude::SessionContext;
 use std::collections::HashMap;
 use std::sync::Arc;
 use wren_core::mdl::builder::{
@@ -17,7 +16,7 @@ async fn main() -> datafusion::common::Result<()> {
         Mode::Unparse,
     )?);
 
-    let sql = "select sum(state) from wrenai.public.customers_model";
+    let sql = "select customer_state from wrenai.public.orders_model";
     println!("Original SQL: \n{sql}");
     let sql = transform_sql_with_ctx(
         &create_wren_ctx(None, Some(&DataSource::BigQuery)),

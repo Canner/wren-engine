@@ -61,6 +61,11 @@ class Config:
     def get_remote_function_list_path(self, data_source: str) -> str:
         if not self.remote_function_list_path:
             return None
+
+        # The function list has been defined by Wren Core
+        if data_source in {"bigquery"}:
+            return None
+
         if data_source in {"local_file", "s3_file", "minio_file", "gcs_file"}:
             data_source = "duckdb"
         base_path = os.path.normpath(self.remote_function_list_path)

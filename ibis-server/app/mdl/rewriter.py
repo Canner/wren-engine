@@ -42,7 +42,9 @@ class Rewriter:
         self.properties = properties
         if experiment:
             function_path = get_config().get_remote_function_list_path(data_source)
-            self._rewriter = EmbeddedEngineRewriter(function_path)
+            self._rewriter = EmbeddedEngineRewriter(
+                function_path=function_path, data_source=data_source
+            )
         else:
             self._rewriter = ExternalEngineRewriter(java_engine_connector)
 
@@ -130,7 +132,8 @@ class ExternalEngineRewriter:
 
 
 class EmbeddedEngineRewriter:
-    def __init__(self, function_path: str):
+    def __init__(self, function_path: str, data_source: DataSource = None):
+        self.data_source = data_source
         self.function_path = function_path
 
     @tracer.start_as_current_span("embedded_rewrite", kind=trace.SpanKind.INTERNAL)
@@ -140,7 +143,10 @@ class EmbeddedEngineRewriter:
         try:
             processed_properties = self.get_session_properties(properties)
             session_context = get_session_context(
-                manifest_str, self.function_path, processed_properties
+                manifest_str,
+                self.function_path,
+                processed_properties,
+                self.data_source.name if self.data_source else None,
             )
             return await to_thread.run_sync(
                 session_context.transform_sql,
