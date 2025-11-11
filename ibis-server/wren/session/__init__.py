@@ -97,7 +97,9 @@ class Task:
         )
 
         self.planned_sql = self.context.rewriter.rewrite_sync(
-            self.manifest, self.wren_sql, self.properties, self.context.data_source
+            self.manifest,
+            self.wren_sql,
+            self.properties,
         )
 
         read = self._get_read_dialect()

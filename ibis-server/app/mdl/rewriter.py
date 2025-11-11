@@ -161,7 +161,6 @@ class EmbeddedEngineRewriter:
         manifest_str: str,
         sql: str,
         properties: dict | None = None,
-        data_source: DataSource = None,
     ) -> str:
         try:
             processed_properties = self.get_session_properties(properties)
@@ -169,7 +168,7 @@ class EmbeddedEngineRewriter:
                 manifest_str,
                 self.function_path,
                 processed_properties,
-                data_source.name if data_source else None,
+                self.data_source.name if self.data_source else None,
             )
             return session_context.transform_sql(sql)
         except Exception as e:

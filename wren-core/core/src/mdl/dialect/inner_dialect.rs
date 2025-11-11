@@ -95,14 +95,17 @@ pub trait InnerDialect: Send + Sync {
         false
     }
 
+    /// Define the supported UDFs for the dialect which will be registered in the execution context.
     fn supported_udfs(&self) -> Vec<Arc<datafusion::logical_expr::ScalarUDF>> {
         scalar_functions()
     }
 
+    /// Define the supported UDAFs for the dialect which will be registered in the execution context.
     fn supported_udafs(&self) -> Vec<Arc<datafusion::logical_expr::AggregateUDF>> {
         aggregate_functions()
     }
 
+    /// Define the supported UDWFs for the dialect which will be registered in the execution context.
     fn supported_udwfs(&self) -> Vec<Arc<datafusion::logical_expr::WindowUDF>> {
         window_functions()
     }
