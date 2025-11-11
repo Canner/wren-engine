@@ -112,8 +112,6 @@ impl PySessionContext {
             None
         };
 
-        dbg!(&data_source);
-
         let config = SessionConfig::default().with_information_schema(true);
         let ctx = wren_core::mdl::create_wren_ctx(Some(config), data_source.as_ref());
 
