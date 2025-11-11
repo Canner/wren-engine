@@ -3718,6 +3718,7 @@ mod test {
             @"SELECT trim(customer.c_name) FROM (SELECT customer.c_name FROM (SELECT __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer"
         );
 
+        let ctx = create_wren_ctx(None, None);
         // normal data source will be transformed to btrim
         let manifest = ManifestBuilder::new()
             .catalog("wren")
