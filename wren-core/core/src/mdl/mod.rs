@@ -3693,7 +3693,7 @@ mod test {
 
     #[tokio::test]
     async fn test_trim_function_bigquery() -> Result<()> {
-        let ctx = create_wren_ctx(None, Some(DataSource::BigQuery));
+        let ctx = create_wren_ctx(None, Some(&DataSource::BigQuery));
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
@@ -3825,7 +3825,7 @@ mod test {
 
     #[tokio::test]
     async fn test_snowflake_unnest() -> Result<()> {
-        let ctx = create_wren_ctx(None, Some(DataSource::Snowflake));
+        let ctx = create_wren_ctx(None, Some(&DataSource::Snowflake));
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
