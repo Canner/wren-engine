@@ -93,7 +93,7 @@ make_udaf_function!(
 make_udaf_function!(
     ByPassAggregateUDF::new(
         "array_concat_agg",
-        ReturnType::ArrayOfInputFirstArgument,
+        ReturnType::SameAsInput,
         Signature::any(1, Volatility::Immutable),
         Some(build_document(
             "Concatenates all input arrays into a single array.",
