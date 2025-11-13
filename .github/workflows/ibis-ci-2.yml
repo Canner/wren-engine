@@ -67,4 +67,4 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
           AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-        run: poetry run pytest -m "oracle and postgres and trino"
+        run: poetry run pytest -m "oracle or postgres or trino"

@@ -74,7 +74,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
           AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-        run: poetry run pytest -m "clickhouse and mssql and functions and mysql and local_file"
+        run: poetry run pytest -m "clickhouse or mssql or functions or mysql or local_file"
       - name: Test bigquery if need
         if: contains(github.event.pull_request.labels.*.name, 'bigquery')
         env:
