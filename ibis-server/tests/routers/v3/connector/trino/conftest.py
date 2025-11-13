@@ -16,7 +16,7 @@ def pytest_collection_modifyitems(items):
             item.add_marker(pytestmark)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def trino(request) -> TrinoContainer:
     db = TrinoContainer().start()
     # To avoid `TrinoQueryError(type=INTERNAL_ERROR, name=GENERIC_INTERNAL_ERROR, message="nodes is empty")`

@@ -20,7 +20,7 @@ def pytest_collection_modifyitems(items):
             item.add_marker(pytestmark)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def mssql(request) -> SqlServerContainer:
     mssql = SqlServerContainer(
         "mcr.microsoft.com/mssql/server:2019-CU27-ubuntu-20.04", dialect="mssql+pyodbc"

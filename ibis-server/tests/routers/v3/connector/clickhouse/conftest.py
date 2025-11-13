@@ -15,7 +15,7 @@ def pytest_collection_modifyitems(items):
             item.add_marker(pytestmark)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def clickhouse(request) -> ClickHouseContainer:
     ch = ClickHouseContainer("clickhouse/clickhouse-server:head-alpine", port=8123)
     ch.start()
