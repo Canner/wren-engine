@@ -18,6 +18,7 @@ from app.dependencies import (
     is_backward_compatible,
     verify_query_dto,
 )
+from app.mdl import knowledge
 from app.mdl.core import get_session_context
 from app.mdl.java_engine import JavaEngineConnector
 from app.mdl.rewriter import Rewriter
@@ -510,3 +511,17 @@ async def model_substitute(
                     ve,
                 )
                 raise e from None
+
+
+@router.get(
+    "/{data_source}/knowledge",
+    description="get the SQL knowledge of the specified data source",
+)
+async def get_sql_knowledge(
+    data_source: DataSource,
+):
+    knowledge_manager = knowledge.Knowledge(data_source=data_source)
+    return {
+        "text_to_sql_rule": knowledge_manager.get_text_to_sql_rule(),
+        "instructions": knowledge_manager.get_sql_instructions(),
+    }
