@@ -429,6 +429,7 @@ class BigQueryConnector(SimpleConnector):
         super().__init__(DataSource.bigquery, connection_info)
         self.connection_info = connection_info
 
+    @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
     def query(self, sql: str, limit: int | None = None) -> pa.Table:
         credits_json = loads(
             base64.b64decode(
