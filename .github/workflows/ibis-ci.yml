@@ -1,4 +1,4 @@
-name: ibis CI
+name: ibis CI (clickhouse, mssql, mysql, local_file, cloud data warehouses)
 permissions:
   contents: read
   pull-requests: write
