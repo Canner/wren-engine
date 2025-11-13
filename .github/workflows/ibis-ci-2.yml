@@ -1,0 +1,66 @@
+name: ibis CI 2
+permissions:
+  contents: read
+  pull-requests: write
+  
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: ibis-server
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ruff check
+        uses: chartboost/ruff-action@v1
+        with:
+          src: './ibis-server'
+          args: 'format --check'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+      - name: Start Wren JAVA engine
+        working-directory: ./wren-core-legacy
+        run: |
+          mkdir etc
+          echo "node.environment=production" >> etc/config.properties
+          echo "wren.directory=./etc/mdl" >> etc/config.properties
+          echo "wren.experimental-enable-dynamic-fields=true" >> etc/config.properties
+          ./mvnw clean install -B -DskipTests -P exec-jar
+          java -Dconfig=etc/config.properties \
+                --add-opens=java.base/java.nio=ALL-UNNAMED \
+                -jar ./wren-server/target/wren-server-*-executable.jar &
+      - name: Install poetry
+        run: pipx install poetry
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: ./ibis-server/pyproject.toml
+          cache: 'poetry'
+      - uses: extractions/setup-just@v2
+      - name: Cache Cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            wren-core-py/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('wren-core-py/Cargo.lock') }}
+      - name: Install dependencies
+        run: |
+          just install --with dev
+      - name: Run tests
+        env:
+          WREN_ENGINE_ENDPOINT: http://localhost:8080
+        run: poetry run pytest -m "oracle"
