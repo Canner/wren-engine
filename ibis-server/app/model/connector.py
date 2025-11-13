@@ -447,6 +447,7 @@ class BigQueryConnector(SimpleConnector):
         client = bigquery.Client(credentials=credentials)
         return client.query(sql).result(max_results=limit).to_arrow()
 
+
 class DuckDBConnector:
     def __init__(self, connection_info: ConnectionInfo):
         import duckdb  # noqa: PLC0415

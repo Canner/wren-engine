@@ -1,8 +1,7 @@
-from app.model.connector import BigQueryConnector
 from loguru import logger
 
 from app.model import BigQueryConnectionInfo
-from app.model.data_source import DataSource
+from app.model.connector import BigQueryConnector
 from app.model.metadata.dto import (
     Column,
     Constraint,
