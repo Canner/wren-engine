@@ -1,4 +1,4 @@
-name: ibis CI
+name: ibis CI (oracle, postgres, trino)
 permissions:
   contents: read
   pull-requests: write
