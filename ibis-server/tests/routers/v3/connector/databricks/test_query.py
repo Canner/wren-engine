@@ -86,12 +86,12 @@ async def test_query(client, manifest_str, connection_info):
         "orderkey": "int64",
         "custkey": "int64",
         "orderstatus": "string",
-        "totalprice": "decimal128(38, 9)",
+        "totalprice": "decimal128(18, 2)",
         "orderdate": "date32[day]",
         "order_cust_key": "string",
-        "timestamp": "timestamp[us, tz=UTC]",
-        "timestamptz": "timestamp[us, tz=UTC]",
-        "test_null_time": "timestamp[us, tz=UTC]",
+        "timestamp": "timestamp[us, tz=Etc/UTC]",
+        "timestamptz": "timestamp[us, tz=Etc/UTC]",
+        "test_null_time": "timestamp[us, tz=Etc/UTC]",
     }
 
 

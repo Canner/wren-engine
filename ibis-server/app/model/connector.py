@@ -27,6 +27,7 @@ import psycopg
 import pyarrow as pa
 import sqlglot.expressions as sge
 import trino
+from databricks import sql as dbsql
 from duckdb import HTTPException, IOException
 from google.cloud import bigquery
 from google.oauth2 import service_account
@@ -40,6 +41,7 @@ from opentelemetry import trace
 
 from app.model import (
     ConnectionInfo,
+    DatabricksConnectionInfo,
     GcsFileConnectionInfo,
     MinioFileConnectionInfo,
     RedshiftConnectionInfo,
@@ -88,6 +90,8 @@ class Connector:
             self._connector = RedshiftConnector(connection_info)
         elif data_source == DataSource.postgres:
             self._connector = PostgresConnector(connection_info)
+        elif data_source == DataSource.databricks:
+            self._connector = DatabricksConnector(connection_info)
         else:
             self._connector = SimpleConnector(data_source, connection_info)
 
@@ -605,3 +609,33 @@ class RedshiftConnector:
             self.connection.close()
         except Exception as e:
             logger.warning(f"Error closing Redshift connection: {e}")
+
+
+class DatabricksConnector(SimpleConnector):
+    def __init__(self, connection_info: DatabricksConnectionInfo):
+        self.connection = dbsql.connect(
+            server_hostname=connection_info.server_hostname.get_secret_value(),
+            http_path=connection_info.http_path.get_secret_value(),
+            access_token=connection_info.access_token.get_secret_value(),
+        )
+
+    def query(self, sql, limit=None):
+        with closing(self.connection.cursor()) as cursor:
+            cursor.execute(sql)
+            arrow_table = cursor.fetchall_arrow()
+
+            if limit is not None:
+                arrow_table = arrow_table.slice(0, limit)
+
+            return arrow_table
+
+    def dry_run(self, sql):
+        with closing(self.connection.cursor()) as cursor:
+            cursor.execute(f"SELECT * FROM ({sql}) AS sub LIMIT 0")
+
+    def close(self) -> None:
+        """Close the Databricks connection."""
+        try:
+            self.connection.close()
+        except Exception as e:
+            logger.warning(f"Error closing Databricks connection: {e}")

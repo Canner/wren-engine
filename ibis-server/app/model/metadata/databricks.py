@@ -1,7 +1,7 @@
 from loguru import logger
 
 from app.model import DatabricksConnectionInfo
-from app.model.data_source import DataSource
+from app.model.connector import DatabricksConnector
 from app.model.metadata.dto import (
     Column,
     Constraint,
@@ -35,7 +35,7 @@ DATABRICKS_TYPE_MAPPING = {
 class DatabricksMetadata(Metadata):
     def __init__(self, connection_info: DatabricksConnectionInfo):
         super().__init__(connection_info)
-        self.connection = DataSource.databricks.get_connection(connection_info)
+        self.connection = DatabricksConnector(connection_info)
 
     def get_table_list(self) -> list[Table]:
         sql = """
@@ -58,7 +58,7 @@ class DatabricksMetadata(Metadata):
             WHERE
                 c.TABLE_SCHEMA NOT IN ('information_schema')
         """
-        response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
+        response = self.connection.query(sql).to_pandas().to_dict(orient="records")
 
         unique_tables = {}
         for row in response:
@@ -122,7 +122,7 @@ class DatabricksMetadata(Metadata):
                 AND ccu.constraint_schema = tc.constraint_schema
             WHERE tc.constraint_type = 'FOREIGN KEY'
             """
-        res = self.connection.sql(sql).to_pandas().to_dict(orient="records")
+        res = self.connection.query(sql).to_pandas().to_dict(orient="records")
         constraints = []
         for row in res:
             constraints.append(
@@ -150,7 +150,7 @@ class DatabricksMetadata(Metadata):
 
     def get_version(self) -> str:
         return (
-            self.connection.sql("SELECT current_version().dbsql_version")
+            self.connection.query("SELECT current_version().dbsql_version")
             .to_pandas()
             .iloc[0, 0]
         )
