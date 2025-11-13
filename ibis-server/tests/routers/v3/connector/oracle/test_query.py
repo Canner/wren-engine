@@ -297,7 +297,7 @@ async def test_metadata_list_constraints(client, connection_info):
     )
     assert response.status_code == 200
     result = response.json()
-    # oracale has a lot of constraints on the system tables
+    # oracle has a lot of constraints on the system tables
     assert len(result) > 0
 
 
