@@ -31,6 +31,8 @@ from app.model import (
 from app.model.connector import Connector
 from app.model.data_source import DataSource
 from app.model.error import DatabaseTimeoutError
+from app.model.metadata.dto import Constraint, MetadataDTO, Table
+from app.model.metadata.factory import MetadataFactory
 from app.model.validator import Validator
 from app.query_cache import QueryCacheManager
 from app.routers import v2
@@ -39,6 +41,9 @@ from app.util import (
     append_fallback_context,
     build_context,
     execute_dry_run_with_timeout,
+    execute_get_constraints_with_timeout,
+    execute_get_table_list_with_timeout,
+    execute_get_version_with_timeout,
     execute_query_with_timeout,
     execute_validate_with_timeout,
     pushdown_limit,
@@ -440,6 +445,66 @@ def functions(
         else:
             func_list = [f.to_dict() for f in session_context.get_available_functions()]
         return ORJSONResponse(func_list)
+
+
+@router.post(
+    "/{data_source}/metadata/tables",
+    response_model=list[Table],
+    description="get the table list of the specified data source",
+)
+async def get_table_list(
+    data_source: DataSource,
+    dto: MetadataDTO,
+    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
+) -> list[Table]:
+    span_name = f"v3_metadata_tables_{data_source}"
+    with tracer.start_as_current_span(
+        name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
+    ) as span:
+        set_attribute(headers, span)
+        connection_info = data_source.get_connection_info(
+            dto.connection_info, dict(headers)
+        )
+        metadata = MetadataFactory.get_metadata(data_source, connection_info)
+        return await execute_get_table_list_with_timeout(metadata)
+
+
+@router.post(
+    "/{data_source}/metadata/constraints",
+    response_model=list[Constraint],
+    description="get the constraints of the specified data source",
+)
+async def get_constraints(
+    data_source: DataSource,
+    dto: MetadataDTO,
+    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
+) -> list[Constraint]:
+    span_name = f"v3_metadata_constraints_{data_source}"
+    with tracer.start_as_current_span(
+        name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
+    ) as span:
+        set_attribute(headers, span)
+        connection_info = data_source.get_connection_info(
+            dto.connection_info, dict(headers)
+        )
+        metadata = MetadataFactory.get_metadata(data_source, connection_info)
+        return await execute_get_constraints_with_timeout(metadata)
+
+
+@router.post(
+    "/{data_source}/metadata/version",
+    description="get the version of the specified data source",
+)
+async def get_db_version(
+    data_source: DataSource,
+    dto: MetadataDTO,
+    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
+) -> str:
+    connection_info = data_source.get_connection_info(
+        dto.connection_info, dict(headers)
+    )
+    metadata = MetadataFactory.get_metadata(data_source, connection_info)
+    return await execute_get_version_with_timeout(metadata)
 
 
 @router.post(
