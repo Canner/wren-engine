@@ -1,3 +1,4 @@
+from app.model.connector import BigQueryConnector
 from loguru import logger
 
 from app.model import BigQueryConnectionInfo
@@ -35,7 +36,7 @@ BIGQUERY_TYPE_MAPPING = {
 class BigQueryMetadata(Metadata):
     def __init__(self, connection_info: BigQueryConnectionInfo):
         super().__init__(connection_info)
-        self.connection = DataSource.bigquery.get_connection(connection_info)
+        self.connection = BigQueryConnector(connection_info)
 
     def get_table_list(self) -> list[Table]:
         dataset_id = self.connection_info.dataset_id.get_secret_value()
@@ -74,7 +75,7 @@ class BigQueryMetadata(Metadata):
                 AND cf.data_type NOT LIKE 'RANGE%'
             ORDER BY cf.field_path ASC
             """
-        response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
+        response = self.connection.query(sql).to_pandas().to_dict(orient="records")
 
         def get_column(row) -> Column:
             return Column(
@@ -175,7 +176,7 @@ class BigQueryMetadata(Metadata):
                 ON ccu.constraint_name = tc.constraint_name
             WHERE tc.constraint_type = 'FOREIGN KEY'
             """
-        response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
+        response = self.connection.query(sql).to_pandas().to_dict(orient="records")
 
         constraints = []
         for row in response:
