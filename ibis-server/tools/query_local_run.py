@@ -77,7 +77,7 @@ properties = frozenset(properties.items())
 print("### Session Properties ###")
 for key, value in properties:
     print(f"# {key}: {value}")
-session_context = SessionContext(encoded_str, function_list_path + f"/{data_source}.csv", properties)
+session_context = SessionContext(encoded_str, function_list_path + f"/{data_source}.csv", properties, data_source)
 planned_sql = session_context.transform_sql(sql)
 print("# Planned SQL:\n", planned_sql)
 

@@ -17,7 +17,7 @@ from wren_core import (
 manifest = {
     "catalog": "my_catalog",
     "schema": "my_schema",
-    "dataSource": "bigquery",
+    "dataSource": "datafusion",
     "models": [
         {
             "name": "customer",
@@ -260,7 +260,7 @@ def test_extract_by(dataset, expected_models):
     extracted_manifest = ManifestExtractor(manifest_str).extract_by(dataset)
     assert len(extracted_manifest.models) == len(expected_models)
     assert [m.name for m in extracted_manifest.models] == expected_models
-    assert extracted_manifest.data_source.__str__() == "DataSource.BigQuery"
+    assert extracted_manifest.data_source.__str__() == "DataSource.Datafusion"
 
 
 def test_to_json_base64():

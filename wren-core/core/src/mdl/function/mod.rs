@@ -1,4 +1,5 @@
 mod aggregate;
+pub mod dialect;
 mod macros;
 mod remote_function;
 mod scalar;

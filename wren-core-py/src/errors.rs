@@ -6,6 +6,7 @@ use std::string::FromUtf8Error;
 use thiserror::Error;
 use wren_core::DataFusionError;
 use wren_core::WrenError;
+use wren_core_base::mdl::ParsedDataSourceError;
 
 #[derive(Error, Debug, PartialEq)]
 #[error("{message}")]
@@ -85,5 +86,11 @@ impl From<csv::Error> for CoreError {
 impl From<std::io::Error> for CoreError {
     fn from(err: std::io::Error) -> Self {
         CoreError::new(&format!("IO error: {}", err))
+    }
+}
+
+impl From<ParsedDataSourceError> for CoreError {
+    fn from(err: ParsedDataSourceError) -> Self {
+        CoreError::new(&format!("DataSource error: {}", err))
     }
 }

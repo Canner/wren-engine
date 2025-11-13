@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use std::any::Any;
 use std::fmt::Display;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use crate::logical_plan::utils::{get_coercion_type_signature, map_data_type};
 
@@ -109,6 +110,8 @@ pub enum ReturnType {
     /// If the input type is array, the return type is the same as the element type of the first array argument
     /// e.g. `greatest(array<int>)` will return `int`
     SameAsInputFirstArrayElement,
+    /// The return type is the array of the first argument type
+    ArrayOfInputFirstArgument,
 }
 
 impl Display for ReturnType {
@@ -118,6 +121,9 @@ impl Display for ReturnType {
             ReturnType::SameAsInput => write!(f, "same_as_input"),
             ReturnType::SameAsInputFirstArrayElement => {
                 write!(f, "same_as_input_first_array_element")
+            }
+            ReturnType::ArrayOfInputFirstArgument => {
+                write!(f, "array_of_input_first_argument")
             }
         }
     }
@@ -131,6 +137,7 @@ impl FromStr for ReturnType {
             "same_as_input_first_array_element" => {
                 Ok(ReturnType::SameAsInputFirstArrayElement)
             }
+            "array_of_input_first_argument" => Ok(ReturnType::ArrayOfInputFirstArgument),
             _ => map_data_type(s)
                 .map(ReturnType::Specific)
                 .map_err(|e| e.to_string()),
@@ -155,6 +162,12 @@ impl ReturnType {
                     return not_impl_err!("Input type is not array");
                 }
             }
+            ReturnType::ArrayOfInputFirstArgument => {
+                if arg_types.is_empty() {
+                    return not_impl_err!("No input type");
+                }
+                DataType::List(Arc::new(Field::new("item", arg_types[0].clone(), true)))
+            }
         })
     }
 }
@@ -171,7 +184,21 @@ pub struct ByPassScalarUDF {
 }
 
 impl ByPassScalarUDF {
-    pub fn new(name: &str, return_type: DataType) -> Self {
+    pub fn new(
+        name: &str,
+        return_type: ReturnType,
+        signature: Signature,
+        doc: Option<Documentation>,
+    ) -> Self {
+        Self {
+            name: name.to_string(),
+            return_type,
+            signature,
+            doc,
+        }
+    }
+
+    pub fn new_with_return_type(name: &str, return_type: DataType) -> Self {
         Self {
             name: name.to_string(),
             return_type: ReturnType::Specific(return_type),
@@ -251,11 +278,43 @@ pub struct ByPassAggregateUDF {
     name: String,
     return_type: ReturnType,
     signature: Signature,
+    aliases: Vec<String>,
     doc: Option<Documentation>,
 }
 
 impl ByPassAggregateUDF {
-    pub fn new(name: &str, return_type: DataType) -> Self {
+    pub fn new(
+        name: &str,
+        return_type: ReturnType,
+        signature: Signature,
+        doc: Option<Documentation>,
+    ) -> Self {
+        Self {
+            name: name.to_string(),
+            return_type,
+            signature,
+            aliases: vec![],
+            doc,
+        }
+    }
+
+    pub fn new_with_alias(
+        name: &str,
+        return_type: ReturnType,
+        signature: Signature,
+        aliases: Vec<String>,
+        doc: Option<Documentation>,
+    ) -> Self {
+        Self {
+            name: name.to_string(),
+            return_type,
+            signature,
+            aliases,
+            doc,
+        }
+    }
+
+    pub fn new_with_return_type(name: &str, return_type: DataType) -> Self {
         Self {
             name: name.to_string(),
             return_type: ReturnType::Specific(return_type),
@@ -263,6 +322,7 @@ impl ByPassAggregateUDF {
                 vec![TypeSignature::VariadicAny, TypeSignature::Nullary],
                 Volatility::Volatile,
             ),
+            aliases: vec![],
             doc: None,
         }
     }
@@ -277,6 +337,7 @@ impl From<RemoteFunction> for ByPassAggregateUDF {
             signature: func.get_signature(),
             doc: Some(build_document(&func)),
             name: func.name,
+            aliases: vec![],
         }
     }
 }
@@ -288,6 +349,10 @@ impl AggregateUDFImpl for ByPassAggregateUDF {
 
     fn name(&self) -> &str {
         &self.name
+    }
+
+    fn aliases(&self) -> &[String] {
+        &self.aliases
     }
 
     fn signature(&self) -> &Signature {
@@ -318,7 +383,21 @@ pub struct ByPassWindowFunction {
 }
 
 impl ByPassWindowFunction {
-    pub fn new(name: &str, return_type: DataType) -> Self {
+    pub fn new(
+        name: &str,
+        return_type: ReturnType,
+        signature: Signature,
+        doc: Option<Documentation>,
+    ) -> Self {
+        Self {
+            name: name.to_string(),
+            return_type,
+            signature,
+            doc,
+        }
+    }
+
+    pub fn new_with_return_type(name: &str, return_type: DataType) -> Self {
         Self {
             name: name.to_string(),
             return_type: ReturnType::Specific(return_type),
@@ -399,7 +478,7 @@ mod test {
 
     #[tokio::test]
     async fn test_by_pass_scalar_udf() -> Result<()> {
-        let udf = ByPassScalarUDF::new("date_test", DataType::Int64);
+        let udf = ByPassScalarUDF::new_with_return_type("date_test", DataType::Int64);
         let ctx = SessionContext::new();
         ctx.register_udf(ScalarUDF::new_from_impl(udf));
 
@@ -410,10 +489,9 @@ mod test {
         let expected = "Projection: date_test(Int64(1), Int64(2))\n  EmptyRelation";
         assert_eq!(format!("{plan}"), expected);
 
-        ctx.register_udf(ScalarUDF::new_from_impl(ByPassScalarUDF::new(
-            "today",
-            DataType::Utf8,
-        )));
+        ctx.register_udf(ScalarUDF::new_from_impl(
+            ByPassScalarUDF::new_with_return_type("today", DataType::Utf8),
+        ));
         let plan_2 = ctx.sql("SELECT today()").await?.into_unoptimized_plan();
         assert_eq!(format!("{plan_2}"), "Projection: today()\n  EmptyRelation");
 
@@ -422,7 +500,7 @@ mod test {
 
     #[tokio::test]
     async fn test_by_pass_agg_udf() -> Result<()> {
-        let udf = ByPassAggregateUDF::new("count_self", DataType::Int64);
+        let udf = ByPassAggregateUDF::new_with_return_type("count_self", DataType::Int64);
         let ctx = SessionContext::new();
         ctx.register_udaf(AggregateUDF::new_from_impl(udf));
 
@@ -434,10 +512,9 @@ mod test {
         \n        Values: (Int64(1), Int64(2)), (Int64(2), Int64(3)), (Int64(3), Int64(4))";
         assert_eq!(format!("{plan}"), expected);
 
-        ctx.register_udaf(AggregateUDF::new_from_impl(ByPassAggregateUDF::new(
-            "total_count",
-            DataType::Int64,
-        )));
+        ctx.register_udaf(AggregateUDF::new_from_impl(
+            ByPassAggregateUDF::new_with_return_type("total_count", DataType::Int64),
+        ));
         let plan_2 = ctx
             .sql("SELECT total_count() AS total_count FROM (VALUES (1), (2), (3)) AS val(x)")
             .await?
@@ -455,7 +532,8 @@ mod test {
 
     #[tokio::test]
     async fn test_by_pass_window_udf() -> Result<()> {
-        let udf = ByPassWindowFunction::new("custom_window", DataType::Int64);
+        let udf =
+            ByPassWindowFunction::new_with_return_type("custom_window", DataType::Int64);
         let ctx = SessionContext::new();
         ctx.register_udwf(WindowUDF::new_from_impl(udf));
 
@@ -468,10 +546,9 @@ mod test {
         \n    EmptyRelation";
         assert_eq!(format!("{plan}"), expected);
 
-        ctx.register_udwf(WindowUDF::new_from_impl(ByPassWindowFunction::new(
-            "cume_dist",
-            DataType::Int64,
-        )));
+        ctx.register_udwf(WindowUDF::new_from_impl(
+            ByPassWindowFunction::new_with_return_type("cume_dist", DataType::Int64),
+        ));
         let plan_2 = ctx
             .sql("SELECT cume_dist() OVER ()")
             .await?

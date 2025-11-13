@@ -1,3 +1,4 @@
+use std::error::Error;
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,6 +18,7 @@
  * under the License.
  */
 use std::fmt::Display;
+use std::str::FromStr;
 use std::sync::Arc;
 
 #[cfg(not(feature = "python-binding"))]
@@ -99,6 +101,32 @@ mod manifest_impl {
 
 pub use crate::mdl::manifest::manifest_impl::*;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParsedDataSourceError {
+    pub message: String,
+}
+
+impl ParsedDataSourceError {
+    pub fn new(msg: &str) -> ParsedDataSourceError {
+        ParsedDataSourceError {
+            message: msg.to_string(),
+        }
+    }
+}
+
+impl Display for ParsedDataSourceError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ParsedDataSourceError: {}", self.message)
+    }
+}
+
+impl Error for ParsedDataSourceError {
+    #[allow(deprecated)]
+    fn description(&self) -> &str {
+        &self.message
+    }
+}
+
 impl Display for DataSource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -120,6 +148,37 @@ impl Display for DataSource {
             DataSource::Athena => write!(f, "ATHENA"),
             DataSource::Redshift => write!(f, "REDSHIFT"),
             DataSource::Databricks => write!(f, "DATABRICKS"),
+        }
+    }
+}
+
+impl FromStr for DataSource {
+    type Err = ParsedDataSourceError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_uppercase().as_str() {
+            "BIGQUERY" => Ok(DataSource::BigQuery),
+            "CLICKHOUSE" => Ok(DataSource::Clickhouse),
+            "CANNER" => Ok(DataSource::Canner),
+            "TRINO" => Ok(DataSource::Trino),
+            "MSSQL" => Ok(DataSource::MSSQL),
+            "MYSQL" => Ok(DataSource::MySQL),
+            "POSTGRES" => Ok(DataSource::Postgres),
+            "SNOWFLAKE" => Ok(DataSource::Snowflake),
+            "DATAFUSION" => Ok(DataSource::Datafusion),
+            "DUCKDB" => Ok(DataSource::DuckDB),
+            "LOCAL_FILE" => Ok(DataSource::LocalFile),
+            "S3_FILE" => Ok(DataSource::S3File),
+            "GCS_FILE" => Ok(DataSource::GcsFile),
+            "MINIO_FILE" => Ok(DataSource::MinioFile),
+            "ORACLE" => Ok(DataSource::Oracle),
+            "ATHENA" => Ok(DataSource::Athena),
+            "REDSHIFT" => Ok(DataSource::Redshift),
+            "DATABRICKS" => Ok(DataSource::Databricks),
+            _ => Err(ParsedDataSourceError::new(&format!(
+                "Unknown data source: {}",
+                s
+            ))),
         }
     }
 }
@@ -260,7 +319,7 @@ impl Model {
             self.columns
                 .iter()
                 .filter(|c| c.relationship.is_none())
-                .map(|c| Arc::clone(&c))
+                .map(Arc::clone)
                 .collect()
         }
     }
@@ -286,7 +345,7 @@ impl Model {
         self.columns
             .iter()
             .find(|c| c.name == column_name)
-            .map(|c| Arc::clone(&c))
+            .map(Arc::clone)
     }
 
     /// Return the primary key of the model
