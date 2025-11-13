@@ -1,9 +1,10 @@
 import pathlib
+import time
 
 import pandas as pd
 import pytest
 import sqlalchemy
-from sqlalchemy import text
+from sqlalchemy import NullPool, text
 from testcontainers.oracle import OracleDbContainer
 
 from app.config import get_config
@@ -29,6 +30,33 @@ def oracle(request) -> OracleDbContainer:
     oracle = OracleDbContainer(
         "gvenzl/oracle-free:23.6-slim-faststart", oracle_password=f"{oracle_password}"
     ).start()
+
+    max_retries = 30
+    retry_interval = 10
+    engine = None
+
+    for i in range(max_retries):
+        try:
+            engine = sqlalchemy.create_engine(
+                oracle.get_connection_url(),
+                poolclass=NullPool,
+                pool_pre_ping=True,
+            )
+            with engine.connect() as conn:
+                result = conn.execute(text("SELECT 1"))
+                result.fetchone()
+            break
+        except Exception:
+            if i == max_retries - 1:
+                oracle.stop()
+                raise TimeoutError(
+                    f"Oracle container failed to start after {max_retries * retry_interval}s"
+                )
+            time.sleep(retry_interval)
+        finally:
+            if engine:
+                engine.dispose()
+
     orders_schema = {
         "o_orderkey": sqlalchemy.Integer(),
         "o_custkey": sqlalchemy.Integer(),
@@ -50,7 +78,7 @@ def oracle(request) -> OracleDbContainer:
         "c_mktsegment": sqlalchemy.Text(),
         "c_comment": sqlalchemy.Text(),
     }
-    engine = sqlalchemy.create_engine(oracle.get_connection_url())
+    engine = sqlalchemy.create_engine(oracle.get_connection_url(), poolclass=NullPool)
     with engine.begin() as conn:
         # assign dtype to avoid to create CLOB column for text columns
         pd.read_parquet(file_path("resource/tpch/data/orders.parquet")).to_sql(
