@@ -15,7 +15,7 @@ def pytest_collection_modifyitems(items):
             item.add_marker(pytestmark)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def mysql(request) -> MySqlContainer:
     mysql = MySqlContainer(image="mysql:8.0.40", dialect="pymysql").start()
     request.addfinalizer(mysql.stop)

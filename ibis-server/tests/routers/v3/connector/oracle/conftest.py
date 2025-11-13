@@ -24,7 +24,7 @@ def pytest_collection_modifyitems(items):
             item.add_marker(pytestmark)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def oracle(request) -> OracleDbContainer:
     oracle = OracleDbContainer(
         "gvenzl/oracle-free:23.6-slim-faststart", oracle_password=f"{oracle_password}"

@@ -24,7 +24,7 @@ function_list_path = file_path("../resources/function_list")
 white_function_list_path = file_path("../resources/white_function_list")
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def postgres(request) -> PostgresContainer:
     pg = PostgresContainer("postgres:16-alpine").start()
     engine = sqlalchemy.create_engine(pg.get_connection_url())
