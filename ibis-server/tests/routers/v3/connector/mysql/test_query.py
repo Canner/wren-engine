@@ -2,7 +2,6 @@ import pytest
 
 from app.config import get_config
 from app.dependencies import X_WREN_FALLBACK_DISABLE
-from tests.conftest import DATAFUSION_FUNCTION_COUNT, file_path
 from tests.routers.v3.connector.mysql.conftest import base_url
 
 manifest = {
