@@ -90,7 +90,7 @@ async def test_query(client, manifest_str, connection_info):
         "orderkey": "int64",
         "custkey": "int64",
         "orderstatus": "string",
-        "totalprice": "decimal128(15, 2)",
+        "totalprice": "decimal128(38, 9)",
         "orderdate": "date32[day]",
         "order_cust_key": "string",
         "timestamp": "timestamp[us]",
@@ -211,3 +211,52 @@ async def test_query_with_dry_run_and_invalid_sql(
     )
     assert response.status_code == 422
     assert response.text is not None
+
+
+@pytest.mark.parametrize(
+    "conn_fixture",
+    [
+        "connection_info",
+        "connection_info_default_credential_chain",
+        "connection_info_oidc",
+    ],
+)
+async def test_query_athena_modes(client, manifest_str, request, conn_fixture):
+    connection_info = request.getfixturevalue(conn_fixture)
+
+    response = await client.post(
+        url="/v3/connector/athena/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT * FROM wren.public.orders LIMIT 1",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["columns"]) == len(manifest["models"][0]["columns"])
+    assert len(result["data"]) == 1
+
+    assert result["data"][0] == [
+        1,
+        36901,
+        "O",
+        "173665.47",
+        "1996-01-02",
+        "1_36901",
+        "2024-01-01 23:59:59.000000",
+        "2024-01-01 23:59:59.000000",
+        None,
+    ]
+
+    assert result["dtypes"] == {
+        "orderkey": "int64",
+        "custkey": "int64",
+        "orderstatus": "string",
+        "totalprice": "decimal128(38, 9)",
+        "orderdate": "date32[day]",
+        "order_cust_key": "string",
+        "timestamp": "timestamp[us]",
+        "timestamptz": "timestamp[us]",
+        "test_null_time": "timestamp[us]",
+    }
