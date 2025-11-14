@@ -1,10 +1,9 @@
 import pathlib
 
+import pandas as pd
 import pytest
 import sqlalchemy
-import pandas as pd
 from testcontainers.mysql import MySqlContainer
-from tests.conftest import file_path
 
 from app.config import get_config
 from tests.conftest import file_path

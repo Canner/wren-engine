@@ -3,7 +3,6 @@ import base64
 import orjson
 import pytest
 
-
 from app.dependencies import X_WREN_FALLBACK_DISABLE
 from tests.routers.v3.connector.mysql.conftest import base_url
 
@@ -65,12 +64,9 @@ async def test_extract(client, manifest_str, connection_info):
         "data": [[0]],
         "dtypes": {"col": "int32"},
     }
-import pytest
 
-from app.dependencies import X_WREN_FALLBACK_DISABLE
-from tests.routers.v3.connector.mysql.conftest import base_url
 
-manifest = {
+manifest_json = {
     "catalog": "wren",
     "schema": "public",
     "models": [
@@ -101,16 +97,16 @@ manifest = {
 
 
 @pytest.fixture(scope="module")
-async def manifest_str(web_server):
-    return await web_server.register_mdl(manifest)
+async def manifest_json_str():
+    return base64.b64encode(orjson.dumps(manifest_json)).decode("utf-8")
 
 
-async def test_json_query(client, manifest_str, connection_info):
+async def test_json_query(client, manifest_json_str, connection_info):
     response = await client.post(
         url=f"{base_url}/query",
         json={
             "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
+            "manifestStr": manifest_json_str,
             "sql": "SELECT object_col, array_col FROM wren.public.json_test limit 1",
         },
         headers={
