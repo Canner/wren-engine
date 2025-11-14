@@ -30,6 +30,7 @@ use datafusion::sql::sqlparser::ast::{
 use datafusion::sql::unparser::ast::{
     RelationBuilder, TableFactorBuilder, TableFunctionRelationBuilder,
 };
+use datafusion::sql::unparser::dialect::DateFieldExtractStyle;
 use datafusion::sql::unparser::Unparser;
 use regex::Regex;
 
@@ -88,6 +89,10 @@ pub trait InnerDialect: Send + Sync {
     ) -> bool {
         false
     }
+
+    fn date_field_extract_style(&self) -> Option<DateFieldExtractStyle> {
+        None
+    }
 }
 
 /// [get_inner_dialect] returns the suitable InnerDialect for the given data source.
@@ -122,6 +127,14 @@ impl InnerDialect for MySQLDialect {
             "btrim" => scalar_function_to_sql_internal(unparser, None, "trim", args),
             _ => Ok(None),
         }
+    }
+
+    fn date_field_extract_style(&self) -> Option<DateFieldExtractStyle> {
+        Some(DateFieldExtractStyle::Extract)
+    }
+
+    fn date_field_extract_style(&self) -> Option<DateFieldExtractStyle> {
+        Some(DateFieldExtractStyle::Extract)
     }
 }
 
