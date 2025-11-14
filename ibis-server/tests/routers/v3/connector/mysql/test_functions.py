@@ -4,8 +4,12 @@ import orjson
 import pytest
 
 from app.config import get_config
-from tests.conftest import DATAFUSION_FUNCTION_COUNT, file_path
-from tests.routers.v3.connector.mysql.conftest import base_url
+from tests.conftest import DATAFUSION_FUNCTION_COUNT
+from tests.routers.v3.connector.mysql.conftest import (
+    base_url,
+    function_list_path,
+    white_function_list_path,
+)
 
 manifest = {
     "dataSource": "mysql",
@@ -25,29 +29,10 @@ manifest = {
     ],
 }
 
-function_list_path = file_path("../resources/function_list")
-white_function_list_path = file_path("../resources/white_function_list")
-
 
 @pytest.fixture(scope="module")
 def manifest_str():
     return base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
-
-
-@pytest.fixture(autouse=True)
-def set_remote_function_list_path():
-    config = get_config()
-    config.set_remote_function_list_path(function_list_path)
-    yield
-    config.set_remote_function_list_path(None)
-
-
-@pytest.fixture(autouse=True)
-def set_remote_white_function_list_path():
-    config = get_config()
-    config.set_remote_white_function_list_path(white_function_list_path)
-    yield
-    config.set_remote_white_function_list_path(None)
 
 
 async def test_function_list(client):
