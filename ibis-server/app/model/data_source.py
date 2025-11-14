@@ -273,7 +273,8 @@ class DataSourceExtension(Enum):
                 if info.role_session_name
                 else "wren-oidc-session"
             )
-            sts = boto3.client("sts", region_name=info.region_name.get_secret_value())
+            region = info.region_name.get_secret_value() if info.region_name else None
+            sts = boto3.client("sts", region_name=region)
 
             resp = sts.assume_role_with_web_identity(
                 RoleArn=role_arn,
