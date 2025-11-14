@@ -27,6 +27,9 @@ import psycopg
 import pyarrow as pa
 import sqlglot.expressions as sge
 import trino
+from databricks import sql as dbsql
+from databricks.sdk.core import Config as DbConfig
+from databricks.sdk.core import oauth_service_principal
 from duckdb import HTTPException, IOException
 from google.cloud import bigquery
 from google.oauth2 import service_account
@@ -40,6 +43,9 @@ from opentelemetry import trace
 
 from app.model import (
     ConnectionInfo,
+    DatabricksConnectionUnion,
+    DatabricksServicePrincipalConnectionInfo,
+    DatabricksTokenConnectionInfo,
     GcsFileConnectionInfo,
     MinioFileConnectionInfo,
     RedshiftConnectionInfo,
@@ -88,6 +94,8 @@ class Connector:
             self._connector = RedshiftConnector(connection_info)
         elif data_source == DataSource.postgres:
             self._connector = PostgresConnector(connection_info)
+        elif data_source == DataSource.databricks:
+            self._connector = DatabricksConnector(connection_info)
         else:
             self._connector = SimpleConnector(data_source, connection_info)
 
@@ -584,3 +592,54 @@ class RedshiftConnector:
             self.connection.close()
         except Exception as e:
             logger.warning(f"Error closing Redshift connection: {e}")
+
+
+class DatabricksConnector(SimpleConnector):
+    def __init__(self, connection_info: DatabricksConnectionUnion):
+        if isinstance(connection_info, DatabricksTokenConnectionInfo):
+            self.connection = dbsql.connect(
+                server_hostname=connection_info.server_hostname.get_secret_value(),
+                http_path=connection_info.http_path.get_secret_value(),
+                access_token=connection_info.access_token.get_secret_value(),
+            )
+        elif isinstance(connection_info, DatabricksServicePrincipalConnectionInfo):
+            kwargs = {
+                "host": connection_info.server_hostname.get_secret_value(),
+                "client_id": connection_info.client_id.get_secret_value(),
+                "client_secret": connection_info.client_secret.get_secret_value(),
+            }
+            if connection_info.azure_tenant_id is not None:
+                kwargs["azure_tenant_id"] = (
+                    connection_info.azure_tenant_id.get_secret_value()
+                )
+
+            def credential_provider():
+                return oauth_service_principal(DbConfig(**kwargs))
+
+            self.connection = dbsql.connect(
+                server_hostname=connection_info.server_hostname.get_secret_value(),
+                http_path=connection_info.http_path.get_secret_value(),
+                credentials_provider=credential_provider,
+            )
+
+    def query(self, sql, limit=None):
+        with closing(self.connection.cursor()) as cursor:
+            cursor.execute(sql)
+
+            if limit is not None:
+                arrow_table = cursor.fetchmany_arrow(limit)
+            else:
+                arrow_table = cursor.fetchall_arrow()
+
+            return arrow_table
+
+    def dry_run(self, sql):
+        with closing(self.connection.cursor()) as cursor:
+            cursor.execute(f"SELECT * FROM ({sql}) AS sub LIMIT 0")
+
+    def close(self) -> None:
+        """Close the Databricks connection."""
+        try:
+            self.connection.close()
+        except Exception as e:
+            logger.warning(f"Error closing Databricks connection: {e}")

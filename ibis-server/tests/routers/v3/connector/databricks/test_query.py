@@ -49,6 +49,7 @@ manifest = {
             ],
         },
     ],
+    "dataSource": "databricks",
 }
 
 
@@ -86,13 +87,30 @@ async def test_query(client, manifest_str, connection_info):
         "orderkey": "int64",
         "custkey": "int64",
         "orderstatus": "string",
-        "totalprice": "decimal128(38, 9)",
+        "totalprice": "decimal128(18, 2)",
         "orderdate": "date32[day]",
         "order_cust_key": "string",
-        "timestamp": "timestamp[us, tz=UTC]",
-        "timestamptz": "timestamp[us, tz=UTC]",
-        "test_null_time": "timestamp[us, tz=UTC]",
+        "timestamp": "timestamp[us, tz=Etc/UTC]",
+        "timestamptz": "timestamp[us, tz=Etc/UTC]",
+        "test_null_time": "timestamp[us, tz=Etc/UTC]",
     }
+
+
+async def test_query_with_service_principal(
+    client, manifest_str, service_principal_connection_info
+):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": service_principal_connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT * FROM wren.public.orders ORDER BY orderkey LIMIT 1",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["columns"]) == len(manifest["models"][0]["columns"])
+    assert len(result["data"]) == 1
 
 
 async def test_query_with_limit(client, manifest_str, connection_info):

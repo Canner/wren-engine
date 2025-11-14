@@ -20,7 +20,8 @@ from app.model import (
     ClickHouseConnectionInfo,
     ConnectionInfo,
     ConnectionUrl,
-    DatabricksConnectionInfo,
+    DatabricksServicePrincipalConnectionInfo,
+    DatabricksTokenConnectionInfo,
     GcsFileConnectionInfo,
     LocalFileConnectionInfo,
     MinioFileConnectionInfo,
@@ -180,7 +181,12 @@ class DataSource(StrEnum):
             case DataSource.gcs_file:
                 return GcsFileConnectionInfo.model_validate(data)
             case DataSource.databricks:
-                return DatabricksConnectionInfo.model_validate(data)
+                if (
+                    "databricks_type" in data
+                    and data["databricks_type"] == "service_principal"
+                ):
+                    return DatabricksServicePrincipalConnectionInfo.model_validate(data)
+                return DatabricksTokenConnectionInfo.model_validate(data)
             case _:
                 raise NotImplementedError(f"Unsupported data source: {self}")
 
@@ -415,7 +421,7 @@ class DataSourceExtension(Enum):
         )
 
     @staticmethod
-    def get_databricks_connection(info: DatabricksConnectionInfo) -> BaseBackend:
+    def get_databricks_connection(info: DatabricksTokenConnectionInfo) -> BaseBackend:
         return ibis.databricks.connect(
             server_hostname=info.server_hostname.get_secret_value(),
             http_path=info.http_path.get_secret_value(),

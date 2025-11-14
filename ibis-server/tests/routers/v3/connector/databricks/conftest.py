@@ -54,7 +54,19 @@ def init_databricks(connection_info):
 @pytest.fixture(scope="module")
 def connection_info() -> dict[str, str]:
     return {
-        "serverHostname": os.getenv("DATABRICKS_SERVER_HOSTNAME"),
-        "httpPath": os.getenv("DATABRICKS_HTTP_PATH"),
-        "accessToken": os.getenv("DATABRICKS_TOKEN"),
+        "databricks_type": "token",
+        "serverHostname": os.getenv("TEST_DATABRICKS_SERVER_HOSTNAME"),
+        "httpPath": os.getenv("TEST_DATABRICKS_HTTP_PATH"),
+        "accessToken": os.getenv("TEST_DATABRICKS_TOKEN"),
+    }
+
+
+@pytest.fixture(scope="module")
+def service_principal_connection_info() -> dict[str, str]:
+    return {
+        "databricks_type": "service_principal",
+        "serverHostname": os.getenv("TEST_DATABRICKS_SERVER_HOSTNAME"),
+        "httpPath": os.getenv("TEST_DATABRICKS_HTTP_PATH"),
+        "clientId": os.getenv("TEST_DATABRICKS_CLIENT_ID"),
+        "clientSecret": os.getenv("TEST_DATABRICKS_CLIENT_SECRET"),
     }
