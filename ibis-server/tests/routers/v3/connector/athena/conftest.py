@@ -49,19 +49,15 @@ def connection_info_default_credential_chain():
 
 @pytest.fixture(scope="session")
 def connection_info_oidc():
-    """Use web identity token (OIDC → AssumeRoleWithWebIdentity) authentication."""
-    token_path = os.getenv("TEST_ATHENA_WEB_IDENTITY_TOKEN_PATH")
+    web_identity_token = os.getenv("TEST_ATHENA_WEB_IDENTITY_TOKEN")
     role_arn = os.getenv("TEST_ATHENA_ROLE_ARN")
 
-    if not token_path or not role_arn:
+    if not web_identity_token or not role_arn:
         pytest.skip("Skipping OIDC test: web identity token or role ARN not set")
 
-    with open(token_path, encoding="utf-8") as f:
-        web_identity_token = f.read().strip()
-
     return {
-        "s3_staging_dir": os.getenv("TEST_ATHENA_S3_STAGING_DIR"),
-        "region_name": os.getenv("TEST_ATHENA_REGION_NAME", "ap-northeast-1"),
+        "s3_staging_dir": os.getenv("TEST_ATHENA_OIDC_S3_STAGING_DIR"),
+        "region_name": os.getenv("TEST_ATHENA_OIDC_REGION_NAME", "us-west-1"),
         "schema_name": "test",
         "role_arn": role_arn,
         "web_identity_token": web_identity_token,

@@ -214,7 +214,12 @@ async def test_query_with_dry_run_and_invalid_sql(
 
 
 @pytest.mark.parametrize(
-    "conn_fixture", ["connection_info", "connection_info_default_credential_chain"]
+    "conn_fixture",
+    [
+        "connection_info",
+        "connection_info_default_credential_chain",
+        "connection_info_oidc",
+    ],
 )
 async def test_query_athena_modes(client, manifest_str, request, conn_fixture):
     connection_info = request.getfixturevalue(conn_fixture)

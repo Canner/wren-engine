@@ -8,6 +8,7 @@ from json import loads
 from typing import Any
 from urllib.parse import unquote_plus
 
+import boto3
 import ibis
 from google.cloud import bigquery
 from google.oauth2 import service_account
@@ -263,14 +264,29 @@ class DataSourceExtension(Enum):
         if info.region_name:
             kwargs["region_name"] = info.region_name.get_secret_value()
 
-        # ── 1️⃣ Web Identity Token flow (Google OIDC → AWS STS) ───
+        # ── Web Identity Token flow (Google OIDC → AWS STS) ───
         if info.web_identity_token and info.role_arn:
-            kwargs["web_identity_token"] = info.web_identity_token.get_secret_value()
-            kwargs["role_arn"] = info.role_arn.get_secret_value()
-            if info.role_session_name:
-                kwargs["role_session_name"] = info.role_session_name.get_secret_value()
+            oidc_token = info.web_identity_token.get_secret_value()
+            role_arn = info.role_arn.get_secret_value()
+            session_name = (
+                info.role_session_name.get_secret_value()
+                if info.role_session_name
+                else "wren-oidc-session"
+            )
+            sts = boto3.client("sts", region_name=info.region_name.get_secret_value())
 
-        # ── 2️⃣ Standard Access/Secret Keys ───────────────────────
+            resp = sts.assume_role_with_web_identity(
+                RoleArn=role_arn,
+                RoleSessionName=session_name,
+                WebIdentityToken=oidc_token,
+            )
+
+            creds = resp["Credentials"]
+            kwargs["aws_access_key_id"] = creds["AccessKeyId"]
+            kwargs["aws_secret_access_key"] = creds["SecretAccessKey"]
+            kwargs["aws_session_token"] = creds["SessionToken"]
+
+        # ── Standard Access/Secret Keys ───────────────────────
         elif info.aws_access_key_id and info.aws_secret_access_key:
             kwargs["aws_access_key_id"] = info.aws_access_key_id.get_secret_value()
             kwargs["aws_secret_access_key"] = (
