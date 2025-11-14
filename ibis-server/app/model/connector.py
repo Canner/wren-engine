@@ -37,6 +37,7 @@ from ibis.expr.datatypes.core import UUID
 from ibis.expr.types import Table
 from loguru import logger
 from opentelemetry import trace
+from sqlglot import exp, parse_one
 
 from app.model import (
     ConnectionInfo,
@@ -300,6 +301,7 @@ class MSSqlConnector(SimpleConnector):
 
     @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
     def query(self, sql: str, limit: int | None = None) -> pa.Table:
+        sql = self._flatten_pagination_limit(sql)
         ibis_table = self.connection.sql(sql)
         if limit is not None:
             ibis_table = ibis_table.limit(limit)
@@ -328,6 +330,60 @@ class MSSqlConnector(SimpleConnector):
 
         arrow_table = pa.Table.from_pandas(pandas_df)
         return arrow_table
+
+    # TODO: we should implement analyze rule to rewrite mssql pagination queries
+    # Match: SELECT * FROM (<inner_sql>) AS _paginated_table LIMIT n [OFFSET m]
+    def _flatten_pagination_limit(
+        self, sql_query: str, input_dialect: str = "tsql"
+    ) -> str:
+        try:
+            parsed = parse_one(sql_query, dialect=input_dialect)
+            # Must be a SELECT
+            if not isinstance(parsed, exp.Select):
+                return sql_query
+            # Must have a LIMIT
+            if not parsed.args.get("limit"):
+                return sql_query
+
+            from_clause = parsed.find(exp.From)
+            if not from_clause:
+                return sql_query
+
+            subqueries = []
+
+            # Case 1: Single FROM subquery
+            if isinstance(from_clause.this, exp.Subquery):
+                subqueries.append(from_clause.this)
+
+            # Case 2: Comma-separated or JOIN-based FROM
+            joins = parsed.args.get("joins")
+            if joins:
+                for join in joins:
+                    if isinstance(join, exp.Join):
+                        if isinstance(join.this, exp.Subquery):
+                            subqueries.append(join.this)
+                        if join.expression and isinstance(
+                            join.expression, exp.Subquery
+                        ):
+                            subqueries.append(join.expression)
+
+            # Only flatten if exactly one subquery is present
+            if len(subqueries) != 1:
+                return sql_query
+
+            subquery = subqueries[0]
+            inner = subquery.this
+            if not isinstance(inner, exp.Select):
+                return sql_query
+
+            # Transfer LIMIT to inner query
+            limit_expr = parsed.args["limit"].expression
+            inner.set("limit", exp.Limit(expression=limit_expr))
+
+            return inner.sql(dialect="tsql")
+
+        except Exception as e:
+            return f"Error: {e!s}"
 
     def dry_run(self, sql: str) -> None:
         try:
