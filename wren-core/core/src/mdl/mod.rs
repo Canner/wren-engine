@@ -3691,8 +3691,9 @@ mod test {
         Ok(())
     }
 
+    // bigquery and mssql will transform trim to trim, others to btrim
     #[tokio::test]
-    async fn test_trim_function_bigquery() -> Result<()> {
+    async fn test_trim_function_bigquery_and_mssql() -> Result<()> {
         let ctx = create_wren_ctx(None, Some(&DataSource::BigQuery));
         let manifest = ManifestBuilder::new()
             .catalog("wren")
@@ -3711,6 +3712,57 @@ mod test {
             Arc::new(HashMap::default()),
             Mode::Unparse,
         )?);
+        let headers = Arc::new(HashMap::default());
+        let sql = "SELECT trim(c_name) FROM customer";
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
+            @"SELECT trim(customer.c_name) FROM (SELECT customer.c_name FROM (SELECT __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer"
+        );
+
+        let ctx = create_wren_ctx(None, Some(&DataSource::MSSQL));
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_custkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .build(),
+            )
+            .data_source(DataSource::MSSQL)
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest,
+            Arc::new(HashMap::default()),
+            Mode::Unparse,
+        )?);
+
+        let headers = Arc::new(HashMap::default());
+        let sql = "SELECT trim(c_name) FROM customer";
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
+            @"SELECT trim(customer.c_name) FROM (SELECT customer.c_name FROM (SELECT __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer"
+        );
+
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_custkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .build(),
+            )
+            .data_source(DataSource::MSSQL)
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest,
+            Arc::new(HashMap::default()),
+            Mode::Unparse,
+        )?);
+
         let headers = Arc::new(HashMap::default());
         let sql = "SELECT trim(c_name) FROM customer";
         assert_snapshot!(
