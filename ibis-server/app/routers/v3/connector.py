@@ -443,6 +443,28 @@ def functions(
         return ORJSONResponse(func_list)
 
 
+@router.get(
+    "/{data_source}/function/{function_name}",
+    description="get the available function list of the specified data source",
+)
+def function(
+    data_source: DataSource,
+    function_name: str,
+    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
+) -> Response:
+    span_name = f"v3_get_function_{data_source}"
+    with tracer.start_as_current_span(
+        name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
+    ) as span:
+        set_attribute(headers, span)
+        file_path = get_config().get_remote_function_list_path(data_source)
+        session_context = get_session_context(None, file_path)
+        func_list = [
+            f.to_dict() for f in session_context.get_available_function(function_name)
+        ]
+        return ORJSONResponse(func_list)
+
+
 @router.post(
     "/{data_source}/model-substitute",
     description="get the SQL which table name is substituted",
