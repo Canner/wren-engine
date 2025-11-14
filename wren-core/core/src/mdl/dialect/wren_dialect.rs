@@ -21,8 +21,12 @@ use crate::mdl::manifest::DataSource;
 use datafusion::common::Result;
 use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
 use datafusion::logical_expr::Expr;
+use datafusion::scalar::ScalarValue;
 use datafusion::sql::sqlparser::ast::{self, WindowFrameBound};
-use datafusion::sql::unparser::dialect::{Dialect, IntervalStyle};
+use datafusion::sql::sqlparser::tokenizer::Span;
+use datafusion::sql::unparser::dialect::{
+    CharacterLengthStyle, DateFieldExtractStyle, Dialect, IntervalStyle,
+};
 use datafusion::sql::unparser::Unparser;
 use regex::Regex;
 
@@ -67,7 +71,15 @@ impl Dialect for WrenDialect {
             return Ok(Some(function));
         }
 
-        Ok(None)
+        match func_name {
+            "date_part" => {
+                date_part_to_sql(unparser, self.date_field_extract_style(), args)
+            }
+            "character_length" => {
+                character_length_to_sql(unparser, self.character_length_style(), args)
+            }
+            _ => Ok(None),
+        }
     }
 
     fn unnest_as_table_factor(&self) -> bool {
@@ -119,6 +131,14 @@ impl Dialect for WrenDialect {
         self.inner_dialect
             .relation_alias_overrides(_relation_builder, _alias)
     }
+
+    fn date_field_extract_style(&self) -> DateFieldExtractStyle {
+        if let Some(style) = self.inner_dialect.date_field_extract_style() {
+            style
+        } else {
+            DateFieldExtractStyle::DatePart
+        }
+    }
 }
 
 impl Default for WrenDialect {
@@ -138,4 +158,101 @@ impl WrenDialect {
 fn non_lowercase(sql: &str) -> bool {
     let lowercase = sql.to_lowercase();
     lowercase != sql
+}
+
+/// Converts a date_part function to SQL, tailoring it to the supported date field extraction style.
+pub(crate) fn date_part_to_sql(
+    unparser: &Unparser,
+    style: DateFieldExtractStyle,
+    date_part_args: &[Expr],
+) -> Result<Option<ast::Expr>> {
+    match (style, date_part_args.len()) {
+        (DateFieldExtractStyle::Extract, 2) => {
+            let date_expr = unparser.expr_to_sql(&date_part_args[1])?;
+            if let Expr::Literal(ScalarValue::Utf8(Some(field)), _) = &date_part_args[0] {
+                let field = match field.to_lowercase().as_str() {
+                    "year" => ast::DateTimeField::Year,
+                    "month" => ast::DateTimeField::Month,
+                    "day" => ast::DateTimeField::Day,
+                    "hour" => ast::DateTimeField::Hour,
+                    "minute" => ast::DateTimeField::Minute,
+                    "second" => ast::DateTimeField::Second,
+                    "week" => ast::DateTimeField::Week(None),
+                    _ => return Ok(None),
+                };
+
+                return Ok(Some(ast::Expr::Extract {
+                    field,
+                    expr: Box::new(date_expr),
+                    syntax: ast::ExtractSyntax::From,
+                }));
+            }
+        }
+        (DateFieldExtractStyle::Strftime, 2) => {
+            let column = unparser.expr_to_sql(&date_part_args[1])?;
+
+            if let Expr::Literal(ScalarValue::Utf8(Some(field)), _) = &date_part_args[0] {
+                let field = match field.to_lowercase().as_str() {
+                    "year" => "%Y",
+                    "month" => "%m",
+                    "day" => "%d",
+                    "hour" => "%H",
+                    "minute" => "%M",
+                    "second" => "%S",
+                    "week" => "%U",
+                    _ => return Ok(None),
+                };
+
+                return Ok(Some(ast::Expr::Function(ast::Function {
+                    name: ast::ObjectName::from(vec![ast::Ident {
+                        value: "strftime".to_string(),
+                        quote_style: None,
+                        span: Span::empty(),
+                    }]),
+                    args: ast::FunctionArguments::List(ast::FunctionArgumentList {
+                        duplicate_treatment: None,
+                        args: vec![
+                            ast::FunctionArg::Unnamed(ast::FunctionArgExpr::Expr(
+                                ast::Expr::value(ast::Value::SingleQuotedString(
+                                    field.to_string(),
+                                )),
+                            )),
+                            ast::FunctionArg::Unnamed(ast::FunctionArgExpr::Expr(column)),
+                        ],
+                        clauses: vec![],
+                    }),
+                    filter: None,
+                    null_treatment: None,
+                    over: None,
+                    within_group: vec![],
+                    parameters: ast::FunctionArguments::None,
+                    uses_odbc_syntax: false,
+                })));
+            }
+        }
+        (DateFieldExtractStyle::DatePart, _) => {
+            return Ok(Some(
+                unparser.scalar_function_to_sql("date_part", date_part_args)?,
+            ));
+        }
+        _ => {}
+    };
+
+    Ok(None)
+}
+
+pub(crate) fn character_length_to_sql(
+    unparser: &Unparser,
+    style: CharacterLengthStyle,
+    character_length_args: &[Expr],
+) -> Result<Option<ast::Expr>> {
+    let func_name = match style {
+        CharacterLengthStyle::CharacterLength => "character_length",
+        CharacterLengthStyle::Length => "length",
+    };
+
+    Ok(Some(unparser.scalar_function_to_sql(
+        func_name,
+        character_length_args,
+    )?))
 }
