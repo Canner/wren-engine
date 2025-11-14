@@ -646,10 +646,11 @@ class DatabricksConnector(SimpleConnector):
     def query(self, sql, limit=None):
         with closing(self.connection.cursor()) as cursor:
             cursor.execute(sql)
-            arrow_table = cursor.fetchall_arrow()
 
             if limit is not None:
-                arrow_table = arrow_table.slice(0, limit)
+                arrow_table = cursor.fetchmany_arrow(limit)
+            else:
+                arrow_table = cursor.fetchall_arrow()
 
             return arrow_table
 
