@@ -1,3 +1,6 @@
+import base64
+
+import orjson
 import pytest
 
 from app.dependencies import X_WREN_FALLBACK_DISABLE
@@ -34,8 +37,8 @@ manifest = {
 
 
 @pytest.fixture(scope="module")
-async def manifest_str(web_server):
-    return await web_server.register_mdl(manifest)
+async def manifest_str():
+    return base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
 
 
 async def test_json_query(client, manifest_str, connection_info):
