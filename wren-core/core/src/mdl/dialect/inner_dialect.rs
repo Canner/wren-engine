@@ -132,10 +132,6 @@ impl InnerDialect for MySQLDialect {
     fn date_field_extract_style(&self) -> Option<DateFieldExtractStyle> {
         Some(DateFieldExtractStyle::Extract)
     }
-
-    fn date_field_extract_style(&self) -> Option<DateFieldExtractStyle> {
-        Some(DateFieldExtractStyle::Extract)
-    }
 }
 
 pub struct BigQueryDialect {}
