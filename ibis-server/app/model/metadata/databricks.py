@@ -1,6 +1,6 @@
 from loguru import logger
 
-from app.model import DatabricksConnectionInfo
+from app.model import DatabricksTokenConnectionInfo
 from app.model.connector import DatabricksConnector
 from app.model.metadata.dto import (
     Column,
@@ -33,7 +33,7 @@ DATABRICKS_TYPE_MAPPING = {
 
 
 class DatabricksMetadata(Metadata):
-    def __init__(self, connection_info: DatabricksConnectionInfo):
+    def __init__(self, connection_info: DatabricksTokenConnectionInfo):
         super().__init__(connection_info)
         self.connection = DatabricksConnector(connection_info)
 
