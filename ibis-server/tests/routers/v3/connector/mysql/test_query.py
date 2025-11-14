@@ -1,6 +1,9 @@
+import base64
+
+import orjson
 import pytest
 
-from app.config import get_config
+
 from app.dependencies import X_WREN_FALLBACK_DISABLE
 from tests.routers.v3.connector.mysql.conftest import base_url
 
@@ -24,8 +27,8 @@ manifest = {
 
 
 @pytest.fixture(scope="module")
-async def manifest_str(web_server):
-    return await web_server.register_mdl(manifest)
+async def manifest_str():
+    return base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
 
 
 async def test_extract(client, manifest_str, connection_info):
