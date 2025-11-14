@@ -70,6 +70,22 @@ async def test_function_list(client):
     assert len(result) == DATAFUSION_FUNCTION_COUNT
 
 
+async def test_get_function(client):
+    response = await client.get(url=f"{base_url}/function/div")
+    assert response.status_code == 200
+    result = response.json()
+    assert result == [
+        {
+            "name": "div",
+            "description": "trunc(x/y)",
+            "function_type": "scalar",
+            "param_names": None,
+            "param_types": "Decimal(38, 10),Decimal(38, 10)",
+            "return_type": "Decimal(38, 10)",
+        }
+    ]
+
+
 async def test_scalar_function(client, manifest_str: str, connection_info):
     response = await client.post(
         url=f"{base_url}/query",
