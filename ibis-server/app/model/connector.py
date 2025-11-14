@@ -429,45 +429,24 @@ class BigQueryConnector(SimpleConnector):
         super().__init__(DataSource.bigquery, connection_info)
         self.connection_info = connection_info
 
+    @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
     def query(self, sql: str, limit: int | None = None) -> pa.Table:
-        try:
-            return super().query(sql, limit)
-        except ValueError as e:
-            # Import here to avoid override the custom datatypes
-            import ibis.backends.bigquery  # noqa: PLC0415
-
-            # Try to match the error message from the google cloud bigquery library matching Arrow type error.
-            # If the error message matches, requries to get the schema from the result and generate a empty pandas dataframe with the mapped schema
-            #
-            # It's a workaround for the issue that the ibis library does not support empty result for some special types (e.g. JSON or Interval)
-            # see details:
-            # - https://github.com/Canner/wren-engine/issues/909
-            # - https://github.com/ibis-project/ibis/issues/10612
-            if "Must pass schema" in str(e):
-                with tracer.start_as_current_span(
-                    "get_schema", kind=trace.SpanKind.CLIENT
-                ):
-                    credits_json = loads(
-                        base64.b64decode(
-                            self.connection_info.credentials.get_secret_value()
-                        ).decode("utf-8")
-                    )
-                    credentials = service_account.Credentials.from_service_account_info(
-                        credits_json
-                    )
-                    credentials = credentials.with_scopes(
-                        [
-                            "https://www.googleapis.com/auth/drive",
-                            "https://www.googleapis.com/auth/cloud-platform",
-                        ]
-                    )
-                    client = bigquery.Client(credentials=credentials)
-                    ibis_schema_mapper = ibis.backends.bigquery.BigQuerySchema()
-                    bq_fields = client.query(sql).result()
-                    ibis_fields = ibis_schema_mapper.to_ibis(bq_fields.schema)
-                    return pd.DataFrame(columns=ibis_fields.names)
-            else:
-                raise e
+        credits_json = loads(
+            base64.b64decode(
+                self.connection_info.credentials.get_secret_value()
+            ).decode("utf-8")
+        )
+        credentials = service_account.Credentials.from_service_account_info(
+            credits_json
+        )
+        credentials = credentials.with_scopes(
+            [
+                "https://www.googleapis.com/auth/drive",
+                "https://www.googleapis.com/auth/cloud-platform",
+            ]
+        )
+        client = bigquery.Client(credentials=credentials)
+        return client.query(sql).result(max_results=limit).to_arrow()
 
 
 class DuckDBConnector:
