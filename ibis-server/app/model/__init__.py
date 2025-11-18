@@ -203,18 +203,23 @@ class PostgresConnectionInfo(BaseConnectionInfo):
 
 
 class OracleConnectionInfo(BaseConnectionInfo):
-    host: SecretStr = Field(
-        examples=["localhost"], description="the hostname of your database"
+    host: SecretStr | None = Field(
+        examples=["localhost"], description="the hostname of your database", default=None
     )
-    port: SecretStr = Field(examples=[1521], description="the port of your database")
-    database: SecretStr = Field(
-        examples=["orcl"], description="the database name of your database"
+    port: SecretStr | None = Field(examples=[1521], description="the port of your database", default=None)
+    database: SecretStr | None = Field(
+        examples=["orcl"], description="the database name of your database", default=None
     )
     user: SecretStr = Field(
         examples=["admin"], description="the username of your database"
     )
     password: SecretStr | None = Field(
         examples=["password"], description="the password of your database", default=None
+    )
+    dsn: SecretStr | None = Field(
+        examples=["(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=host)(PORT=port))(CONNECT_DATA=(SERVICE_NAME=service)))"],
+        description="Oracle Data Source Name (DSN) - Alternative to host/port/database configuration",
+        default=None
     )
 
 
@@ -261,10 +266,10 @@ class TrinoConnectionInfo(BaseConnectionInfo):
 
 class LocalFileConnectionInfo(BaseConnectionInfo):
     url: SecretStr = Field(
-        description="the root path of the local file", default="/", examples=["/data"]
+        description="the root path of the local file", examples=["/data"]
     )
     format: str = Field(
-        description="File format", default="csv", examples=["csv", "parquet", "json"]
+        description="File format", examples=["csv", "parquet", "json"]
     )
 
 

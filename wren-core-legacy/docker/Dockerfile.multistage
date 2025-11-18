@@ -1,0 +1,42 @@
+# Multi-stage Dockerfile for wren-engine
+# Stage 1: Build the Java application
+FROM eclipse-temurin:21 AS builder
+WORKDIR /build
+
+# Copy Maven wrapper and pom files
+COPY ../wren-core-legacy/.mvn .mvn
+COPY ../wren-core-legacy/mvnw .
+COPY ../wren-core-legacy/pom.xml .
+COPY ../wren-core-legacy/wren-base ./wren-base
+COPY ../wren-core-legacy/wren-main ./wren-main
+COPY ../wren-core-legacy/wren-server ./wren-server
+COPY ../wren-core-legacy/wren-tests ./wren-tests
+COPY ../wren-core-legacy/trino-parser ./trino-parser
+
+# Build the application
+RUN ./mvnw clean install -B -DskipTests -P exec-jar
+
+# Get the version and copy the jar
+RUN WREN_VERSION=$(./mvnw --quiet help:evaluate -Dexpression=project.version -DforceStdout) && \
+    cp ./wren-server/target/wren-server-${WREN_VERSION}-executable.jar /wren-server-executable.jar
+
+# Stage 2: Runtime image
+FROM eclipse-temurin:21
+LABEL maintainer="RepairQ - Oracle ADB Integration"
+WORKDIR /usr/src/app
+
+RUN \
+    apt update && \
+    apt -y install curl gpg lsb-release && \
+    curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg && \
+    echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" | tee /etc/apt/sources.list.d/pgdg.list && \
+    apt update && \
+    apt -y install postgresql-client-13
+
+# Copy the built jar from builder stage
+COPY --from=builder /wren-server-executable.jar ./wren-server-executable.jar
+
+COPY entrypoint.sh ./
+RUN chmod +x ./entrypoint.sh
+
+CMD ./entrypoint.sh wren-server-executable.jar ${MAX_HEAP_SIZE} ${MIN_HEAP_SIZE}

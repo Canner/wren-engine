@@ -1,4 +1,4 @@
-FROM python:3.11-buster AS builder
+FROM python:3.11-bookworm AS builder
 
 ARG ENV
 ENV ENV=$ENV
@@ -37,13 +37,13 @@ COPY . .
 RUN just install --without dev
 
 
-FROM python:3.11-slim-buster AS runtime
+FROM python:3.11-slim-bookworm AS runtime
 
 # Add microsoft package list
 RUN apt-get update \
     && apt-get install -y curl gnupg \
-    && curl https://packages.microsoft.com/keys/microsoft.asc | tee /etc/apt/trusted.gpg.d/microsoft.asc \
-    && curl https://packages.microsoft.com/config/debian/11/prod.list | tee /etc/apt/sources.list.d/mssql-release.list \
+    && curl -sSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft.gpg \
+    && echo "deb [arch=amd64,arm64,armhf signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" | tee /etc/apt/sources.list.d/mssql-release.list \
     && apt-get update
 
 # Install msodbcsql 18 driver for mssql
@@ -53,12 +53,22 @@ RUN ACCEPT_EULA=Y apt-get -y install unixodbc-dev msodbcsql18
 RUN apt-get install -y default-libmysqlclient-dev
 
 # libpq-dev is required for psycopg2
-RUN apt-get -y install libpq-dev \
+RUN apt-get -y install libpq-dev
+
+# Install Oracle Instant Client for Oracle database connections
+RUN apt-get install -y wget unzip libaio1 \
+    && wget https://download.oracle.com/otn_software/linux/instantclient/1923000/instantclient-basic-linux.x64-19.23.0.0.0dbru.zip \
+    && unzip instantclient-basic-linux.x64-19.23.0.0.0dbru.zip -d /opt/ \
+    && rm instantclient-basic-linux.x64-19.23.0.0.0dbru.zip \
+    && echo "/opt/instantclient_19_23" > /etc/ld.so.conf.d/oracle-instantclient.conf \
+    && ldconfig \
     && rm -rf /var/lib/apt/lists/*
 
 ENV VIRTUAL_ENV=/app/.venv \
     PATH="/app/.venv/bin:$PATH" \
-    REMOTE_FUNCTION_LIST_PATH=/resources/function_list
+    REMOTE_FUNCTION_LIST_PATH=/resources/function_list \
+    LD_LIBRARY_PATH="/opt/instantclient_19_23:$LD_LIBRARY_PATH" \
+    ORACLE_HOME="/opt/instantclient_19_23"
 
 COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 COPY app app

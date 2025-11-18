@@ -181,13 +181,24 @@ class DataSourceExtension(Enum):
 
     @staticmethod
     def get_oracle_connection(info: OracleConnectionInfo) -> BaseBackend:
-        return ibis.oracle.connect(
-            host=info.host.get_secret_value(),
-            port=int(info.port.get_secret_value()),
-            database=info.database.get_secret_value(),
-            user=info.user.get_secret_value(),
-            password=(info.password and info.password.get_secret_value()),
-        )
+        # Build connection parameters
+        connect_params = {
+            "user": info.user.get_secret_value(),
+            "password": (info.password and info.password.get_secret_value()),
+        }
+        
+        # If DSN is provided, use it directly
+        if info.dsn:
+            connect_params["dsn"] = info.dsn.get_secret_value()
+        else:
+            # Otherwise use individual host/port/database parameters
+            connect_params.update({
+                "host": info.host.get_secret_value(),
+                "port": int(info.port.get_secret_value()),
+                "database": info.database.get_secret_value(),
+            })
+        
+        return ibis.oracle.connect(**connect_params)
 
     @staticmethod
     def get_snowflake_connection(info: SnowflakeConnectionInfo) -> BaseBackend:

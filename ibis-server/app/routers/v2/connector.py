@@ -210,13 +210,10 @@ def get_constraints(
     dto: MetadataDTO,
     headers: Annotated[Headers, Depends(get_wren_headers)] = None,
 ) -> list[Constraint]:
-    span_name = f"v2_metadata_constraints_{data_source}"
-    with tracer.start_as_current_span(
-        name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
-    ):
-        return MetadataFactory.get_metadata(
-            data_source, dto.connection_info
-        ).get_constraints()
+    # TEMPORARY: Return empty list immediately without any database calls
+    # The Oracle constraint auto-detection is causing 30+ minute hangs
+    # Relationships must be manually defined in the UI for now
+    return []
 
 
 @router.post(

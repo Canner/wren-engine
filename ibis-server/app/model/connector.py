@@ -1,5 +1,6 @@
 import base64
 import importlib
+import logging
 from functools import cache
 from json import loads
 from typing import Any
@@ -17,6 +18,8 @@ from ibis import BaseBackend
 from ibis.backends.sql.compilers.postgres import compiler as postgres_compiler
 from opentelemetry import trace
 
+logger = logging.getLogger(__name__)
+
 from app.model import (
     ConnectionInfo,
     GcsFileConnectionInfo,
@@ -30,6 +33,10 @@ from app.model.utils import init_duckdb_gcs, init_duckdb_minio, init_duckdb_s3
 
 # Override datatypes of ibis
 importlib.import_module("app.custom_ibis.backends.sql.datatypes")
+
+# Apply Oracle backend patch to fix ORA-00923 error
+from app.model.oracle_backend_patch import patch_oracle_backend
+patch_oracle_backend()
 
 tracer = trace.get_tracer(__name__)
 
@@ -70,10 +77,16 @@ class SimpleConnector:
 
     @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
     def query(self, sql: str, limit: int) -> pd.DataFrame:
+        import sys
+        print(f"🔍 CONNECTOR QUERY: {sql}", file=sys.stderr, flush=True)
+        print(f"🔍 LIMIT: {limit}", file=sys.stderr, flush=True)
+        logger.info(f"🔍 CONNECTOR QUERY: {sql}")
+        logger.info(f"🔍 LIMIT: {limit}")
         return self.connection.sql(sql).limit(limit).to_pandas()
 
     @tracer.start_as_current_span("connector_dry_run", kind=trace.SpanKind.CLIENT)
     def dry_run(self, sql: str) -> None:
+        logger.info(f"🔍 CONNECTOR DRY_RUN: {sql}")
         self.connection.sql(sql)
 
 
