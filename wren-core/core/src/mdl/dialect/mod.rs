@@ -17,7 +17,7 @@
  * under the License.
  */
 
-mod inner_dialect;
+pub mod inner_dialect;
 mod utils;
 mod wren_dialect;
 

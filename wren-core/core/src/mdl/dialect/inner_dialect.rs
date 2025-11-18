@@ -17,7 +17,13 @@
  * under the License.
  */
 
+use std::sync::Arc;
+
 use crate::mdl::dialect::utils::scalar_function_to_sql_internal;
+use crate::mdl::function::dialect::bigquery::{
+    bigquery_aggregate_functions, bigquery_scalar_functions, bigquery_window_functions,
+};
+use crate::mdl::function::{aggregate_functions, scalar_functions, window_functions};
 use crate::mdl::manifest::DataSource;
 use datafusion::common::{plan_err, Result};
 use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
@@ -88,6 +94,21 @@ pub trait InnerDialect: Send + Sync {
     ) -> bool {
         false
     }
+
+    /// Define the supported UDFs for the dialect which will be registered in the execution context.
+    fn supported_udfs(&self) -> Vec<Arc<datafusion::logical_expr::ScalarUDF>> {
+        scalar_functions()
+    }
+
+    /// Define the supported UDAFs for the dialect which will be registered in the execution context.
+    fn supported_udafs(&self) -> Vec<Arc<datafusion::logical_expr::AggregateUDF>> {
+        aggregate_functions()
+    }
+
+    /// Define the supported UDWFs for the dialect which will be registered in the execution context.
+    fn supported_udwfs(&self) -> Vec<Arc<datafusion::logical_expr::WindowUDF>> {
+        window_functions()
+    }
 }
 
 /// [get_inner_dialect] returns the suitable InnerDialect for the given data source.
@@ -128,6 +149,18 @@ impl InnerDialect for MySQLDialect {
 pub struct BigQueryDialect {}
 
 impl InnerDialect for BigQueryDialect {
+    fn supported_udafs(&self) -> Vec<Arc<datafusion::logical_expr::AggregateUDF>> {
+        bigquery_aggregate_functions()
+    }
+
+    fn supported_udfs(&self) -> Vec<Arc<datafusion::logical_expr::ScalarUDF>> {
+        bigquery_scalar_functions()
+    }
+
+    fn supported_udwfs(&self) -> Vec<Arc<datafusion::logical_expr::WindowUDF>> {
+        bigquery_window_functions()
+    }
+
     fn unnest_as_table_factor(&self) -> bool {
         true
     }
@@ -175,49 +208,15 @@ impl InnerDialect for BigQueryDialect {
                     expr: Box::new(unparser.expr_to_sql(&args[1])?),
                 }))
             }
-            "date_diff" => {
-                if args.len() != 3 {
-                    return plan_err!(
-                        "date_diff requires exactly 3 arguments, found {}",
-                        args.len()
-                    );
-                }
-                let Expr::Literal(ScalarValue::Utf8(Some(s)), _) = args[0].clone() else {
-                    return plan_err!(
-                        "date_diff requires a string literal as the third argument"
-                    );
-                };
-                let granularity = ast::Expr::Identifier(Ident::new(
-                    self.datetime_field_from_str(&s)?.to_string(),
-                ));
-                // DATE_DIFF(end_date, start_date, granularity)
-                // https://cloud.google.com/bigquery/docs/reference/standard-sql/date_functions#date_diff
-                Ok(Some(ast::Expr::Function(Function {
-                    name: ObjectName(vec![ObjectNamePart::Identifier(Ident::new(
-                        "DATE_DIFF",
-                    ))]),
-                    args: ast::FunctionArguments::List(ast::FunctionArgumentList {
-                        duplicate_treatment: None,
-                        args: vec![
-                            unparser.expr_to_sql(&args[2]).map(|e| {
-                                ast::FunctionArg::Unnamed(ast::FunctionArgExpr::Expr(e))
-                            })?,
-                            unparser.expr_to_sql(&args[1]).map(|e| {
-                                ast::FunctionArg::Unnamed(ast::FunctionArgExpr::Expr(e))
-                            })?,
-                            ast::FunctionArg::Unnamed(ast::FunctionArgExpr::Expr(
-                                granularity,
-                            )),
-                        ],
-                        clauses: vec![],
-                    }),
-                    filter: None,
-                    null_treatment: None,
-                    over: None,
-                    within_group: vec![],
-                    parameters: ast::FunctionArguments::None,
-                    uses_odbc_syntax: false,
-                })))
+            // DATE_DIFF(end_date, start_date, granularity)
+            // https://cloud.google.com/bigquery/docs/reference/standard-sql/date_functions#date_diff
+            "date_diff" => self.transform_diff_function("DATE_DIFF", args, unparser),
+            "time_diff" => self.transform_diff_function("TIME_DIFF", args, unparser),
+            "timestamp_diff" => {
+                self.transform_diff_function("TIMESTAMP_DIFF", args, unparser)
+            }
+            "datetime_diff" => {
+                self.transform_diff_function("DATETIME_DIFF", args, unparser)
             }
             "now" => {
                 scalar_function_to_sql_internal(unparser, None, "CURRENT_TIMESTAMP", args)
@@ -256,6 +255,52 @@ impl InnerDialect for BigQueryDialect {
 }
 
 impl BigQueryDialect {
+    fn transform_diff_function(
+        &self,
+        func_name: &str,
+        args: &[Expr],
+        unparser: &Unparser,
+    ) -> Result<Option<ast::Expr>> {
+        if args.len() != 3 {
+            return plan_err!(
+                "{} requires exactly 3 arguments, found {}",
+                func_name,
+                args.len()
+            );
+        }
+        let Expr::Literal(ScalarValue::Utf8(Some(s)), _) = args[0].clone() else {
+            return plan_err!(
+                "{} requires a string literal as the third argument (granularity)",
+                func_name
+            );
+        };
+        let granularity = ast::Expr::Identifier(Ident::new(
+            self.datetime_field_from_str(&s)?.to_string(),
+        ));
+        Ok(Some(ast::Expr::Function(Function {
+            name: ObjectName(vec![ObjectNamePart::Identifier(Ident::new(func_name))]),
+            args: ast::FunctionArguments::List(ast::FunctionArgumentList {
+                duplicate_treatment: None,
+                args: vec![
+                    unparser.expr_to_sql(&args[2]).map(|e| {
+                        ast::FunctionArg::Unnamed(ast::FunctionArgExpr::Expr(e))
+                    })?,
+                    unparser.expr_to_sql(&args[1]).map(|e| {
+                        ast::FunctionArg::Unnamed(ast::FunctionArgExpr::Expr(e))
+                    })?,
+                    ast::FunctionArg::Unnamed(ast::FunctionArgExpr::Expr(granularity)),
+                ],
+                clauses: vec![],
+            }),
+            filter: None,
+            null_treatment: None,
+            over: None,
+            within_group: vec![],
+            parameters: ast::FunctionArguments::None,
+            uses_odbc_syntax: false,
+        })))
+    }
+
     fn datetime_field_from_expr(&self, expr: &Expr) -> Result<ast::DateTimeField> {
         match expr {
             Expr::Literal(ScalarValue::Utf8(Some(s)), _)

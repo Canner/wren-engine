@@ -1,12 +1,11 @@
-use datafusion::prelude::SessionContext;
 use std::collections::HashMap;
 use std::sync::Arc;
 use wren_core::mdl::builder::{
     ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder,
 };
 use wren_core::mdl::context::Mode;
-use wren_core::mdl::manifest::{JoinType, Manifest};
-use wren_core::mdl::{transform_sql_with_ctx, AnalyzedWrenMDL};
+use wren_core::mdl::manifest::{DataSource, JoinType, Manifest};
+use wren_core::mdl::{create_wren_ctx, transform_sql_with_ctx, AnalyzedWrenMDL};
 
 #[tokio::main]
 async fn main() -> datafusion::common::Result<()> {
@@ -20,7 +19,7 @@ async fn main() -> datafusion::common::Result<()> {
     let sql = "select customer_state from wrenai.public.orders_model";
     println!("Original SQL: \n{sql}");
     let sql = transform_sql_with_ctx(
-        &SessionContext::new(),
+        &create_wren_ctx(None, Some(&DataSource::BigQuery)),
         analyzed_mdl,
         &[],
         HashMap::new().into(),

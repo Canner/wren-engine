@@ -17,7 +17,7 @@ async fn main() -> Result<()> {
     let manifest = init_manifest();
 
     // register the table
-    let ctx = create_wren_ctx(None);
+    let ctx = create_wren_ctx(None, None);
     ctx.register_csv(
         "orders",
         "sqllogictest/tests/resources/ecommerce/orders.csv",
