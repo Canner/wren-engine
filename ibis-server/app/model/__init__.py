@@ -68,7 +68,7 @@ class QuerySnowflakeDTO(QueryDTO):
 
 
 class QueryDatabricksDTO(QueryDTO):
-    connection_info: DatabricksConnectionInfo = connection_info_field
+    connection_info: DatabricksConnectionUnion = connection_info_field
 
 
 class QueryTrinoDTO(QueryDTO):
@@ -400,7 +400,8 @@ class SnowflakeConnectionInfo(BaseConnectionInfo):
     )
 
 
-class DatabricksConnectionInfo(BaseConnectionInfo):
+class DatabricksTokenConnectionInfo(BaseConnectionInfo):
+    databricks_type: Literal["token"] = "token"
     server_hostname: SecretStr = Field(
         alias="serverHostname",
         description="the server hostname of your Databricks instance",
@@ -416,6 +417,43 @@ class DatabricksConnectionInfo(BaseConnectionInfo):
         description="the access token for your Databricks instance",
         examples=["XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"],
     )
+
+
+# https://docs.databricks.com/aws/en/dev-tools/python-sql-connector#oauth-machine-to-machine-m2m-authentication
+class DatabricksServicePrincipalConnectionInfo(BaseConnectionInfo):
+    databricks_type: Literal["service_principal"] = "service_principal"
+    server_hostname: SecretStr = Field(
+        alias="serverHostname",
+        description="the server hostname of your Databricks instance",
+        examples=["dbc-xxxxxxxx-xxxx.cloud.databricks.com"],
+    )
+    http_path: SecretStr = Field(
+        alias="httpPath",
+        description="the HTTP path of your Databricks SQL warehouse",
+        examples=["/sql/1.0/warehouses/xxxxxxxx"],
+    )
+    client_id: SecretStr = Field(
+        alias="clientId",
+        description="the client ID for OAuth M2M authentication",
+        examples=["your-client-id"],
+    )
+    client_secret: SecretStr = Field(
+        alias="clientSecret",
+        description="the client secret for OAuth M2M authentication",
+        examples=["your-client-secret"],
+    )
+    azure_tenant_id: SecretStr | None = Field(
+        alias="azureTenantId",
+        description="the Azure tenant ID for OAuth M2M authentication",
+        examples=["your-tenant-id"],
+        default=None,
+    )
+
+
+DatabricksConnectionUnion = Annotated[
+    Union[DatabricksTokenConnectionInfo, DatabricksServicePrincipalConnectionInfo],
+    Field(discriminator="databricks_type"),
+]
 
 
 class TrinoConnectionInfo(BaseConnectionInfo):
@@ -543,7 +581,7 @@ ConnectionInfo = (
     | RedshiftConnectionInfo
     | RedshiftIAMConnectionInfo
     | SnowflakeConnectionInfo
-    | DatabricksConnectionInfo
+    | DatabricksTokenConnectionInfo
     | TrinoConnectionInfo
     | LocalFileConnectionInfo
     | S3FileConnectionInfo
