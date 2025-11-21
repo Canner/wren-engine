@@ -1,3 +1,4 @@
+from loguru import logger
 from sqlglot import exp
 from sqlglot.dialects.oracle import Oracle as OriginalOracle
 
@@ -18,5 +19,7 @@ class Oracle(OriginalOracle):
     class Generator(OriginalOracle.Generator):
         """Custom generator for Oracle 19c SQL syntax."""
 
-        # Will be implemented in subsequent tasks
-        pass
+        def __init__(self, *args, **kwargs):
+            """Initialize Oracle 19c generator with logging."""
+            super().__init__(*args, **kwargs)
+            logger.debug("Using custom Oracle 19c dialect for SQL generation")
