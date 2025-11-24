@@ -30,8 +30,9 @@ class Oracle(OriginalOracle):
             **OriginalOracle.Generator.TRANSFORMS,
             # Register custom date arithmetic transforms for Oracle 19c compatibility
             # These convert INTERVAL-based date arithmetic to 19c-compatible syntax
-            exp.DateAdd: lambda self, e: self._dateadd_oracle19c(e),
-            exp.DateSub: lambda self, e: self._datesub_oracle19c(e),
+            # Note: Trino parser creates Add/Sub nodes for date arithmetic, not DateAdd/DateSub
+            exp.Add: lambda self, e: self._handle_add_oracle19c(e),
+            exp.Sub: lambda self, e: self._handle_sub_oracle19c(e),
         }
 
         def __init__(self, *args, **kwargs):
@@ -39,7 +40,33 @@ class Oracle(OriginalOracle):
             super().__init__(*args, **kwargs)
             logger.debug("Using custom Oracle 19c dialect for SQL generation")
 
-        def _dateadd_oracle19c(self, expression: exp.DateAdd) -> str:
+        def _handle_add_oracle19c(self, expression: exp.Add) -> str:
+            """
+            Handle Add expressions, checking for INTERVAL date arithmetic.
+            
+            If this is date + INTERVAL, convert to Oracle 19c syntax.
+            Otherwise, use default addition handling.
+            """
+            # Check if right side is an Interval (date + INTERVAL pattern)
+            if isinstance(expression.expression, exp.Interval):
+                return self._dateadd_oracle19c(expression)
+            # Default behavior for regular addition
+            return self.add_sql(expression)
+
+        def _handle_sub_oracle19c(self, expression: exp.Sub) -> str:
+            """
+            Handle Sub expressions, checking for INTERVAL date arithmetic.
+            
+            If this is date - INTERVAL, convert to Oracle 19c syntax.
+            Otherwise, use default subtraction handling.
+            """
+            # Check if right side is an Interval (date - INTERVAL pattern)
+            if isinstance(expression.expression, exp.Interval):
+                return self._datesub_oracle19c(expression)
+            # Default behavior for regular subtraction
+            return self.sub_sql(expression)
+
+        def _dateadd_oracle19c(self, expression: exp.Add) -> str:
             """
             Generate Oracle 19c-compatible date addition.
 
@@ -51,7 +78,7 @@ class Oracle(OriginalOracle):
             Oracle 19c doesn't support INTERVAL arithmetic syntax (21c+ feature).
 
             Args:
-                expression: DateAdd expression node
+                expression: Add expression node containing an Interval
 
             Returns:
                 Oracle 19c-compatible SQL string
@@ -61,7 +88,12 @@ class Oracle(OriginalOracle):
 
             if isinstance(interval, exp.Interval):
                 unit = interval.unit.this.upper() if interval.unit else "DAY"
-                value = self.sql(interval, "this")
+                # Extract raw value from Literal node (interval.this.this) to avoid quotes
+                # self.sql(interval, "this") would return '1' (with quotes), we need 1 (without)
+                if isinstance(interval.this, exp.Literal):
+                    value = interval.this.this  # Get raw value
+                else:
+                    value = self.sql(interval, "this")  # Fallback for non-literal expressions
 
                 if unit == "DAY":
                     # date + n days → date + n
@@ -84,10 +116,11 @@ class Oracle(OriginalOracle):
                     logger.warning(f"Unsupported INTERVAL unit for Oracle 19c: {unit}")
                     return f"{date_expr} + {value}"  # Fallback
 
-            # Not an INTERVAL expression, use default behavior
-            return self.dateadd_sql(expression)
+            # Not an INTERVAL expression, should not reach here
+            # (handled by _handle_add_oracle19c)
+            return self.add_sql(expression)
 
-        def _datesub_oracle19c(self, expression: exp.DateSub) -> str:
+        def _datesub_oracle19c(self, expression: exp.Sub) -> str:
             """
             Generate Oracle 19c-compatible date subtraction.
 
@@ -99,7 +132,7 @@ class Oracle(OriginalOracle):
             Oracle 19c doesn't support INTERVAL arithmetic syntax (21c+ feature).
 
             Args:
-                expression: DateSub expression node
+                expression: Sub expression node containing an Interval
 
             Returns:
                 Oracle 19c-compatible SQL string
@@ -109,7 +142,12 @@ class Oracle(OriginalOracle):
 
             if isinstance(interval, exp.Interval):
                 unit = interval.unit.this.upper() if interval.unit else "DAY"
-                value = self.sql(interval, "this")
+                # Extract raw value from Literal node (interval.this.this) to avoid quotes
+                # self.sql(interval, "this") would return '1' (with quotes), we need 1 (without)
+                if isinstance(interval.this, exp.Literal):
+                    value = interval.this.this  # Get raw value
+                else:
+                    value = self.sql(interval, "this")  # Fallback for non-literal expressions
 
                 if unit == "DAY":
                     # date - n days → date - n
@@ -131,5 +169,6 @@ class Oracle(OriginalOracle):
                     logger.warning(f"Unsupported INTERVAL unit for Oracle 19c: {unit}")
                     return f"{date_expr} - {value}"  # Fallback
 
-            # Not an INTERVAL expression, use default behavior
-            return self.datesub_sql(expression)
+            # Not an INTERVAL expression, should not reach here
+            # (handled by _handle_sub_oracle19c)
+            return self.sub_sql(expression)
