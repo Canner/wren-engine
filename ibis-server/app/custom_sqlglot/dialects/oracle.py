@@ -35,8 +35,9 @@ class Oracle(OriginalOracle):
             """
             Generate Oracle 19c-compatible date addition.
 
-            Converts INTERVAL expressions to numeric addition for DAY unit:
+            Converts INTERVAL expressions to numeric addition or ADD_MONTHS:
             - date + INTERVAL 'n' DAY → date + n
+            - date + INTERVAL 'n' MONTH → ADD_MONTHS(date, n)
 
             Oracle 19c doesn't support INTERVAL arithmetic syntax (21c+ feature).
 
@@ -56,6 +57,13 @@ class Oracle(OriginalOracle):
                 if unit == "DAY":
                     # date + n days → date + n
                     return f"{date_expr} + {value}"
+                
+                elif unit == "MONTH":
+                    # date + n months → ADD_MONTHS(date, n)
+                    # ADD_MONTHS handles month-end edge cases correctly
+                    # (e.g., Jan 31 + 1 month = Feb 28/29, not Mar 3)
+                    return f"ADD_MONTHS({date_expr}, {value})"
+                
                 else:
                     # Other units handled in subsequent tasks
                     logger.warning(f"Unsupported INTERVAL unit for Oracle 19c: {unit}")
@@ -68,8 +76,9 @@ class Oracle(OriginalOracle):
             """
             Generate Oracle 19c-compatible date subtraction.
 
-            Converts INTERVAL expressions to numeric subtraction for DAY unit:
+            Converts INTERVAL expressions to numeric subtraction or ADD_MONTHS:
             - date - INTERVAL 'n' DAY → date - n
+            - date - INTERVAL 'n' MONTH → ADD_MONTHS(date, -n)
 
             Oracle 19c doesn't support INTERVAL arithmetic syntax (21c+ feature).
 
@@ -89,6 +98,12 @@ class Oracle(OriginalOracle):
                 if unit == "DAY":
                     # date - n days → date - n
                     return f"{date_expr} - {value}"
+                
+                elif unit == "MONTH":
+                    # date - n months → ADD_MONTHS(date, -n)
+                    # ADD_MONTHS with negative value handles month-end edge cases
+                    return f"ADD_MONTHS({date_expr}, -{value})"
+                
                 else:
                     # Other units handled in subsequent tasks
                     logger.warning(f"Unsupported INTERVAL unit for Oracle 19c: {unit}")
