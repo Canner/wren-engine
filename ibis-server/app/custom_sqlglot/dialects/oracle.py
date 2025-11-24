@@ -38,6 +38,7 @@ class Oracle(OriginalOracle):
             Converts INTERVAL expressions to numeric addition or ADD_MONTHS:
             - date + INTERVAL 'n' DAY → date + n
             - date + INTERVAL 'n' MONTH → ADD_MONTHS(date, n)
+            - date + INTERVAL 'n' YEAR → ADD_MONTHS(date, n * 12)
 
             Oracle 19c doesn't support INTERVAL arithmetic syntax (21c+ feature).
 
@@ -64,6 +65,12 @@ class Oracle(OriginalOracle):
                     # (e.g., Jan 31 + 1 month = Feb 28/29, not Mar 3)
                     return f"ADD_MONTHS({date_expr}, {value})"
                 
+                elif unit == "YEAR":
+                    # date + n years → ADD_MONTHS(date, n * 12)
+                    # Convert years to months and use ADD_MONTHS for consistency
+                    # This handles year-end edge cases like leap years correctly
+                    return f"ADD_MONTHS({date_expr}, {value} * 12)"
+                
                 else:
                     # Other units handled in subsequent tasks
                     logger.warning(f"Unsupported INTERVAL unit for Oracle 19c: {unit}")
@@ -79,6 +86,7 @@ class Oracle(OriginalOracle):
             Converts INTERVAL expressions to numeric subtraction or ADD_MONTHS:
             - date - INTERVAL 'n' DAY → date - n
             - date - INTERVAL 'n' MONTH → ADD_MONTHS(date, -n)
+            - date - INTERVAL 'n' YEAR → ADD_MONTHS(date, -(n * 12))
 
             Oracle 19c doesn't support INTERVAL arithmetic syntax (21c+ feature).
 
@@ -103,6 +111,12 @@ class Oracle(OriginalOracle):
                     # date - n months → ADD_MONTHS(date, -n)
                     # ADD_MONTHS with negative value handles month-end edge cases
                     return f"ADD_MONTHS({date_expr}, -{value})"
+                
+                elif unit == "YEAR":
+                    # date - n years → ADD_MONTHS(date, -(n * 12))
+                    # Convert years to months and use ADD_MONTHS for consistency
+                    # Parentheses ensure correct order: negate (value * 12), not (-value) * 12
+                    return f"ADD_MONTHS({date_expr}, -({value} * 12))"
                 
                 else:
                     # Other units handled in subsequent tasks
