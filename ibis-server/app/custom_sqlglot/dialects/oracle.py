@@ -30,3 +30,36 @@ class Oracle(OriginalOracle):
             """Initialize Oracle 19c generator with logging."""
             super().__init__(*args, **kwargs)
             logger.debug("Using custom Oracle 19c dialect for SQL generation")
+
+        def _dateadd_oracle19c(self, expression: exp.DateAdd) -> str:
+            """
+            Generate Oracle 19c-compatible date addition.
+
+            Converts INTERVAL expressions to numeric addition for DAY unit:
+            - date + INTERVAL 'n' DAY → date + n
+
+            Oracle 19c doesn't support INTERVAL arithmetic syntax (21c+ feature).
+
+            Args:
+                expression: DateAdd expression node
+
+            Returns:
+                Oracle 19c-compatible SQL string
+            """
+            date_expr = self.sql(expression, "this")
+            interval = expression.expression
+
+            if isinstance(interval, exp.Interval):
+                unit = interval.unit.this.upper() if interval.unit else "DAY"
+                value = self.sql(interval, "this")
+
+                if unit == "DAY":
+                    # date + n days → date + n
+                    return f"{date_expr} + {value}"
+                else:
+                    # Other units handled in subsequent tasks
+                    logger.warning(f"Unsupported INTERVAL unit for Oracle 19c: {unit}")
+                    return f"{date_expr} + {value}"  # Fallback
+
+            # Not an INTERVAL expression, use default behavior
+            return self.dateadd_sql(expression)
