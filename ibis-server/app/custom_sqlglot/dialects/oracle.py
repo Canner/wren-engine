@@ -26,6 +26,14 @@ class Oracle(OriginalOracle):
             exp.DataType.Type.BOOLEAN: "CHAR(1)",
         }
 
+        TRANSFORMS = {
+            **OriginalOracle.Generator.TRANSFORMS,
+            # Register custom date arithmetic transforms for Oracle 19c compatibility
+            # These convert INTERVAL-based date arithmetic to 19c-compatible syntax
+            exp.DateAdd: lambda self, e: self._dateadd_oracle19c(e),
+            exp.DateSub: lambda self, e: self._datesub_oracle19c(e),
+        }
+
         def __init__(self, *args, **kwargs):
             """Initialize Oracle 19c generator with logging."""
             super().__init__(*args, **kwargs)
@@ -58,19 +66,19 @@ class Oracle(OriginalOracle):
                 if unit == "DAY":
                     # date + n days → date + n
                     return f"{date_expr} + {value}"
-                
+
                 elif unit == "MONTH":
                     # date + n months → ADD_MONTHS(date, n)
                     # ADD_MONTHS handles month-end edge cases correctly
                     # (e.g., Jan 31 + 1 month = Feb 28/29, not Mar 3)
                     return f"ADD_MONTHS({date_expr}, {value})"
-                
+
                 elif unit == "YEAR":
                     # date + n years → ADD_MONTHS(date, n * 12)
                     # Convert years to months and use ADD_MONTHS for consistency
                     # This handles year-end edge cases like leap years correctly
                     return f"ADD_MONTHS({date_expr}, {value} * 12)"
-                
+
                 else:
                     # Other units handled in subsequent tasks
                     logger.warning(f"Unsupported INTERVAL unit for Oracle 19c: {unit}")
@@ -106,18 +114,18 @@ class Oracle(OriginalOracle):
                 if unit == "DAY":
                     # date - n days → date - n
                     return f"{date_expr} - {value}"
-                
+
                 elif unit == "MONTH":
                     # date - n months → ADD_MONTHS(date, -n)
                     # ADD_MONTHS with negative value handles month-end edge cases
                     return f"ADD_MONTHS({date_expr}, -{value})"
-                
+
                 elif unit == "YEAR":
                     # date - n years → ADD_MONTHS(date, -(n * 12))
                     # Convert years to months and use ADD_MONTHS for consistency
                     # Parentheses ensure correct order: negate (value * 12), not (-value) * 12
                     return f"ADD_MONTHS({date_expr}, -({value} * 12))"
-                
+
                 else:
                     # Other units handled in subsequent tasks
                     logger.warning(f"Unsupported INTERVAL unit for Oracle 19c: {unit}")
