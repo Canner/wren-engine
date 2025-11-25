@@ -21,7 +21,7 @@ class TestOracle19cTypeMapping:
     def test_boolean_type_maps_to_char1(self, oracle_type_mapping):
         """
         Test BOOLEAN type maps to CHAR(1) for Oracle 19c compatibility.
-        
+
         Oracle 19c doesn't have native BOOLEAN type (21c+ feature).
         We map to CHAR(1) to match our 'Y'/'N' boolean representation pattern.
         """
@@ -31,17 +31,17 @@ class TestOracle19cTypeMapping:
     def test_type_mapping_inheritance(self, oracle_type_mapping, base_oracle_type_mapping):
         """
         Test that non-overridden types inherit from base Oracle dialect.
-        
+
         Verifies that the spread operator (**OriginalOracle.Generator.TYPE_MAPPING)
         correctly inherits all base type mappings.
         """
         # Get all base types
         base_types = set(base_oracle_type_mapping.keys())
-        
+
         # Verify all base types are present in our mapping
         for data_type in base_types:
             assert data_type in oracle_type_mapping, f"Type {data_type} not inherited"
-            
+
         # Verify BOOLEAN is the only override (count should be base + 1 if BOOLEAN wasn't in base)
         # or same count if BOOLEAN was already in base
         assert len(oracle_type_mapping) >= len(base_oracle_type_mapping)
@@ -68,7 +68,7 @@ class TestOracle19cTypeMapping:
     def test_number_type_preserved(self, oracle_type_mapping, base_oracle_type_mapping):
         """
         Test numeric types are inherited unchanged from base Oracle dialect.
-        
+
         Oracle uses NUMBER type for various numeric representations.
         """
         numeric_types = [
@@ -78,7 +78,7 @@ class TestOracle19cTypeMapping:
             exp.DataType.Type.FLOAT,
             exp.DataType.Type.DOUBLE,
         ]
-        
+
         for numeric_type in numeric_types:
             if numeric_type in base_oracle_type_mapping:
                 assert oracle_type_mapping[numeric_type] == base_oracle_type_mapping[numeric_type], \
@@ -87,7 +87,7 @@ class TestOracle19cTypeMapping:
     def test_boolean_override_is_intentional(self, oracle_type_mapping, base_oracle_type_mapping):
         """
         Test that BOOLEAN override is intentional and different from base.
-        
+
         If base Oracle dialect has BOOLEAN mapped to something else,
         verify we're intentionally overriding it to CHAR(1).
         """
@@ -95,10 +95,10 @@ class TestOracle19cTypeMapping:
             # If base has BOOLEAN, verify we override it
             base_mapping = base_oracle_type_mapping[exp.DataType.Type.BOOLEAN]
             our_mapping = oracle_type_mapping[exp.DataType.Type.BOOLEAN]
-            
+
             # Our mapping should be CHAR(1)
             assert our_mapping == "CHAR(1)"
-            
+
             # Document if we're overriding base
             # (this is informational, not a failure condition)
             if base_mapping != "CHAR(1)":
@@ -117,7 +117,7 @@ class TestOracle19cTypeMapping:
     def test_oracle_specific_types(self, oracle_type_mapping, data_type, expected_mapping):
         """
         Test Oracle-specific type mappings are preserved.
-        
+
         Oracle has specific type names like VARCHAR2, NVARCHAR2, etc.
         These should be inherited from base dialect.
         """

@@ -40,10 +40,10 @@ def base_oracle_type_mapping():
 def transpile_trino_to_oracle():
     """
     Helper fixture to transpile Trino SQL to Oracle 19c.
-    
+
     Returns:
         Callable that takes SQL string and returns transpiled result.
-    
+
     Example:
         def test_something(transpile_trino_to_oracle):
             result = transpile_trino_to_oracle("SELECT * FROM users")

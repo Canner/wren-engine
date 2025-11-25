@@ -43,7 +43,7 @@ class Oracle(OriginalOracle):
         def _handle_add_oracle19c(self, expression: exp.Add) -> str:
             """
             Handle Add expressions, checking for INTERVAL date arithmetic.
-            
+
             If this is date + INTERVAL, convert to Oracle 19c syntax.
             Otherwise, use default addition handling.
             """
@@ -56,7 +56,7 @@ class Oracle(OriginalOracle):
         def _handle_sub_oracle19c(self, expression: exp.Sub) -> str:
             """
             Handle Sub expressions, checking for INTERVAL date arithmetic.
-            
+
             If this is date - INTERVAL, convert to Oracle 19c syntax.
             Otherwise, use default subtraction handling.
             """
