@@ -74,9 +74,9 @@ class TestOraclePaginationSyntax:
     def test_pagination_with_joins(self):
         """Verify pagination works with JOIN clauses."""
         sql = """
-        SELECT o.id, c.name 
-        FROM orders o 
-        JOIN customers c ON o.customer_id = c.id 
+        SELECT o.id, c.name
+        FROM orders o
+        JOIN customers c ON o.customer_id = c.id
         LIMIT 50 OFFSET 100
         """
         result = sqlglot.transpile(sql, read="trino", write="oracle")[0]
@@ -114,9 +114,9 @@ class TestOracleCustomDialectPagination:
         from app.custom_sqlglot.dialects.oracle import Oracle
 
         sql = """
-        SELECT * FROM orders 
-        WHERE order_date >= CURRENT_DATE - INTERVAL '7' DAY 
-        ORDER BY order_date DESC 
+        SELECT * FROM orders
+        WHERE order_date >= CURRENT_DATE - INTERVAL '7' DAY
+        ORDER BY order_date DESC
         LIMIT 20
         """
         result = sqlglot.transpile(sql, read="trino", write=Oracle)[0]
