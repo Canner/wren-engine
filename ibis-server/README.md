@@ -81,6 +81,22 @@ OpenTelemetry zero-code instrumentation is highly configurable. You can set the 
 
 [Metrics we are tracing right now](./Metrics.md)
 
+## Oracle 19c Compatibility
+
+WrenAI includes a custom Oracle 19c dialect override for generating compatible SQL syntax. See [Oracle 19c Dialect Documentation](docs/oracle_19c_dialect.md) for details.
+
+### Testing Oracle 19c Dialect
+
+Run the Oracle 19c test suite (34 tests):
+```bash
+# Using alias (if configured)
+wren-test-oracle
+
+# Full command
+cd ibis-server
+PYTHONPATH=. poetry run pytest tests/custom_sqlglot/ -m oracle19c -v --confcutdir=tests/custom_sqlglot
+```
+
 ## Contributing
 Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for more information.
 
