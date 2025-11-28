@@ -65,6 +65,7 @@ class AthenaMetadata(Metadata):
                 t.table_schema,
                 t.table_name,
                 c.column_name,
+                c.comment,
                 c.ordinal_position,
                 c.is_nullable,
                 c.data_type
@@ -91,7 +92,7 @@ class AthenaMetadata(Metadata):
                 name=row["column_name"],
                 type=self._transform_column_type(row["data_type"]),
                 notNull=row["is_nullable"].lower() == "no",
-                description="",  # Athena doesn't provide column descriptions in information_schema
+                description=row["comment"],
                 properties=None,
             )
 
