@@ -16,15 +16,102 @@ WREN_URL = os.getenv("WREN_URL", "localhost:8000")
 USER_AGENT = "wren-app/1.0"
 MDL_SCHEMA_PATH = "mdl.schema.json"
 connection_info_path = os.getenv("CONNECTION_INFO_FILE")
-# TODO: maybe we should log the number of tables and columns
 mdl_path = os.getenv("MDL_PATH")
+
+
+class MdlCache:
+    """
+    Cache for MDL with pre-built indexes for O(1) lookups.
+    Avoids repeated base64 decoding and O(n) linear searches.
+    """
+
+    def __init__(self):
+        self._mdl_base64: str | None = None
+        self._mdl_dict: dict | None = None
+        self._model_index: dict[str, dict] = {}
+        self._column_index: dict[str, dict[str, dict]] = {}
+        self._table_names: list[str] = []
+
+    def set_mdl(self, mdl_base64: str) -> None:
+        """Set MDL and invalidate cached indexes."""
+        self._mdl_base64 = mdl_base64
+        self._mdl_dict = None
+        self._model_index = {}
+        self._column_index = {}
+        self._table_names = []
+
+    def get_base64(self) -> str | None:
+        return self._mdl_base64
+
+    def is_deployed(self) -> bool:
+        return self._mdl_base64 is not None
+
+    def _ensure_parsed(self) -> None:
+        """Lazy parse and build indexes on first access."""
+        if self._mdl_dict is not None:
+            return
+
+        if self._mdl_base64 is None:
+            self._mdl_dict = {}
+            return
+
+        self._mdl_dict = orjson.loads(
+            base64.b64decode(self._mdl_base64).decode("utf-8")
+        )
+
+        models = self._mdl_dict.get("models", [])
+        self._model_index = {model["name"]: model for model in models}
+        self._table_names = list(self._model_index.keys())
+
+        for model_name, model in self._model_index.items():
+            columns = model.get("columns", [])
+            self._column_index[model_name] = {col["name"]: col for col in columns}
+
+    def get_mdl_dict(self) -> dict:
+        """Get parsed MDL dictionary."""
+        self._ensure_parsed()
+        return self._mdl_dict
+
+    def get_table_names(self) -> list[str]:
+        """Get list of table names. O(1) after first call."""
+        self._ensure_parsed()
+        return self._table_names
+
+    def get_model(self, table_name: str) -> dict | None:
+        """Get model by name. O(1) lookup."""
+        self._ensure_parsed()
+        return self._model_index.get(table_name)
+
+    def get_column(self, table_name: str, column_name: str) -> dict | None:
+        """Get column by table and column name. O(1) lookup."""
+        self._ensure_parsed()
+        table_columns = self._column_index.get(table_name)
+        if table_columns is None:
+            return None
+        return table_columns.get(column_name)
+
+    def get_columns_dict(self, table_name: str) -> dict[str, dict] | None:
+        """Get all columns for a table as dict. O(1) lookup."""
+        self._ensure_parsed()
+        return self._column_index.get(table_name)
+
+    def get_relationships(self) -> list:
+        """Get relationships from MDL."""
+        self._ensure_parsed()
+        return self._mdl_dict.get("relationships", [])
+
+
+mdl_cache = MdlCache()
+data_source = None
 
 if mdl_path:
     with open(mdl_path) as f:
         mdl_schema = json.load(f)
         data_source = mdl_schema["dataSource"].lower()
-        mdl_base64 = dict_to_base64_string(mdl_schema)
-        print(f"Loaded MDL {f.name}")  # noqa: T201
+        mdl_cache.set_mdl(dict_to_base64_string(mdl_schema))
+        models = mdl_schema.get("models", [])
+        total_columns = sum(len(m.get("columns", [])) for m in models)
+        print(f"Loaded MDL {f.name} ({len(models)} models, {total_columns} columns)")  # noqa: T201
 else:
     print("No MDL_PATH environment variable found")
 
@@ -45,7 +132,7 @@ async def make_query_request(sql: str, dry_run: bool = False):
                 headers=headers,
                 json={
                     "sql": sql,
-                    "manifestStr": mdl_base64,
+                    "manifestStr": mdl_cache.get_base64(),
                     "connectionInfo": connection_info,
                 },
                 timeout=30,
@@ -106,11 +193,15 @@ async def get_mdl_json_schema() -> str:
 # TODO: should validate the MDL
 @mcp.tool()
 async def deploy(mdl: Manifest) -> str:
-    global mdl_base64
     """
     Deploy the MDL JSON schema to Wren Engine
     """
-    mdl_base64 = json_to_base64_string(mdl.model_dump_json(by_alias=True))
+    global data_source
+    mdl_json = mdl.model_dump_json(by_alias=True)
+    mdl_dict = orjson.loads(mdl_json)
+    data_source = mdl_dict.get("dataSource", "").lower()
+    mdl_base64 = json_to_base64_string(mdl_json)
+    mdl_cache.set_mdl(mdl_base64)
     return "MDL deployed successfully"
 
 
@@ -119,7 +210,7 @@ async def is_deployed() -> str:
     """
     Check if the MDL JSON schema is deployed
     """
-    if mdl_base64:
+    if mdl_cache.is_deployed():
         return "MDL is deployed"
     return "MDL is not deployed. Please deploy the MDL first"
 
@@ -170,7 +261,7 @@ async def get_full_manifest() -> str:
     """
     Get the current deployed manifest in Wren Engine
     """
-    return base64.b64decode(mdl_base64).decode("utf-8")
+    return base64.b64decode(mdl_cache.get_base64()).decode("utf-8")
 
 
 @mcp.tool()
@@ -180,7 +271,7 @@ async def get_manifest() -> str:
     If the number of deployed tables and columns is small, then it's better to use this tool.
     Otherwise, use `get_available_tables` and `get_table_info` and `get_column_info` tools.
     """
-    return base64.b64decode(mdl_base64).decode("utf-8")
+    return base64.b64decode(mdl_cache.get_base64()).decode("utf-8")
 
 
 @mcp.resource("wren://metadata/tables")
@@ -188,9 +279,7 @@ async def get_available_tables_resource() -> str:
     """
     Get the available tables in Wren Engine
     """
-    mdl = orjson.loads(base64.b64decode(mdl_base64).decode("utf-8"))
-    # return only table name
-    return [table["name"] for table in mdl["models"]]
+    return mdl_cache.get_table_names()
 
 
 @mcp.tool()
@@ -198,9 +287,7 @@ async def get_available_tables() -> list[str]:
     """
     Get the available tables in Wren Engine
     """
-    mdl = orjson.loads(base64.b64decode(mdl_base64).decode("utf-8"))
-    # return only table name
-    return [table["name"] for table in mdl["models"]]   
+    return mdl_cache.get_table_names()   
 
 
 @mcp.tool()
@@ -215,35 +302,28 @@ async def get_table_columns_info(
     If the columns is not None, then it will return only the given columns of the table.
     If the `full_column_info` is True, then it will return the full column info, otherwise only the column name.
     """
-    mdl = orjson.loads(base64.b64decode(mdl_base64).decode("utf-8"))
     result = []
     for table_column in table_columns:
-        # find the specific table
-        tables = [
-            table for table in mdl["models"] if table["name"] == table_column.table_name
-        ]
-
-        if len(tables) == 0:
+        model = mdl_cache.get_model(table_column.table_name)
+        if model is None:
             return f"Table not found: {table_column.table_name}"
 
-        if len(tables) > 1:
-            return f"Multiple tables found: {table_column.table_name}"
+        columns_dict = mdl_cache.get_columns_dict(table_column.table_name)
 
-        # extract the only column
         if table_column.column_names and len(table_column.column_names) > 0:
-            columns = [
-                col
-                for col in tables[0]["columns"]
-                if col["name"] in table_column.column_names
-            ]
-            # check the missed columns
-            missed_columns = set(table_column.column_names) - set(
-                [col["name"] for col in columns]
-            )
+            columns = []
+            missed_columns = []
+            for col_name in table_column.column_names:
+                col = columns_dict.get(col_name)
+                if col is not None:
+                    columns.append(col)
+                else:
+                    missed_columns.append(col_name)
+
             if len(missed_columns) > 0:
-                return f"Table {table_column.table_name}'s columns not found: {missed_columns}"
+                return f"Table {table_column.table_name}'s columns not found: {set(missed_columns)}"
         else:
-            columns = tables[0]["columns"]
+            columns = list(columns_dict.values())
 
         if not full_column_info:
             columns = [col["name"] for col in columns]
@@ -257,11 +337,13 @@ async def get_table_info(table_name: str) -> str:
     """
     Get the table info for the given table name in Wren Engine
     """
-    mdl = orjson.loads(base64.b64decode(mdl_base64).decode("utf-8"))
-    result = [table for table in mdl["models"] if table["name"] == table_name]
-    for table in result:
-        table["columns"] = [col["name"] for col in table["columns"]]
-    return orjson.dumps(result).decode("utf-8")
+    model = mdl_cache.get_model(table_name)
+    if model is None:
+        return orjson.dumps([]).decode("utf-8")
+
+    result = model.copy()
+    result["columns"] = [col["name"] for col in model.get("columns", [])]
+    return orjson.dumps([result]).decode("utf-8")
 
 
 @mcp.tool()
@@ -269,25 +351,15 @@ async def get_column_info(table_name: str, column_name: str) -> str:
     """
     Get the column info for the given table and column name in Wren Engine
     """
-    mdl = orjson.loads(base64.b64decode(mdl_base64).decode("utf-8"))
-    # find the specific table
-    tables = [table for table in mdl["models"] if table["name"] == table_name]
-
-    if len(tables) == 0:
+    model = mdl_cache.get_model(table_name)
+    if model is None:
         return "Table not found"
 
-    if len(tables) > 1:
-        return "Multiple tables found"
-
-    # extract the only column
-    result = [col for col in tables[0]["columns"] if col["name"] == column_name]
-    if len(result) == 0:
+    column = mdl_cache.get_column(table_name, column_name)
+    if column is None:
         return "Column not found"
 
-    if len(result) > 1:
-        return "Multiple columns found"
-
-    return orjson.dumps(result[0]).decode("utf-8")
+    return orjson.dumps(column).decode("utf-8")
 
 
 @mcp.tool()
@@ -295,8 +367,7 @@ async def get_relationships() -> str:
     """
     Get the relationships in Wren Engine
     """
-    mdl = orjson.loads(base64.b64decode(mdl_base64).decode("utf-8"))
-    return orjson.dumps(mdl["relationships"]).decode("utf-8")
+    return orjson.dumps(mdl_cache.get_relationships()).decode("utf-8")
 
 
 @mcp.tool()
