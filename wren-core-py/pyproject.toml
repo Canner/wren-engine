@@ -11,11 +11,11 @@ authors = ["Canner <dev@cannerdata.com>"]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-maturin = "1.9.4"
+maturin = "1.10.2"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "8.4.2"
-ruff = "0.13.1"
+pytest = "9.0.1"
+ruff = "0.14.7"
 
 [tool.maturin]
 module-name = "wren_core"
