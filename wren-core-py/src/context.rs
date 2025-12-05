@@ -29,8 +29,9 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::vec;
 use tokio::runtime::Runtime;
-use wren_core::array::AsArray;
+use wren_core::array::{AsArray, GenericByteArray};
 use wren_core::ast::{visit_statements_mut, Expr, Statement, Value, ValueWithSpan};
+use wren_core::datatypes::GenericStringType;
 use wren_core::dialect::GenericDialect;
 use wren_core::mdl::context::apply_wren_on_ctx;
 use wren_core::mdl::function::{
@@ -239,6 +240,20 @@ impl PySessionContext {
         Ok(registered_functions)
     }
 
+    pub fn get_available_function(
+        &self,
+        function_name: &str,
+    ) -> PyResult<Vec<PyRemoteFunction>> {
+        let functions = self
+            .runtime
+            .block_on(Self::get_registered_function(function_name, &self.exec_ctx))
+            .map_err(CoreError::from)?
+            .into_iter()
+            .map(|f| PyRemoteFunction::from(f))
+            .collect::<Vec<_>>();
+        Ok(functions)
+    }
+
     /// Push down the limit to the given SQL.
     /// If the limit is None, the SQL will be returned as is.
     /// If the limit is greater than the pushdown limit, the limit will be replaced with the pushdown limit.
@@ -406,6 +421,90 @@ impl PySessionContext {
             }
         }
         Ok(())
+    }
+
+    async fn get_registered_function(
+        function_name: &str,
+        ctx: &wren_core::SessionContext,
+    ) -> PyResult<Vec<RemoteFunction>> {
+        let sql = format!(
+            r#"
+            WITH inputs AS (
+                SELECT
+                    r.specific_name,
+                    r.data_type as return_type,
+                    pi.rid,
+                    array_agg(pi.parameter_name order by pi.ordinal_position) as param_names,
+                    array_agg(pi.data_type order by pi.ordinal_position) as param_types
+                FROM
+                    information_schema.routines r
+                JOIN
+                    information_schema.parameters pi ON r.specific_name = pi.specific_name AND pi.parameter_mode = 'IN'
+                GROUP BY 1, 2, 3
+            )
+            SELECT
+                r.routine_name as name,
+                i.param_names,
+                i.param_types,
+                r.data_type as return_type,
+                r.function_type,
+                r.description
+            FROM
+                information_schema.routines r
+            LEFT JOIN
+                inputs i ON r.specific_name = i.specific_name
+            WHERE
+                r.routine_name = '{}'
+        "#,
+            function_name
+        );
+        let batches = ctx
+            .sql(&sql)
+            .await
+            .map_err(CoreError::from)?
+            .collect()
+            .await
+            .map_err(CoreError::from)?;
+        let mut functions = vec![];
+
+        for batch in batches {
+            let name_array = batch.column(0).as_string::<i32>();
+            let param_names_array = batch.column(1).as_list::<i32>();
+            let param_types_array = batch.column(2).as_list::<i32>();
+            let return_type_array = batch.column(3).as_string::<i32>();
+            let function_type_array = batch.column(4).as_string::<i32>();
+            let description_array = batch.column(5).as_string::<i32>();
+
+            for row in 0..batch.num_rows() {
+                let name = name_array.value(row).to_string();
+                let param_names =
+                    Self::to_string_vec(param_names_array.value(row).as_string::<i32>());
+                let param_types =
+                    Self::to_string_vec(param_types_array.value(row).as_string::<i32>());
+                let return_type = return_type_array.value(row).to_string();
+                let description = description_array.value(row).to_string();
+                let function_type = function_type_array.value(row).to_string();
+
+                functions.push(RemoteFunction {
+                    name,
+                    param_names: Some(param_names),
+                    param_types: Some(param_types),
+                    return_type,
+                    description: Some(description),
+                    function_type: FunctionType::from_str(&function_type).unwrap(),
+                });
+            }
+        }
+        Ok(functions)
+    }
+
+    fn to_string_vec(
+        array: &GenericByteArray<GenericStringType<i32>>,
+    ) -> Vec<Option<String>> {
+        array
+            .iter()
+            .map(|s| s.map(|s| s.to_string()))
+            .collect::<Vec<Option<String>>>()
     }
 }
 
