@@ -36,6 +36,7 @@ use datafusion::sql::sqlparser::ast::{
 use datafusion::sql::unparser::ast::{
     RelationBuilder, TableFactorBuilder, TableFunctionRelationBuilder,
 };
+use datafusion::sql::unparser::dialect::DateFieldExtractStyle;
 use datafusion::sql::unparser::Unparser;
 use regex::Regex;
 
@@ -95,6 +96,10 @@ pub trait InnerDialect: Send + Sync {
         false
     }
 
+    fn date_field_extract_style(&self) -> Option<DateFieldExtractStyle> {
+        None
+    }
+
     /// Define the supported UDFs for the dialect which will be registered in the execution context.
     fn supported_udfs(&self) -> Vec<Arc<datafusion::logical_expr::ScalarUDF>> {
         scalar_functions()
@@ -143,6 +148,10 @@ impl InnerDialect for MySQLDialect {
             "btrim" => scalar_function_to_sql_internal(unparser, None, "trim", args),
             _ => Ok(None),
         }
+    }
+
+    fn date_field_extract_style(&self) -> Option<DateFieldExtractStyle> {
+        Some(DateFieldExtractStyle::Extract)
     }
 }
 
