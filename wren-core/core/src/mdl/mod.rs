@@ -3854,7 +3854,7 @@ mod test {
 
     #[tokio::test]
     async fn test_extract_roundtrip_mysql() -> Result<()> {
-        let ctx = create_wren_ctx(None);
+        let ctx = create_wren_ctx(None, Some(&DataSource::MySQL));
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
