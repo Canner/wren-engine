@@ -1,0 +1,78 @@
+### SQL USAGE CONTEXT ###
+Now, you aren't querying a tranditional database, but rather a semantic layer, Wren engine.
+Wren Engine is a semantic layer to help you query your database easily using SQL.
+Wren engine supports a generic SQL dialect similar to ANSI SQL (based on DataFusion SQL, similar to Postgres and DuckDB), but with some differences and limitations.
+Wren SQL doesn't equal to your database SQL. Wren Engine translates your Wren SQL to your database SQL internally.
+Avoid to use database specific SQL syntax and functions in your Wren SQL.
+You should follow the rules below when generating SQL queries for Wren engine.
+
+### SQL RULES ###
+- ONLY USE SELECT statements, NO DELETE, UPDATE OR INSERT etc. statements that might change the data in the database.
+- ONLY USE the tables and columns mentioned in the database schema.
+- DON'T INCLUDE comments in the generated SQL query.
+- PREFER USING CTEs over subqueries.
+- The Identifer case sensitivity is case-sensitivity. You need to quote the identifier if it contains unicode characters, special characters (except _), or starts with a digit.
+    - example : "客户"."姓名", "table-name"."column-name", "123column"
+- The Identifier quote character is double quotes (").
+- The String literal quote character is single quotes (').
+- If the user asks for a specific date, please give the date range in SQL query
+    - example: "What is the total revenue for the month of 2024-11-01?"
+    - answer: "SELECT SUM(r.PriceSum) FROM Revenue r WHERE r.PurchaseTimestamp >= CAST('2024-11-01 00:00:00' AS TIMESTAMP WITH TIME ZONE) AND r.PurchaseTimestamp < CAST('2024-11-02 00:00:00' AS TIMESTAMP WITH TIME ZONE)"
+- Aggregate functions are not allowed in the WHERE clause. Instead, they belong in the HAVING clause, which is used to filter after aggregation.
+- You can only add "ORDER BY" and "LIMIT" to the final "UNION" result.
+- For the ranking problem, you must use the ranking function, `DENSE_RANK()` to rank the results and then use `WHERE` clause to filter the results.
+- For the ranking problem, you must add the ranking column to the final SELECT clause.
+- Avoid to use correlated subqueries in the generated SQL query. Use JOINs instead.
+- If a casting is unsafe, use SAFE_CAST function to avoid runtime errors.
+    - example: SAFE_CAST("<column_name>" AS <data_type>)
+             
+### SUPPORT SQL DATA TYPES ###
+The following SQL data types are supported to use for casting or creating literals:
+- bool, boolean
+- int, integer, bigint, smallint, tinyint
+- float, double, real
+- decimal, numeric
+- varchar, char, string, text
+- date, time, timestamp, timestamp with time zone
+- bytea
+
+For example:
+- CAST("<column_name>" AS INT)
+- SAFE_CAST("<column_name>" AS INT)
+- TIMESTAMP '2024-11-09 00:00:00'ㄌ 
+
+### DATE AND TIME FUNATIONALILTY ###
+- Use `CURRENT_DATE` to get the current date.
+- Use `CURRENT_TIMESTAMP` to get the current timestamp.
+- Use `DATE_TRUNC('<part>', <timestamp>)` to truncate a timestamp to the specified part.
+  - Example parts: 'year', 'quarter', 'month', 'week', 'day', 'hour', 'minute', 'second
+- Use `EXTRACT(<part> FROM <timestamp>)` to extract a specific part from a timestamp.
+  - Example parts: year, quarter, month, week, day, hour, minute, second
+- Use `DATE_DIFF('<part>', <start_date>, <end_date>)` to calculate the difference between two dates in the specified part.
+  - Example parts: 'year', 'quarter', 'month', 'week', 'day', 'hour', 'minute', 'second'
+- Use `+` and `-` operators to add or subtract intervals from dates or timestamps.
+  - Example: `<date_column> + INTERVAL '7' days`, `<timestamp_column> - INTERVAL '3' hours`
+- Use `TIMESTAMP WITH TIME ZONE` type when timezone is important.
+- `TIMESTAMP` can't be directly compared with `TIMESTAMP WITH TIME ZONE`. You need to cast one to another before comparison.
+  - Example: `CAST(<timestamp_column> AS TIMESTAMP WITH TIME ZONE)`, `CAST(<timestamp_with_time_zone_column> AS TIMESTAMP)`
+
+### ARRAY USAGE ###
+To presenet array type literal, use the following syntax:
+- ARRAY[<value1>, <value2>, ..., <valueN>]
+- ['value1', 'value2', ..., 'valueN']
+- CAST(ARRAY[<value1>, <value2>, ..., <valueN>] AS ARRAY<data_type>)
+- CAST(['value1', 'value2', ..., 'valueN'] AS <data_type>[] )
+
+### UNNEST ARRAYS ###
+To unnest an array column, use the following syntax:
+- SELECT ...
+  FROM <table_name>, UNNEST(<array_column>) AS <alias_name>(<alias_column>)
+- You can use JOIN to join the unnested array with other tables.
+  - SELECT ...
+    FROM <table_name1>
+    JOIN <table_name2>, UNNEST(<table_name2>.<array_column>) AS <alias_name>(<alias_column>)
+    ON <table_name1>.<column_name> = <alias_name>.<alias_column>
+
+### AGGREGATION ###
+- Make sure the group by key contains all non-aggregated columns in the select clause.
+  - Window functions are not considered as aggregated columns.
