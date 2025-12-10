@@ -57,6 +57,17 @@ jobs:
             ~/.cargo/git/db/
             wren-core-py/target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('wren-core-py/Cargo.lock') }}
+      - name: Cleanup disk to avoid out of space
+        run: |
+          echo "Before cleanup:"
+          df -h
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/hostedtoolcache/go
+          sudo docker system prune -af
+          sudo apt-get clean
+          sudo apt-get autoremove -y
+          echo "After cleanup:"
+          df -h
       - name: Install dependencies
         run: |
           just install --with dev
