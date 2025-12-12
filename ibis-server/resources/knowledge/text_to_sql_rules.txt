@@ -13,66 +13,60 @@ You should follow the rules below when generating SQL queries for Wren engine.
 - PREFER USING CTEs over subqueries.
 - The Identifer case sensitivity is case-sensitivity. You need to quote the identifier if it contains unicode characters, special characters (except _), or starts with a digit.
     - example : "客户"."姓名", "table-name"."column-name", "123column"
-- The Identifier quote character is double quotes (").
-- The String literal quote character is single quotes (').
+- The Identifier quote character is double quotes `"`.
+- The String literal quote character is single quotes `'`.
 - If the user asks for a specific date, please give the date range in SQL query
     - example: "What is the total revenue for the month of 2024-11-01?"
     - answer: "SELECT SUM(r.PriceSum) FROM Revenue r WHERE r.PurchaseTimestamp >= CAST('2024-11-01 00:00:00' AS TIMESTAMP WITH TIME ZONE) AND r.PurchaseTimestamp < CAST('2024-11-02 00:00:00' AS TIMESTAMP WITH TIME ZONE)"
-- Aggregate functions are not allowed in the WHERE clause. Instead, they belong in the HAVING clause, which is used to filter after aggregation.
-- You can only add "ORDER BY" and "LIMIT" to the final "UNION" result.
 - For the ranking problem, you must use the ranking function, `DENSE_RANK()` to rank the results and then use `WHERE` clause to filter the results.
 - For the ranking problem, you must add the ranking column to the final SELECT clause.
-- Avoid to use correlated subqueries in the generated SQL query. Use JOINs instead.
+- Avoid correlated subqueries - use JOINs instead.
 - If a casting is unsafe, use SAFE_CAST function to avoid runtime errors.
     - example: SAFE_CAST("<column_name>" AS <data_type>)
-             
+
+### FILTER STRATEGIES ###
+- When filtering on text columns, prefer using `LIKE` operator with `%` wildcard for partial matches.
+  - Example: `WHERE name LIKE '%Smith%'`
+- When filtering on numeric columns, use range conditions for better performance.
+  - Example: `WHERE age BETWEEN 30 AND 40`
+- When filtering on date or timestamp columns, use range conditions to leverage indexing.
+  - Example: `WHERE created_at >= '2024-01-01' AND created_at < '2024-02-01'`
+- If user provides the exact value or list of values to filter, use `=` or `IN` operator.
+  - Example: `WHERE status = 'active'`
+  - Example: `WHERE category IN ('electronics', 'furniture', 'clothing')`
+- If the sample data or properties indicate the exact values to filter, use those values in the SQL query.
+  - Example: If the sample data shows status values as 'active', 'inactive', use `WHERE status = 'active'` instead of vague conditions like `WHERE status IS NOT NULL`.
+- If the column is indcated as the primary key or indexed column, prefer using equality filters on that column for better performance.
+  - Example: `WHERE user_id = 12345`
+
 ### SUPPORT SQL DATA TYPES ###
-The following SQL data types are supported to use for casting or creating literals:
-- bool, boolean
-- int, integer, bigint, smallint, tinyint
-- float, double, real
-- decimal, numeric
-- varchar, char, string, text
-- date, time, timestamp, timestamp with time zone
-- bytea
-
-For example:
-- CAST("<column_name>" AS INT)
-- SAFE_CAST("<column_name>" AS INT)
-- TIMESTAMP '2024-11-09 00:00:00'ㄌ 
-
-### DATE AND TIME FUNATIONALILTY ###
-- Use `CURRENT_DATE` to get the current date.
-- Use `CURRENT_TIMESTAMP` to get the current timestamp.
-- Use `DATE_TRUNC('<part>', <timestamp>)` to truncate a timestamp to the specified part.
-  - Example parts: 'year', 'quarter', 'month', 'week', 'day', 'hour', 'minute', 'second
-- Use `EXTRACT(<part> FROM <timestamp>)` to extract a specific part from a timestamp.
-  - Example parts: year, quarter, month, week, day, hour, minute, second
-- Use `DATE_DIFF('<part>', <start_date>, <end_date>)` to calculate the difference between two dates in the specified part.
-  - Example parts: 'year', 'quarter', 'month', 'week', 'day', 'hour', 'minute', 'second'
-- Use `+` and `-` operators to add or subtract intervals from dates or timestamps.
-  - Example: `<date_column> + INTERVAL '7' days`, `<timestamp_column> - INTERVAL '3' hours`
-- Use `TIMESTAMP WITH TIME ZONE` type when timezone is important.
-- `TIMESTAMP` can't be directly compared with `TIMESTAMP WITH TIME ZONE`. You need to cast one to another before comparison.
-  - Example: `CAST(<timestamp_column> AS TIMESTAMP WITH TIME ZONE)`, `CAST(<timestamp_with_time_zone_column> AS TIMESTAMP)`
-
-### ARRAY USAGE ###
-To presenet array type literal, use the following syntax:
-- ARRAY[<value1>, <value2>, ..., <valueN>]
-- ['value1', 'value2', ..., 'valueN']
-- CAST(ARRAY[<value1>, <value2>, ..., <valueN>] AS ARRAY<data_type>)
-- CAST(['value1', 'value2', ..., 'valueN'] AS <data_type>[] )
-
-### UNNEST ARRAYS ###
-To unnest an array column, use the following syntax:
-- SELECT ...
-  FROM <table_name>, UNNEST(<array_column>) AS <alias_name>(<alias_column>)
-- You can use JOIN to join the unnested array with other tables.
-  - SELECT ...
-    FROM <table_name1>
-    JOIN <table_name2>, UNNEST(<table_name2>.<array_column>) AS <alias_name>(<alias_column>)
-    ON <table_name1>.<column_name> = <alias_name>.<alias_column>
+-The following SQL data types are supported to use for casting or creating literals:
+  - bool, boolean
+  - int, integer, bigint, smallint, tinyint
+  - float, double, real
+  - decimal, numeric
+  - varchar, char, string, text
+  - date, time, timestamp, timestamp with time zone
+  - bytea
+  - For example:
+    - CAST("<column_name>" AS INT)
+    - SAFE_CAST("<column_name>" AS INT)
+    - TIMESTAMP '2024-11-09 00:00:00' 
 
 ### AGGREGATION ###
 - Make sure the group by key contains all non-aggregated columns in the select clause.
   - Window functions are not considered as aggregated columns.
+- Aggregate functions are not allowed in the WHERE clause. Instead, they belong in the HAVING clause, which is used to filter after aggregation.
+
+### SORTING AND LIMITING ###
+- Use `ORDER BY` to sort results.
+  - Example: `ORDER BY created_at DESC, name ASC`
+- Use `LIMIT` to restrict number of rows returned.
+  - Example: `LIMIT 10` or `LIMIT 10 OFFSET 20`
+- When use `ORDER BY` in a subquery or CTE, always include `LIMIT` to avoid unnecessary large intermediate result sets.
+
+### SUBQUERY PATTERNS ###
+- Use CTEs (WITH clause) instead of nested subqueries for better readability.
+- Subquery in SELECT: Must return single value per row.
+- Subquery in WHERE: Use with `IN`, `EXISTS`, comparison operators.
+- `IN SUBQUERY` is not supported in JOIN conditions. Use JOIN with ON clause instead.

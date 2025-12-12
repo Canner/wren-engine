@@ -16,4 +16,11 @@ class Knowledge:
     def get_sql_instructions(self) -> dict:
         instructions_path = Path(f"{KNOWLEDGE_RESOURCE_PATH}/instructions")
         files = [f for f in instructions_path.iterdir() if f.is_file()]
+
+        if self.data_source:
+            dialect_file = Path(
+                f"{KNOWLEDGE_RESOURCE_PATH}/dialects/{self.data_source.name}.txt"
+            )
+            if dialect_file.exists():
+                files.append(dialect_file)
         return {file.stem: file.read_text() for file in files}
