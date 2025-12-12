@@ -8,8 +8,10 @@ use datafusion::{
 
 use crate::{
     make_udf_function,
-    mdl::function::{dialect::utils::build_document, ByPassScalarUDF, ReturnType},
+    mdl::function::{ByPassScalarUDF, ReturnType},
 };
+
+use crate::mdl::function::utils::build_document;
 
 make_udf_function!(
     ByPassScalarUDF::new(

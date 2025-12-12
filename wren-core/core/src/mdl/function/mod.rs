@@ -4,6 +4,7 @@ mod macros;
 mod remote_function;
 mod scalar;
 mod table;
+mod utils;
 mod window;
 pub use aggregate::aggregate_functions;
 pub use remote_function::*;
