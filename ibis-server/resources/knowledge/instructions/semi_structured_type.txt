@@ -36,5 +36,5 @@
                     -- {"alias":"address","description":"A JSON object that represents address information of this user.","json_type":"JSON","json_fields":{"json_type":"JSON","address.json.city":{"name":"city","type":"varchar","path":"$.city","properties":{"alias":"city","description":"City Name."}},"address.json.state":{"name":"state","type":"varchar","path":"$.state","properties":{"alias":"state","description":"ISO code or name of the state, province or district."}},"address.json.postcode":{"name":"postcode","type":"varchar","path":"$.postcode","properties":{"alias":"postcode","description":"Postal code."}},"address.json.country":{"name":"country","type":"varchar","path":"$.country","properties":{"alias":"country","description":"ISO code of the country."}}}}
                     address JSON
                 )`
-            To get the city of address in user table use SQL:
-            `SELECT AS_VARCHAR(GET_PATH(u.address, '$.city')) FROM user as u`
+            To get the city of address in users table use SQL:
+            `SELECT AS_VARCHAR(GET_PATH(u.address, '$.city')) FROM users as u`

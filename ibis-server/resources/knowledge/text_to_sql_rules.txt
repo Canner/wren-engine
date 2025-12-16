@@ -1,5 +1,5 @@
 ### SQL USAGE CONTEXT ###
-Now, you aren't querying a tranditional database, but rather a semantic layer, Wren engine.
+Now, you aren't querying a traditional database, but rather a semantic layer, Wren engine.
 Wren Engine is a semantic layer to help you query your database easily using SQL.
 Wren engine supports a generic SQL dialect similar to ANSI SQL (based on DataFusion SQL, similar to Postgres and DuckDB), but with some differences and limitations.
 Wren SQL doesn't equal to your database SQL. Wren Engine translates your Wren SQL to your database SQL internally.
@@ -12,7 +12,7 @@ You should check which database is connected to the backend. You can find it in 
 - ONLY USE the tables and columns mentioned in the database schema.
 - DON'T INCLUDE comments in the generated SQL query.
 - PREFER USING CTEs over subqueries.
-- The Identifer case sensitivity is case-sensitivity. You need to quote the identifier if it contains unicode characters, special characters (except _), or starts with a digit.
+- The Identifier case sensitivity is case-sensitivity. You need to quote the identifier if it contains unicode characters, special characters (except _), or starts with a digit.
     - example : "客户"."姓名", "table-name"."column-name", "123column"
 - The Identifier quote character is double quotes `"`.
 - The String literal quote character is single quotes `'`.
@@ -37,7 +37,7 @@ You should check which database is connected to the backend. You can find it in 
   - Example: `WHERE category IN ('electronics', 'furniture', 'clothing')`
 - If the sample data or properties indicate the exact values to filter, use those values in the SQL query.
   - Example: If the sample data shows status values as 'active', 'inactive', use `WHERE status = 'active'` instead of vague conditions like `WHERE status IS NOT NULL`.
-- If the column is indcated as the primary key or indexed column, prefer using equality filters on that column for better performance.
+- If the column is indicated as the primary key or indexed column, prefer using equality filters on that column for better performance.
   - Example: `WHERE user_id = 12345`
 
 ### SUPPORT SQL DATA TYPES ###
