@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from app.model.data_source import DataSource
+from app.model.error import ErrorCode, WrenError
 
 KNOWLEDGE_RESOURCE_PATH = "resources/knowledge"
 
@@ -11,10 +12,18 @@ class Knowledge:
 
     def get_text_to_sql_rule(self) -> str:
         rules_path = Path(f"{KNOWLEDGE_RESOURCE_PATH}/text_to_sql_rule.txt")
+        if not rules_path.exists():
+            raise WrenError(
+                ErrorCode.GENERIC_INTERNAL_ERROR, "Text to SQL rule not found."
+            )
         return rules_path.read_text()
 
     def get_sql_instructions(self) -> dict:
         instructions_path = Path(f"{KNOWLEDGE_RESOURCE_PATH}/instructions")
+        if not instructions_path.exists():
+            raise WrenError(
+                ErrorCode.GENERIC_INTERNAL_ERROR, "SQL instructions path not found."
+            )
         files = [f for f in instructions_path.iterdir() if f.is_file()]
 
         if self.data_source:
@@ -27,4 +36,8 @@ class Knowledge:
 
     def get_sql_correction_rule(self) -> str:
         rules_path = Path(f"{KNOWLEDGE_RESOURCE_PATH}/sql_correction_rule.txt")
+        if not rules_path.exists():
+            raise WrenError(
+                ErrorCode.GENERIC_INTERNAL_ERROR, "SQL correction rule not found."
+            )
         return rules_path.read_text()
