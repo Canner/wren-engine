@@ -10,7 +10,7 @@ class Knowledge:
         self.data_source = data_source
 
     def get_text_to_sql_rule(self) -> str:
-        rules_path = Path(f"{KNOWLEDGE_RESOURCE_PATH}/text_to_sql_rules.txt")
+        rules_path = Path(f"{KNOWLEDGE_RESOURCE_PATH}/text_to_sql_rule.txt")
         return rules_path.read_text()
 
     def get_sql_instructions(self) -> dict:
@@ -24,3 +24,7 @@ class Knowledge:
             if dialect_file.exists():
                 files.append(dialect_file)
         return {file.stem: file.read_text() for file in files}
+
+    def get_sql_correction_rule(self) -> str:
+        rules_path = Path(f"{KNOWLEDGE_RESOURCE_PATH}/sql_correction_rule.txt")
+        return rules_path.read_text()
