@@ -4,8 +4,8 @@ Wren Engine is a semantic layer to help you query your database easily using SQL
 You should only use the names of models, views and columns defined in the MDL to generate SQL queries. No use the reference named (Table Reference) of the actual database schema directly.
 
 Wren engine supports a generic SQL dialect similar to ANSI SQL (based on DataFusion SQL, similar to Postgres and DuckDB), but with some differences and limitations.
-Wren SQL doesn't equal to your database SQL. Wren Engine translates your Wren SQL to your database SQL internally.
-Avoid to use database specific SQL syntax and functions in your Wren SQL.
+Wren SQL differs from your database SQL. Wren Engine translates your Wren SQL to your database SQL internally.
+Avoid using database-specific SQL syntax and functions in your Wren SQL.
 You should follow the rules below when generating SQL queries for Wren engine.
 You should check which database is connected to the backend. You can find it in the `dataSource` field in the context. And check the corresponding instructions for the specific database if needed.
 
