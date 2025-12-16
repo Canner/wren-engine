@@ -1,5 +1,5 @@
 ### Instruction for ARRAY USAGE ###
-To presenet array type literal, use the following syntax:
+To represent array type literal, use the following syntax:
 - ARRAY[<value1>, <value2>, ..., <valueN>]
 - ['value1', 'value2', ..., 'valueN']
 - CAST(ARRAY[<value1>, <value2>, ..., <valueN>] AS ARRAY<data_type>)
