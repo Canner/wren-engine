@@ -3,9 +3,7 @@ This section covers the concept of how SQL queries are planned and executed by W
 Wren engine planned the SQL according to a Model definition Language (MDL) which defines the structure of the tables used in the SQL queries.
 When a SQL query is submitted to the Wren engine, it undergoes several stages of processing before the final result is returned. The key stages include:
     1. Parsing: The SQL query is parsed into an abstract syntax tree (AST) representation.
-    2. Planning: The SQL query will be constructed by the Wren engine into an intermediate representation (IR).
-    Wren engine will analyze the used tables and columns to generate the subquery for each table according to the definition of the model.
-    All the tables used in the SQL is a model of Wren engine. The model defines how the table is structured, including the columns, data types, and relationships with other tables. The models 
+    2. Planning: The SQL query will be constructed by the Wren engine into an intermediate representation (IR). Wren engine will analyze the used tables and columns to generate the subquery for each table according to the definition of the model. All the tables used in the SQL are models of Wren engine. The model defines how the table is structured, including the columns, data types, and relationships with other tables. 
     3. Unparsing: This IR is then unparsed into a SQL in a generic dialect.
     4. Transpile: The generic SQL is then transpiled into the specific SQL dialect of the target database.
     5. Execution: The transpiled SQL is then executed against the target database, and the results are fetched.
