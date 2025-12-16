@@ -12,7 +12,7 @@
 - Use `TIMESTAMP WITH TIME ZONE` type when timezone is important.
 - `TIMESTAMP` can't be directly compared with `TIMESTAMP WITH TIME ZONE`. You need to cast one to another before comparison.
   - Example: `CAST(<timestamp_column> AS TIMESTAMP WITH TIME ZONE)`, `CAST(<timestamp_with_time_zone_column> AS TIMESTAMP)`
-- If a column could be date or timestamp but the type is int, it means it could be stored in epoch or Unix time. If possible, check it's unit and use `to_timestamp` functions to convert it.
+- If a column could be date or timestamp but the type is int, it means it could be stored in epoch or Unix time. If possible, check its unit and use `to_timestamp` functions to convert it.
   - `to_timestamp(<int_column>)`
   - `to_timestamp_millis(<int_column>)`
   - `to_timestamp_micros(<int_column>)`
