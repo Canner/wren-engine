@@ -243,14 +243,20 @@ impl InnerDialect for BigQueryDialect {
                     }
                 }
 
-                return plan_err!(
-                    "AS_ARRAY requires the argument to be a GET_PATH function."
-                );
+                plan_err!("AS_ARRAY requires the argument to be a GET_PATH function.")
             }
-            "as_varchar" => scalar_function_to_sql_internal(unparser, None, "lax_string", args),
-            "as_integer" => scalar_function_to_sql_internal(unparser, None, "lax_int64", args),
-            "as_double" => scalar_function_to_sql_internal(unparser, None, "lax_float64", args),
-            "as_boolean" => scalar_function_to_sql_internal(unparser, None, "lax_bool", args),
+            "as_varchar" => {
+                scalar_function_to_sql_internal(unparser, None, "lax_string", args)
+            }
+            "as_integer" => {
+                scalar_function_to_sql_internal(unparser, None, "lax_int64", args)
+            }
+            "as_double" => {
+                scalar_function_to_sql_internal(unparser, None, "lax_float64", args)
+            }
+            "as_boolean" => {
+                scalar_function_to_sql_internal(unparser, None, "lax_bool", args)
+            }
             _ => Ok(None),
         }
     }
