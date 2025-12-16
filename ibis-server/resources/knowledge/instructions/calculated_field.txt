@@ -38,8 +38,8 @@ And if the user input queries like these:
 2. "What is the average customer rating for orders that were rated by more than 10 reviewers?"
 
 For the first query:
-First try to intepret the user query, the user wants to know the average rating for orders which have attracted significant review activity, specifically those with more than 10 reviews.
-Then, according to the above intepretation about the given schema, the term 'Rating' is predefined in the Calculated Field of the 'orders' model. And, the number of reviews is also predefined in the 'ReviewCount' Calculated Field.
+First try to interpret the user query, the user wants to know the average rating for orders which have attracted significant review activity, specifically those with more than 10 reviews.
+Then, according to the above interpretation about the given schema, the term 'Rating' is predefined in the Calculated Field of the 'orders' model. And, the number of reviews is also predefined in the 'ReviewCount' Calculated Field.
 So utilize those Calculated Fields in the SQL generation process to give an answer like this:
 
 SQL Query: SELECT AVG(Rating) FROM orders WHERE ReviewCount > 10
