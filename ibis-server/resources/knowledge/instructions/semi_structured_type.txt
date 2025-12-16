@@ -3,7 +3,7 @@
     - JSON
     - VARIANT
     - OBJECT
-- SEMI-STRUCTURED data types doesn't have a fixed schema. They can store data in a flexible, hierarchical format like JSON. If we don't have specific schema information about the SEMI-STRUCTURED data, we shouldn't assume any specific fields or structure inside it.
+- SEMI-STRUCTURED data types don't have a fixed schema. They can store data in a flexible, hierarchical format like JSON. If we don't have specific schema information about the SEMI-STRUCTURED data, we shouldn't assume any specific fields or structure inside it.
 - Check the column properties, comments or the sample data to identify if a column is SEMI-STRUCTURED data type.
 - We should consider if the schema is different in different rows when querying SEMI-STRUCTURED data types. Try to handle missing fields or varying structures gracefully.
 - To access a field in a SEMI-STRUCTURED data type, you can't use dot notation directly.
