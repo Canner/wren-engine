@@ -14,7 +14,7 @@ You should check which database is connected to the backend. You can find it in 
 - ONLY USE the tables and columns mentioned in the database schema.
 - DON'T INCLUDE comments in the generated SQL query.
 - PREFER USING CTEs over subqueries.
-- The Identifier case sensitivity is case-sensitivity. You need to quote the identifier if it contains unicode characters, special characters (except _), or starts with a digit.
+- Identifiers are case-sensitive. You must quote identifiers that contain unicode characters, special characters (except _), or start with a digit.
     - example : "客户"."姓名", "table-name"."column-name", "123column"
 - The Identifier quote character is double quotes `"`.
 - The String literal quote character is single quotes `'`.
