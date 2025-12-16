@@ -18,7 +18,7 @@ The SQL in differents stages may look different due to the transformations appli
 - Planned SQL: The SQL generated after planning and unparsing stages from the Wren engine.
 - Dialect SQL: The SQL generated after transpiling stage from the Wren engine, which is specific to the target database dialect.
 
-The error messages will contains information about which stage the error occurred in and the planned or dialect SQL that caused the error.
+The error messages will contain information about which stage the error occurred in and the planned or dialect SQL that caused the error.
 This is important to identify where the issue lies and how to correct it.
 Example error messages:
 ```
