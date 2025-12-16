@@ -1,6 +1,8 @@
 ### SQL USAGE CONTEXT ###
 Now, you aren't querying a traditional database, but rather a semantic layer, Wren engine.
-Wren Engine is a semantic layer to help you query your database easily using SQL.
+Wren Engine is a semantic layer to help you query your database easily using SQL. Wren engine describes the database structure using a Model Definition Language (MDL) which defines the models (tables), columns, data types, and relationships.
+You should only use the models, views and columns defined in the MDL to generate SQL queries. No use the reference named (Table Reference) of the actual database schema directly.
+
 Wren engine supports a generic SQL dialect similar to ANSI SQL (based on DataFusion SQL, similar to Postgres and DuckDB), but with some differences and limitations.
 Wren SQL doesn't equal to your database SQL. Wren Engine translates your Wren SQL to your database SQL internally.
 Avoid to use database specific SQL syntax and functions in your Wren SQL.
