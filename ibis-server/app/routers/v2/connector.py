@@ -18,6 +18,7 @@ from app.mdl.java_engine import JavaEngineConnector
 from app.mdl.rewriter import Rewriter
 from app.mdl.substitute import ModelSubstitute
 from app.model import (
+    BigQueryProjectConnectionInfo,
     DryPlanDTO,
     QueryDTO,
     TranspileDTO,
@@ -25,7 +26,12 @@ from app.model import (
 )
 from app.model.connector import Connector
 from app.model.data_source import DataSource
-from app.model.metadata.dto import Constraint, MetadataDTO, Table
+from app.model.error import ErrorCode, WrenError
+from app.model.metadata.dto import (
+    Constraint,
+    Table,
+    V2MetadataDTO,
+)
 from app.model.metadata.factory import MetadataFactory
 from app.model.validator import Validator
 from app.query_cache import QueryCacheManager
@@ -258,7 +264,7 @@ async def validate(
 )
 async def get_table_list(
     data_source: DataSource,
-    dto: MetadataDTO,
+    dto: V2MetadataDTO,
     headers: Annotated[Headers, Depends(get_wren_headers)] = None,
 ) -> list[Table]:
     span_name = f"v2_metadata_tables_{data_source}"
@@ -269,8 +275,14 @@ async def get_table_list(
         connection_info = data_source.get_connection_info(
             dto.connection_info, dict(headers)
         )
-        metadata = MetadataFactory.get_metadata(data_source, connection_info)
-        return await execute_get_table_list_with_timeout(metadata)
+        if isinstance(connection_info, BigQueryProjectConnectionInfo):
+            raise WrenError(
+                ErrorCode.INVALID_CONNECTION_INFO,
+                "BigQuery project-level connection info is only supported by v3 API for metadata table list retrieval.",
+            )
+        else:
+            metadata = MetadataFactory.get_metadata(data_source, connection_info)
+            return await execute_get_table_list_with_timeout(metadata)
 
 
 @router.post(
@@ -281,7 +293,7 @@ async def get_table_list(
 )
 async def get_constraints(
     data_source: DataSource,
-    dto: MetadataDTO,
+    dto: V2MetadataDTO,
     headers: Annotated[Headers, Depends(get_wren_headers)] = None,
 ) -> list[Constraint]:
     span_name = f"v2_metadata_constraints_{data_source}"
@@ -292,6 +304,11 @@ async def get_constraints(
         connection_info = data_source.get_connection_info(
             dto.connection_info, dict(headers)
         )
+        if isinstance(connection_info, BigQueryProjectConnectionInfo):
+            raise WrenError(
+                ErrorCode.INVALID_CONNECTION_INFO,
+                "BigQuery project-level connection info is only supported by v3 API for metadata table list retrieval.",
+            )
         metadata = MetadataFactory.get_metadata(data_source, connection_info)
         return await execute_get_constraints_with_timeout(metadata)
 
@@ -303,7 +320,7 @@ async def get_constraints(
 )
 async def get_db_version(
     data_source: DataSource,
-    dto: MetadataDTO,
+    dto: V2MetadataDTO,
     headers: Annotated[Headers, Depends(get_wren_headers)] = None,
 ) -> str:
     connection_info = data_source.get_connection_info(
