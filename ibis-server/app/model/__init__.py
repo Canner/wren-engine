@@ -149,8 +149,6 @@ class BigQueryProjectConnectionInfo(BigQueryConnectionInfo):
             (
                 self.region,
                 self.billing_project_id,
-                tuple(self.data_project_ids or []),
-                tuple(self.dataset_ids or []),
                 self.credentials,
             )
         )

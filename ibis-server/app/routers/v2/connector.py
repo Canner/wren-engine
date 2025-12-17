@@ -307,7 +307,7 @@ async def get_constraints(
         if isinstance(connection_info, BigQueryProjectConnectionInfo):
             raise WrenError(
                 ErrorCode.INVALID_CONNECTION_INFO,
-                "BigQuery project-level connection info is only supported by v3 API for metadata table list retrieval.",
+                "BigQuery project-level connection info is only supported by v3 API for metadata constraints retrieval.",
             )
         metadata = MetadataFactory.get_metadata(data_source, connection_info)
         return await execute_get_constraints_with_timeout(metadata)

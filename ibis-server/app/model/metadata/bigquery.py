@@ -337,8 +337,10 @@ class BigQueryMetadata(Metadata):
                 return None
         return col_ref
 
-    def get_constraints(self) -> list[Constraint]:
-        project_datasets = self._get_project_datasets(None)
+    def get_constraints(
+        self, filter_info: FilterInfo | None = None
+    ) -> list[Constraint]:
+        project_datasets = self._get_project_datasets(filter_info)
         constraints = []
 
         for project_dataset in project_datasets:
@@ -366,25 +368,6 @@ class BigQueryMetadata(Metadata):
                     AND tc.constraint_name = kcu.constraint_name
                 WHERE tc.constraint_type = 'FOREIGN KEY'
                 """
-
-            # if the length of dataset_ids == 1, we only query the specific dataset
-            if isinstance(self.connection_info, BigQueryProjectConnectionInfo):
-                if (
-                    self.connection_info.dataset_ids
-                    and len(self.connection_info.dataset_ids) > 1
-                ):
-                    dataset_list = ", ".join(
-                        [
-                            f"'{ds_id.get_secret_value()}'"
-                            for ds_id in self.connection_info.dataset_ids
-                        ]
-                    )
-                    # the foreign key constraints involve two tables, so we need to ensure both tables are in the specified datasets
-                    sql += f"\nAND tc.table_schema in ({dataset_list}) AND ccu.table_schema in ({dataset_list})"
-                # if the project_ids > 1, we will query with region qualifier and filter dataset_id to ensure the tables are from the specified region.
-                else:
-                    # the foreign key constraints involve two tables, so we need to ensure both tables are in the specified datasets
-                    sql += f"\nAND tc.table_schema = '{self.connection_info.dataset_ids[0].get_secret_value()}' AND ccu.table_schema = '{self.connection_info.dataset_ids[0].get_secret_value()}'"
 
             logger.debug(f"get constraints SQL: {sql}")
 
