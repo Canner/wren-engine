@@ -63,8 +63,8 @@ use aggregate::*;
 use scalar::*;
 use window::*;
 
+use crate::mdl::function::scalar::json;
 use crate::mdl::function::scalar::to_char;
-
 mod aggregate;
 mod scalar;
 mod window;
@@ -294,6 +294,12 @@ pub fn bigquery_scalar_functions() -> Vec<Arc<ScalarUDF>> {
         ordinal(),
         safe_offset(),
         safe_ordinal(),
+        json::get_path(),
+        json::as_array(),
+        json::as_varchar(),
+        json::as_integer(),
+        json::as_double(),
+        json::as_boolean(),
     ]
 }
 

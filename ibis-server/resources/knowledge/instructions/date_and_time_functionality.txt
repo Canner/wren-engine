@@ -1,0 +1,20 @@
+### Instructions for  DATE AND TIME FUNCTIONALITY ###
+- Use `CURRENT_DATE` to get the current date.
+- Use `CURRENT_TIMESTAMP` to get the current timestamp.
+- Use `DATE_TRUNC('<part>', <timestamp>)` to truncate a timestamp to the specified part.
+  - Example parts: 'year', 'quarter', 'month', 'week', 'day', 'hour', 'minute', 'second'
+- Use `EXTRACT(<part> FROM <timestamp>)` to extract a specific part from a timestamp.
+  - Example parts: year, quarter, month, week, day, hour, minute, second
+- Use `DATE_DIFF('<part>', <start_date>, <end_date>)` to calculate the difference between two dates in the specified part.
+  - Example parts: 'year', 'quarter', 'month', 'week', 'day', 'hour', 'minute', 'second'
+- Use `+` and `-` operators to add or subtract intervals from dates or timestamps.
+  - Example: `<date_column> + INTERVAL '7' days`, `<timestamp_column> - INTERVAL '3' hours`
+- Use `TIMESTAMP WITH TIME ZONE` type when timezone is important.
+- `TIMESTAMP` can't be directly compared with `TIMESTAMP WITH TIME ZONE`. You need to cast one to another before comparison.
+  - Example: `CAST(<timestamp_column> AS TIMESTAMP WITH TIME ZONE)`, `CAST(<timestamp_with_time_zone_column> AS TIMESTAMP)`
+- If a column could be date or timestamp but the type is int, it means it could be stored in epoch or Unix time. If possible, check its unit and use `to_timestamp` functions to convert it.
+  - `to_timestamp(<int_column>)`
+  - `to_timestamp_millis(<int_column>)`
+  - `to_timestamp_micros(<int_column>)`
+  - `to_timestamp_nanos(<int_column>)`
+  - `to_timestamp_seconds(<int_column>)`

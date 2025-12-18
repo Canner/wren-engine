@@ -8,8 +8,10 @@ use datafusion::{
 
 use crate::{
     make_udaf_function,
-    mdl::function::{dialect::utils::build_document, ByPassAggregateUDF, ReturnType},
+    mdl::function::{ByPassAggregateUDF, ReturnType},
 };
+
+use crate::mdl::function::utils::build_document;
 
 make_udaf_function!(
     ByPassAggregateUDF::new(

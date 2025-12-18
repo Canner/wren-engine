@@ -1,0 +1,40 @@
+### Instruction for SEMI-STRUCTURED DATA TYPES ###
+- The type definition for SEMI-STRUCTURED data types is as follows:
+    - JSON
+    - VARIANT
+    - OBJECT
+- SEMI-STRUCTURED data types don't have a fixed schema. They can store data in a flexible, hierarchical format like JSON. If we don't have specific schema information about the SEMI-STRUCTURED data, we shouldn't assume any specific fields or structure inside it.
+- Check the column properties, comments or the sample data to identify if a column is SEMI-STRUCTURED data type.
+- We should consider if the schema is different in different rows when querying SEMI-STRUCTURED data types. Try to handle missing fields or varying structures gracefully.
+- To access a field in a SEMI-STRUCTURED data type, you can't use dot notation directly.
+  - Instead, use the following functions:
+    - GET_PATH: To extract a JSON object from a SEMI-STRUCTURED column.
+        - Example: `GET_PATH(<semi_structured_column>, '<json_path>')`
+
+- After extracting the field using GET_PATH, you may need to cast it to the desired data type using appropriate functions. Don't use CAST directly on SEMI-STRUCTURED columns.
+    - AS_BOOLEAN for boolean fields
+    - AS_DOUBLE for double and float fields
+    - AS_INTEGER for bigint fields
+    - AS_VARCHAR for varchar fields
+    - Example: `AS_VARCHAR(GET_PATH(<semi_structured_column>, '<json_path>'))`
+- When querying SEMI-STRUCTURED data types, be mindful of performance implications. Complex queries on SEMI-STRUCTURED data can be slower than on structured data. Optimize your queries accordingly.
+- To create a literal SEMI-STRUCTURED data type, use the following syntax:
+    - use `parse_json('<json_string>')` to create a JSON SEMI-STRUCTURED literal.
+        - Example: `parse_json('{"field1": "value1", "field2": 123}')`
+- You can unnest arrays within SEMI-STRUCTURED data types using the UNNEST function.
+    - Example: `SELECT item FROM <table_name>, UNNEST(AS_ARRAY(GET_PATH(<table_name>.<semi_structured_column>, '<json_path>'))) AS unnest_table_alias(item)`
+- If `json_type` property is specified in the column comment or metadata, follow the following rules:
+    - If `json_type` is `JSON`, use GET_PATH to extract fields.
+    - If `json_type` is `JSON_ARRAY`, use `GET_PATH` wrapped with `AS_ARRAY` to extract array elements.
+        Example: `AS_ARRAY(GET_PATH(<semi_structured_column>, '<json_path>'))`
+    - If `json_type` is empty, do not use GET_PATH functions.
+    - Follow the path specified in the `path` property to extract the correct field or array elements
+        - Example:
+            DATA SCHEMA:
+                `/* {"alias":"users","description":"A model representing the users data."} */
+                CREATE TABLE users (
+                    -- {"alias":"address","description":"A JSON object that represents address information of this user.","json_type":"JSON","json_fields":{"json_type":"JSON","address.json.city":{"name":"city","type":"varchar","path":"$.city","properties":{"alias":"city","description":"City Name."}},"address.json.state":{"name":"state","type":"varchar","path":"$.state","properties":{"alias":"state","description":"ISO code or name of the state, province or district."}},"address.json.postcode":{"name":"postcode","type":"varchar","path":"$.postcode","properties":{"alias":"postcode","description":"Postal code."}},"address.json.country":{"name":"country","type":"varchar","path":"$.country","properties":{"alias":"country","description":"ISO code of the country."}}}}
+                    address JSON
+                )`
+            To get the city of address in users table use SQL:
+            `SELECT AS_VARCHAR(GET_PATH(u.address, '$.city')) FROM users as u`

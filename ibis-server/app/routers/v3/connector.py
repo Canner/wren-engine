@@ -546,4 +546,5 @@ async def get_sql_knowledge(
     return {
         "text_to_sql_rule": knowledge_manager.get_text_to_sql_rule(),
         "instructions": knowledge_manager.get_sql_instructions(),
+        "sql_correction_rule": knowledge_manager.get_sql_correction_rule(),
     }

@@ -3852,6 +3852,40 @@ mod test {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_bigquery_json() -> Result<()> {
+        let ctx = create_wren_ctx(None, Some(&DataSource::BigQuery));
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("json_table")
+                    .table_reference("json_table")
+                    .column(ColumnBuilder::new("json_col", "json").build())
+                    .build(),
+            )
+            .data_source(DataSource::BigQuery)
+            .build();
+        let headers = SessionPropertiesRef::default();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest,
+            Arc::new(HashMap::default()),
+            Mode::Unparse,
+        )?);
+        let sql = "SELECT GET_PATH(json_col, '$.field') FROM json_table";
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
+            @r#"SELECT JSON_EXTRACT("json_table".json_col, '$.field') FROM (SELECT "json_table".json_col FROM (SELECT __source.json_col AS json_col FROM "json_table" AS __source) AS "json_table") AS "json_table""#
+        );
+
+        let sql = "SELECT AS_ARRAY(GET_PATH(json_col, '$.field')) FROM json_table";
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
+            @r#"SELECT JSON_EXTRACT_ARRAY("json_table".json_col, '$.field') FROM (SELECT "json_table".json_col FROM (SELECT __source.json_col AS json_col FROM "json_table" AS __source) AS "json_table") AS "json_table""#
+        );
+        Ok(())
+    }
+
     /// Return a RecordBatch with made up data about customer
     fn customer() -> RecordBatch {
         let custkey: ArrayRef = Arc::new(Int64Array::from(vec![1, 2, 3]));

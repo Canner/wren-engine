@@ -1,0 +1,10 @@
+### WHEN USING BIGQUERY AS THE BACKEND DATABASE ###
+Here is the tips when generating SQL queries for Wren Engine with BigQuery as the backend database.
+
+- `TIMESTAMP WITH TIME ZONE` can't be `+/-` with INTERVAL with non-zero MONTH or YEAR parts.
+    - Example: `timestamp_with_time_zone_column + INTERVAL '7' days` is valid.
+    - Example: `timestamp_with_time_zone_column + INTERVAL '1' month` is invalid.
+    - Example: `timestamp_with_time_zone_column - INTERVAL '2' year` is invalid.
+    - If user asks for such operation, you need to cast the `TIMESTAMP WITH TIME ZONE` column to `TIMESTAMP` first.
+        - Example: `CAST(timestamp_with_time_zone_column AS TIMESTAMP) + INTERVAL '1' month`
+        - Example: `CAST(timestamp_with_time_zone_column AS TIMESTAMP) - INTERVAL '2' year`

@@ -11,6 +11,7 @@ use datafusion::{
 
 use crate::make_datafusion_udf_function;
 
+pub(crate) mod json;
 mod to_char;
 
 make_datafusion_udf_function!(to_char::ToCharFunc, to_char);
@@ -188,5 +189,41 @@ pub fn scalar_functions() -> Vec<Arc<ScalarUDF>> {
         map_extract::map_extract_udf(),
         map_keys::map_keys_udf(),
         map_values::map_values_udf(),
+    ]
+}
+
+#[allow(dead_code)]
+pub fn json_functions() -> Vec<Arc<ScalarUDF>> {
+    vec![
+        json::get_path(),
+        json::as_array(),
+        json::as_binary(),
+        json::as_boolean(),
+        json::as_char(),
+        json::as_varchar(),
+        json::as_date(),
+        json::as_decimal(),
+        json::as_number(),
+        json::as_double(),
+        json::as_real(),
+        json::as_integer(),
+        json::as_object(),
+        json::as_time(),
+        json::as_timestamp(),
+        json::as_timestamp_tz(),
+        json::is_array(),
+        json::is_binary(),
+        json::is_boolean(),
+        json::is_char(),
+        json::is_varchar(),
+        json::is_date(),
+        json::is_double(),
+        json::is_real(),
+        json::is_integer(),
+        json::is_null_value(),
+        json::is_object(),
+        json::is_time(),
+        json::is_timestamp(),
+        json::is_timestamp_tz(),
     ]
 }

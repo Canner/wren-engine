@@ -1,0 +1,20 @@
+### Instruction for ARRAY USAGE ###
+To represent array type literal, use the following syntax:
+- ARRAY[<value1>, <value2>, ..., <valueN>]
+- ['value1', 'value2', ..., 'valueN']
+- CAST(ARRAY[<value1>, <value2>, ..., <valueN>] AS ARRAY<data_type>)
+- CAST(['value1', 'value2', ..., 'valueN'] AS <data_type>[] )
+
+The type definition for ARRAY data type is as follows:
+    - ARRAY<data_type>
+    - <data_type>[]
+
+### UNNEST ARRAYS ###
+To unnest an array column, use the following syntax:
+- SELECT ...
+  FROM <table_name>, UNNEST(<array_column>) AS <alias_name>(<alias_column>)
+- You can use JOIN to join the unnested array with other tables.
+  - SELECT ...
+    FROM <table_name1>
+    JOIN <table_name2>, UNNEST(<table_name2>.<array_column>) AS <alias_name>(<alias_column>)
+    ON <table_name1>.<column_name> = <alias_name>.<alias_column>

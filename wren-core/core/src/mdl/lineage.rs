@@ -154,7 +154,6 @@ impl Lineage {
 
                                     collect_identifiers(&rs_rf.condition)?
                                         .iter()
-                                        .cloned()
                                         .for_each(|ident| {
                                             required_fields_map
                                                 .entry(column.clone())
@@ -165,7 +164,7 @@ impl Lineage {
                                                         quoted(mdl.catalog()),
                                                         quoted(mdl.schema()),
                                                         qualify_name_from_column_name(
-                                                            &ident
+                                                            ident
                                                         )
                                                     ),
                                                 ));

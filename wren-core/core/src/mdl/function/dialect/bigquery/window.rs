@@ -2,8 +2,10 @@ use datafusion::logical_expr::{Signature, Volatility};
 
 use crate::{
     make_udwf_function,
-    mdl::function::{dialect::utils::build_document, ByPassWindowFunction, ReturnType},
+    mdl::function::{ByPassWindowFunction, ReturnType},
 };
+
+use crate::mdl::function::utils::build_document;
 
 make_udwf_function!(
     ByPassWindowFunction::new(

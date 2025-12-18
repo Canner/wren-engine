@@ -1,0 +1,5 @@
+### Instruction for STRUCTURED DATA TYPES ###
+- The type definition for STRUCTURED data types is as follows:
+  - `STRUCT<field1 data_type1, field2 data_type2, ..., fieldN data_typeN>`
+- To access a field in a STRUCT, use the dot notation:
+  - `<struct_column>.<field_name>`
