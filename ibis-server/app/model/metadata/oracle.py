@@ -287,28 +287,21 @@ class OracleMetadata(Metadata):
 
     def _format_compact_table_name(self, schema: str, table: str):
         """
-        Format Oracle table/view name with explicit quoting.
+        Format Oracle table/view name.
 
-        Oracle views/tables in this system ALL have spaces in their names.
-        We must quote them in the MDL manifest just like column expressions are quoted.
-
-        This matches the pattern used for column expressions:
-        - Column: "expression":"\"Part Primary Key\""
-        - Table:  "table":"\"RT SN Claim\""
-
-        When JSON is parsed, the escaped quotes become actual quotes, so wren-engine
-        receives: "RT SN Claim" as a single quoted identifier.
+        Returns the clean table name without quotes. Quotes will be added
+        by the SQL generation layer (wren-engine or AI) when needed.
 
         Args:
-            schema: Oracle schema name (not used - connection is already authenticated)
-            table: Table/view name (contains spaces, needs quoting)
+            schema: Oracle schema name (not used - connection handles authentication)
+            table: Table/view name from Oracle catalog (no quotes)
 
         Returns:
-            Quoted table name: "TABLE NAME" (no schema prefix - connection handles that)
+            Clean table name: RT SN Claim (no quotes, no schema prefix)
         """
-        # Only return the table name with quotes - no schema prefix needed
+        # Just return the table name as-is - no quotes, no schema prefix
         # The Oracle connection is already authenticated to the correct schema
-        return f'"{table}"'
+        return table
 
     def _format_constraint_name(
         self, table_name, column_name, referenced_table_name, referenced_column_name
@@ -316,6 +309,11 @@ class OracleMetadata(Metadata):
         return f"{table_name}_{column_name}_{referenced_table_name}_{referenced_column_name}"
 
     def _transform_column_type(self, data_type):
+        # Strip precision/scale qualifiers from Oracle types before mapping
+        # e.g., "TIMESTAMP(6)" -> "TIMESTAMP", "NUMBER(10,2)" -> "NUMBER"
+        import re
+        normalized_type = re.sub(r'\([^)]*\)', '', data_type.upper()).strip()
+
         switcher = {
             "CHAR": RustWrenEngineColumnType.CHAR,
             "NCHAR": RustWrenEngineColumnType.CHAR,
@@ -329,8 +327,10 @@ class OracleMetadata(Metadata):
             "BINARY_DOUBLE": RustWrenEngineColumnType.DOUBLE,
             "DATE": RustWrenEngineColumnType.TIMESTAMP,  # Oracle DATE includes time.
             "TIMESTAMP": RustWrenEngineColumnType.TIMESTAMP,
-            "TIMESTAMP WITH TIME ZONE": RustWrenEngineColumnType.TIMESTAMPTZ,
-            "TIMESTAMP WITH LOCAL TIME ZONE": RustWrenEngineColumnType.TIMESTAMPTZ,
+            # Oracle 19c doesn't support TIMESTAMPTZ operations with simple string literals
+            # Map timezone-aware types to plain TIMESTAMP to avoid ORA-01843 errors
+            "TIMESTAMP WITH TIME ZONE": RustWrenEngineColumnType.TIMESTAMP,
+            "TIMESTAMP WITH LOCAL TIME ZONE": RustWrenEngineColumnType.TIMESTAMP,
             "INTERVAL YEAR TO MONTH": RustWrenEngineColumnType.INTERVAL,
             "INTERVAL DAY TO SECOND": RustWrenEngineColumnType.INTERVAL,
             "BLOB": RustWrenEngineColumnType.BYTEA,
@@ -345,4 +345,4 @@ class OracleMetadata(Metadata):
             "BLOB WITH JSON": RustWrenEngineColumnType.JSON,
             "CLOB WITH JSON": RustWrenEngineColumnType.JSON,
         }
-        return switcher.get(data_type.upper(), RustWrenEngineColumnType.UNKNOWN)
+        return switcher.get(normalized_type, RustWrenEngineColumnType.UNKNOWN)

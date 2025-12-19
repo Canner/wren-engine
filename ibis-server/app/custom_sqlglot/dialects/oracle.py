@@ -7,11 +7,12 @@ class Oracle(OriginalOracle):
     """
     Custom Oracle dialect for Oracle 19c compatibility.
 
-    Overrides SQLGlot's default Oracle dialect to generate 19c-compatible
-    syntax instead of 21c+ syntax. Specifically handles:
-    - Date arithmetic without INTERVAL expressions
-    - Boolean literals as CHAR(1) with 'Y'/'N' values
-    - Type mappings for 19c compatibility
+    Overrides SQLGlot's default Oracle dialect to fix specific Oracle 19c issues:
+    - TIMESTAMPTZ → TIMESTAMP type mapping (avoids timezone format issues)
+    - CAST timestamp literals with explicit TO_TIMESTAMP format (fixes ORA-01843)
+    - BOOLEAN → CHAR(1) type mapping (user's boolean representation pattern)
+
+    Note: INTERVAL syntax is fully supported in Oracle 19c and does not need transformation.
 
     Based on SQLGlot version >=23.4,<26.5
     """
@@ -24,15 +25,15 @@ class Oracle(OriginalOracle):
             # Oracle 19c doesn't have native BOOLEAN type (21c+ feature)
             # Map to CHAR(1) to match our 'Y'/'N' boolean representation pattern
             exp.DataType.Type.BOOLEAN: "CHAR(1)",
+            # Map TIMESTAMPTZ to TIMESTAMP (without timezone) for Oracle 19c
+            # Avoids format conversion issues with TIMESTAMP WITH TIME ZONE
+            exp.DataType.Type.TIMESTAMPTZ: "TIMESTAMP",
         }
 
         TRANSFORMS = {
             **OriginalOracle.Generator.TRANSFORMS,
-            # Register custom date arithmetic transforms for Oracle 19c compatibility
-            # These convert INTERVAL-based date arithmetic to 19c-compatible syntax
-            # Note: Trino parser creates Add/Sub nodes for date arithmetic, not DateAdd/DateSub
-            exp.Add: lambda self, e: self._handle_add_oracle19c(e),
-            exp.Sub: lambda self, e: self._handle_sub_oracle19c(e),
+            # Handle CAST to TIMESTAMP with explicit format for string literals (ORA-01843 fix)
+            exp.Cast: lambda self, e: self._handle_cast_oracle19c(e),
         }
 
         def __init__(self, *args, **kwargs):
@@ -40,135 +41,53 @@ class Oracle(OriginalOracle):
             super().__init__(*args, **kwargs)
             logger.debug("Using custom Oracle 19c dialect for SQL generation")
 
-        def _handle_add_oracle19c(self, expression: exp.Add) -> str:
+        def _handle_cast_oracle19c(self, expression: exp.Cast) -> str:
             """
-            Handle Add expressions, checking for INTERVAL date arithmetic.
+            Handle CAST expressions for Oracle 19c timestamp compatibility.
 
-            If this is date + INTERVAL, convert to Oracle 19c syntax.
-            Otherwise, use default addition handling.
-            """
-            # Check if right side is an Interval (date + INTERVAL pattern)
-            if isinstance(expression.expression, exp.Interval):
-                return self._dateadd_oracle19c(expression)
-            # Default behavior for regular addition
-            return self.add_sql(expression)
+            Oracle 19c cannot implicitly convert string literals like '2025-11-24 00:00:00'
+            when casting to TIMESTAMP. This transform converts:
 
-        def _handle_sub_oracle19c(self, expression: exp.Sub) -> str:
-            """
-            Handle Sub expressions, checking for INTERVAL date arithmetic.
+            CAST('2025-11-24 00:00:00' AS TIMESTAMP)
+            → TO_TIMESTAMP('2025-11-24 00:00:00', 'YYYY-MM-DD HH24:MI:SS')
 
-            If this is date - INTERVAL, convert to Oracle 19c syntax.
-            Otherwise, use default subtraction handling.
-            """
-            # Check if right side is an Interval (date - INTERVAL pattern)
-            if isinstance(expression.expression, exp.Interval):
-                return self._datesub_oracle19c(expression)
-            # Default behavior for regular subtraction
-            return self.sub_sql(expression)
-
-        def _dateadd_oracle19c(self, expression: exp.Add) -> str:
-            """
-            Generate Oracle 19c-compatible date addition.
-
-            Converts INTERVAL expressions to numeric addition or ADD_MONTHS:
-            - date + INTERVAL 'n' DAY → date + n
-            - date + INTERVAL 'n' MONTH → ADD_MONTHS(date, n)
-            - date + INTERVAL 'n' YEAR → ADD_MONTHS(date, n * 12)
-
-            Oracle 19c doesn't support INTERVAL arithmetic syntax (21c+ feature).
+            Only applies when:
+            - Source is a string literal
+            - Target type is TIMESTAMP or DATE
+            - Literal matches YYYY-MM-DD pattern
 
             Args:
-                expression: Add expression node containing an Interval
+                expression: Cast expression node
 
             Returns:
                 Oracle 19c-compatible SQL string
             """
-            date_expr = self.sql(expression, "this")
-            interval = expression.expression
+            source = expression.this
+            target_type = expression.to
 
-            if isinstance(interval, exp.Interval):
-                unit = interval.unit.this.upper() if interval.unit else "DAY"
-                # Extract raw value from Literal node (interval.this.this) to avoid quotes
-                # self.sql(interval, "this") would return '1' (with quotes), we need 1 (without)
-                if isinstance(interval.this, exp.Literal):
-                    value = interval.this.this  # Get raw value
-                else:
-                    value = self.sql(interval, "this")  # Fallback for non-literal expressions
+            # Check if we're casting to TIMESTAMP or DATE
+            if target_type and target_type.this in (exp.DataType.Type.TIMESTAMP, exp.DataType.Type.DATE):
+                # Check if source is a string literal
+                if isinstance(source, exp.Literal) and source.is_string:
+                    literal_value = source.this
 
-                if unit == "DAY":
-                    # date + n days → date + n
-                    return f"{date_expr} + {value}"
+                    # Check if it matches YYYY-MM-DD pattern (with or without time)
+                    # Pattern: YYYY-MM-DD or YYYY-MM-DD HH:MI:SS
+                    if literal_value and len(literal_value) >= 10 and literal_value[4] == '-' and literal_value[7] == '-':
+                        # Determine format based on length
+                        if len(literal_value) == 10:
+                            # Just date: YYYY-MM-DD
+                            format_mask = 'YYYY-MM-DD'
+                        elif len(literal_value) == 19:
+                            # Date with time: YYYY-MM-DD HH:MI:SS
+                            format_mask = 'YYYY-MM-DD HH24:MI:SS'
+                        else:
+                            # Other length, use default CAST
+                            return self.cast_sql(expression)
 
-                elif unit == "MONTH":
-                    # date + n months → ADD_MONTHS(date, n)
-                    # ADD_MONTHS handles month-end edge cases correctly
-                    # (e.g., Jan 31 + 1 month = Feb 28/29, not Mar 3)
-                    return f"ADD_MONTHS({date_expr}, {value})"
+                        # Use TO_TIMESTAMP or TO_DATE with explicit format
+                        func_name = "TO_TIMESTAMP" if target_type.this == exp.DataType.Type.TIMESTAMP else "TO_DATE"
+                        return f"{func_name}('{literal_value}', '{format_mask}')"
 
-                elif unit == "YEAR":
-                    # date + n years → ADD_MONTHS(date, n * 12)
-                    # Convert years to months and use ADD_MONTHS for consistency
-                    # This handles year-end edge cases like leap years correctly
-                    return f"ADD_MONTHS({date_expr}, {value} * 12)"
-
-                else:
-                    # Other units handled in subsequent tasks
-                    logger.warning(f"Unsupported INTERVAL unit for Oracle 19c: {unit}")
-                    return f"{date_expr} + {value}"  # Fallback
-
-            # Not an INTERVAL expression, should not reach here
-            # (handled by _handle_add_oracle19c)
-            return self.add_sql(expression)
-
-        def _datesub_oracle19c(self, expression: exp.Sub) -> str:
-            """
-            Generate Oracle 19c-compatible date subtraction.
-
-            Converts INTERVAL expressions to numeric subtraction or ADD_MONTHS:
-            - date - INTERVAL 'n' DAY → date - n
-            - date - INTERVAL 'n' MONTH → ADD_MONTHS(date, -n)
-            - date - INTERVAL 'n' YEAR → ADD_MONTHS(date, -(n * 12))
-
-            Oracle 19c doesn't support INTERVAL arithmetic syntax (21c+ feature).
-
-            Args:
-                expression: Sub expression node containing an Interval
-
-            Returns:
-                Oracle 19c-compatible SQL string
-            """
-            date_expr = self.sql(expression, "this")
-            interval = expression.expression
-
-            if isinstance(interval, exp.Interval):
-                unit = interval.unit.this.upper() if interval.unit else "DAY"
-                # Extract raw value from Literal node (interval.this.this) to avoid quotes
-                # self.sql(interval, "this") would return '1' (with quotes), we need 1 (without)
-                if isinstance(interval.this, exp.Literal):
-                    value = interval.this.this  # Get raw value
-                else:
-                    value = self.sql(interval, "this")  # Fallback for non-literal expressions
-
-                if unit == "DAY":
-                    # date - n days → date - n
-                    return f"{date_expr} - {value}"
-
-                elif unit == "MONTH":
-                    # date - n months → ADD_MONTHS(date, -n)
-                    # ADD_MONTHS with negative value handles month-end edge cases
-                    return f"ADD_MONTHS({date_expr}, -{value})"
-
-                elif unit == "YEAR":
-                    # date - n years → ADD_MONTHS(date, -(n * 12))
-                    # Convert years to months and use ADD_MONTHS for consistency
-                    # Parentheses ensure correct order: negate (value * 12), not (-value) * 12
-                    return f"ADD_MONTHS({date_expr}, -({value} * 12))"
-
-                else:
-                    # Other units handled in subsequent tasks
-                    logger.warning(f"Unsupported INTERVAL unit for Oracle 19c: {unit}")
-                    return f"{date_expr} - {value}"  # Fallback
-
-            # Not an INTERVAL expression, should not reach here
-            # (handled by _handle_sub_oracle19c)
-            return self.sub_sql(expression)
+            # For all other cases, use default CAST behavior
+            return self.cast_sql(expression)
