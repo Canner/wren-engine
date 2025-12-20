@@ -42,6 +42,8 @@ from app.dependencies import (
 )
 from app.model.data_source import DataSource
 from app.model.error import DatabaseTimeoutError
+from app.model.metadata.bigquery import BigQueryMetadata
+from app.model.metadata.dto import FilterInfo
 from app.model.metadata.metadata import Metadata
 
 tracer = trace.get_tracer(__name__)
@@ -350,11 +352,49 @@ async def execute_dry_run_with_timeout(connector, sql: str):
 
 async def execute_get_table_list_with_timeout(
     metadata: Metadata,
+    filter_info: FilterInfo | None = None,
+    limit: int | None = None,
 ):
     """Get the list of tables with a timeout control."""
+    if isinstance(metadata, BigQueryMetadata):
+        return await execute_with_timeout(
+            asyncio.create_task(
+                asyncio.to_thread(
+                    metadata.get_table_list,
+                    filter_info,
+                    limit,
+                )
+            ),
+            "Get Table List",
+        )
+
     return await execute_with_timeout(
         asyncio.to_thread(metadata.get_table_list),
         "Get Table List",
+    )
+
+
+async def execute_get_schema_list_with_timeout(
+    metadata: Metadata,
+    filter_info: FilterInfo | None = None,
+    limit: int | None = None,
+):
+    """Get the list of tables with a timeout control."""
+    if isinstance(metadata, BigQueryMetadata):
+        return await execute_with_timeout(
+            asyncio.create_task(
+                asyncio.to_thread(
+                    metadata.get_schema_list,
+                    filter_info,
+                    limit,
+                )
+            ),
+            "Get Schema List",
+        )
+
+    return await execute_with_timeout(
+        asyncio.to_thread(metadata.get_schema_list),
+        "Get Schema List",
     )
 
 

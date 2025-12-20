@@ -16,7 +16,8 @@ from ibis import BaseBackend
 
 from app.model import (
     AthenaConnectionInfo,
-    BigQueryConnectionInfo,
+    BigQueryDatasetConnectionInfo,
+    BigQueryProjectConnectionInfo,
     CannerConnectionInfo,
     ClickHouseConnectionInfo,
     ConnectionInfo,
@@ -152,7 +153,9 @@ class DataSource(StrEnum):
             case DataSource.athena:
                 return AthenaConnectionInfo.model_validate(data)
             case DataSource.bigquery:
-                return BigQueryConnectionInfo.model_validate(data)
+                if "bigquery_type" in data and data["bigquery_type"] == "project":
+                    return BigQueryProjectConnectionInfo.model_validate(data)
+                return BigQueryDatasetConnectionInfo.model_validate(data)
             case DataSource.canner:
                 return CannerConnectionInfo.model_validate(data)
             case DataSource.clickhouse:
@@ -312,7 +315,7 @@ class DataSourceExtension(Enum):
         return ibis.athena.connect(**kwargs)
 
     @staticmethod
-    def get_bigquery_connection(info: BigQueryConnectionInfo) -> BaseBackend:
+    def get_bigquery_connection(info: BigQueryDatasetConnectionInfo) -> BaseBackend:
         credits_json = loads(
             base64.b64decode(info.credentials.get_secret_value()).decode("utf-8")
         )

@@ -15,7 +15,8 @@ import base64
 import json
 import os
 from app.custom_sqlglot.dialects.wren import Wren
-from app.model import MSSqlConnectionInfo, MySqlConnectionInfo, OracleConnectionInfo, PostgresConnectionInfo, SnowflakeConnectionInfo
+from app.model import BigQueryDatasetConnectionInfo, MSSqlConnectionInfo, MySqlConnectionInfo, OracleConnectionInfo, PostgresConnectionInfo, SnowflakeConnectionInfo
+from app.model.connector import BigQueryConnector
 from app.util import to_json
 import sqlglot
 import sys
@@ -23,7 +24,6 @@ import pandas as pd
 
 from dotenv import load_dotenv
 from wren_core import SessionContext
-from app.model.data_source import BigQueryConnectionInfo
 from app.model.data_source import DataSourceExtension
 import wren_core
 
@@ -91,8 +91,8 @@ print("# Dialect SQL:\n", dialect_sql)
 print("#")
 
 if data_source == "bigquery":
-    connection_info = BigQueryConnectionInfo.model_validate_json(json.dumps(connection_info))
-    connection = DataSourceExtension.get_bigquery_connection(connection_info)
+    connection_info = BigQueryDatasetConnectionInfo.model_validate_json(json.dumps(connection_info))
+    connection = BigQueryConnector(connection_info)
 elif data_source == "mysql":
     connection_info = MySqlConnectionInfo.model_validate_json(json.dumps(connection_info))
     connection = DataSourceExtension.get_mysql_connection(connection_info)

@@ -1,10 +1,13 @@
 import base64
+import os
 import time
+from re import split
 
 import orjson
 import pytest
 
 from app.dependencies import X_WREN_FALLBACK_DISABLE, X_WREN_VARIABLE_PREFIX
+from app.model.metadata.bigquery import BIGQUERY_PUBLIC_DATASET_PROJECT_ID
 from tests.routers.v3.connector.bigquery.conftest import base_url
 
 manifest = {
@@ -161,6 +164,94 @@ async def test_query(client, manifest_str, connection_info):
         "dst_utc_minus_5": "timestamp[us, tz=UTC]",
         "dst_utc_minus_4": "timestamp[us, tz=UTC]",
     }
+
+    multi_dataset_connection_info = {
+        "bigquery_type": "project",
+        "billing_project_id": os.getenv("TEST_BIG_QUERY_PROJECT_ID"),
+        "region": os.getenv("TEST_BIG_QUERY_REGION", "asia-east1"),
+        "credentials": os.getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"),
+    }
+
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": multi_dataset_connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT * FROM wren.public.orders LIMIT 1",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["columns"]) == len(manifest["models"][0]["columns"])
+    assert len(result["data"]) == 1
+
+
+async def test_query_cross_project_dataset(client):
+    manifest = {
+        "catalog": "wren",
+        "schema": "public",
+        "dataSource": "bigquery",
+        "models": [
+            {
+                "name": "orders",
+                "tableReference": {
+                    "catalog": "wrenai",
+                    "schema": "tpch_tiny_us",
+                    "table": "orders",
+                },
+                "columns": [
+                    {
+                        "name": "o_orderkey",
+                        "type": "integer",
+                    },
+                    {
+                        "name": "o_custkey",
+                        "type": "integer",
+                    },
+                ],
+            },
+            {
+                "name": "311_service_requests",
+                "tableReference": {
+                    "catalog": "bigquery-public-data",
+                    "schema": "austin_311",
+                    "table": "311_service_requests",
+                },
+                "columns": [
+                    {
+                        "name": "city",
+                        "type": "string",
+                    },
+                    {
+                        "name": "unique_key",
+                        "type": "string",
+                    },
+                ],
+            },
+        ],
+    }
+
+    manifest_str = base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
+
+    connection_info = {
+        "bigquery_type": "project",
+        "billing_project_id": os.getenv("TEST_BIG_QUERY_PROJECT_ID"),
+        "region": "US",
+        "credentials": os.getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"),
+    }
+
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT o.o_orderkey, s.city FROM orders o CROSS JOIN "311_service_requests" s LIMIT 2',
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["columns"]) == len(manifest["models"][0]["columns"])
+    assert len(result["data"]) == 2
 
 
 async def test_query_with_cache(client, manifest_str, connection_info):
@@ -598,3 +689,243 @@ async def test_cache_ignores_irrelevant_headers(client, manifest_str, connection
     assert (
         response2.headers["X-Cache-Hit"] == "true"
     )  # Should hit cache despite different irrelevant headers
+
+
+async def test_metadata_list_schemas(client, project_connection_info):
+    response = await client.post(
+        url=f"{base_url}/metadata/schemas",
+        json={
+            "connectionInfo": project_connection_info,
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert isinstance(result, list)
+    # one project
+    assert len(result) == 1
+    # multiple datasets
+    assert len(result[0]["schemas"]) > 1
+    assert any(schema == "tpch_tiny" for schema in result[0]["schemas"])
+    assert any(schema == "tpch_sf1" for schema in result[0]["schemas"])
+    assert len(result[0]["schemas"]) > 2
+
+    response = await client.post(
+        url=f"{base_url}/metadata/schemas",
+        json={
+            "connectionInfo": {
+                "bigquery_type": "project",
+                "billing_project_id": os.getenv("TEST_BIG_QUERY_PROJECT_ID"),
+                "region": "US",
+                "credentials": os.getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"),
+            },
+            "filterInfo": {
+                "projects": [{"projectId": BIGQUERY_PUBLIC_DATASET_PROJECT_ID}]
+            },
+        },
+    )
+
+    result = response.json()
+    assert len(result) == 2
+    # multiple datasets
+    public_project = next(
+        project
+        for project in result
+        if project["name"] == BIGQUERY_PUBLIC_DATASET_PROJECT_ID
+    )
+    assert any(schema == "austin_311" for schema in public_project["schemas"])
+
+
+async def test_metadata_list_tables(client, project_connection_info):
+    response = await client.post(
+        url=f"{base_url}/metadata/tables",
+        json={
+            "connectionInfo": project_connection_info,
+            "filterInfo": {
+                "projects": [
+                    {
+                        "projectId": "wrenai",
+                        "datasetIds": ["tpch_tiny"],
+                    }
+                ]
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()) == 8
+    table_name = response.json()[0]["name"]
+    assert len(split(r"\.", table_name)) == 1  # no catalog and schema in table name
+
+    response = await client.post(
+        url=f"{base_url}/metadata/tables",
+        json={
+            "connectionInfo": project_connection_info,
+            "filterInfo": {
+                "projects": [
+                    {
+                        "projectId": "wrenai",
+                        "datasetIds": ["tpch_tiny", "tpch_sf1"],
+                    }
+                ]
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()) == 16
+    table_name = response.json()[0]["name"]
+    assert len(split(r"\.", table_name)) == 2  # no catalog in table name
+
+
+async def test_metadata_list_public_dataset_tables(client):
+    response = await client.post(
+        url=f"{base_url}/metadata/tables",
+        json={
+            "connectionInfo": {
+                "bigquery_type": "project",
+                "billing_project_id": os.getenv("TEST_BIG_QUERY_PROJECT_ID"),
+                "region": "asia-east1",
+                "credentials": os.getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"),
+            },
+            "filterInfo": {
+                "projects": [
+                    {
+                        "projectId": BIGQUERY_PUBLIC_DATASET_PROJECT_ID,
+                        "datasetIds": ["austin_311"],
+                    }
+                ]
+            },
+        },
+    )
+
+    assert response.status_code == 422
+    assert (
+        f"Dataset {BIGQUERY_PUBLIC_DATASET_PROJECT_ID}.austin_311 is in region us, which does not match the connection region asia-east1."
+        in response.text
+    )
+
+    us_connection_info = {
+        "bigquery_type": "project",
+        "billing_project_id": os.getenv("TEST_BIG_QUERY_PROJECT_ID"),
+        "region": "US",
+        "credentials": os.getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"),
+    }
+
+    response = await client.post(
+        url=f"{base_url}/metadata/tables",
+        json={
+            "connectionInfo": us_connection_info,
+            "filterInfo": {
+                "projects": [
+                    {
+                        "projectId": BIGQUERY_PUBLIC_DATASET_PROJECT_ID,
+                        "datasetIds": ["austin_311"],
+                    }
+                ]
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()) > 0
+
+
+async def test_metadata_list_tables_missing_field(client, project_connection_info):
+    response = await client.post(
+        url=f"{base_url}/metadata/tables",
+        json={
+            "connectionInfo": project_connection_info,
+            "filterInfo": {"projects": []},
+        },
+    )
+
+    assert response.status_code == 422
+    assert "At least one project and dataset must be specified" in response.text
+
+    response = await client.post(
+        url=f"{base_url}/metadata/tables",
+        json={
+            "connectionInfo": project_connection_info,
+            "filterInfo": {
+                "projects": [
+                    {
+                        "projectId": "",
+                    }
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 422
+    assert "project id should not be empty" in response.text
+
+    response = await client.post(
+        url=f"{base_url}/metadata/tables",
+        json={
+            "connectionInfo": project_connection_info,
+            "filterInfo": {
+                "projects": [
+                    {
+                        "projectId": "",
+                    }
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 422
+    assert "project id should not be empty" in response.text
+
+    response = await client.post(
+        url=f"{base_url}/metadata/tables",
+        json={
+            "connectionInfo": project_connection_info,
+            "filterInfo": {
+                "projects": [
+                    {
+                        "projectId": "wrenai",
+                        "datasetIds": [],
+                    }
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 422
+    assert "dataset ids should not be empty" in response.text
+
+    response = await client.post(
+        url=f"{base_url}/metadata/tables",
+        json={
+            "connectionInfo": project_connection_info,
+            "filterInfo": {
+                "projects": [
+                    {
+                        "projectId": "wrenai",
+                        "datasetIds": [""],
+                    }
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 422
+    assert "dataset id should not be empty" in response.text
+
+    response = await client.post(
+        url=f"{base_url}/metadata/tables",
+        json={
+            "connectionInfo": project_connection_info,
+            "filterInfo": {
+                "projects": [
+                    {
+                        "projectId": "wrenai",
+                        "datasetIds": ["tpch_sf1", ""],
+                    }
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 422
+    assert "dataset id should not be empty" in response.text

@@ -521,7 +521,13 @@ class BigQueryConnector(ConnectorABC):
                 "https://www.googleapis.com/auth/cloud-platform",
             ]
         )
-        client = bigquery.Client(credentials=credentials)
+        client = bigquery.Client(
+            credentials=credentials,
+            project=connection_info.get_billing_project_id(),
+        )
+        job_config = bigquery.QueryJobConfig()
+        job_config.job_timeout_ms = self.connection_info.job_timeout_ms
+        client.default_query_job_config = job_config
         self.connection = client
 
     @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)

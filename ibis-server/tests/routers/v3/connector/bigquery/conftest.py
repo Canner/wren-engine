@@ -30,6 +30,16 @@ def connection_info():
     }
 
 
+@pytest.fixture(scope="session")
+def project_connection_info():
+    return {
+        "bigquery_type": "project",
+        "billing_project_id": os.getenv("TEST_BIG_QUERY_PROJECT_ID"),
+        "region": os.getenv("TEST_BIG_QUERY_REGION", "asia-east1"),
+        "credentials": os.getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"),
+    }
+
+
 @pytest.fixture(autouse=True)
 def set_remote_function_list_path():
     config = get_config()
