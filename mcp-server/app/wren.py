@@ -6,6 +6,7 @@ import json
 import os
 import httpx
 from mcp.server.fastmcp import FastMCP
+from mcp.types import ToolAnnotations
 from dto import Manifest, TableColumns
 from utils import dict_to_base64_string, json_to_base64_string
 
@@ -191,7 +192,12 @@ async def get_mdl_json_schema() -> str:
 
 
 # TODO: should validate the MDL
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Deploy MDL",
+        destructiveHint=True,
+    ),
+)
 async def deploy(mdl: Manifest) -> str:
     """
     Deploy the MDL JSON schema to Wren Engine
@@ -205,7 +211,12 @@ async def deploy(mdl: Manifest) -> str:
     return "MDL deployed successfully"
 
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Check Deployment Status",
+        readOnlyHint=True,
+    ),
+)
 async def is_deployed() -> str:
     """
     Check if the MDL JSON schema is deployed
@@ -215,7 +226,12 @@ async def is_deployed() -> str:
     return "MDL is not deployed. Please deploy the MDL first"
 
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="List Remote Constraints",
+        readOnlyHint=True,
+    ),
+)
 async def list_remote_constraints() -> str:
     """
     Get the available constraints of connected Database
@@ -224,7 +240,12 @@ async def list_remote_constraints() -> str:
     return response
 
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="List Remote Tables",
+        readOnlyHint=True,
+    ),
+)
 async def list_remote_tables() -> str:
     """
     Get the available tables of connected Database
@@ -233,7 +254,12 @@ async def list_remote_tables() -> str:
     return response
 
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Execute Query",
+        destructiveHint=True,
+    ),
+)
 async def query(sql: str) -> str:
     """
     Query the Wren Engine with the given SQL query
@@ -242,7 +268,12 @@ async def query(sql: str) -> str:
     return response.text
 
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Dry Run Query",
+        readOnlyHint=True,
+    ),
+)
 async def dry_run(sql: str) -> str:
     """
     Dry run the query in Wren Engine with the given SQL query.
@@ -264,7 +295,12 @@ async def get_full_manifest() -> str:
     return base64.b64decode(mdl_cache.get_base64()).decode("utf-8")
 
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Get Manifest",
+        readOnlyHint=True,
+    ),
+)
 async def get_manifest() -> str:
     """
     Get the current deployed manifest in Wren Engine.
@@ -282,7 +318,12 @@ async def get_available_tables_resource() -> str:
     return mdl_cache.get_table_names()
 
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Get Available Tables",
+        readOnlyHint=True,
+    ),
+)
 async def get_available_tables() -> list[str]:
     """
     Get the available tables in Wren Engine
@@ -290,7 +331,12 @@ async def get_available_tables() -> list[str]:
     return mdl_cache.get_table_names()   
 
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Get Table Columns Info",
+        readOnlyHint=True,
+    ),
+)
 async def get_table_columns_info(
     table_columns: list[TableColumns], full_column_info: bool = False
 ) -> str:
@@ -332,7 +378,12 @@ async def get_table_columns_info(
     return orjson.dumps(result).decode("utf-8")
 
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Get Table Info",
+        readOnlyHint=True,
+    ),
+)
 async def get_table_info(table_name: str) -> str:
     """
     Get the table info for the given table name in Wren Engine
@@ -346,7 +397,12 @@ async def get_table_info(table_name: str) -> str:
     return orjson.dumps([result]).decode("utf-8")
 
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Get Column Info",
+        readOnlyHint=True,
+    ),
+)
 async def get_column_info(table_name: str, column_name: str) -> str:
     """
     Get the column info for the given table and column name in Wren Engine
@@ -362,7 +418,12 @@ async def get_column_info(table_name: str, column_name: str) -> str:
     return orjson.dumps(column).decode("utf-8")
 
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Get Relationships",
+        readOnlyHint=True,
+    ),
+)
 async def get_relationships() -> str:
     """
     Get the relationships in Wren Engine
@@ -370,7 +431,12 @@ async def get_relationships() -> str:
     return orjson.dumps(mdl_cache.get_relationships()).decode("utf-8")
 
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Get Available Functions",
+        readOnlyHint=True,
+    ),
+)
 async def get_available_functions() -> str:
     """
     Get the available functions of connected DataSource Type
@@ -378,7 +444,12 @@ async def get_available_functions() -> str:
     response = await make_get_available_functions_request()
     return response
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Get Data Source Type",
+        readOnlyHint=True,
+    ),
+)
 async def get_current_data_source_type() -> str:
     """
     Get the current data source type
@@ -387,7 +458,12 @@ async def get_current_data_source_type() -> str:
         return "No data source connected. Please deploy the MDL first and assign `dataSource` field."
     return data_source
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Get Wren Guide",
+        readOnlyHint=True,
+    ),
+)
 async def get_wren_guide() -> str:
     """
     Understand how to use Wren Engine effectively to query your database
@@ -434,7 +510,12 @@ async def get_wren_guide() -> str:
     4. You can validate your SQL query using the `dry_run` tool before running the actual query.
     """
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Health Check",
+        readOnlyHint=True,
+    ),
+)
 async def health_check() -> str:
     """
     Check the health of Wren Engine
