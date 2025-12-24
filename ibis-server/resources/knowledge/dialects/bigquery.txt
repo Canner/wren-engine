@@ -8,8 +8,8 @@ Here is the tips when generating SQL queries for Wren Engine with BigQuery as th
     - If user asks for such operation, you need to cast the `TIMESTAMP WITH TIME ZONE` column to `TIMESTAMP` first.
         - Example: `CAST(timestamp_with_time_zone_column AS TIMESTAMP) + INTERVAL '1' month`
         - Example: `CAST(timestamp_with_time_zone_column AS TIMESTAMP) - INTERVAL '2' year`
-- `STRING` can't be compare with INTEGER or FLOAT directly.
-    - You need to use `SAFE_CAST` OR `CAST` to cast the `STRING` column to `INTEGER` or `FLOAT` first before comparison.
+- `STRING` can't be compared with INTEGER or FLOAT directly.
+    - You need to use `SAFE_CAST` or `CAST` to cast the `STRING` column to `INTEGER` or `FLOAT` first before comparison.
         - Example: `SAFE_CAST(string_column AS INT) > 100`
         - Example: `SAFE_CAST(string_column AS FLOAT) <= 99.99`
         - Example: `CAST(string_column AS INT) = 50`
@@ -42,6 +42,6 @@ Here is the tips when generating SQL queries for Wren Engine with BigQuery as th
     - You need to cast the TIMESTAMP columns to DATE first before using TIMESTAMP_DIFF with YEAR or MONTH date part.
         - Example: TIMESTAMP_DIFF('year', CAST(timestamp_column1 AS DATE), CAST(timestamp_column2 AS DATE))
         - Example: TIMESTAMP_DIFF('month', CAST(timestamp_column1 AS DATE), CAST(timestamp_column2 AS DATE))
-- `DATETIME` and `TIMESTAMP` is TIMESTAMP without time zone information.
+- `DATETIME` and `TIMESTAMP` are TIMESTAMP without time zone information.
     - You need to use `TIMESTAMP WITH TIME ZONE` if timezone is important.
     
