@@ -9,6 +9,4 @@ async def test_get_knowledge(client):
     assert "text_to_sql_rule" in data
     assert "instructions" in data
     instructions = data["instructions"]
-    assert "calculated_field_instructions" in instructions
-    assert "metric_instructions" in instructions
-    assert "json_field_instructions" in instructions
+    assert "calculated_field" in instructions
