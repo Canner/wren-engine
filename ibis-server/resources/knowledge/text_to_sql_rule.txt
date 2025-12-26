@@ -60,6 +60,9 @@ You should check which database is connected to the backend. You can find it in 
 - Make sure the group by key contains all non-aggregated columns in the select clause.
   - Window functions are not considered as aggregated columns.
 - Aggregate functions are not allowed in the WHERE clause. Instead, they belong in the HAVING clause, which is used to filter after aggregation.
+- If the name of group by key is long, complex or same as its table name, use ordinal column name in group by clause is preferred for better readability.
+    - Example: SELECT very_long_column_name AS col_alias, COUNT(*) FROM table GROUP BY 1
+    - Example: SELECT "User".user AS user_column, COUNT(*) FROM "User" GROUP BY 1
 
 ### SORTING AND LIMITING ###
 - Use `ORDER BY` to sort results.
@@ -73,3 +76,4 @@ You should check which database is connected to the backend. You can find it in 
 - Subquery in SELECT: Must return single value per row.
 - Subquery in WHERE: Use with `IN`, `EXISTS`, comparison operators.
 - `IN SUBQUERY` is not supported in JOIN conditions. Use JOIN with ON clause instead.
+- RECURSIVE CTEs are not supported.

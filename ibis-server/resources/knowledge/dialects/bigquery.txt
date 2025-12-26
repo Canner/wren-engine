@@ -8,3 +8,40 @@ Here is the tips when generating SQL queries for Wren Engine with BigQuery as th
     - If user asks for such operation, you need to cast the `TIMESTAMP WITH TIME ZONE` column to `TIMESTAMP` first.
         - Example: `CAST(timestamp_with_time_zone_column AS TIMESTAMP) + INTERVAL '1' month`
         - Example: `CAST(timestamp_with_time_zone_column AS TIMESTAMP) - INTERVAL '2' year`
+- `STRING` can't be compared with INTEGER or FLOAT directly.
+    - You need to use `SAFE_CAST` or `CAST` to cast the `STRING` column to `INTEGER` or `FLOAT` first before comparison.
+        - Example: `SAFE_CAST(string_column AS INT) > 100`
+        - Example: `SAFE_CAST(string_column AS FLOAT) <= 99.99`
+        - Example: `CAST(string_column AS INT) = 50`
+        - Example: `CAST(string_column AS FLOAT) <> 75.5`
+- For parsing string to timestamp or timestamp with time zone, you need to use `PARSE_DATETIME` or `PARSE_TIMESTAMP` function.
+    - Example: `PARSE_DATETIME('%Y-%m-%d', string_column)` to parse string to timestamp.
+    - Example: `PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', string_column)` to parse string to timestamp with time zone.
+- The group by key can't use alias defined in the select clause.
+    - Example: This is invalid:
+        - SELECT column1 AS col1_alias, COUNT(*) FROM table GROUP BY col1_alias
+    - You need to use the original column name in the group by clause.
+        - SELECT column1 AS col1_alias, COUNT(*) FROM table GROUP BY column1
+    - If the name of group by key is long, complex or same as its table name, use ordinal column name in group by clause is preferred for better readability.
+        - Example: SELECT very_long_column_name AS col_alias, COUNT(*) FROM table GROUP BY 1
+        - Example: SELECT "User".user AS user_column, COUNT(*) FROM "User" GROUP BY 1
+- If column name is same as the table name in case-insensitive manner, prefer rename the column using alias in the select clause to avoid ambiguity.
+    - Example: This isn't preferred:
+        - SELECT "User".user from "User"
+    - You should rename the column using alias:
+        - SELECT "User".user AS user_column from "User"
+- The usage of time diff function `DATE_DIFF`, `TIMESTAMP_DIFF`, `DATETIME_DIFF` or `TIME_DIFF` must follow the order of `<start_date>` and `<end_date>`.
+    - Example: `DATE_DIFF('day', start_date_column, end_date_column)`
+    - Example: `TIMESTAMP_DIFF('hour', start_timestamp_column, end_timestamp_column)`
+    - Example: `DATETIME_DIFF('minute', start_datetime_column, end_datetime_column)`
+    - Example: `TIME_DIFF('second', start_time_column, end_time_column)`
+- TIMESTAMP_DIFF does not support the YEAR or MONTH date part when the argument is TIMESTAMP
+    - Example: This is invalid:
+        - TIMESTAMP_DIFF('year', timestamp_column1, timestamp_column2)
+        - TIMESTAMP_DIFF('month', timestamp_column1, timestamp_column2)
+    - You need to cast the TIMESTAMP columns to DATE first before using TIMESTAMP_DIFF with YEAR or MONTH date part.
+        - Example: TIMESTAMP_DIFF('year', CAST(timestamp_column1 AS DATE), CAST(timestamp_column2 AS DATE))
+        - Example: TIMESTAMP_DIFF('month', CAST(timestamp_column1 AS DATE), CAST(timestamp_column2 AS DATE))
+- `DATETIME` and `TIMESTAMP` are TIMESTAMP without time zone information.
+    - You need to use `TIMESTAMP WITH TIME ZONE` if timezone is important.
+    
