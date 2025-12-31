@@ -5,6 +5,8 @@ from typing import Annotated, Any, Literal, Union
 
 from pydantic import BaseModel, Field, SecretStr
 
+from app.model.error import ErrorCode, WrenError
+
 manifest_str_field = Field(alias="manifestStr", description="Base64 manifest")
 connection_info_field = Field(alias="connectionInfo")
 
@@ -28,7 +30,7 @@ class QueryDTO(BaseModel):
 
 
 class QueryBigQueryDTO(QueryDTO):
-    connection_info: BigQueryConnectionInfo = connection_info_field
+    connection_info: BigQueryConnectionUnion = connection_info_field
 
 
 class QueryAthenaDTO(QueryDTO):
@@ -100,10 +102,6 @@ class ConnectionUrl(BaseConnectionInfo):
 
 
 class BigQueryConnectionInfo(BaseConnectionInfo):
-    project_id: SecretStr = Field(description="GCP project id", examples=["my-project"])
-    dataset_id: SecretStr = Field(
-        description="BigQuery dataset id", examples=["my_dataset"]
-    )
     credentials: SecretStr = Field(
         description="Base64 encode `credentials.json`", examples=["eyJ..."]
     )
@@ -111,6 +109,55 @@ class BigQueryConnectionInfo(BaseConnectionInfo):
         description="Job timeout in milliseconds. If the job is not complete within the specified time, it will be cancelled.",
         default=None,
     )
+
+    def get_billing_project_id(self) -> str | None:
+        raise WrenError(
+            ErrorCode.NOT_IMPLEMENTED,
+            "get_billing_project_id not implemented by base class",
+        )
+
+
+class BigQueryDatasetConnectionInfo(BigQueryConnectionInfo):
+    bigquery_type: Literal["dataset"] = "dataset"
+    project_id: SecretStr = Field(description="GCP project id", examples=["my-project"])
+    dataset_id: SecretStr = Field(
+        description="BigQuery dataset id", examples=["my_dataset"]
+    )
+
+    def get_billing_project_id(self):
+        return self.project_id.get_secret_value()
+
+    def __hash__(self):
+        return hash((self.project_id, self.dataset_id, self.credentials))
+
+
+class BigQueryProjectConnectionInfo(BigQueryConnectionInfo):
+    bigquery_type: Literal["project"] = "project"
+    region: SecretStr = Field(
+        description="the region of your BigQuery connection", examples=["US"]
+    )
+    billing_project_id: SecretStr = Field(
+        description="the billing project id of your BigQuery connection",
+        examples=["billing-project-1"],
+    )
+
+    def get_billing_project_id(self):
+        return self.billing_project_id.get_secret_value()
+
+    def __hash__(self):
+        return hash(
+            (
+                self.region,
+                self.billing_project_id,
+                self.credentials,
+            )
+        )
+
+
+BigQueryConnectionUnion = Annotated[
+    Union[BigQueryDatasetConnectionInfo, BigQueryProjectConnectionInfo],
+    Field(discriminator="bigquery_type", default="dataset"),
+]
 
 
 class AthenaConnectionInfo(BaseConnectionInfo):
@@ -570,7 +617,8 @@ class GcsFileConnectionInfo(BaseConnectionInfo):
 
 ConnectionInfo = (
     AthenaConnectionInfo
-    | BigQueryConnectionInfo
+    | BigQueryDatasetConnectionInfo
+    | BigQueryProjectConnectionInfo
     | CannerConnectionInfo
     | ClickHouseConnectionInfo
     | ConnectionUrl

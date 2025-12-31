@@ -392,6 +392,24 @@ async def test_metadata_list_constraints(client):
     assert response.status_code == 200
 
 
+async def test_metadata_list_unsupported_project_connection(client):
+    multi_dataset_connection_info = {
+        "bigquery_type": "project",
+        "billing_project_id": os.getenv("TEST_BIG_QUERY_PROJECT_ID"),
+        "region": os.getenv("TEST_BIG_QUERY_REGION", "asia-east1"),
+        "credentials": os.getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"),
+    }
+    response = await client.post(
+        url=f"{base_url}/metadata/tables",
+        json={"connectionInfo": multi_dataset_connection_info},
+    )
+    assert response.status_code == 422
+    assert (
+        "BigQuery project-level connection info is only supported by v3 API for metadata table list retrieval."
+        in response.text
+    )
+
+
 async def test_metadata_db_version(client):
     response = await client.post(
         url=f"{base_url}/metadata/version",

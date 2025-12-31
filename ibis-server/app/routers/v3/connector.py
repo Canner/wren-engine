@@ -32,6 +32,8 @@ from app.model import (
 from app.model.connector import Connector
 from app.model.data_source import DataSource
 from app.model.error import DatabaseTimeoutError
+from app.model.metadata.dto import Catalog, MetadataDTO, Table, get_filter_info
+from app.model.metadata.factory import MetadataFactory
 from app.model.validator import Validator
 from app.query_cache import QueryCacheManager
 from app.routers import v2
@@ -40,6 +42,8 @@ from app.util import (
     append_fallback_context,
     build_context,
     execute_dry_run_with_timeout,
+    execute_get_schema_list_with_timeout,
+    execute_get_table_list_with_timeout,
     execute_query_with_timeout,
     execute_validate_with_timeout,
     pushdown_limit,
@@ -548,3 +552,55 @@ async def get_sql_knowledge(
         "instructions": knowledge_manager.get_sql_instructions(),
         "sql_correction_rule": knowledge_manager.get_sql_correction_rule(),
     }
+
+
+@router.post(
+    "/{data_source}/metadata/tables",
+    description="get the table metadata of the specified data source",
+)
+async def get_table_list(
+    data_source: DataSource,
+    dto: MetadataDTO,
+    headers: Annotated[Headers, Depends(get_wren_headers)],
+) -> list[Table]:
+    span_name = f"v3_get_table_list_{data_source}"
+    with tracer.start_as_current_span(
+        name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
+    ) as span:
+        set_attribute(headers, span)
+        connection_info = data_source.get_connection_info(
+            dto.connection_info, dict(headers)
+        )
+        metadata = MetadataFactory.get_metadata(data_source, connection_info)
+        filter_info = get_filter_info(data_source, dto.filter_info or {})
+        return await execute_get_table_list_with_timeout(
+            metadata,
+            filter_info,
+            dto.table_limit,
+        )
+
+
+@router.post(
+    "/{data_source}/metadata/schemas",
+    description="get the schema metadata of the specified data source",
+)
+async def get_schema_list(
+    data_source: DataSource,
+    dto: MetadataDTO,
+    headers: Annotated[Headers, Depends(get_wren_headers)],
+) -> list[Catalog]:
+    span_name = f"v3_get_schema_list_{data_source}"
+    with tracer.start_as_current_span(
+        name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
+    ) as span:
+        set_attribute(headers, span)
+        connection_info = data_source.get_connection_info(
+            dto.connection_info, dict(headers)
+        )
+        metadata = MetadataFactory.get_metadata(data_source, connection_info)
+        filter_info = get_filter_info(data_source, dto.filter_info or {})
+        return await execute_get_schema_list_with_timeout(
+            metadata,
+            filter_info,
+            dto.table_limit,
+        )

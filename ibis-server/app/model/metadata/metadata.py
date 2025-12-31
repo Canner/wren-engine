@@ -1,21 +1,24 @@
-from abc import ABC, abstractmethod
-
 from app.model import ConnectionInfo
-from app.model.metadata.dto import Constraint, Table
+from app.model.error import ErrorCode, WrenError
+from app.model.metadata.dto import Catalog, Constraint, FilterInfo, Table
 
 
-class Metadata(ABC):
+class Metadata:
     def __init__(self, connection_info: ConnectionInfo):
         self.connection_info = connection_info
 
-    @abstractmethod
-    def get_table_list(self) -> list[Table]:
-        pass
+    def get_table_list(
+        self, filter_info: FilterInfo | None = None, limit: int | None = None
+    ) -> list[Table]:
+        raise WrenError(ErrorCode.NOT_IMPLEMENTED, "get_table_list not implemented")
 
-    @abstractmethod
     def get_constraints(self) -> list[Constraint]:
-        pass
+        raise WrenError(ErrorCode.NOT_IMPLEMENTED, "get_constraints not implemented")
 
-    @abstractmethod
     def get_version(self) -> str:
-        pass
+        raise WrenError(ErrorCode.NOT_IMPLEMENTED, "get_version not implemented")
+
+    def get_schema_list(
+        self, filter_info: FilterInfo | None = None, limit: int | None = None
+    ) -> list[Catalog]:
+        raise WrenError(ErrorCode.NOT_IMPLEMENTED, "get_schema_list not implemented")

@@ -4,10 +4,36 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from app.model import ConnectionInfo
+from app.model.data_source import DataSource
+
+
+class V2MetadataDTO(BaseModel):
+    connection_info: dict[str, Any] | ConnectionInfo = Field(alias="connectionInfo")
+
+
+class FilterInfo(BaseModel):
+    pass
 
 
 class MetadataDTO(BaseModel):
     connection_info: dict[str, Any] | ConnectionInfo = Field(alias="connectionInfo")
+    table_limit: int | None = Field(alias="limit", default=None)
+    filter_info: dict[str, Any] | None = Field(alias="filterInfo", default=None)
+
+
+class BigQueryFilterInfo(FilterInfo):
+    projects: list["ProjectDatasets"] | None = None
+
+
+class ProjectDatasets(BaseModel):
+    project_id: str = Field(alias="projectId")
+    dataset_ids: list[str] | None = Field(alias="datasetIds", default=None)
+
+
+def get_filter_info(data_source: DataSource, info: dict[str, Any]) -> FilterInfo | None:
+    if data_source == DataSource.bigquery:
+        return BigQueryFilterInfo(**info)
+    return None
 
 
 class RustWrenEngineColumnType(Enum):
@@ -83,6 +109,11 @@ class Table(BaseModel):
     description: str | None = None
     properties: TableProperties = None
     primaryKey: str | None = None
+
+
+class Catalog(BaseModel):
+    name: str
+    schemas: list[str]
 
 
 class ConstraintType(Enum):
