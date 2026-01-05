@@ -49,7 +49,7 @@ jobs:
         run: |
           docker compose up -d --build
           echo "Waiting for Spark Connect to be ready..."
-          timeout 180 bash -c 'until docker logs spark-connect 2>&1 | grep -q "Started SparkConnectServer"; do echo "Waiting..."; sleep 5; done' || (echo "Timeout waiting for Spark"; docker compose logs; exit 1)
+          timeout 180 bash -c 'until docker logs spark-connect 2>&1 | grep -q "Spark Connect server started"; do echo "Waiting..."; sleep 5; done' || (echo "Timeout waiting for Spark"; docker compose logs; exit 1)
           echo "Spark Connect is ready!"
       
       - name: Verify Spark cluster status
