@@ -47,11 +47,13 @@ from app.model import (
     QueryRedshiftDTO,
     QueryS3FileDTO,
     QuerySnowflakeDTO,
+    QuerySparkDTO,
     QueryTrinoDTO,
     RedshiftConnectionInfo,
     RedshiftIAMConnectionInfo,
     S3FileConnectionInfo,
     SnowflakeConnectionInfo,
+    SparkConnectionInfo,
     SSLMode,
     TrinoConnectionInfo,
 )
@@ -76,6 +78,7 @@ class DataSource(StrEnum):
     s3_file = auto()
     minio_file = auto()
     gcs_file = auto()
+    spark = auto()
     databricks = auto()
 
     def get_connection(self, info: ConnectionInfo) -> BaseBackend:
@@ -184,6 +187,8 @@ class DataSource(StrEnum):
                 return MinioFileConnectionInfo.model_validate(data)
             case DataSource.gcs_file:
                 return GcsFileConnectionInfo.model_validate(data)
+            case DataSource.spark:
+                return SparkConnectionInfo.model_validate(data)
             case DataSource.databricks:
                 if (
                     "databricks_type" in data
@@ -241,6 +246,7 @@ class DataSourceExtension(Enum):
     minio_file = QueryMinioFileDTO
     gcs_file = QueryGcsFileDTO
     databricks = QueryDatabricksDTO
+    spark = QuerySparkDTO
 
     def __init__(self, dto: QueryDTO):
         self.dto = dto
@@ -250,7 +256,7 @@ class DataSourceExtension(Enum):
             if hasattr(info, "connection_url"):
                 kwargs = info.kwargs if info.kwargs else {}
                 return ibis.connect(info.connection_url.get_secret_value(), **kwargs)
-            if self.name in {"local_file", "redshift"}:
+            if self.name in {"local_file", "redshift", "spark"}:
                 raise NotImplementedError(
                     f"{self.name} connection is not implemented to get ibis backend"
                 )

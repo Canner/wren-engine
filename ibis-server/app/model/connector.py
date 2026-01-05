@@ -41,6 +41,7 @@ from ibis.expr.datatypes.core import UUID
 from ibis.expr.types import Table
 from loguru import logger
 from opentelemetry import trace
+from pyspark.sql import SparkSession
 from sqlglot import exp, parse_one
 
 from app.model import (
@@ -54,6 +55,7 @@ from app.model import (
     RedshiftConnectionUnion,
     RedshiftIAMConnectionInfo,
     S3FileConnectionInfo,
+    SparkConnectionInfo,
 )
 from app.model.data_source import DataSource
 from app.model.error import (
@@ -96,6 +98,8 @@ class Connector:
             self._connector = RedshiftConnector(connection_info)
         elif data_source == DataSource.postgres:
             self._connector = PostgresConnector(connection_info)
+        elif data_source == DataSource.spark:
+            self._connector = SparkConnector(connection_info)
         elif data_source == DataSource.databricks:
             self._connector = DatabricksConnector(connection_info)
         else:
@@ -684,6 +688,59 @@ class RedshiftConnector(ConnectorABC):
             self.connection.close()
         except Exception as e:
             logger.warning(f"Error closing Redshift connection: {e}")
+
+
+class SparkConnector(ConnectorABC):
+    def __init__(self, connection_info: SparkConnectionInfo):
+        self.connection_info = connection_info
+        self.connection = self._create_session()
+        self._closed = False
+
+    def _create_session(self) -> SparkSession:
+        host = self.connection_info.host.get_secret_value()
+        port = self.connection_info.port.get_secret_value()
+
+        # Spark Connect endpoint
+        endpoint = f"sc://{host}:{port}"
+
+        builder = SparkSession.builder.remote(endpoint).appName("wren-spark-connect")
+
+        return builder.getOrCreate()
+
+    def query(self, sql: str, limit: int | None = None) -> pa.Table:
+        df = self.connection.sql(sql).toPandas()
+        # SPARK-54068 workaround: Remove non-serializable attrs
+        # PyArrow >= 22.0.0 tries to serialize DataFrame.attrs to JSON
+        # but PlanMetrics objects aren't JSON serializable
+        if hasattr(df, "attrs") and df.attrs:
+            df.attrs = {
+                k: v
+                for k, v in df.attrs.items()
+                if k not in ("metrics", "observed_metrics")
+            }
+
+        # Convert to Arrow
+        arrow_table = pa.Table.from_pandas(df)
+
+        if limit is not None:
+            arrow_table = arrow_table.slice(0, limit)
+
+        return arrow_table
+
+    def dry_run(self, sql: str) -> None:
+        self.connection.sql(sql).limit(0)
+
+    def close(self) -> None:
+        if self._closed:
+            return
+
+        try:
+            # Spark Connect client-side cleanup
+            self.connection.stop()
+        except Exception:
+            pass
+        finally:
+            self._closed = True
 
 
 class DatabricksConnector(ConnectorABC):
