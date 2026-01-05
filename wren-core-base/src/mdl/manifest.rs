@@ -148,6 +148,7 @@ impl Display for DataSource {
             DataSource::Athena => write!(f, "ATHENA"),
             DataSource::Redshift => write!(f, "REDSHIFT"),
             DataSource::Databricks => write!(f, "DATABRICKS"),
+            DataSource::Spark => write!(f, "SPARK"),
         }
     }
 }
@@ -175,6 +176,7 @@ impl FromStr for DataSource {
             "ATHENA" => Ok(DataSource::Athena),
             "REDSHIFT" => Ok(DataSource::Redshift),
             "DATABRICKS" => Ok(DataSource::Databricks),
+            "SPARK" => Ok(DataSource::Spark),
             _ => Err(ParsedDataSourceError::new(&format!(
                 "Unknown data source: {}",
                 s
