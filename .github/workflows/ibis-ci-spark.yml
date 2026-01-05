@@ -47,9 +47,9 @@ jobs:
       - name: Start Spark cluster
         working-directory: ./ibis-server/tests/routers/v3/connector/spark
         run: |
-          docker-compose up -d --build
+          docker compose up -d --build
           echo "Waiting for Spark Connect to be ready..."
-          timeout 180 bash -c 'until docker logs spark-connect 2>&1 | grep -q "Started SparkConnectServer"; do echo "Waiting..."; sleep 5; done' || (echo "Timeout waiting for Spark"; docker-compose logs; exit 1)
+          timeout 180 bash -c 'until docker logs spark-connect 2>&1 | grep -q "Started SparkConnectServer"; do echo "Waiting..."; sleep 5; done' || (echo "Timeout waiting for Spark"; docker compose logs; exit 1)
           echo "Spark Connect is ready!"
       
       - name: Verify Spark cluster status
@@ -101,4 +101,4 @@ jobs:
       - name: Cleanup Spark cluster
         if: always()
         working-directory: ./ibis-server/tests/routers/v3/connector/spark
-        run: docker-compose down -v
+        run: docker compose down -v
