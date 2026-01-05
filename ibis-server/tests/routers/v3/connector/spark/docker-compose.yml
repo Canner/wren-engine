@@ -1,0 +1,53 @@
+version: "3.8"
+
+services:
+  spark-master:
+    build: .
+    container_name: spark-master
+    command: >
+      /opt/spark/bin/spark-class
+      org.apache.spark.deploy.master.Master
+    ports:
+      - "7077:7077"
+      - "8081:8081"
+    volumes:
+      - spark-warehouse:/opt/spark/work/warehouse
+
+  spark-worker:
+    build: .
+    container_name: spark-worker
+    depends_on:
+      - spark-master
+    command: >
+      /opt/spark/bin/spark-class
+      org.apache.spark.deploy.worker.Worker
+      spark://spark-master:7077
+    volumes:
+      - spark-warehouse:/opt/spark/work/warehouse
+
+  spark-connect:
+    build: .
+    container_name: spark-connect
+    depends_on:
+      - spark-master
+    environment:
+      SPARK_LOCAL_DIRS: /tmp
+      SPARK_USER: spark
+      IVY_HOME: /tmp/.ivy2
+    command: >
+      /opt/spark/bin/spark-submit
+      --master spark://spark-master:7077
+      --packages org.apache.spark:spark-connect_2.12:3.5.7,org.apache.derby:derby:10.14.2.0
+      --class org.apache.spark.sql.connect.service.SparkConnectServer
+      --conf spark.sql.connect.port=15002
+      --conf spark.jars.ivy=/tmp/.ivy2
+      --conf spark.sql.catalogImplementation=hive
+      --conf spark.sql.warehouse.dir=file:/opt/spark/work/warehouse
+      --conf spark.hadoop.hive.metastore.warehouse.dir=file:/opt/spark/work/warehouse
+    ports:
+      - "15002:15002"
+    volumes:
+      - spark-warehouse:/opt/spark/work/warehouse
+
+volumes:
+  spark-warehouse:
