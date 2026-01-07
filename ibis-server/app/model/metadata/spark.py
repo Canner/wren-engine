@@ -2,6 +2,7 @@ from loguru import logger
 
 from app.model import SparkConnectionInfo
 from app.model.connector import Connector
+from app.model.data_source import DataSource
 from app.model.metadata.dto import (
     Column,
     Constraint,
@@ -46,7 +47,7 @@ SPARK_TYPE_MAPPING = {
 class SparkMetadata(Metadata):
     def __init__(self, connection_info: SparkConnectionInfo):
         super().__init__(connection_info)
-        self.connector = Connector("spark", connection_info)
+        self.connector = Connector(DataSource.spark, connection_info)
 
     def get_table_list(self) -> list[Table]:
         tables_sql = "SHOW TABLES"
@@ -66,7 +67,7 @@ class SparkMetadata(Metadata):
 
             # Get columns
             try:
-                columns_sql = f"DESCRIBE {database}.{table_name}"
+                columns_sql = f"DESCRIBE `{database}`.`{table_name}`"
                 columns_table = self.connector.query(columns_sql)
                 columns_df = columns_table.to_pandas()
 
@@ -144,7 +145,7 @@ class SparkMetadata(Metadata):
 
         try:
             df = self.connector.query(sql)
-            res = df.to_dict(orient="records")
+            res = df.to_pandas().to_dict(orient="records")
         except Exception as e:
             logger.warning(
                 f"Failed to get constraints from Spark (this is normal for many Spark deployments): {e}"

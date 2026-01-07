@@ -728,7 +728,7 @@ class SparkConnector(ConnectorABC):
         return arrow_table
 
     def dry_run(self, sql: str) -> None:
-        self.connection.sql(sql).limit(0)
+        self.connection.sql(sql).limit(0).count()
 
     def close(self) -> None:
         if self._closed:

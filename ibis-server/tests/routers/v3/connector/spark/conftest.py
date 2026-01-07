@@ -70,13 +70,6 @@ def connection_info(spark_connect: SparkSession) -> dict[str, str]:
     }
 
 
-@pytest.fixture(scope="module")
-def connection_url(connection_info: dict[str, str]):
-    info = connection_info
-    # Spark Connect URL format
-    return f"sc://{info['host']}:{info['port']}"
-
-
 @pytest.fixture(autouse=True)
 def set_remote_function_list_path():
     config = get_config()
