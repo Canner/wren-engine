@@ -98,6 +98,8 @@ class Connector:
             self._connector = PostgresConnector(connection_info)
         elif data_source == DataSource.databricks:
             self._connector = DatabricksConnector(connection_info)
+        elif data_source == DataSource.mysql:
+            self._connector = MySqlConnector(connection_info)
         else:
             self._connector = IbisConnector(data_source, connection_info)
 
@@ -316,6 +318,39 @@ class PostgresConnector(IbisConnector):
             # Mark connection as closed to prevent double-close
             self._closed = True
             self.connection = None
+
+
+class MySqlConnector(IbisConnector):
+    def __init__(self, connection_info: ConnectionInfo):
+        super().__init__(DataSource.mysql, connection_info)
+
+    def _handle_pyarrow_unsupported_type(self, ibis_table: Table, **kwargs) -> Table:
+        result_table = ibis_table
+        for name, dtype in ibis_table.schema().items():
+            if isinstance(dtype, Decimal):
+                # Round decimal columns to a specified scale
+                result_table = self._round_decimal_columns(
+                    result_table=result_table, col_name=name, **kwargs
+                )
+            elif isinstance(dtype, UUID):
+                # Convert UUID to string for compatibility
+                result_table = self._cast_uuid_columns(
+                    result_table=result_table, col_name=name
+                )
+            elif isinstance(dtype, dt.JSON):
+                # ibis doesn't handle JSON type for MySQL properly.
+                # We need to convert JSON columns to string for compatibility manually.
+                result_table = self._cast_json_columns(
+                    result_table=result_table, col_name=name
+                )
+
+        return result_table
+
+    def _cast_json_columns(self, result_table: Table, col_name: str) -> Table:
+        col = result_table[col_name]
+        # Convert JSON to string for compatibility
+        casted_col = col.cast("string")
+        return result_table.mutate(**{col_name: casted_col})
 
 
 class MSSqlConnector(IbisConnector):
