@@ -74,6 +74,47 @@ Run the server
 just run
 ```
 
+
+### Running Spark Tests Locally
+Spark-related tests require a local Spark cluster with Spark Connect enabled.
+Our GitHub CI already handles this automatically, but you must start Spark manually when running tests locally.
+
+Prerequisites
+
+- Docker & Docker Compose
+- Python dependencies installed (just install)
+- Java engine running (same as other integration tests)
+
+1. Start the Spark Cluster
+From the ibis-server directory:
+```
+cd tests/routers/v3/connector/spark
+docker compose up -d --build
+```
+Wait until Spark Connect is ready. You should see this in the logs:
+```
+docker logs spark-connect
+# Spark Connect server started
+```
+- Spark Master: spark://localhost:7077
+- Spark Connect: localhost:15002
+
+2. Run Spark Tests
+Go back to the ibis-server directory and run:
+```
+just test spark
+```
+⚠️ Spark tests will fail if the Spark cluster is not running.
+
+3. Stop the Spark Cluster (Cleanup)
+After tests finish:
+```
+cd tests/routers/v3/connector/spark
+docker compose down -v
+```
+
+
+
 ### Start with Python Interactive Mode
 Install the dependencies
 ```bash

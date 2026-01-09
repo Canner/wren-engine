@@ -1,0 +1,104 @@
+name: ibis CI (spark)
+permissions:
+  contents: read
+  pull-requests: write
+  
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: ibis-server
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Ruff check
+        uses: chartboost/ruff-action@v1
+        with:
+          src: './ibis-server'
+          args: 'format --check'
+      
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+      
+      - name: Start Wren JAVA engine
+        working-directory: ./wren-core-legacy
+        run: |
+          mkdir etc
+          echo "node.environment=production" >> etc/config.properties
+          echo "wren.directory=./etc/mdl" >> etc/config.properties
+          echo "wren.experimental-enable-dynamic-fields=true" >> etc/config.properties
+          ./mvnw clean install -B -DskipTests -P exec-jar
+          java -Dconfig=etc/config.properties \
+                --add-opens=java.base/java.nio=ALL-UNNAMED \
+                -jar ./wren-server/target/wren-server-*-executable.jar &
+      
+      - name: Start Spark cluster
+        working-directory: ./ibis-server/tests/routers/v3/connector/spark
+        run: |
+          docker compose up -d --build
+          echo "Waiting for Spark Connect to be ready..."
+          timeout 180 bash -c 'until docker logs spark-connect 2>&1 | grep -q "Spark Connect server started"; do echo "Waiting..."; sleep 5; done' || (echo "Timeout waiting for Spark"; docker compose logs; exit 1)
+          echo "Spark Connect is ready!"
+      
+      - name: Verify Spark cluster status
+        run: |
+          docker ps
+          echo "Checking Spark Connect logs:"
+          docker logs spark-connect --tail 50
+      
+      - name: Install poetry
+        run: pipx install poetry
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: ./ibis-server/pyproject.toml
+          cache: 'poetry'
+      
+      - uses: extractions/setup-just@v2
+      
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            wren-core-py/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('wren-core-py/Cargo.lock') }}
+      
+      - name: Install dependencies
+        run: |
+          just install --with dev
+      
+      - name: Run Spark tests
+        env:
+          WREN_ENGINE_ENDPOINT: http://localhost:8080
+        run: poetry run pytest -m "spark" -v
+      
+      - name: Show Spark logs on failure
+        if: failure()
+        run: |
+          echo "=== Spark Connect logs ==="
+          docker logs spark-connect
+          echo "=== Spark Master logs ==="
+          docker logs spark-master
+          echo "=== Spark Worker logs ==="
+          docker logs spark-worker
+      
+      - name: Cleanup Spark cluster
+        if: always()
+        working-directory: ./ibis-server/tests/routers/v3/connector/spark
+        run: docker compose down -v

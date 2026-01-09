@@ -18,6 +18,7 @@ from app.model.metadata.oracle import OracleMetadata
 from app.model.metadata.postgres import PostgresMetadata
 from app.model.metadata.redshift import RedshiftMetadata
 from app.model.metadata.snowflake import SnowflakeMetadata
+from app.model.metadata.spark import SparkMetadata
 from app.model.metadata.trino import TrinoMetadata
 
 mapping = {
@@ -37,6 +38,7 @@ mapping = {
     DataSource.minio_file: MinioFileMetadata,
     DataSource.gcs_file: GcsFileMetadata,
     DataSource.databricks: DatabricksMetadata,
+    DataSource.spark: SparkMetadata,
 }
 
 

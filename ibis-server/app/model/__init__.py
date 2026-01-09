@@ -73,6 +73,10 @@ class QueryDatabricksDTO(QueryDTO):
     connection_info: DatabricksConnectionUnion = connection_info_field
 
 
+class QuerySparkDTO(QueryDTO):
+    connection_info: SparkConnectionInfo = connection_info_field
+
+
 class QueryTrinoDTO(QueryDTO):
     connection_info: ConnectionUrl | TrinoConnectionInfo = connection_info_field
 
@@ -447,6 +451,14 @@ class SnowflakeConnectionInfo(BaseConnectionInfo):
     )
 
 
+class SparkConnectionInfo(BaseConnectionInfo):
+    host: SecretStr = Field(
+        description="Spark Connect server hostname",
+        examples=["localhost", "spark-connect.mycompany.internal"],
+    )
+    port: SecretStr = Field(description="the port of your spark connect server")
+
+
 class DatabricksTokenConnectionInfo(BaseConnectionInfo):
     databricks_type: Literal["token"] = "token"
     server_hostname: SecretStr = Field(
@@ -629,6 +641,7 @@ ConnectionInfo = (
     | RedshiftConnectionInfo
     | RedshiftIAMConnectionInfo
     | SnowflakeConnectionInfo
+    | SparkConnectionInfo
     | DatabricksTokenConnectionInfo
     | TrinoConnectionInfo
     | LocalFileConnectionInfo
