@@ -3853,6 +3853,40 @@ mod test {
     }
 
     #[tokio::test]
+    async fn test_extract_roundtrip_mysql() -> Result<()> {
+        let ctx = create_wren_ctx(None, Some(&DataSource::MySQL));
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("orders")
+                    .table_reference("orders")
+                    .column(ColumnBuilder::new("o_orderdate", "date").build())
+                    .build(),
+            )
+            .data_source(DataSource::MySQL)
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest,
+            Arc::new(HashMap::default()),
+            Mode::Unparse,
+        )?);
+        let headers = Arc::new(HashMap::default());
+        let sql = "SELECT EXTRACT(YEAR FROM o_orderdate) FROM orders";
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
+            @"SELECT EXTRACT(YEAR FROM orders.o_orderdate) FROM (SELECT orders.o_orderdate FROM (SELECT __source.o_orderdate AS o_orderdate FROM orders AS __source) AS orders) AS orders"
+        );
+
+        let sql = "SELECT EXTRACT(WEEK FROM o_orderdate) FROM orders";
+        assert_snapshot!(
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
+            @"SELECT EXTRACT(WEEK FROM orders.o_orderdate) FROM (SELECT orders.o_orderdate FROM (SELECT __source.o_orderdate AS o_orderdate FROM orders AS __source) AS orders) AS orders"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_bigquery_json() -> Result<()> {
         let ctx = create_wren_ctx(None, Some(&DataSource::BigQuery));
         let manifest = ManifestBuilder::new()
