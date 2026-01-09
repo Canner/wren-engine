@@ -12,12 +12,15 @@ async def test_metadata_list_tables(client, connection_info):
     assert len(tables) > 0
 
     # Find the orders table created in conftest
-    result = next(filter(lambda x: x["name"] == "default.orders", tables), None)
+    result = next(
+        filter(lambda x: x["name"] == "spark_catalog.default.orders", tables),
+        None,
+    )
     assert result is not None
-    assert result["name"] == "default.orders"
-    assert result["primaryKey"] == ""  # Spark typically doesn't enforce primary keys
+    assert result["name"] == "spark_catalog.default.orders"
+    assert result["primaryKey"] == ""
     assert result["properties"] == {
-        "catalog": "spark_catalog",  # Default Spark catalog
+        "catalog": "spark_catalog",
         "path": None,
         "schema": "default",
         "table": "orders",

@@ -30,23 +30,21 @@ def spark_connect(request):
         .getOrCreate()
     )
 
+    spark.sql("CREATE DATABASE IF NOT EXISTS default")
+
+    # Ensure clean state (IMPORTANT)
+    spark.sql("DROP TABLE IF EXISTS default.orders")
+
     # Load test data
     orders_pdf = pd.read_parquet(file_path("resource/tpch/data/orders.parquet"))
-    customer_pdf = pd.read_parquet(file_path("resource/tpch/data/customer.parquet"))
 
-    # Workaround for SPARK-54068: Remove non-serializable attrs
-    if hasattr(orders_pdf, "attrs") and orders_pdf.attrs:
+    if hasattr(orders_pdf, "attrs"):
         orders_pdf.attrs = {}
-    if hasattr(customer_pdf, "attrs") and customer_pdf.attrs:
-        customer_pdf.attrs = {}
 
     # Create Spark DataFrames and save as tables
     orders_df = spark.createDataFrame(orders_pdf)
 
-    # Create database if not exists
-    spark.sql("CREATE DATABASE IF NOT EXISTS default")
-
-    # Save as tables
+    # Create managed table ONCE
     orders_df.write.mode("overwrite").saveAsTable("default.orders")
 
     def cleanup():
