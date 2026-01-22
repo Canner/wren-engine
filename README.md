@@ -29,7 +29,7 @@
 <img src="./misc/wren_engine_overview.png">
 
 ## 🔌 Supported Data Sources
-- [BigQuery](https://docs.getwren.ai/oss/wren_engine_api#tag/BigQueryConnectionInfo)
+- [BigQuery](https://docs.getwren.ai/oss/wren_engine_api#tag/BigQueryProjectConnectionInfo)
 - [Google Cloud Storage](https://docs.getwren.ai/oss/wren_engine_api#tag/GcsFileConnectionInfo)
 - [Local Files](https://docs.getwren.ai/oss/wren_engine_api#tag/LocalFileConnectionInfo)
 - [MS SQL Server](https://docs.getwren.ai/oss/wren_engine_api#tag/MSSqlConnectionInfo)
@@ -40,6 +40,10 @@
 - [Amazon S3](https://docs.getwren.ai/oss/wren_engine_api#tag/S3FileConnectionInfo)
 - [Snowflake](https://docs.getwren.ai/oss/wren_engine_api#tag/SnowflakeConnectionInfo)
 - [Trino](https://docs.getwren.ai/oss/wren_engine_api#tag/TrinoConnectionInfo)
+- [Athena](https://docs.getwren.ai/oss/wren_engine_api#tag/AthenaConnectionInfo)
+- [Databricks](https://docs.getwren.ai/oss/wren_engine_api#tag/DatabricksTokenConnectionInfo)
+- [Redshift](https://docs.getwren.ai/oss/wren_engine_api#tag/RedshiftConnectionInfo)
+- [Apache Spark](https://docs.getwren.ai/oss/wren_engine_api#tag/SparkConnectionInfo)
 
 ## 😫 Challenge Today
 
