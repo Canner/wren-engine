@@ -43,7 +43,7 @@
 - [Athena](https://docs.getwren.ai/oss/wren_engine_api#tag/AthenaConnectionInfo)
 - [Databricks](https://docs.getwren.ai/oss/wren_engine_api#tag/DatabricksTokenConnectionInfo)
 - [Redshift](https://docs.getwren.ai/oss/wren_engine_api#tag/RedshiftConnectionInfo)
-- [Apache Saprk](https://docs.getwren.ai/oss/wren_engine_api#tag/SparkConnectionInfo)
+- [Apache Spark](https://docs.getwren.ai/oss/wren_engine_api#tag/SparkConnectionInfo)
 
 ## 😫 Challenge Today
 
