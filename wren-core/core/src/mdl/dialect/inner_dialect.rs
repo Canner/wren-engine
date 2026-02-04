@@ -426,6 +426,18 @@ fn non_uppercase(sql: &str) -> bool {
 pub struct MsSqlDialect {}
 
 impl InnerDialect for MsSqlDialect {
+    fn scalar_function_to_sql_overrides(
+        &self,
+        unparser: &Unparser,
+        function_name: &str,
+        args: &[Expr],
+    ) -> Result<Option<ast::Expr>> {
+        match function_name {
+            "btrim" => scalar_function_to_sql_internal(unparser, None, "trim", args),
+            _ => Ok(None),
+        }
+    }
+
     fn to_unicode_string_literal(&self, s: &str) -> Option<ast::Expr> {
         if !s.is_ascii() {
             Some(ast::Expr::value(ast::Value::NationalStringLiteral(
