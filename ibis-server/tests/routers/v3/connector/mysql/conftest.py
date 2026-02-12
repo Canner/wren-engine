@@ -1,9 +1,11 @@
 import pathlib
 
+import pandas as pd
 import pytest
 import sqlalchemy
-import pandas as pd
 from testcontainers.mysql import MySqlContainer
+
+from app.config import get_config
 from tests.conftest import file_path
 
 pytestmark = pytest.mark.mysql
@@ -54,6 +56,26 @@ def mysql(request) -> MySqlContainer:
 
     request.addfinalizer(mysql.stop)
     return mysql
+
+
+function_list_path = file_path("../resources/function_list")
+white_function_list_path = file_path("../resources/white_function_list")
+
+
+@pytest.fixture(autouse=True)
+def set_remote_function_list_path():
+    config = get_config()
+    config.set_remote_function_list_path(function_list_path)
+    yield
+    config.set_remote_function_list_path(None)
+
+
+@pytest.fixture(autouse=True)
+def set_remote_white_function_list_path():
+    config = get_config()
+    config.set_remote_white_function_list_path(white_function_list_path)
+    yield
+    config.set_remote_white_function_list_path(None)
 
 
 @pytest.fixture(scope="module")
