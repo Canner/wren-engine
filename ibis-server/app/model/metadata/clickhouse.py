@@ -28,6 +28,7 @@ CLICKHOUSE_TYPE_MAPPING = {
     "float32": RustWrenEngineColumnType.FLOAT4,
     "float64": RustWrenEngineColumnType.FLOAT8,
     "decimal": RustWrenEngineColumnType.DECIMAL,
+    "numeric": RustWrenEngineColumnType.NUMERIC,
     # Date/Time Types
     "date": RustWrenEngineColumnType.DATE,
     "datetime": RustWrenEngineColumnType.TIMESTAMP,
@@ -120,6 +121,19 @@ class ClickHouseMetadata(Metadata):
         """
         # Convert to lowercase for comparison
         normalized_type = data_type.lower()
+
+        # Decimal type with precision and scale
+        if normalized_type.startswith("decimal"):
+            return RustWrenEngineColumnType.DECIMAL
+
+        # Numeric type with precision and scale
+        if normalized_type.startswith("numeric"):
+            return RustWrenEngineColumnType.NUMERIC
+
+        # Support to Nullable wrapper
+        if normalized_type.startswith("nullable("):
+            inner_type = normalized_type[9:-1]
+            return self._transform_column_type(inner_type)
 
         # Use the module-level mapping table
         mapped_type = CLICKHOUSE_TYPE_MAPPING.get(
