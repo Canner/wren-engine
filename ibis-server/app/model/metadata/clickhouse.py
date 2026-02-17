@@ -32,6 +32,7 @@ CLICKHOUSE_TYPE_MAPPING = {
     # Date/Time Types
     "date": RustWrenEngineColumnType.DATE,
     "datetime": RustWrenEngineColumnType.TIMESTAMP,
+    "datetime64": RustWrenEngineColumnType.TIMESTAMP,
     # String Types
     "string": RustWrenEngineColumnType.VARCHAR,
     "fixedstring": RustWrenEngineColumnType.CHAR,
@@ -90,11 +91,12 @@ class ClickHouseMetadata(Metadata):
                 )
 
             # table exists, and add column to the table
+            is_nullable = 'nullable(' in row["data_type"].lower()
             unique_tables[schema_table].columns.append(
                 Column(
                     name=row["column_name"],
                     type=self._transform_column_type(row["data_type"]),
-                    notNull=False,
+                    notNull=not is_nullable,
                     description=row["column_comment"],
                     properties=None,
                 )
@@ -120,7 +122,9 @@ class ClickHouseMetadata(Metadata):
             The corresponding RustWrenEngineColumnType
         """
         # Convert to lowercase for comparison
-        normalized_type = data_type.lower()
+        # Extract inner type from wrappers like Nullable(...), Array(...), etc.
+        inner_type = self._extract_inner_type(data_type)
+        normalized_type = inner_type.lower()
 
         # Decimal type with precision and scale
         if normalized_type.startswith("decimal"):
@@ -144,3 +148,25 @@ class ClickHouseMetadata(Metadata):
             logger.warning(f"Unknown ClickHouse data type: {data_type}")
 
         return mapped_type
+
+def _extract_inner_type(self, data_type: str) -> str:
+        """Extract the inner type from ClickHouse type definitions.
+
+        This handles types wrapped in Nullable(...), Array(...), etc.
+
+        Args:
+            data_type: The ClickHouse data type string
+
+        Returns:
+            The extracted inner type string
+        """
+
+        if '(' in data_type and data_type.endswith(')'):
+            paren_start = data_type.find('(')
+            type_name = data_type[:paren_start].lower()
+            inner = data_type[paren_start + 1:-1]
+
+            if type_name in ['nullable', 'array', 'lowcardinality']:
+                return self._extract_inner_type(inner)
+            else:
+                return type_name
