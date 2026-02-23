@@ -632,7 +632,10 @@ impl InnerDialect for ClickHouseDialect {
                         &[args[1].clone()],
                     );
                 }
-                Ok(None)
+                plan_err!(
+                    "date_part requires a string literal as the first argument (field), got: {:?}",
+                    args[0]
+                )
             }
             _ => Ok(None),
         }
