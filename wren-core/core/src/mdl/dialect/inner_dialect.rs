@@ -28,6 +28,7 @@ use crate::mdl::manifest::DataSource;
 use datafusion::common::{plan_err, Result};
 use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
 use datafusion::logical_expr::{Expr, LogicalPlan};
+use datafusion::sql::sqlparser::tokenizer::Span; 
 
 use datafusion::scalar::ScalarValue;
 use datafusion::sql::sqlparser::ast::{
@@ -124,6 +125,7 @@ pub fn get_inner_dialect(data_source: &DataSource) -> Box<dyn InnerDialect> {
         DataSource::Oracle => Box::new(OracleDialect {}),
         DataSource::MSSQL => Box::new(MsSqlDialect {}),
         DataSource::Snowflake => Box::new(SnowflakeDialect {}),
+        DataSource::Clickhouse => Box::new(ClickHouseDialect {}),
         _ => Box::new(GenericDialect {}),
     }
 }
@@ -562,5 +564,84 @@ impl InnerDialect for SnowflakeDialect {
             }
         }
         false
+    }
+}
+
+/// [ClickHouseDialect] is a dialect for ClickHouse database.
+/// ClickHouse uses specific functions for date/time operations (e.g., toDayOfWeek, toYear)
+/// instead of standard SQL EXTRACT or date_part.
+pub struct ClickHouseDialect {}
+
+impl InnerDialect for ClickHouseDialect {
+    fn scalar_function_to_sql_overrides(
+        &self,
+        unparser: &Unparser,
+        function_name: &str,
+        args: &[Expr],
+    ) -> Result<Option<ast::Expr>> {
+        match function_name {
+            "date_part" => {
+                // Map date_part to ClickHouse native functions
+                if args.len() != 2 {
+                    return plan_err!(
+                        "date_part requires exactly 2 arguments, found {}",
+                        args.len()
+                    );
+                }
+
+                // Extract the field name from the first argument
+                if let Expr::Literal(ScalarValue::Utf8(Some(field)), _) = &args[0] {
+                    let clickhouse_func = match field.to_lowercase().as_str() {
+                        "year" => "toYear",
+                        "quarter" => "toQuarter",
+                        "month" => "toMonth",
+                        "week" => "toWeek",
+                        "day" => "toDayOfMonth",
+                        "dow" | "dayofweek" => {
+                            // ClickHouse toDayOfWeek returns 1-7 (Mon-Sun)
+                            // but we need 0-6 (Sun-Sat) like PostgreSQL
+                            // Convert using modulo: (toDayOfWeek % 7) converts 1-7 to 1-6,0
+                            let func_expr = scalar_function_to_sql_internal(
+                                unparser,
+                                None,
+                                "toDayOfWeek",
+                                &[args[1].clone()],
+                            )?;
+
+                            if let Some(inner_expr) = func_expr {
+                                return Ok(Some(ast::Expr::BinaryOp {
+                                    left: Box::new(inner_expr),
+                                    op: ast::BinaryOperator::Modulo,
+                                    right: Box::new(ast::Expr::Value(
+                                        ast::ValueWithSpan {
+                                            value: ast::Value::Number(
+                                                "7".to_string(),
+                                                false,
+                                            ),
+                                            span: Span::empty(),
+                                        },
+                                    )),
+                                }));
+                            }
+                            return Ok(None);
+                        }
+                        "doy" | "dayofyear" => "toDayOfYear",
+                        "hour" => "toHour",
+                        "minute" => "toMinute",
+                        "second" => "toSecond",
+                        _ => return Ok(None),
+                    };
+
+                    return scalar_function_to_sql_internal(
+                        unparser,
+                        None,
+                        clickhouse_func,
+                        &[args[1].clone()],
+                    );
+                }
+                Ok(None)
+            }
+            _ => Ok(None),
+        }
     }
 }
