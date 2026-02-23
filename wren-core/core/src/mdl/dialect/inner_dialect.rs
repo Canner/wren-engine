@@ -590,40 +590,33 @@ impl InnerDialect for ClickHouseDialect {
                 }
 
                 // Extract the field name from the first argument
-                if let Expr::Literal(ScalarValue::Utf8(Some(field)), _) = &args[0] {
+                if let Expr::Literal(ScalarValue::Utf8(Some(field)), _)
++                    | Expr::Literal(ScalarValue::LargeUtf8(Some(field)), _) = &args[0] {
                     let clickhouse_func = match field.to_lowercase().as_str() {
                         "year" => "toYear",
                         "quarter" => "toQuarter",
                         "month" => "toMonth",
-                        "week" => "toWeek",
+                        "week" => "toISOWeek",
                         "day" => "toDayOfMonth",
                         "dow" | "dayofweek" => {
                             // ClickHouse toDayOfWeek returns 1-7 (Mon-Sun)
                             // but we need 0-6 (Sun-Sat) like PostgreSQL
                             // Convert using modulo: (toDayOfWeek % 7) converts 1-7 to 1-6,0
-                            let func_expr = scalar_function_to_sql_internal(
-                                unparser,
-                                None,
-                                "toDayOfWeek",
-                                &[args[1].clone()],
-                            )?;
-
-                            if let Some(inner_expr) = func_expr {
-                                return Ok(Some(ast::Expr::BinaryOp {
-                                    left: Box::new(inner_expr),
-                                    op: ast::BinaryOperator::Modulo,
-                                    right: Box::new(ast::Expr::Value(
-                                        ast::ValueWithSpan {
-                                            value: ast::Value::Number(
-                                                "7".to_string(),
-                                                false,
-                                            ),
-                                            span: Span::empty(),
-                                        },
-                                    )),
-                                }));
-                            }
-                            return Ok(None);
+                            let inner_expr = scalar_function_to_sql_internal(
++                                unparser,
++                                None,
++                                "toDayOfWeek",
++                                &[args[1].clone()],
++                            )?
++                            .expect("scalar_function_to_sql_internal always returns Some");
++                            return Ok(Some(ast::Expr::BinaryOp {
++                                left: Box::new(inner_expr),
++                                op: ast::BinaryOperator::Modulo,
++                                right: Box::new(ast::Expr::Value(ast::ValueWithSpan {
++                                    value: ast::Value::Number("7".to_string(), false),
++                                    span: Span::empty(),
++                                })),
++                            }));
                         }
                         "doy" | "dayofyear" => "toDayOfYear",
                         "hour" => "toHour",

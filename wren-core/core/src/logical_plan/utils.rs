@@ -184,10 +184,8 @@ pub fn map_data_type(data_type: &str) -> Result<DataType> {
         "uint16" => DataType::UInt16,
         "uint32" => DataType::UInt32,
         "uint64" => DataType::UInt64,
-        "int8" => DataType::Int8,
         "int16" => DataType::Int16,
         "int32" => DataType::Int32,
-        "int64" => DataType::Int64,
         // DuckDB Compatible Types
         "blob" => DataType::Binary,
         "hugeint" => DataType::Int64, // we don't have a HUGEINT type, so we map it to Int64
