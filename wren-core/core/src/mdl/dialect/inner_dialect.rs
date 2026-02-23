@@ -622,7 +622,12 @@ impl InnerDialect for ClickHouseDialect {
                         "hour" => "toHour",
                         "minute" => "toMinute",
                         "second" => "toSecond",
-                        _ => return Ok(None),
+                        _ => return plan_err!(
+                            "Unsupported date part '{}' for ClickHouse. Supported values: \
+                             year, quarter, month, week, day, dow, dayofweek, doy, dayofyear, \
+                             hour, minute, second",
+                            field
+                        ),
                     };
 
                     return scalar_function_to_sql_internal(
