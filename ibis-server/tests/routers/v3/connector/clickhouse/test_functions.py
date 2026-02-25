@@ -125,6 +125,7 @@ async def test_date_part_year(client, manifest_str: str, connection_info):
         "dtypes": {"col": "uint16"},
     }
 
+
 async def test_date_part_month(client, manifest_str: str, connection_info):
     response = await client.post(
         url=f"{base_url}/query",
