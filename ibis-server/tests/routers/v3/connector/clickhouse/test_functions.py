@@ -113,7 +113,7 @@ async def test_date_part_year(client, manifest_str: str, connection_info):
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": "SELECT date_part('year', '2026-02-25'::Date) AS col",
+            "sql": "SELECT date_part('year', toDate('2026-02-25')) AS col",
         },
     )
     assert response.status_code == 200
@@ -131,7 +131,7 @@ async def test_date_part_month(client, manifest_str: str, connection_info):
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": "SELECT date_part('month', '2026-02-25'::Date) AS col",
+            "sql": "SELECT date_part('month', toDate('2026-02-25')) AS col",
         },
     )
     assert response.status_code == 200
@@ -149,7 +149,7 @@ async def test_date_part_day(client, manifest_str: str, connection_info):
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": "SELECT date_part('day', '2026-02-25'::Date) AS col",
+            "sql": "SELECT date_part('day', toDate('2026-02-25')) AS col",
         },
     )
     assert response.status_code == 200
@@ -167,7 +167,7 @@ async def test_date_part_hour(client, manifest_str: str, connection_info):
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": "SELECT date_part('hour', '2026-02-25 14:30:45'::DateTime) AS col",
+            "sql": "SELECT date_part('hour', toDateTime('2026-02-25 14:30:45')) AS col",
         },
     )
     assert response.status_code == 200
@@ -185,7 +185,7 @@ async def test_date_part_minute(client, manifest_str: str, connection_info):
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": "SELECT date_part('minute', '2026-02-25 14:30:45'::DateTime) AS col",
+            "sql": "SELECT date_part('minute', toDateTime('2026-02-25 14:30:45')) AS col",
         },
     )
     assert response.status_code == 200
@@ -203,7 +203,7 @@ async def test_date_part_dow(client, manifest_str: str, connection_info):
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": "SELECT date_part('dow', '2026-02-25'::Date) AS col",
+            "sql": "SELECT date_part('dow', toDate('2026-02-25')) AS col",
         },
     )
     assert response.status_code == 200
