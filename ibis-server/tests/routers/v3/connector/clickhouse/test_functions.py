@@ -105,3 +105,111 @@ async def test_aggregate_function(client, manifest_str: str, connection_info):
         "data": [[1]],
         "dtypes": {"col": "uint64"},
     }
+
+
+async def test_date_part_year(client, manifest_str: str, connection_info):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT date_part('year', '2026-02-25'::Date) AS col",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert result == {
+        "columns": ["col"],
+        "data": [[2026]],
+        "dtypes": {"col": "uint16"},
+    }
+
+
+async def test_date_part_month(client, manifest_str: str, connection_info):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT date_part('month', '2026-02-25'::Date) AS col",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert result == {
+        "columns": ["col"],
+        "data": [[2]],
+        "dtypes": {"col": "uint8"},
+    }
+
+
+async def test_date_part_day(client, manifest_str: str, connection_info):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT date_part('day', '2026-02-25'::Date) AS col",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert result == {
+        "columns": ["col"],
+        "data": [[25]],
+        "dtypes": {"col": "uint8"},
+    }
+
+
+async def test_date_part_hour(client, manifest_str: str, connection_info):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT date_part('hour', '2026-02-25 14:30:45'::DateTime) AS col",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert result == {
+        "columns": ["col"],
+        "data": [[14]],
+        "dtypes": {"col": "uint8"},
+    }
+
+
+async def test_date_part_minute(client, manifest_str: str, connection_info):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT date_part('minute', '2026-02-25 14:30:45'::DateTime) AS col",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert result == {
+        "columns": ["col"],
+        "data": [[30]],
+        "dtypes": {"col": "uint8"},
+    }
+
+
+async def test_date_part_dow(client, manifest_str: str, connection_info):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT date_part('dow', '2026-02-25'::Date) AS col",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert result == {
+        "columns": ["col"],
+        "data": [[3]],
+        "dtypes": {"col": "uint8"},
+    }
