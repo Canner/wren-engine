@@ -572,23 +572,30 @@ impl InnerDialect for SnowflakeDialect {
 /// instead of standard SQL EXTRACT or date_part.
 pub struct ClickHouseDialect {}
 
+
 impl ClickHouseDialect {
-    /// Helper function to create case-sensitive function calls for ClickHouse
     fn clickhouse_function_to_sql(
         unparser: &Unparser,
-        func_name: &str,
+        function_name: &str,
         args: &[Expr],
     ) -> Result<Option<ast::Expr>> {
-        let args = crate::mdl::dialect::utils::function_args_to_sql(unparser, args)?;
+        let sql_args = args
+            .iter()
+            .map(|arg| unparser.expr_to_sql(arg).map(ast::FunctionArgExpr::Expr))
+            .collect::<Result<Vec<_>>>()?;
+
         Ok(Some(ast::Expr::Function(Function {
             name: ObjectName(vec![ObjectNamePart::Identifier(Ident {
-                value: func_name.to_string(),
-                quote_style: Some('"'),
+                value: function_name.to_string(),
+                quote_style: None,
                 span: Span::empty(),
             })]),
             args: ast::FunctionArguments::List(ast::FunctionArgumentList {
                 duplicate_treatment: None,
-                args,
+                args: sql_args
+                    .into_iter()
+                    .map(ast::FunctionArg::Unnamed)
+                    .collect(),
                 clauses: vec![],
             }),
             filter: None,
@@ -620,7 +627,8 @@ impl InnerDialect for ClickHouseDialect {
 
                 // Extract the field name from the first argument
                 if let Expr::Literal(ScalarValue::Utf8(Some(field)), _)
-                    | Expr::Literal(ScalarValue::LargeUtf8(Some(field)), _) = &args[0] {
+                    | Expr::Literal(ScalarValue::LargeUtf8(Some(field)), _) = &args[0]
+                {
                     let clickhouse_func = match field.to_lowercase().as_str() {
                         "year" => "toYear",
                         "quarter" => "toQuarter",
@@ -650,12 +658,14 @@ impl InnerDialect for ClickHouseDialect {
                         "hour" => "toHour",
                         "minute" => "toMinute",
                         "second" => "toSecond",
-                        _ => return plan_err!(
-                            "Unsupported date part '{}' for ClickHouse. Supported values: \
-                             year, quarter, month, week, day, dow, dayofweek, doy, dayofyear, \
-                             hour, minute, second",
-                            field
-                        ),
+                        _ => {
+                            return plan_err!(
+                                "Unsupported date part '{}' for ClickHouse. Supported values: \
+                                 year, quarter, month, week, day, dow, dayofweek, doy, dayofyear, \
+                                 hour, minute, second",
+                                field
+                            )
+                        }
                     };
 
                     return Self::clickhouse_function_to_sql(
@@ -669,13 +679,33 @@ impl InnerDialect for ClickHouseDialect {
                     args[0]
                 )
             }
-            // Preserve case for ClickHouse date/time conversion functions
+            // Map lowercase function names back to ClickHouse's native camelCase names
+            // This is necessary because DataFusion normalizes function names to lowercase,
+            // but ClickHouse functions are case-sensitive
+            "toyear" => Self::clickhouse_function_to_sql(unparser, "toYear", args),
+            "toquarter" => Self::clickhouse_function_to_sql(unparser, "toQuarter", args),
+            "tomonth" => Self::clickhouse_function_to_sql(unparser, "toMonth", args),
             "todate" => Self::clickhouse_function_to_sql(unparser, "toDate", args),
+            "todate32" => Self::clickhouse_function_to_sql(unparser, "toDate32", args),
             "todatetime" => Self::clickhouse_function_to_sql(unparser, "toDateTime", args),
             "todatetime64" => Self::clickhouse_function_to_sql(unparser, "toDateTime64", args),
-            "todate32" => Self::clickhouse_function_to_sql(unparser, "toDate32", args),
-            "totime" => Self::clickhouse_function_to_sql(unparser, "toTime", args),
-            "totimestamp" => Self::clickhouse_function_to_sql(unparser, "toTimestamp", args),
+            "toisoweek" => Self::clickhouse_function_to_sql(unparser, "toISOWeek", args),
+            "todayofmonth" => Self::clickhouse_function_to_sql(unparser, "toDayOfMonth", args),
+            "todayofweek" => Self::clickhouse_function_to_sql(unparser, "toDayOfWeek", args),
+            "todayofyear" => Self::clickhouse_function_to_sql(unparser, "toDayOfYear", args),
+            "tohour" => Self::clickhouse_function_to_sql(unparser, "toHour", args),
+            "tominute" => Self::clickhouse_function_to_sql(unparser, "toMinute", args),
+            "tosecond" => Self::clickhouse_function_to_sql(unparser, "toSecond", args),
+            "uniqexact" => Self::clickhouse_function_to_sql(unparser, "uniqExact", args),
+            "grouparray" => Self::clickhouse_function_to_sql(unparser, "groupArray", args),
+            "groupuniqarray" => Self::clickhouse_function_to_sql(unparser, "groupUniqArray", args),
+            "stddevpop" => Self::clickhouse_function_to_sql(unparser, "stddevPop", args),
+            "stddevsamp" => Self::clickhouse_function_to_sql(unparser, "stddevSamp", args),
+            "varpop" => Self::clickhouse_function_to_sql(unparser, "varPop", args),
+            "varsamp" => Self::clickhouse_function_to_sql(unparser, "varSamp", args),
+            "anylast" => Self::clickhouse_function_to_sql(unparser, "anyLast", args),
+            "argmin" => Self::clickhouse_function_to_sql(unparser, "argMin", args),
+            "argmax" => Self::clickhouse_function_to_sql(unparser, "argMax", args),
             _ => Ok(None),
         }
     }

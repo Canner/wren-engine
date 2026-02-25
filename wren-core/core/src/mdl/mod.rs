@@ -530,22 +530,29 @@ fn register_remote_function(
     ctx: &SessionContext,
     remote_function: &RemoteFunction,
 ) -> Result<()> {
+    // DataFusion normalizes function names to lowercase during SQL parsing,
+    // but we need to register with the original name for SQL generation
+    // and add the lowercase name as an alias for parsing.
+    let normalized_name = remote_function.name.to_lowercase();
+    let original_name = &remote_function.name;
+    
     match &remote_function.function_type {
         FunctionType::Scalar => ctx.register_udf(ScalarUDF::new_from_impl(
-            ByPassScalarUDF::new_with_return_type(
-                &remote_function.name,
+            ByPassScalarUDF::new_with_original_name(
+                original_name,
+                &normalized_name,
                 try_map_data_type(&remote_function.return_type)?,
             ),
         )),
         FunctionType::Aggregate => ctx.register_udaf(AggregateUDF::new_from_impl(
             ByPassAggregateUDF::new_with_return_type(
-                &remote_function.name,
+                &normalized_name,
                 try_map_data_type(&remote_function.return_type)?,
             ),
         )),
         FunctionType::Window => ctx.register_udwf(WindowUDF::new_from_impl(
             ByPassWindowFunction::new_with_return_type(
-                &remote_function.name,
+                &normalized_name,
                 try_map_data_type(&remote_function.return_type)?,
             ),
         )),

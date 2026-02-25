@@ -301,8 +301,12 @@ impl PySessionContext {
 impl PySessionContext {
     fn register_remote_function(
         ctx: &wren_core::SessionContext,
-        remote_function: RemoteFunction,
+        mut remote_function: RemoteFunction,
     ) -> PyResult<()> {
+        // DataFusion normalizes function names to lowercase during SQL parsing,
+        // so we need to normalize the function name before registration
+        remote_function.name = remote_function.name.to_lowercase();
+        
         match &remote_function.function_type {
             FunctionType::Scalar => {
                 let func: ByPassScalarUDF = remote_function.into();
@@ -413,7 +417,9 @@ impl PySessionContext {
                     .try_for_each(|remote_function| {
                         debug!("Registering remote function: {:?}", remote_function);
                         // TODO: check not only the name but also the return type and the parameter types
-                        if !registered_functions.contains(&remote_function.name) {
+                        // DataFusion normalizes function names to lowercase, so we need to check with lowercase
+                        let normalized_name = remote_function.name.to_lowercase();
+                        if !registered_functions.contains(&normalized_name) {
                             Self::register_remote_function(ctx, remote_function)?;
                         }
                         Ok::<(), CoreError>(())

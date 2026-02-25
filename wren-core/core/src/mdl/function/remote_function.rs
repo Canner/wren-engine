@@ -178,6 +178,12 @@ impl ReturnType {
 #[derive(Debug)]
 pub struct ByPassScalarUDF {
     name: String,
+    /// The original function name as it should appear in the generated SQL.
+    /// This is used to preserve case-sensitive function names (e.g., toYear for ClickHouse)
+    /// even though DataFusion normalizes function names to lowercase during parsing.
+    original_name: Option<String>,
+    /// Aliases for the function, including the normalized name if different from original
+    aliases: Vec<String>,
     return_type: ReturnType,
     signature: Signature,
     doc: Option<Documentation>,
@@ -192,6 +198,8 @@ impl ByPassScalarUDF {
     ) -> Self {
         Self {
             name: name.to_string(),
+            original_name: None,
+            aliases: vec![],
             return_type,
             signature,
             doc,
@@ -201,6 +209,8 @@ impl ByPassScalarUDF {
     pub fn new_with_return_type(name: &str, return_type: DataType) -> Self {
         Self {
             name: name.to_string(),
+            original_name: None,
+            aliases: vec![],
             return_type: ReturnType::Specific(return_type),
             signature: Signature::one_of(
                 vec![TypeSignature::Nullary, TypeSignature::VariadicAny],
@@ -208,6 +218,32 @@ impl ByPassScalarUDF {
             ),
             doc: None,
         }
+    }
+    
+    pub fn new_with_original_name(original_name: &str, alias_name: &str, return_type: DataType) -> Self {
+        // Register with original name (e.g., "toYear") for SQL generation
+        // Add lowercase alias (e.g., "toyear") for DataFusion parsing
+        let aliases = if original_name.to_lowercase() != alias_name.to_lowercase() {
+            vec![alias_name.to_string()]
+        } else {
+            vec![]
+        };
+        
+        Self {
+            name: original_name.to_string(), // Use original name for SQL generation
+            original_name: Some(original_name.to_string()),
+            aliases, // Add normalized name as alias for parsing
+            return_type: ReturnType::Specific(return_type),
+            signature: Signature::one_of(
+                vec![TypeSignature::Nullary, TypeSignature::VariadicAny],
+                Volatility::Volatile,
+            ),
+            doc: None,
+        }
+    }
+    
+    pub fn original_name(&self) -> Option<&str> {
+        self.original_name.as_deref()
     }
 }
 
@@ -221,6 +257,8 @@ impl From<RemoteFunction> for ByPassScalarUDF {
             signature: func.get_signature(),
             doc: Some(build_document(&func)),
             name: func.name,
+            original_name: None,
+            aliases: vec![],
         }
     }
 }
@@ -252,6 +290,10 @@ impl ScalarUDFImpl for ByPassScalarUDF {
 
     fn name(&self) -> &str {
         &self.name
+    }
+    
+    fn aliases(&self) -> &[String] {
+        &self.aliases
     }
 
     fn signature(&self) -> &Signature {

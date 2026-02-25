@@ -22,6 +22,7 @@ manifest = {
             ],
         },
     ],
+    "dataSource": "CLICKHOUSE",
 }
 
 function_list_path = file_path("../resources/function_list")
@@ -53,7 +54,7 @@ async def test_function_list(client):
     response = await client.get(url=f"{base_url}/functions")
     assert response.status_code == 200
     result = response.json()
-    assert len(result) == DATAFUSION_FUNCTION_COUNT + 82
+    assert len(result) == DATAFUSION_FUNCTION_COUNT + 80
     the_func = next(filter(lambda x: x["name"] == "uniq", result))
     assert the_func == {
         "name": "uniq",
@@ -124,7 +125,6 @@ async def test_date_part_year(client, manifest_str: str, connection_info):
         "dtypes": {"col": "uint16"},
     }
 
-
 async def test_date_part_month(client, manifest_str: str, connection_info):
     response = await client.post(
         url=f"{base_url}/query",
@@ -149,7 +149,7 @@ async def test_date_part_day(client, manifest_str: str, connection_info):
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": "SELECT date_part('day', toDate('2026-02-25')) AS col",
+            "sql": "SELECT date_part('day', '2026-02-25') AS col",
         },
     )
     assert response.status_code == 200
