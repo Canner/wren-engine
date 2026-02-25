@@ -572,6 +572,35 @@ impl InnerDialect for SnowflakeDialect {
 /// instead of standard SQL EXTRACT or date_part.
 pub struct ClickHouseDialect {}
 
+impl ClickHouseDialect {
+    /// Helper function to create case-sensitive function calls for ClickHouse
+    fn clickhouse_function_to_sql(
+        unparser: &Unparser,
+        func_name: &str,
+        args: &[Expr],
+    ) -> Result<Option<ast::Expr>> {
+        let args = crate::mdl::dialect::utils::function_args_to_sql(unparser, args)?;
+        Ok(Some(ast::Expr::Function(Function {
+            name: ObjectName(vec![ObjectNamePart::Identifier(Ident {
+                value: func_name.to_string(),
+                quote_style: Some('"'),
+                span: Span::empty(),
+            })]),
+            args: ast::FunctionArguments::List(ast::FunctionArgumentList {
+                duplicate_treatment: None,
+                args,
+                clauses: vec![],
+            }),
+            filter: None,
+            null_treatment: None,
+            over: None,
+            within_group: vec![],
+            parameters: ast::FunctionArguments::None,
+            uses_odbc_syntax: false,
+        })))
+    }
+}
+
 impl InnerDialect for ClickHouseDialect {
     fn scalar_function_to_sql_overrides(
         &self,
@@ -602,13 +631,12 @@ impl InnerDialect for ClickHouseDialect {
                             // ClickHouse toDayOfWeek returns 1-7 (Mon-Sun)
                             // but we need 0-6 (Sun-Sat) like PostgreSQL
                             // Convert using modulo: (toDayOfWeek % 7) converts 1-7 to 1-6,0
-                            let inner_expr = scalar_function_to_sql_internal(
+                            let inner_expr = Self::clickhouse_function_to_sql(
                                 unparser,
-                                None,
                                 "toDayOfWeek",
                                 &[args[1].clone()],
                             )?
-                            .expect("scalar_function_to_sql_internal always returns Some");
+                            .expect("clickhouse_function_to_sql always returns Some");
                             return Ok(Some(ast::Expr::BinaryOp {
                                 left: Box::new(inner_expr),
                                 op: ast::BinaryOperator::Modulo,
@@ -630,9 +658,8 @@ impl InnerDialect for ClickHouseDialect {
                         ),
                     };
 
-                    return scalar_function_to_sql_internal(
+                    return Self::clickhouse_function_to_sql(
                         unparser,
-                        None,
                         clickhouse_func,
                         &[args[1].clone()],
                     );
