@@ -669,6 +669,13 @@ impl InnerDialect for ClickHouseDialect {
                     args[0]
                 )
             }
+            // Preserve case for ClickHouse date/time conversion functions
+            "todate" => Self::clickhouse_function_to_sql(unparser, "toDate", args),
+            "todatetime" => Self::clickhouse_function_to_sql(unparser, "toDateTime", args),
+            "todatetime64" => Self::clickhouse_function_to_sql(unparser, "toDateTime64", args),
+            "todate32" => Self::clickhouse_function_to_sql(unparser, "toDate32", args),
+            "totime" => Self::clickhouse_function_to_sql(unparser, "toTime", args),
+            "totimestamp" => Self::clickhouse_function_to_sql(unparser, "toTimestamp", args),
             _ => Ok(None),
         }
     }
