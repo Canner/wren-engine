@@ -176,6 +176,16 @@ pub fn map_data_type(data_type: &str) -> Result<DataType> {
         "null" => DataType::Null,
         // Trino Compatible Types
         "varbinary" => DataType::Binary,
+        // ClickHouse Compatible Types
+        "datetime64" => DataType::Timestamp(TimeUnit::Nanosecond, None),
+        "datetime32" => DataType::Timestamp(TimeUnit::Second, None),
+        "date32" => DataType::Date32,
+        "uint8" => DataType::UInt8,
+        "uint16" => DataType::UInt16,
+        "uint32" => DataType::UInt32,
+        "uint64" => DataType::UInt64,
+        "int16" => DataType::Int16,
+        "int32" => DataType::Int32,
         // DuckDB Compatible Types
         "blob" => DataType::Binary,
         "hugeint" => DataType::Int64, // we don't have a HUGEINT type, so we map it to Int64

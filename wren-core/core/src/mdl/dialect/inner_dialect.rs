@@ -28,6 +28,7 @@ use crate::mdl::manifest::DataSource;
 use datafusion::common::{plan_err, Result};
 use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
 use datafusion::logical_expr::{Expr, LogicalPlan};
+use datafusion::sql::sqlparser::tokenizer::Span; 
 
 use datafusion::scalar::ScalarValue;
 use datafusion::sql::sqlparser::ast::{
@@ -124,6 +125,7 @@ pub fn get_inner_dialect(data_source: &DataSource) -> Box<dyn InnerDialect> {
         DataSource::Oracle => Box::new(OracleDialect {}),
         DataSource::MSSQL => Box::new(MsSqlDialect {}),
         DataSource::Snowflake => Box::new(SnowflakeDialect {}),
+        DataSource::Clickhouse => Box::new(ClickHouseDialect {}),
         _ => Box::new(GenericDialect {}),
     }
 }
@@ -562,5 +564,149 @@ impl InnerDialect for SnowflakeDialect {
             }
         }
         false
+    }
+}
+
+/// [ClickHouseDialect] is a dialect for ClickHouse database.
+/// ClickHouse uses specific functions for date/time operations (e.g., toDayOfWeek, toYear)
+/// instead of standard SQL EXTRACT or date_part.
+pub struct ClickHouseDialect {}
+
+
+impl ClickHouseDialect {
+    fn clickhouse_function_to_sql(
+        unparser: &Unparser,
+        function_name: &str,
+        args: &[Expr],
+    ) -> Result<Option<ast::Expr>> {
+        let sql_args = args
+            .iter()
+            .map(|arg| unparser.expr_to_sql(arg).map(ast::FunctionArgExpr::Expr))
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(Some(ast::Expr::Function(Function {
+            name: ObjectName(vec![ObjectNamePart::Identifier(Ident {
+                value: function_name.to_string(),
+                quote_style: None,
+                span: Span::empty(),
+            })]),
+            args: ast::FunctionArguments::List(ast::FunctionArgumentList {
+                duplicate_treatment: None,
+                args: sql_args
+                    .into_iter()
+                    .map(ast::FunctionArg::Unnamed)
+                    .collect(),
+                clauses: vec![],
+            }),
+            filter: None,
+            null_treatment: None,
+            over: None,
+            within_group: vec![],
+            parameters: ast::FunctionArguments::None,
+            uses_odbc_syntax: false,
+        })))
+    }
+}
+
+impl InnerDialect for ClickHouseDialect {
+    fn scalar_function_to_sql_overrides(
+        &self,
+        unparser: &Unparser,
+        function_name: &str,
+        args: &[Expr],
+    ) -> Result<Option<ast::Expr>> {
+        match function_name {
+            "date_part" => {
+                // Map date_part to ClickHouse native functions
+                if args.len() != 2 {
+                    return plan_err!(
+                        "date_part requires exactly 2 arguments, found {}",
+                        args.len()
+                    );
+                }
+
+                // Extract the field name from the first argument
+                if let Expr::Literal(ScalarValue::Utf8(Some(field)), _)
+                    | Expr::Literal(ScalarValue::LargeUtf8(Some(field)), _) = &args[0]
+                {
+                    let clickhouse_func = match field.to_lowercase().as_str() {
+                        "year" => "toYear",
+                        "quarter" => "toQuarter",
+                        "month" => "toMonth",
+                        "week" => "toISOWeek",
+                        "day" => "toDayOfMonth",
+                        "dow" | "dayofweek" => {
+                            // ClickHouse toDayOfWeek returns 1-7 (Mon-Sun)
+                            // but we need 0-6 (Sun-Sat) like PostgreSQL
+                            // Convert using modulo: (toDayOfWeek % 7) converts 1-7 to 1-6,0
+                            let inner_expr = Self::clickhouse_function_to_sql(
+                                unparser,
+                                "toDayOfWeek",
+                                &[args[1].clone()],
+                            )?
+                            .expect("clickhouse_function_to_sql always returns Some");
+                            return Ok(Some(ast::Expr::BinaryOp {
+                                left: Box::new(inner_expr),
+                                op: ast::BinaryOperator::Modulo,
+                                right: Box::new(ast::Expr::Value(ast::ValueWithSpan {
+                                    value: ast::Value::Number("7".to_string(), false),
+                                    span: Span::empty(),
+                                })),
+                            }));
+                        }
+                        "doy" | "dayofyear" => "toDayOfYear",
+                        "hour" => "toHour",
+                        "minute" => "toMinute",
+                        "second" => "toSecond",
+                        _ => {
+                            return plan_err!(
+                                "Unsupported date part '{}' for ClickHouse. Supported values: \
+                                 year, quarter, month, week, day, dow, dayofweek, doy, dayofyear, \
+                                 hour, minute, second",
+                                field
+                            )
+                        }
+                    };
+
+                    return Self::clickhouse_function_to_sql(
+                        unparser,
+                        clickhouse_func,
+                        &[args[1].clone()],
+                    );
+                }
+                plan_err!(
+                    "date_part requires a string literal as the first argument (field), got: {:?}",
+                    args[0]
+                )
+            }
+            // Map lowercase function names back to ClickHouse's native camelCase names
+            // This is necessary because DataFusion normalizes function names to lowercase,
+            // but ClickHouse functions are case-sensitive
+            "toyear" => Self::clickhouse_function_to_sql(unparser, "toYear", args),
+            "toquarter" => Self::clickhouse_function_to_sql(unparser, "toQuarter", args),
+            "tomonth" => Self::clickhouse_function_to_sql(unparser, "toMonth", args),
+            "todate" => Self::clickhouse_function_to_sql(unparser, "toDate", args),
+            "todate32" => Self::clickhouse_function_to_sql(unparser, "toDate32", args),
+            "todatetime" => Self::clickhouse_function_to_sql(unparser, "toDateTime", args),
+            "todatetime64" => Self::clickhouse_function_to_sql(unparser, "toDateTime64", args),
+            "toisoweek" => Self::clickhouse_function_to_sql(unparser, "toISOWeek", args),
+            "todayofmonth" => Self::clickhouse_function_to_sql(unparser, "toDayOfMonth", args),
+            "todayofweek" => Self::clickhouse_function_to_sql(unparser, "toDayOfWeek", args),
+            "todayofyear" => Self::clickhouse_function_to_sql(unparser, "toDayOfYear", args),
+            "tohour" => Self::clickhouse_function_to_sql(unparser, "toHour", args),
+            "tominute" => Self::clickhouse_function_to_sql(unparser, "toMinute", args),
+            "tosecond" => Self::clickhouse_function_to_sql(unparser, "toSecond", args),
+            "uniqexact" => Self::clickhouse_function_to_sql(unparser, "uniqExact", args),
+            "grouparray" => Self::clickhouse_function_to_sql(unparser, "groupArray", args),
+            "groupuniqarray" => Self::clickhouse_function_to_sql(unparser, "groupUniqArray", args),
+            "stddevpop" => Self::clickhouse_function_to_sql(unparser, "stddevPop", args),
+            "stddevsamp" => Self::clickhouse_function_to_sql(unparser, "stddevSamp", args),
+            "varpop" => Self::clickhouse_function_to_sql(unparser, "varPop", args),
+            "varsamp" => Self::clickhouse_function_to_sql(unparser, "varSamp", args),
+            "anylast" => Self::clickhouse_function_to_sql(unparser, "anyLast", args),
+            "argmin" => Self::clickhouse_function_to_sql(unparser, "argMin", args),
+            "argmax" => Self::clickhouse_function_to_sql(unparser, "argMax", args),
+            _ => Ok(None),
+        }
     }
 }
