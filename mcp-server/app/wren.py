@@ -7,15 +7,25 @@ import os
 import httpx
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
-from dto import Manifest, TableColumns
-from utils import dict_to_base64_string, json_to_base64_string
 
-mcp = FastMCP("Wren Engine")
+try:
+    from dto import Manifest, TableColumns
+    from utils import dict_to_base64_string, json_to_base64_string
+except ImportError:
+    from app.dto import Manifest, TableColumns
+    from app.utils import dict_to_base64_string, json_to_base64_string
 
 load_dotenv()
+
+MCP_TRANSPORT = os.getenv("MCP_TRANSPORT", "stdio")
+MCP_HOST = os.getenv("MCP_HOST", "0.0.0.0")
+MCP_PORT = int(os.getenv("MCP_PORT", "9000"))
+
+mcp = FastMCP("Wren Engine", host=MCP_HOST, port=MCP_PORT)
+
 WREN_URL = os.getenv("WREN_URL", "localhost:8000")
 USER_AGENT = "wren-app/1.0"
-MDL_SCHEMA_PATH = "mdl.schema.json"
+MDL_SCHEMA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "mdl.schema.json")
 connection_info_path = os.getenv("CONNECTION_INFO_FILE")
 mdl_path = os.getenv("MDL_PATH")
 
@@ -531,5 +541,4 @@ async def health_check() -> str:
 
 
 if __name__ == "__main__":
-    # Initialize and run the server
-    mcp.run(transport="stdio")
+    mcp.run(transport=MCP_TRANSPORT)

@@ -36,6 +36,9 @@ WORKDIR /app
 COPY . .
 RUN just install --without dev
 
+# Install MCP server dependencies into the venv
+RUN poetry run pip install "mcp[cli]>=1.19.0,<2"
+
 
 FROM python:3.11-slim-bookworm AS runtime
 
@@ -71,6 +74,10 @@ COPY resources ./resources/
 COPY notebooks ./notebooks/
 COPY wren/ ./wren/
 
+# Copy MCP server
+COPY --from=mcp-server ./app /mcp-server/app/
+COPY --from=mcp-server ./mdl.schema.json /mcp-server/
+
 # Copy pyproject.toml and poetry.lock for poetry to work
 COPY pyproject.toml poetry.lock ./
 
@@ -93,6 +100,6 @@ RUN jupyter lab --generate-config --allow-root
 COPY entrypoint.sh ./
 RUN chmod +x ./entrypoint.sh
 
-EXPOSE 8000 8888
+EXPOSE 8000 8888 9000
 
 ENTRYPOINT ["./entrypoint.sh"]

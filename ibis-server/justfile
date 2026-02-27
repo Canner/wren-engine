@@ -61,6 +61,7 @@ docker-build:
         --build-context wren-core-py=../wren-core-py \
         --build-context wren-core=../wren-core \
         --build-context wren-core-base=../wren-core-base \
+        --build-context mcp-server=../mcp-server \
         .
 
 docker-run:
