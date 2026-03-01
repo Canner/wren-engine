@@ -84,13 +84,74 @@ def _engine(session_id: str) -> "sa.Engine | None":
 
 
 def register_mdl_tools(mcp: FastMCP) -> None:
-    """Register flat MDL tools onto *mcp*. No-op if sqlalchemy/jsonschema missing."""
+    """Register flat MDL tools and the generate_mdl prompt onto *mcp*."""
     if not _AVAILABLE:
         print(  # noqa: T201
             "[MDL Tools] sqlalchemy or jsonschema not installed — "
             "MDL tools not registered. Run: uv pip install sqlalchemy jsonschema"
         )
         return
+
+    # ------------------------------------------------------------------
+    # Prompt: defines the MDL generation workflow as a reusable starting point.
+    # Claude Desktop exposes this as a slash command: /generate_mdl
+    # Other clients can invoke it via prompts/get.
+    # ------------------------------------------------------------------
+
+    @mcp.prompt()
+    def generate_mdl(connection_string: str = "") -> str:
+        """Guided workflow for generating a Wren MDL manifest from a database.
+
+        Invoke this prompt to start the MDL generation process.  The agent
+        will follow the steps below automatically.
+
+        Args:
+            connection_string: Optional SQLAlchemy URL to skip the first question.
+                               e.g. ``postgresql://user:pass@host:5432/db``
+        """
+        conn_step = (
+            f'You already have the connection string: `{connection_string}`\n'
+            f'Start at Step 2.'
+            if connection_string
+            else 'Ask the user for their database connection string (SQLAlchemy URL).'
+        )
+        return f"""You are generating a Wren MDL manifest for a user's database.
+Follow these steps in order — do not skip steps or ask unnecessary questions.
+
+## Step 1 — Get connection string
+{conn_step}
+
+## Step 2 — Connect
+Call `mdl_connect_database` with the connection string.
+If it fails, report the error and ask the user to correct it.
+
+## Step 3 — Explore schema
+For EVERY table returned:
+  a. Call `mdl_get_column_info(<table>)` to get column types, PKs, FKs.
+  b. Call `mdl_get_sample_data(<table>, limit=3)` to understand data semantics.
+  c. For columns where purpose is unclear, call `mdl_get_column_stats(<table>, <column>)`.
+
+## Step 4 — Build MDL manifest
+Construct the MDL JSON following these rules:
+- `catalog`: use "wren" unless user specifies otherwise.
+- `schema`: use the database's default schema (e.g. "public" for PostgreSQL).
+- `dataSource`: set to the correct enum value (POSTGRES, MYSQL, DUCKDB, BIGQUERY, etc.).
+- Each table → one `Model`. Set `tableReference.table` to the table name.
+- Each column → one `Column`. Use the exact DB column name for `name`.
+- Mark primary key columns with `"isHidden": false` and note them in model `primaryKey`.
+- For FK columns, add a `Relationship` entry between the two models.
+- Calculated columns and metrics can be added later — omit them for now.
+
+## Step 5 — Validate
+Call `mdl_validate_manifest` with the constructed manifest dict.
+If validation fails, fix the reported errors and validate again.
+
+## Step 6 — Deploy
+Call `deploy` with the validated manifest.
+Confirm success to the user.
+
+Do not ask for confirmation between steps unless you encounter an error.
+"""
 
     # ------------------------------------------------------------------
     # 1. Connect to database
@@ -131,7 +192,11 @@ def register_mdl_tools(mcp: FastMCP) -> None:
             _engines[session_id] = engine
             tables = sorted(sa_inspect(engine).get_table_names())
             preview = ", ".join(tables[:20]) + ("…" if len(tables) > 20 else "")
-            return f"Connected. Found {len(tables)} table(s): {preview}"
+            return (
+                f"Connected. Found {len(tables)} table(s): {preview}\n"
+                f"→ Next: call `mdl_get_column_info` for each table, "
+                f"then `mdl_get_sample_data` to understand the data."
+            )
         except Exception as e:
             return f"Connection failed: {e}"
 
@@ -161,7 +226,10 @@ def register_mdl_tools(mcp: FastMCP) -> None:
             return f"No connection for session '{session_id}'. Call mdl_connect_database first."
         try:
             tables = sorted(sa_inspect(engine).get_table_names())
-            return json.dumps(tables)
+            return (
+                json.dumps(tables) + "\n"
+                "→ Next: call `mdl_get_column_info(<table>)` for each table."
+            )
         except Exception as e:
             return f"Error listing tables: {e}"
 
@@ -215,7 +283,11 @@ def register_mdl_tools(mcp: FastMCP) -> None:
                 if name in fk_map:
                     entry["foreign_key"] = fk_map[name]
                 result.append(entry)
-            return json.dumps(result, default=str)
+            return (
+                json.dumps(result, default=str) + "\n"
+                f"→ Next: call `mdl_get_sample_data('{table}', limit=3)` "
+                f"to understand data semantics."
+            )
         except Exception as e:
             return f"Error getting column info for '{table}': {e}"
 
@@ -303,7 +375,11 @@ def register_mdl_tools(mcp: FastMCP) -> None:
             stmt = sa.select(text("*")).select_from(tbl).limit(limit)
             with engine.connect() as conn:
                 rows = conn.execute(stmt).mappings().all()
-            return json.dumps([dict(r) for r in rows], default=str)
+            return (
+                json.dumps([dict(r) for r in rows], default=str) + "\n"
+                "→ After exploring all tables: build the MDL manifest, "
+                "then call `mdl_validate_manifest`."
+            )
         except Exception as e:
             return f"Error sampling '{table}': {e}"
 
@@ -350,7 +426,11 @@ def register_mdl_tools(mcp: FastMCP) -> None:
 
         ibis_url = os.getenv("WREN_ENGINE_ENDPOINT")
         if not ibis_url:
-            return "JSON Schema validation passed. (Skipping dry-plan: WREN_ENGINE_ENDPOINT not set)"
+            return (
+                "JSON Schema validation passed. "
+                "(Skipping dry-plan: WREN_ENGINE_ENDPOINT not set)\n"
+                "→ Next: call `deploy` with this manifest."
+            )
 
         try:
             manifest_str = base64.b64encode(json.dumps(mdl).encode()).decode()
@@ -361,7 +441,10 @@ def register_mdl_tools(mcp: FastMCP) -> None:
                     headers={"x-wren-fallback_disable": "true"},
                 )
             if resp.status_code == 200:
-                return "MDL validation passed (JSON Schema + dry-plan)."
+                return (
+                    "MDL validation passed (JSON Schema + dry-plan).\n"
+                    "→ Next: call `deploy` with this manifest."
+                )
             return (
                 f"JSON Schema passed, but dry-plan failed "
                 f"(HTTP {resp.status_code}): {resp.text[:300]}"
