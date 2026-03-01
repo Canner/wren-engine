@@ -103,7 +103,7 @@ def register_mdl_tools(mcp: FastMCP) -> None:
     def generate_mdl(
         connection_string: str = "",
         project_dir: str = "",
-        deploy: bool = True,
+        deploy: bool = False,
     ) -> str:
         """Guided workflow for generating a Wren MDL manifest from a database.
 
@@ -147,7 +147,8 @@ def register_mdl_tools(mcp: FastMCP) -> None:
         else:
             deploy_step = (
                 'Deployment was not requested — skip this step.\n'
-                'Inform the user that the MDL is ready and saved (if a project_dir was used).'
+                'Inform the user that the MDL is ready and saved (if a project_dir was used).\n'
+                'Ask if they want to deploy now or later.'
             )
 
         return f"""You are generating a Wren MDL manifest for a user's database.
