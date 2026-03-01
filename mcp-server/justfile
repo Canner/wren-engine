@@ -12,7 +12,7 @@ install-core:
     uv pip install --force-reinstall {{ core-wheel-path }}
 
 install-mdl:
-    uv pip install "sqlalchemy>=2.0" "jsonschema>=4.0"
+    uv pip install "sqlalchemy>=2.0" "jsonschema>=4.0" "pyyaml>=6.0"
 
 # Install a database driver alongside the MDL tools:
 #   just install-mdl-driver postgres   → psycopg2-binary

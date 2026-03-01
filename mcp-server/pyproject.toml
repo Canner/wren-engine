@@ -17,4 +17,5 @@ dependencies = [
 mdl = [
     "sqlalchemy>=2.0",
     "jsonschema>=4.0",
+    "pyyaml>=6.0",
 ]
