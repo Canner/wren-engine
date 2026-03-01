@@ -1,0 +1,44 @@
+[project]
+name = "wren-agent"
+version = "0.1.0"
+description = "AI agent for agentic MDL generation for Wren Engine"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic-ai>=0.0.40",
+    "pydantic>=2.10",
+    "sqlalchemy>=2.0",
+    "httpx>=0.28",
+    "jsonschema>=4.0",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+postgres = ["psycopg2-binary>=2.9"]
+mysql = ["pymysql>=1.1"]
+duckdb = ["duckdb>=1.0", "duckdb-engine>=0.13"]
+all = ["wren-agent[postgres,mysql,duckdb]"]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "pytest-mock>=3.14",
+    "ruff>=0.11",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/wren_agent"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]

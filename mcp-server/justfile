@@ -2,7 +2,7 @@ default:
     @just --list --unsorted
 
 build-core:
-    cd ../wren-core-py && just install && just build
+    cd ../wren-core-py && just install && just develop
 
 core-wheel-path := "../wren-core-py/target/wheels/wren_core_py-*.whl"
 
@@ -10,3 +10,6 @@ install-core:
     # just build-core
     # Using pip install to avoid adding wheel to pyproject.toml
     uv pip install --force-reinstall {{ core-wheel-path }}
+
+install-mdl-agent:
+    uv pip install --editable "../wren-agent"

@@ -139,6 +139,129 @@ Optional follow-ups:
 
 ---
 
+## MDL Agent (Optional)
+
+The **MDL Agent** is an optional extension that adds three MCP tools for **agentic MDL generation**.  
+Instead of writing MDL JSON by hand, you describe your database and the agent explores the schema,
+builds the manifest, and hands it off to the existing `deploy` tool — all within the same MCP session.
+
+### Prerequisites
+
+- An LLM provider API key (Anthropic, OpenAI, etc.)
+- The `wren-agent` package (lives inside this monorepo at `../wren-agent`)
+
+### Installation
+
+Install `wren-agent` as an editable path dependency into the MCP server's virtual environment:
+
+```sh
+# inside mcp-server/
+just install-mdl-agent
+# or, without just:
+uv pip install --editable "../wren-agent"
+```
+
+> The server uses a **graceful fallback**: if `wren-agent` is not installed the three MDL tools
+> are simply not registered, and all other tools continue to work unchanged.
+
+### Environment Variables
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `PYDANTIC_AI_MODEL` | **Yes** | `anthropic:claude-3-5-sonnet-latest` | LLM to use, e.g. `openai:gpt-4o` |
+| `WREN_ENGINE_ENDPOINT` | No | — | ibis-server URL for MDL dry-plan validation |
+| `MDL_AGENT_SKILLS_DIR` | No | — | Directory of `*.md` / `*.txt` skill files loaded at startup |
+| `MDL_AGENT_MEMORY_PATH` | No | — | JSON file path for persistent cross-session memory |
+| `MDL_AGENT_MAX_SKILLS` | No | `5` | Max skills injected per turn (semantic ranking) |
+
+Add these to your `.env` file or to the `"env"` block in your MCP config:
+
+```json
+{
+    "mcpServers": {
+        "wren": {
+            "command": "uv",
+            "args": [
+                "--directory", "/ABSOLUTE/PATH/TO/wren-engine/mcp-server",
+                "run", "app/wren.py"
+            ],
+            "env": {
+                "WREN_URL": "localhost:8000",
+                "CONNECTION_INFO_FILE": "/path/connection.json",
+                "MDL_PATH": "/path/mdl.json",
+                "PYDANTIC_AI_MODEL": "anthropic:claude-3-5-sonnet-latest",
+                "ANTHROPIC_API_KEY": "<your-key>",
+                "WREN_ENGINE_ENDPOINT": "http://localhost:8000",
+                "MDL_AGENT_MEMORY_PATH": "~/.wren/memory.json"
+            }
+        }
+    }
+}
+```
+
+### Available Tools
+
+| Tool | Description |
+|---|---|
+| `mdl_chat(message, session_id?)` | Send a message to the MDL generation agent. Returns a follow-up question or a completed MDL JSON. |
+| `mdl_reset_session(session_id?)` | Clear conversation history and DB connection for a session. |
+| `mdl_list_sessions()` | List all active sessions and their message counts. |
+
+### Example Workflow
+
+The following example shows how an AI agent (Claude, Copilot, etc.) would use the MDL tools
+in a conversation:
+
+```
+User  → "Generate an MDL for my PostgreSQL ecommerce database."
+
+Agent → mdl_chat("Generate an MDL for my PostgreSQL ecommerce database.")
+      ← [MDL Agent asks]: Please provide your PostgreSQL connection string.
+
+Agent → mdl_chat("postgresql://user:pass@localhost:5432/shop")
+      ← [MDL Agent asks]: I found tables: orders, customers, products, order_items.
+        Should I include all of them?
+
+Agent → mdl_chat("Yes, include all.")
+      ← [MDL Ready — use the 'deploy' tool with this manifest]
+        {
+          "catalog": "wren",
+          "schema": "public",
+          "dataSource": "POSTGRES",
+          "models": [ ... ]
+        }
+
+Agent → deploy(<paste MDL JSON above>)
+      ← "MDL deployed successfully"
+```
+
+Multiple independent sessions can run in parallel using different `session_id` values:
+
+```
+mdl_chat("...", session_id="project_a")
+mdl_chat("...", session_id="project_b")
+```
+
+### Skills
+
+You can inject domain knowledge (naming conventions, relationship patterns, etc.) by providing a
+skills directory. Each `.md` or `.txt` file in the directory becomes a skill. On every turn,
+the agent automatically selects the most relevant skills using TF-IDF cosine similarity — only
+the top `MDL_AGENT_MAX_SKILLS` are injected, so the context stays focused.
+
+```
+MDL_AGENT_SKILLS_DIR=./skills/
+```
+
+```
+skills/
+  postgres_conventions.md   # "Use bigint for all primary keys…"
+  ecommerce_patterns.md     # "Order tables should reference customers via customer_id…"
+  bigquery_tips.md          # "Use STRUCT for nested columns…"
+```
+
+---
+
 ## Additional Resources
 
 - **Wren Engine Documentation**: [Wren AI](https://getwren.ai/)  

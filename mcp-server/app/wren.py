@@ -11,9 +11,11 @@ from mcp.types import ToolAnnotations
 try:
     from dto import Manifest, TableColumns
     from utils import dict_to_base64_string, json_to_base64_string
+    from mdl_tools import register_mdl_tools
 except ImportError:
     from app.dto import Manifest, TableColumns
     from app.utils import dict_to_base64_string, json_to_base64_string
+    from app.mdl_tools import register_mdl_tools
 
 load_dotenv()
 
@@ -539,6 +541,9 @@ async def health_check() -> str:
     except Exception as e:
         return "Wren Engine is not healthy"
 
+
+# Register MDL agent tools (no-op if wren-agent is not installed)
+register_mdl_tools(mcp)
 
 if __name__ == "__main__":
     mcp.run(transport=MCP_TRANSPORT)

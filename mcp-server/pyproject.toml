@@ -12,3 +12,11 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "ruff>=0.11.0",
 ]
+
+[project.optional-dependencies]
+mdl-agent = [
+    "wren-agent",
+]
+
+[tool.uv.sources]
+wren-agent = { path = "../wren-agent", editable = true }
