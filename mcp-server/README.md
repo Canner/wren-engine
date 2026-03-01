@@ -139,125 +139,82 @@ Optional follow-ups:
 
 ---
 
-## MDL Agent (Optional)
+## MDL Tools (Optional)
 
-The **MDL Agent** is an optional extension that adds three MCP tools for **agentic MDL generation**.  
-Instead of writing MDL JSON by hand, you describe your database and the agent explores the schema,
-builds the manifest, and hands it off to the existing `deploy` tool — all within the same MCP session.
+The **MDL Tools** extension adds six MCP tools that let any AI agent (Claude,
+Copilot, Cursor, Cline…) **generate a Wren MDL manifest autonomously**, by
+directly exploring a database and building the manifest step-by-step — without
+a secondary LLM layer.
+
+The calling agent acts as the orchestrator: it chooses which tools to call,
+inspects the schema, builds the JSON, and validates it before passing it to
+the existing `deploy` tool.
 
 ### Prerequisites
 
-- An LLM provider API key (Anthropic, OpenAI, etc.)
-- The `wren-agent` package (lives inside this monorepo at `../wren-agent`)
+- `sqlalchemy>=2.0` and `jsonschema>=4.0`
+- The appropriate DB driver for your data source
 
 ### Installation
 
-Install `wren-agent` as an editable path dependency into the MCP server's virtual environment:
-
 ```sh
-# inside mcp-server/
-just install-mdl-agent
-# or, without just:
-uv pip install --editable "../wren-agent"
+# Core MDL tools
+just install-mdl
+# or: uv pip install sqlalchemy jsonschema
+
+# DB driver (pick one)
+just install-mdl-driver postgres   # psycopg2-binary
+just install-mdl-driver mysql      # pymysql
+just install-mdl-driver duckdb     # duckdb-engine
+# for other drivers: uv pip install <driver>
 ```
 
-> The server uses a **graceful fallback**: if `wren-agent` is not installed the three MDL tools
-> are simply not registered, and all other tools continue to work unchanged.
+> If `sqlalchemy` or `jsonschema` are missing the tools are silently skipped and
+> all other server functionality continues to work.
 
 ### Environment Variables
 
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `PYDANTIC_AI_MODEL` | **Yes** | `anthropic:claude-3-5-sonnet-latest` | LLM to use, e.g. `openai:gpt-4o` |
-| `WREN_ENGINE_ENDPOINT` | No | — | ibis-server URL for MDL dry-plan validation |
-| `MDL_AGENT_SKILLS_DIR` | No | — | Directory of `*.md` / `*.txt` skill files loaded at startup |
-| `MDL_AGENT_MEMORY_PATH` | No | — | JSON file path for persistent cross-session memory |
-| `MDL_AGENT_MAX_SKILLS` | No | `5` | Max skills injected per turn (semantic ranking) |
-
-Add these to your `.env` file or to the `"env"` block in your MCP config:
-
-```json
-{
-    "mcpServers": {
-        "wren": {
-            "command": "uv",
-            "args": [
-                "--directory", "/ABSOLUTE/PATH/TO/wren-engine/mcp-server",
-                "run", "app/wren.py"
-            ],
-            "env": {
-                "WREN_URL": "localhost:8000",
-                "CONNECTION_INFO_FILE": "/path/connection.json",
-                "MDL_PATH": "/path/mdl.json",
-                "PYDANTIC_AI_MODEL": "anthropic:claude-3-5-sonnet-latest",
-                "ANTHROPIC_API_KEY": "<your-key>",
-                "WREN_ENGINE_ENDPOINT": "http://localhost:8000",
-                "MDL_AGENT_MEMORY_PATH": "~/.wren/memory.json"
-            }
-        }
-    }
-}
-```
+| Variable | Required | Description |
+|---|---|---|
+| `WREN_ENGINE_ENDPOINT` | No | ibis-server URL — enables dry-plan check in `mdl_validate_manifest` |
 
 ### Available Tools
 
 | Tool | Description |
 |---|---|
-| `mdl_chat(message, session_id?)` | Send a message to the MDL generation agent. Returns a follow-up question or a completed MDL JSON. |
-| `mdl_reset_session(session_id?)` | Clear conversation history and DB connection for a session. |
-| `mdl_list_sessions()` | List all active sessions and their message counts. |
+| `mdl_connect_database(connection_string, session_id?)` | Connect to a DB via SQLAlchemy URL. Stores the connection under `session_id`. |
+| `mdl_list_tables(session_id?)` | List all user tables in the connected database. |
+| `mdl_get_column_info(table, session_id?)` | Column metadata: name, type, nullable, PK, FK references. |
+| `mdl_get_column_stats(table, column, session_id?)` | Distinct count, null count, min, max for a column. |
+| `mdl_get_sample_data(table, limit?, session_id?)` | Fetch sample rows (max 20) to understand data semantics. |
+| `mdl_validate_manifest(mdl)` | Validate an MDL dict against the official JSON Schema, plus optional dry-plan. |
+
+Multiple concurrent sessions are supported via the `session_id` parameter (default `"default"`).
 
 ### Example Workflow
 
-The following example shows how an AI agent (Claude, Copilot, etc.) would use the MDL tools
-in a conversation:
+The AI agent calls the tools in sequence — no additional configuration needed
+beyond providing a connection string:
 
 ```
-User  → "Generate an MDL for my PostgreSQL ecommerce database."
+User  → "Generate an MDL for my PostgreSQL ecommerce database at
+         postgresql://user:pass@localhost:5432/shop"
 
-Agent → mdl_chat("Generate an MDL for my PostgreSQL ecommerce database.")
-      ← [MDL Agent asks]: Please provide your PostgreSQL connection string.
+Agent → mdl_connect_database("postgresql://user:pass@localhost:5432/shop")
+      ← "Connected. Found 5 table(s): customers, order_items, orders, products, reviews"
 
-Agent → mdl_chat("postgresql://user:pass@localhost:5432/shop")
-      ← [MDL Agent asks]: I found tables: orders, customers, products, order_items.
-        Should I include all of them?
+Agent → mdl_get_column_info("orders")
+      ← [{"name":"id","type":"INTEGER","primary_key":true}, {"name":"customer_id",
+          "type":"INTEGER","foreign_key":{"table":"customers","column":"id"}}, ...]
 
-Agent → mdl_chat("Yes, include all.")
-      ← [MDL Ready — use the 'deploy' tool with this manifest]
-        {
-          "catalog": "wren",
-          "schema": "public",
-          "dataSource": "POSTGRES",
-          "models": [ ... ]
-        }
+Agent → mdl_get_column_info("customers")   # repeats for each table...
 
-Agent → deploy(<paste MDL JSON above>)
+Agent → mdl_validate_manifest({"catalog":"wren","schema":"public",
+           "dataSource":"POSTGRES","models":[...]})
+      ← "MDL validation passed (JSON Schema + dry-plan)."
+
+Agent → deploy({"catalog":"wren","schema":"public","dataSource":"POSTGRES","models":[...]})
       ← "MDL deployed successfully"
-```
-
-Multiple independent sessions can run in parallel using different `session_id` values:
-
-```
-mdl_chat("...", session_id="project_a")
-mdl_chat("...", session_id="project_b")
-```
-
-### Skills
-
-You can inject domain knowledge (naming conventions, relationship patterns, etc.) by providing a
-skills directory. Each `.md` or `.txt` file in the directory becomes a skill. On every turn,
-the agent automatically selects the most relevant skills using TF-IDF cosine similarity — only
-the top `MDL_AGENT_MAX_SKILLS` are injected, so the context stays focused.
-
-```
-MDL_AGENT_SKILLS_DIR=./skills/
-```
-
-```
-skills/
-  postgres_conventions.md   # "Use bigint for all primary keys…"
-  ecommerce_patterns.md     # "Order tables should reference customers via customer_id…"
-  bigquery_tips.md          # "Use STRUCT for nested columns…"
 ```
 
 ---

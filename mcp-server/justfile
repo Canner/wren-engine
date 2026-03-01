@@ -11,5 +11,18 @@ install-core:
     # Using pip install to avoid adding wheel to pyproject.toml
     uv pip install --force-reinstall {{ core-wheel-path }}
 
-install-mdl-agent:
-    uv pip install --editable "../wren-agent"
+install-mdl:
+    uv pip install "sqlalchemy>=2.0" "jsonschema>=4.0"
+
+# Install a database driver alongside the MDL tools:
+#   just install-mdl-driver postgres   → psycopg2-binary
+#   just install-mdl-driver mysql      → pymysql
+#   just install-mdl-driver duckdb     → duckdb-engine
+install-mdl-driver driver:
+    #!/usr/bin/env bash
+    case "{{driver}}" in
+      postgres) uv pip install psycopg2-binary ;;
+      mysql)    uv pip install pymysql ;;
+      duckdb)   uv pip install duckdb-engine ;;
+      *)        echo "Unknown driver: {{driver}}. Supported: postgres, mysql, duckdb" && exit 1 ;;
+    esac

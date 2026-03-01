@@ -14,9 +14,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-mdl-agent = [
-    "wren-agent",
+mdl = [
+    "sqlalchemy>=2.0",
+    "jsonschema>=4.0",
 ]
-
-[tool.uv.sources]
-wren-agent = { path = "../wren-agent", editable = true }

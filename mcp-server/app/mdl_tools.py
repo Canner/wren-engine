@@ -1,87 +1,81 @@
-"""MDL generation tools — powered by wren-agent.
+"""MDL generation tools — flat MCP tools for agentic MDL creation.
 
-Registers three tools onto the shared FastMCP instance:
+Registers six tools onto the shared FastMCP instance.  The calling AI agent
+acts as the orchestrator: it connects to a database, explores the schema,
+builds an MDL manifest, and validates it — all via direct tool calls, without
+a secondary LLM layer.
 
-- ``mdl_chat``          — multi-turn conversation to build an MDL manifest
-- ``mdl_reset_session`` — clear a session (history + DB connection)
-- ``mdl_list_sessions`` — list active sessions
+Tools registered:
 
-Requires ``wren-agent`` to be installed.  If it is missing the module
-loads silently and no tools are registered, so the rest of the server
+- ``mdl_connect_database``  — establish a SQLAlchemy connection for a session
+- ``mdl_list_tables``       — list user tables in the connected database
+- ``mdl_get_column_info``   — column metadata (type, nullable, PK, FK)
+- ``mdl_get_column_stats``  — distinct count, null count, min/max for a column
+- ``mdl_get_sample_data``   — fetch sample rows to understand data semantics
+- ``mdl_validate_manifest`` — validate an MDL dict (JSON Schema + dry-plan)
+
+Requires ``sqlalchemy`` and ``jsonschema`` to be installed::
+
+    uv pip install sqlalchemy jsonschema
+
+Plus the appropriate DB driver, e.g.:
+    uv pip install psycopg2-binary      # PostgreSQL
+    uv pip install pymysql              # MySQL
+    uv pip install duckdb-engine        # DuckDB
+
+If ``sqlalchemy`` or ``jsonschema`` are missing the module loads silently and
+no tools are registered, so the rest of the server
 continues to work unchanged.
 
-Environment variables (all optional):
+Environment variables:
 
-- ``PYDANTIC_AI_MODEL``     — LLM to use, e.g. ``anthropic:claude-3-5-sonnet-latest``
-- ``WREN_ENGINE_ENDPOINT``  — ibis-server URL for MDL dry-plan validation
-- ``MDL_AGENT_SKILLS_DIR``  — directory of *.md / *.txt skill files to load on startup
-- ``MDL_AGENT_MEMORY_PATH`` — JSON file path for persistent cross-session memory
-- ``MDL_AGENT_MAX_SKILLS``  — max skills injected per turn (default 5)
+- ``WREN_ENGINE_ENDPOINT`` — ibis-server URL for MDL dry-plan validation
 """
 
 from __future__ import annotations
 
+import base64
+import json
 import os
-from dataclasses import dataclass, field
+from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
 try:
-    from wren_agent import MDLAgent, AgentQuestion, SkillStore, MemoryStore
+    import sqlalchemy as sa
+    from sqlalchemy import inspect as sa_inspect, text
+    import jsonschema
 
     _AVAILABLE = True
 except ImportError:
     _AVAILABLE = False
 
-
 # ---------------------------------------------------------------------------
-# Session state
+# Module-level session state: session_id → SA Engine
 # ---------------------------------------------------------------------------
 
+_engines: dict[str, "sa.Engine"] = {}
 
-@dataclass
-class _Session:
-    agent: "MDLAgent"
-    history: list = field(default_factory=list)
-
-
-_sessions: dict[str, _Session] = {}
-
-# Shared across all sessions (loaded once at startup)
-_skill_store: "SkillStore | None" = None
-_memory: "MemoryStore | None" = None
+# MDL JSON Schema — fetched once per process
+_MDL_SCHEMA_URL = (
+    "https://raw.githubusercontent.com/Canner/WrenAI/main/wren-mdl/mdl.schema.json"
+)
+_cached_schema: dict[str, Any] | None = None
 
 
-def _init_shared_state() -> None:
-    """Load skills and memory from environment variables (called once)."""
-    global _skill_store, _memory
-
-    skills_dir = os.getenv("MDL_AGENT_SKILLS_DIR")
-    if skills_dir and os.path.isdir(skills_dir):
-        _skill_store = SkillStore()
-        _skill_store.load_dir(skills_dir)
-        skill_count = len(_skill_store)
-        print(f"[MDL Agent] Loaded {skill_count} skills from {skills_dir}")  # noqa: T201
-
-    memory_path = os.getenv("MDL_AGENT_MEMORY_PATH")
-    if memory_path:
-        _memory = MemoryStore(persist_path=memory_path)
-        print(f"[MDL Agent] Memory store: {memory_path}")  # noqa: T201
+def _get_mdl_schema() -> dict[str, Any]:
+    global _cached_schema
+    if _cached_schema is None:
+        import httpx  # already in core deps
+        resp = httpx.get(_MDL_SCHEMA_URL, timeout=10.0)
+        resp.raise_for_status()
+        _cached_schema = resp.json()
+    return _cached_schema
 
 
-def _get_or_create_session(session_id: str) -> "_Session":
-    if session_id not in _sessions:
-        max_skills = int(os.getenv("MDL_AGENT_MAX_SKILLS", "5"))
-        _sessions[session_id] = _Session(
-            agent=MDLAgent(
-                ibis_server_url=os.getenv("WREN_ENGINE_ENDPOINT"),
-                skill_store=_skill_store,
-                memory=_memory,
-                max_skills=max_skills,
-            )
-        )
-    return _sessions[session_id]
+def _engine(session_id: str) -> "sa.Engine | None":
+    return _engines.get(session_id)
 
 
 # ---------------------------------------------------------------------------
@@ -90,90 +84,287 @@ def _get_or_create_session(session_id: str) -> "_Session":
 
 
 def register_mdl_tools(mcp: FastMCP) -> None:
-    """Register MDL agent tools onto *mcp*. No-op if wren-agent is missing."""
+    """Register flat MDL tools onto *mcp*. No-op if sqlalchemy/jsonschema missing."""
     if not _AVAILABLE:
-        print("[MDL Agent] wren-agent not installed — MDL tools not registered.")  # noqa: T201
+        print(  # noqa: T201
+            "[MDL Tools] sqlalchemy or jsonschema not installed — "
+            "MDL tools not registered. Run: uv pip install sqlalchemy jsonschema"
+        )
         return
 
-    _init_shared_state()
+    # ------------------------------------------------------------------
+    # 1. Connect to database
+    # ------------------------------------------------------------------
 
     @mcp.tool(
         annotations=ToolAnnotations(
-            title="MDL Chat",
+            title="Connect to Database",
             readOnlyHint=False,
         ),
     )
-    async def mdl_chat(message: str, session_id: str = "default") -> str:
-        """Generate or refine a Wren MDL manifest through a guided conversation.
+    async def mdl_connect_database(
+        connection_string: str,
+        session_id: str = "default",
+    ) -> str:
+        """Connect to a database using a SQLAlchemy connection string.
 
-        The agent explores the database schema and produces a validated MDL
-        manifest ready for deployment with the ``deploy`` tool.
+        Must be called before any other ``mdl_*`` tool that needs schema access.
+        Each ``session_id`` maintains its own independent connection.
 
-        **Typical workflow**:
-
-        1. Say what database you want to model (e.g. "I want to model my PostgreSQL
-           ecommerce database").
-        2. The agent may ask for a connection string or clarifying questions.
-        3. When MDL is ready, a JSON block is returned — copy it into ``deploy``.
-
-        You can run multiple independent sessions in parallel using different
-        ``session_id`` values.
+        Supported schemes (driver must be installed separately):
+        - ``postgresql://user:pass@host:5432/db``  (needs psycopg2-binary)
+        - ``mysql+pymysql://user:pass@host:3306/db`` (needs pymysql)
+        - ``duckdb:///path/to/file.db``             (needs duckdb-engine)
+        - ``sqlite:///path/to/file.db``             (built-in)
 
         Args:
-            message: Your message or answer to the agent's question.
-            session_id: Conversation ID. Reuse the same ID across turns to
-                        continue an existing session.
+            connection_string: SQLAlchemy URL.
+            session_id: Connection identifier, allows multiple parallel sessions.
 
         Returns:
-            Either a follow-up question prefixed with ``[MDL Agent asks]``
-            or a completed MDL JSON prefixed with ``[MDL Ready]``.
+            Success message with table count, or an error description.
         """
-        session = _get_or_create_session(session_id)
-        resp = await session.agent.run(message, message_history=session.history)
-        session.history = resp.message_history
+        try:
+            engine = sa.create_engine(connection_string)
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            _engines[session_id] = engine
+            tables = sorted(sa_inspect(engine).get_table_names())
+            preview = ", ".join(tables[:20]) + ("…" if len(tables) > 20 else "")
+            return f"Connected. Found {len(tables)} table(s): {preview}"
+        except Exception as e:
+            return f"Connection failed: {e}"
 
-        if isinstance(resp.result, AgentQuestion):
-            return f"[MDL Agent asks]: {resp.result.question}"
-
-        mdl_json = resp.result.model_dump_json(by_alias=True, indent=2)
-        return f"[MDL Ready — use the 'deploy' tool with this manifest]\n\n{mdl_json}"
+    # ------------------------------------------------------------------
+    # 2. List tables
+    # ------------------------------------------------------------------
 
     @mcp.tool(
         annotations=ToolAnnotations(
-            title="Reset MDL Session",
-            readOnlyHint=False,
-        ),
-    )
-    async def mdl_reset_session(session_id: str = "default") -> str:
-        """Reset an MDL generation session.
-
-        Clears the conversation history and the database connection held inside
-        the session. The next ``mdl_chat`` call on this ID starts fresh.
-
-        Args:
-            session_id: Session to reset (default: ``"default"``).
-        """
-        if session_id in _sessions:
-            del _sessions[session_id]
-            return f"Session '{session_id}' has been reset."
-        return f"Session '{session_id}' not found — nothing to reset."
-
-    @mcp.tool(
-        annotations=ToolAnnotations(
-            title="List MDL Sessions",
+            title="List Database Tables",
             readOnlyHint=True,
         ),
     )
-    async def mdl_list_sessions() -> str:
-        """List all active MDL generation sessions and their message counts.
+    async def mdl_list_tables(session_id: str = "default") -> str:
+        """List all user tables in the connected database.
 
-        Returns a summary so you can track which sessions are in progress or
-        decide which one to continue.
+        Call ``mdl_connect_database`` first.
+
+        Args:
+            session_id: Session to query.
+
+        Returns:
+            JSON array of table names, or an error string.
         """
-        if not _sessions:
-            return "No active MDL sessions."
-        lines = [
-            f"- '{sid}': {len(s.history)} messages in history"
-            for sid, s in _sessions.items()
-        ]
-        return "\n".join(lines)
+        engine = _engine(session_id)
+        if engine is None:
+            return f"No connection for session '{session_id}'. Call mdl_connect_database first."
+        try:
+            tables = sorted(sa_inspect(engine).get_table_names())
+            return json.dumps(tables)
+        except Exception as e:
+            return f"Error listing tables: {e}"
+
+    # ------------------------------------------------------------------
+    # 3. Column info
+    # ------------------------------------------------------------------
+
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            title="Get Column Info",
+            readOnlyHint=True,
+        ),
+    )
+    async def mdl_get_column_info(
+        table: str,
+        session_id: str = "default",
+    ) -> str:
+        """Get column metadata for a table.
+
+        Returns name, data type, nullable flag, whether it is a primary key,
+        and foreign key references (if any).
+
+        Args:
+            table: Table name.
+            session_id: Session to query.
+
+        Returns:
+            JSON array of column objects, or an error string.
+        """
+        engine = _engine(session_id)
+        if engine is None:
+            return f"No connection for session '{session_id}'. Call mdl_connect_database first."
+        try:
+            insp = sa_inspect(engine)
+            columns = insp.get_columns(table)
+            pk_cols = set(insp.get_pk_constraint(table).get("constrained_columns", []))
+            fk_map: dict[str, dict] = {}
+            for fk in insp.get_foreign_keys(table):
+                for local, ref in zip(fk["constrained_columns"], fk["referred_columns"]):
+                    fk_map[local] = {"table": fk["referred_table"], "column": ref}
+
+            result = []
+            for col in columns:
+                name = col["name"]
+                entry: dict[str, Any] = {
+                    "name": name,
+                    "type": str(col["type"]),
+                    "nullable": col.get("nullable", True),
+                    "primary_key": name in pk_cols,
+                }
+                if name in fk_map:
+                    entry["foreign_key"] = fk_map[name]
+                result.append(entry)
+            return json.dumps(result, default=str)
+        except Exception as e:
+            return f"Error getting column info for '{table}': {e}"
+
+    # ------------------------------------------------------------------
+    # 4. Column stats
+    # ------------------------------------------------------------------
+
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            title="Get Column Statistics",
+            readOnlyHint=True,
+        ),
+    )
+    async def mdl_get_column_stats(
+        table: str,
+        column: str,
+        session_id: str = "default",
+    ) -> str:
+        """Get basic statistics for a column: distinct count, null count, min, max.
+
+        Useful for inferring column semantics (e.g., ID vs. enum vs. metric).
+
+        Args:
+            table: Table name.
+            column: Column name.
+            session_id: Session to query.
+
+        Returns:
+            JSON object with stats, or an error string.
+        """
+        engine = _engine(session_id)
+        if engine is None:
+            return f"No connection for session '{session_id}'. Call mdl_connect_database first."
+        try:
+            col_id = sa.column(column)
+            tbl = sa.table(table, col_id)
+            stmt = sa.select(
+                sa.func.count(sa.func.distinct(col_id)).label("distinct_count"),
+                (sa.func.count() - sa.func.count(col_id)).label("null_count"),
+                sa.func.min(col_id).label("min_val"),
+                sa.func.max(col_id).label("max_val"),
+            ).select_from(tbl)
+            with engine.connect() as conn:
+                row = conn.execute(stmt).one()
+            return json.dumps({
+                "distinct_count": row.distinct_count,
+                "null_count": row.null_count,
+                "min": str(row.min_val) if row.min_val is not None else None,
+                "max": str(row.max_val) if row.max_val is not None else None,
+            }, default=str)
+        except Exception as e:
+            return f"Error getting stats for '{table}.{column}': {e}"
+
+    # ------------------------------------------------------------------
+    # 5. Sample data
+    # ------------------------------------------------------------------
+
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            title="Get Sample Data",
+            readOnlyHint=True,
+        ),
+    )
+    async def mdl_get_sample_data(
+        table: str,
+        limit: int = 5,
+        session_id: str = "default",
+    ) -> str:
+        """Fetch sample rows from a table to understand data semantics.
+
+        Args:
+            table: Table name.
+            limit: Number of rows (default 5, capped at 20).
+            session_id: Session to query.
+
+        Returns:
+            JSON array of row objects, or an error string.
+        """
+        engine = _engine(session_id)
+        if engine is None:
+            return f"No connection for session '{session_id}'. Call mdl_connect_database first."
+        try:
+            limit = min(int(limit), 20)
+            tbl = sa.table(table)
+            stmt = sa.select(text("*")).select_from(tbl).limit(limit)
+            with engine.connect() as conn:
+                rows = conn.execute(stmt).mappings().all()
+            return json.dumps([dict(r) for r in rows], default=str)
+        except Exception as e:
+            return f"Error sampling '{table}': {e}"
+
+    # ------------------------------------------------------------------
+    # 6. Validate MDL manifest
+    # ------------------------------------------------------------------
+
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            title="Validate MDL Manifest",
+            readOnlyHint=True,
+        ),
+    )
+    async def mdl_validate_manifest(mdl: dict) -> str:
+        """Validate an MDL manifest dict against the official Wren JSON Schema.
+
+        Optionally runs a dry-plan against ibis-server when
+        ``WREN_ENGINE_ENDPOINT`` is set.
+
+        Pass the MDL as a plain dict (use ``"schema"`` key, not ``"schema_name"``).
+
+        Args:
+            mdl: The MDL manifest as a dictionary.
+
+        Returns:
+            A string describing the validation result.
+        """
+        # Step 1: JSON Schema
+        try:
+            schema = _get_mdl_schema()
+        except Exception as e:
+            return f"Warning: could not fetch MDL schema: {e}. Skipping schema check."
+
+        errors = list(jsonschema.Draft202012Validator(schema).iter_errors(mdl))
+        if errors:
+            messages = "; ".join(
+                f"{'.'.join(str(p) for p in e.absolute_path) or '<root>'}: {e.message}"
+                for e in errors[:5]
+            )
+            return f"JSON Schema validation failed ({len(errors)} error(s)): {messages}"
+
+        # Step 2: ibis-server dry-plan (optional)
+        import httpx  # already in core deps
+
+        ibis_url = os.getenv("WREN_ENGINE_ENDPOINT")
+        if not ibis_url:
+            return "JSON Schema validation passed. (Skipping dry-plan: WREN_ENGINE_ENDPOINT not set)"
+
+        try:
+            manifest_str = base64.b64encode(json.dumps(mdl).encode()).decode()
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(
+                    f"{ibis_url.rstrip('/')}/v3/connector/dry-plan",
+                    json={"manifest_str": manifest_str, "sql": "SELECT 1"},
+                    headers={"x-wren-fallback_disable": "true"},
+                )
+            if resp.status_code == 200:
+                return "MDL validation passed (JSON Schema + dry-plan)."
+            return (
+                f"JSON Schema passed, but dry-plan failed "
+                f"(HTTP {resp.status_code}): {resp.text[:300]}"
+            )
+        except Exception as e:
+            return f"JSON Schema passed, but dry-plan request failed: {e}"
