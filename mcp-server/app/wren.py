@@ -309,7 +309,7 @@ async def mdl_validate_manifest(mdl: dict) -> str:
         async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.post(
                 f"{ibis_url.rstrip('/')}/v3/connector/dry-plan",
-                json={"manifest_str": manifest_str, "sql": "SELECT 1"},
+                json={"manifestStr": manifest_str, "sql": "SELECT 1"},
                 headers={"x-wren-fallback_disable": "true"},
             )
         if resp.status_code == 200:
