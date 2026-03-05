@@ -1,5 +1,6 @@
 .venv
 target
+!target/wheels
 tests
 README.md
 rustfmt.toml

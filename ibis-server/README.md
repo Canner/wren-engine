@@ -3,6 +3,34 @@ This module is the API server of Wren Engine. It's built on top of [FastAPI](htt
 
 ## Quick Start
 
+### Building the Docker Image
+
+```bash
+just docker-build                              # current platform (fast: Rust built locally)
+just docker-build linux/amd64                  # single platform
+just docker-build linux/amd64,linux/arm64 --push  # multi-arch (requires --push)
+```
+
+#### Build strategies
+
+| Scenario | Rust compilation | Speed |
+|---|---|---|
+| Target matches host platform | Built locally via `maturin + zig` | Fast (reuses host cargo cache) |
+| Cross-platform or multi-arch | Built inside Docker via BuildKit cache mounts | Slow on first build, incremental after |
+
+**Local build prerequisites** (single-platform matching your host):
+```bash
+brew install zig
+rustup target add aarch64-unknown-linux-gnu  # Apple Silicon
+rustup target add x86_64-unknown-linux-gnu   # Intel Mac
+```
+
+Once set up, only the first build is slow. Subsequent builds reuse the host cargo cache and take a few minutes.
+
+> **Note**: Multi-arch builds (`linux/amd64,linux/arm64`) always build Rust inside Docker and require `--push` to export the image (Docker cannot load multi-arch images locally).
+
+---
+
 ### Running Ibis Server on Docker
 You can follow the steps below to run the Java engine and ibis.
 > Wren Engine is migrating to [wren-core](../wren-core/). However, we still recommend starting [the Java engine](../wren-core-legacy/) to enable the query fallback mechanism.
