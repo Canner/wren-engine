@@ -68,6 +68,31 @@ You would see that the MDL and connection info are loaded. Then, you can use `Ct
   docker compose up
   ```
 
+### MDL Workspace
+
+The `workspace/` directory is the conventional location for MDL files when using Docker.
+It is mounted into the container at `/workspace`.
+
+**Input — load an existing MDL:**
+Place your MDL JSON file in `mcp-server/workspace/` on your host, then reference it in the MCP tool:
+```
+deploy(mdl_file_path="/workspace/my_mdl.json")
+```
+
+**Output — save a generated MDL:**
+The agent writes YAML project files and compiled MDL JSON back to your host via the `mdl-project` skill:
+```
+# agent writes: mcp-server/workspace/my_project/wren_project.yml, models/*.yml, ...
+# agent compiles to: mcp-server/workspace/my_project/target/mdl.json
+```
+
+**Custom host path:**
+Set `MDL_WORKSPACE` in `docker/.env` to point to any directory on your host:
+```sh
+# docker/.env
+MDL_WORKSPACE=/Users/me/my-mdl-files
+```
+
 ### 3. Set Environment Variables
 
 There are two ways to set the required environment variables:
@@ -139,83 +164,43 @@ Optional follow-ups:
 
 ---
 
-## MDL Tools (Optional)
+## Generating an MDL (No Database Drivers Required)
 
-The **MDL Tools** extension adds six MCP tools that let any AI agent (Claude,
-Copilot, Cursor, Cline…) **generate a Wren MDL manifest autonomously**, by
-directly exploring a database and building the manifest step-by-step — without
-a secondary LLM layer.
+The **`generate-mdl` skill** (`skills/generate-mdl/SKILL.md`) guides any AI agent through
+creating a Wren MDL manifest from scratch — using ibis-server's metadata endpoints for
+schema discovery. No local database drivers need to be installed on the MCP server.
 
-The calling agent acts as the orchestrator: it chooses which tools to call,
-inspects the schema, builds the JSON, and validates it before passing it to
-the existing `deploy` tool.
+### How it works
 
-### Prerequisites
+The agent calls ibis-server tools in sequence:
 
-- `sqlalchemy>=2.0` and `jsonschema>=4.0`
-- The appropriate DB driver for your data source
-
-### Installation
-
-```sh
-# Core MDL tools
-just install-mdl
-# or: uv pip install sqlalchemy jsonschema
-
-# DB driver (pick one)
-just install-mdl-driver postgres   # psycopg2-binary
-just install-mdl-driver mysql      # pymysql
-just install-mdl-driver duckdb     # duckdb-engine
-# for other drivers: uv pip install <driver>
 ```
+User  → "Generate an MDL for my PostgreSQL ecommerce database"
 
-> If `sqlalchemy` or `jsonschema` are missing the tools are silently skipped and
-> all other server functionality continues to work.
+Agent → setup_connection(datasource="POSTGRES",
+          conn_info={"host":"localhost","port":"5432","user":"...","database":"shop"})
+
+Agent → list_remote_tables()
+      ← [{"name":"orders","columns":[...]}, {"name":"customers","columns":[...]}, ...]
+
+Agent → list_remote_constraints()
+      ← [{"constraintType":"FOREIGN_KEY","constraintTable":"orders", ...}]
+
+Agent → (builds MDL JSON from schema info)
+
+Agent → mdl_validate_manifest({"catalog":"wren","schema":"public",
+           "dataSource":"POSTGRES","models":[...]})
+      ← "MDL validation passed."
+
+Agent → deploy_manifest({"catalog":"wren","schema":"public","dataSource":"POSTGRES","models":[...]})
+      ← "MDL deployed successfully (5 models, 23 columns)"
+```
 
 ### Environment Variables
 
 | Variable | Required | Description |
 |---|---|---|
-| `WREN_ENGINE_ENDPOINT` | No | ibis-server URL — enables dry-plan check in `mdl_validate_manifest` |
-
-### Available Tools
-
-| Tool | Description |
-|---|---|
-| `mdl_connect_database(connection_string, session_id?)` | Connect to a DB via SQLAlchemy URL. Stores the connection under `session_id`. |
-| `mdl_list_tables(session_id?)` | List all user tables in the connected database. |
-| `mdl_get_column_info(table, session_id?)` | Column metadata: name, type, nullable, PK, FK references. |
-| `mdl_get_column_stats(table, column, session_id?)` | Distinct count, null count, min, max for a column. |
-| `mdl_get_sample_data(table, limit?, session_id?)` | Fetch sample rows (max 20) to understand data semantics. |
-| `mdl_validate_manifest(mdl)` | Validate an MDL dict against the official JSON Schema, plus optional dry-plan. |
-
-Multiple concurrent sessions are supported via the `session_id` parameter (default `"default"`).
-
-### Example Workflow
-
-The AI agent calls the tools in sequence — no additional configuration needed
-beyond providing a connection string:
-
-```
-User  → "Generate an MDL for my PostgreSQL ecommerce database at
-         postgresql://user:pass@localhost:5432/shop"
-
-Agent → mdl_connect_database("postgresql://user:pass@localhost:5432/shop")
-      ← "Connected. Found 5 table(s): customers, order_items, orders, products, reviews"
-
-Agent → mdl_get_column_info("orders")
-      ← [{"name":"id","type":"INTEGER","primary_key":true}, {"name":"customer_id",
-          "type":"INTEGER","foreign_key":{"table":"customers","column":"id"}}, ...]
-
-Agent → mdl_get_column_info("customers")   # repeats for each table...
-
-Agent → mdl_validate_manifest({"catalog":"wren","schema":"public",
-           "dataSource":"POSTGRES","models":[...]})
-      ← "MDL validation passed (JSON Schema + dry-plan)."
-
-Agent → deploy({"catalog":"wren","schema":"public","dataSource":"POSTGRES","models":[...]})
-      ← "MDL deployed successfully"
-```
+| `WREN_ENGINE_ENDPOINT` | No | ibis-server URL for dry-plan check in `mdl_validate_manifest` (default: `http://localhost:8000`) |
 
 ---
 

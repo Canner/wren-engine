@@ -11,11 +11,9 @@ from mcp.types import ToolAnnotations
 try:
     from dto import TableColumns
     from utils import dict_to_base64_string, json_to_base64_string
-    from mdl_tools import register_mdl_tools
 except ImportError:
     from app.dto import TableColumns
     from app.utils import dict_to_base64_string, json_to_base64_string
-    from app.mdl_tools import register_mdl_tools
 
 load_dotenv()
 
@@ -116,6 +114,7 @@ class MdlCache:
 
 mdl_cache = MdlCache()
 data_source = None
+connection_info = None
 
 if mdl_path:
     with open(mdl_path) as f:
@@ -232,6 +231,95 @@ async def deploy(mdl_file_path: str) -> str:
     mdl_base64 = json_to_base64_string(mdl_json)
     mdl_cache.set_mdl(mdl_base64)
     return f"MDL deployed successfully from {mdl_file_path}"
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Setup Connection",
+        destructiveHint=False,
+    ),
+)
+async def setup_connection(datasource: str, conn_info: dict) -> str:
+    """
+    Configure the database connection for query execution at runtime.
+
+    Call this after deploying the MDL so that `query` and `dry_run` know
+    which database to connect to.
+
+    Args:
+        datasource: Data source type, e.g. "POSTGRES", "MYSQL", "DUCKDB", "BIGQUERY".
+        conn_info: Connection credentials dict. Fields vary by data source:
+            - POSTGRES/MYSQL: {"host": ..., "port": ..., "user": ..., "password": ..., "database": ...}
+            - DUCKDB: {"path": "<file path>"}
+            - BIGQUERY: {"project": ..., "dataset": ..., "credentials_base64": ...}
+    """
+    global data_source, connection_info
+    data_source = datasource.lower()
+    connection_info = conn_info
+    return f"Connection configured for {data_source}"
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Deploy MDL Manifest",
+        destructiveHint=True,
+    ),
+)
+async def deploy_manifest(mdl: dict) -> str:
+    """
+    Deploy an MDL manifest dict directly to Wren Engine.
+
+    Use this instead of `deploy` when the MDL is already in memory
+    (e.g. after `mdl_validate_manifest`), avoiding an intermediate file write.
+
+    Args:
+        mdl: The MDL manifest as a dictionary.
+    """
+    global data_source
+    data_source = mdl.get("dataSource", "").lower()
+    mdl_base64 = dict_to_base64_string(mdl)
+    mdl_cache.set_mdl(mdl_base64)
+    models = mdl.get("models", [])
+    total_columns = sum(len(m.get("columns", [])) for m in models)
+    return f"MDL deployed successfully ({len(models)} models, {total_columns} columns)"
+
+
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Validate MDL Manifest",
+        readOnlyHint=True,
+    ),
+)
+async def mdl_validate_manifest(mdl: dict) -> str:
+    """
+    Validate an MDL manifest dict via ibis-server dry-plan.
+
+    Sends the manifest to the ibis-server ``/v3/connector/dry-plan`` endpoint
+    to verify that the MDL is structurally valid before deploying.
+
+    Args:
+        mdl: The MDL manifest as a dictionary.
+
+    Returns:
+        A string describing the validation result.
+    """
+    ibis_url = os.getenv("WREN_ENGINE_ENDPOINT", f"http://{WREN_URL}")
+    manifest_str = base64.b64encode(json.dumps(mdl).encode()).decode()
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                f"{ibis_url.rstrip('/')}/v3/connector/dry-plan",
+                json={"manifest_str": manifest_str, "sql": "SELECT 1"},
+                headers={"x-wren-fallback_disable": "true"},
+            )
+        if resp.status_code == 200:
+            return (
+                "MDL validation passed.\n"
+                "→ Next: call `deploy_manifest(mdl=<manifest dict>)` to deploy."
+            )
+        return f"Dry-plan validation failed (HTTP {resp.status_code}): {resp.text[:300]}"
+    except Exception as e:
+        return f"Dry-plan request failed: {e}"
 
 
 @mcp.tool(
@@ -492,6 +580,24 @@ async def get_wren_guide() -> str:
     Understand how to use Wren Engine effectively to query your database
     """
 
+    if data_source is None:
+        return """
+    Wren Engine is not yet configured. To get started:
+
+    ## Quick Setup
+    1. Call `generate_mdl` with your database connection string:
+       e.g. `postgresql://user:pass@host:5432/mydb`
+       The agent will explore your schema, build an MDL, configure the
+       connection, and deploy — all automatically.
+
+    2. Once deployed, you can start querying with natural language or SQL.
+
+    ## Manual Setup (if you already have an MDL file)
+    1. Call `deploy(mdl_file_path=<path>)` to load the MDL.
+    2. Call `setup_connection(datasource=<type>, conn_info={...})` with your DB credentials.
+    3. Call `health_check()` to verify everything is working.
+    """
+
     tips = f"""
     ## Tips for using Wren Engine with {data_source.capitalize()}
     You are connected to a {data_source.capitalize()} database via Wren Engine.
@@ -552,9 +658,6 @@ async def health_check() -> str:
     except Exception as e:
         return "Wren Engine is not healthy"
 
-
-# Register MDL agent tools (no-op if wren-agent is not installed)
-register_mdl_tools(mcp)
 
 if __name__ == "__main__":
     mcp.run(transport=MCP_TRANSPORT)

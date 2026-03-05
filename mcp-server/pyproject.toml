@@ -13,9 +13,3 @@ dependencies = [
     "ruff>=0.11.0",
 ]
 
-[project.optional-dependencies]
-mdl = [
-    "sqlalchemy>=2.0",
-    "jsonschema>=4.0",
-    "pyyaml>=6.0",
-]
