@@ -9,11 +9,11 @@ from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
 try:
-    from dto import Manifest, TableColumns
+    from dto import TableColumns
     from utils import dict_to_base64_string, json_to_base64_string
     from mdl_tools import register_mdl_tools
 except ImportError:
-    from app.dto import Manifest, TableColumns
+    from app.dto import TableColumns
     from app.utils import dict_to_base64_string, json_to_base64_string
     from app.mdl_tools import register_mdl_tools
 
@@ -210,17 +210,28 @@ async def get_mdl_json_schema() -> str:
         destructiveHint=True,
     ),
 )
-async def deploy(mdl: Manifest) -> str:
+async def deploy(mdl_file_path: str) -> str:
     """
-    Deploy the MDL JSON schema to Wren Engine
+    Deploy the MDL JSON schema to Wren Engine by reading from a JSON file.
+
+    Args:
+        mdl_file_path: Absolute or relative path to the MDL JSON file (e.g. `target/mdl.json`).
+                       Use `build_mdl_project` to generate this file from a YAML project directory.
     """
     global data_source
-    mdl_json = mdl.model_dump_json(by_alias=True)
-    mdl_dict = orjson.loads(mdl_json)
+    expanded = os.path.expanduser(mdl_file_path)
+    if not os.path.isfile(expanded):
+        return f"ERROR: File not found: {mdl_file_path}"
+    with open(expanded) as f:
+        mdl_json = f.read()
+    try:
+        mdl_dict = orjson.loads(mdl_json)
+    except Exception as e:
+        return f"ERROR: Failed to parse JSON from {mdl_file_path}: {e}"
     data_source = mdl_dict.get("dataSource", "").lower()
     mdl_base64 = json_to_base64_string(mdl_json)
     mdl_cache.set_mdl(mdl_base64)
-    return "MDL deployed successfully"
+    return f"MDL deployed successfully from {mdl_file_path}"
 
 
 @mcp.tool(

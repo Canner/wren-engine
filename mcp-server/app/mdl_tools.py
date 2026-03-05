@@ -15,6 +15,7 @@ Tools registered:
 - ``mdl_validate_manifest`` — validate an MDL dict (JSON Schema + dry-plan)
 - ``mdl_save_project``      — save MDL JSON as a dbt-like YAML project directory
 - ``mdl_load_project``      — load a YAML project directory and return MDL JSON
+- ``build_mdl_project``     — assemble a YAML project into ``target/mdl.json``
 
 Requires ``sqlalchemy`` and ``jsonschema`` to be installed::
 
@@ -583,7 +584,8 @@ Do not ask for confirmation between steps unless you encounter an error.
         return (
             f"Project saved to: {project_dir}\n\n"
             f"Files written:\n{summary}\n\n"
-            f"→ Next: call `deploy(mdl={json.dumps(manifest)})` to deploy to Wren Engine, "
+            f"→ Next: call `build_mdl_project(project_dir='{project_dir}')` to write `target/mdl.json`, "
+            f"or call `deploy(mdl_file_path=<path to mdl.json>)` to deploy to Wren Engine, "
             f"or commit {project_dir} to version control."
         )
 
@@ -676,5 +678,98 @@ Do not ask for confirmation between steps unless you encounter an error.
             f"  Models: {model_count}, Relationships: {rel_count}\n\n"
             f"MDL JSON:\n```json\n{mdl_json}\n```\n\n"
             f"→ Next: call `mdl_validate_manifest(mdl=<above JSON>)` to validate, "
-            f"then `deploy(mdl=<JSON>)` to deploy."
+            f"then `build_mdl_project(project_dir='{project_dir}')` to write `target/mdl.json`, "
+            f"then `deploy(mdl_file_path='{project_dir}/target/mdl.json')` to deploy."
+        )
+
+    # ------------------------------------------------------------------
+    # 9. Build MDL project — output YAML project as target/mdl.json
+    # ------------------------------------------------------------------
+
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            title="Build MDL Project",
+            readOnlyHint=False,
+        ),
+    )
+    def build_mdl_project(project_dir: str) -> str:
+        """Assemble a Wren YAML project directory into a single JSON file.
+
+        Reads the YAML files from the project directory (same as `mdl_load_project`)
+        and writes the assembled MDL JSON to ``<project_dir>/target/mdl.json``.
+
+        Args:
+            project_dir: Path to the Wren project directory containing
+                         ``wren_project.yml``, ``models/*.yml``, etc.
+
+        Returns:
+            Path to the generated ``target/mdl.json`` file.
+        """
+        import glob
+
+        project_dir = os.path.expanduser(project_dir)
+
+        if not os.path.isdir(project_dir):
+            return f"ERROR: Directory not found: {project_dir}"
+
+        project_yml = os.path.join(project_dir, "wren_project.yml")
+        if not os.path.isfile(project_yml):
+            return f"ERROR: wren_project.yml not found in {project_dir}"
+
+        with open(project_yml) as f:
+            project_meta = yaml.safe_load(f) or {}
+
+        manifest: dict[str, Any] = {
+            "catalog": project_meta.get("catalog", ""),
+            "schema": project_meta.get("schema", ""),
+            "dataSource": project_meta.get("dataSource", ""),
+            "models": [],
+            "relationships": [],
+            "views": [],
+            "metrics": [],
+        }
+
+        # models/*.yml
+        model_files = sorted(glob.glob(os.path.join(project_dir, "models", "*.yml")))
+        for mf in model_files:
+            with open(mf) as f:
+                model = yaml.safe_load(f)
+            if model:
+                manifest["models"].append(model)
+
+        # relationships.yml
+        rels_yml = os.path.join(project_dir, "relationships.yml")
+        if os.path.isfile(rels_yml):
+            with open(rels_yml) as f:
+                data = yaml.safe_load(f) or {}
+            manifest["relationships"] = data.get("relationships", [])
+
+        # views.yml
+        views_yml = os.path.join(project_dir, "views.yml")
+        if os.path.isfile(views_yml):
+            with open(views_yml) as f:
+                data = yaml.safe_load(f) or {}
+            manifest["views"] = data.get("views", [])
+
+        # metrics.yml
+        metrics_yml = os.path.join(project_dir, "metrics.yml")
+        if os.path.isfile(metrics_yml):
+            with open(metrics_yml) as f:
+                data = yaml.safe_load(f) or {}
+            manifest["metrics"] = data.get("metrics", [])
+
+        # write to target/mdl.json
+        target_dir = os.path.join(project_dir, "target")
+        os.makedirs(target_dir, exist_ok=True)
+        output_path = os.path.join(target_dir, "mdl.json")
+        mdl_json = json.dumps(manifest, indent=2, ensure_ascii=False)
+        with open(output_path, "w") as f:
+            f.write(mdl_json)
+
+        model_count = len(manifest["models"])
+        rel_count = len(manifest["relationships"])
+        return (
+            f"MDL JSON written to: {output_path}\n"
+            f"  Models: {model_count}, Relationships: {rel_count}\n\n"
+            f"→ Next: call `deploy(mdl_file_path='{output_path}')` to deploy to Wren Engine."
         )
