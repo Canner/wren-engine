@@ -15,7 +15,7 @@ import base64
 import json
 import os
 from app.custom_sqlglot.dialects.wren import Wren
-from app.model import BigQueryDatasetConnectionInfo, MSSqlConnectionInfo, MySqlConnectionInfo, OracleConnectionInfo, PostgresConnectionInfo, SnowflakeConnectionInfo
+from app.model import BigQueryDatasetConnectionInfo, DorisConnectionInfo, MSSqlConnectionInfo, MySqlConnectionInfo, OracleConnectionInfo, PostgresConnectionInfo, SnowflakeConnectionInfo
 from app.model.connector import BigQueryConnector
 from app.util import to_json
 import sqlglot
@@ -96,6 +96,9 @@ if data_source == "bigquery":
 elif data_source == "mysql":
     connection_info = MySqlConnectionInfo.model_validate_json(json.dumps(connection_info))
     connection = DataSourceExtension.get_mysql_connection(connection_info)
+elif data_source == "doris":
+    connection_info = DorisConnectionInfo.model_validate_json(json.dumps(connection_info))
+    connection = DataSourceExtension.get_doris_connection(connection_info)
 elif data_source == "postgres":
     connection_info = PostgresConnectionInfo.model_validate_json(json.dumps(connection_info))
     connection = DataSourceExtension.get_postgres_connection(connection_info)

@@ -1,0 +1,37 @@
+### WHEN USING DORIS AS THE BACKEND DATABASE ###
+Here are the tips when generating SQL queries for Wren Engine with Apache Doris as the backend database.
+
+- Apache Doris uses MySQL-compatible SQL syntax, but there are some differences to be aware of.
+- Doris is an analytical (OLAP) database. It is optimized for large-scale aggregation queries rather than transactional workloads.
+- Doris uses backtick (`) for quoting identifiers, same as MySQL.
+    - Example: SELECT `column_name` FROM `table_name`
+- `STRING` is an alias for `VARCHAR(65533)` in Doris.
+- Doris supports `LARGEINT` (128-bit integer) type which is not available in MySQL.
+- Doris has versioned types: `DATEV2` (equivalent to `DATE`), `DATETIMEV2` (equivalent to `DATETIME` with fractional seconds), and `DECIMALV3` (high-precision decimal).
+    - Use `DATE`, `DATETIME`, and `DECIMAL` in queries — Doris handles version mapping internally.
+- For date/time operations, Doris supports standard MySQL functions:
+    - `DATE_ADD(date, INTERVAL expr unit)` and `DATE_SUB(date, INTERVAL expr unit)`
+    - `DATEDIFF(expr1, expr2)` returns difference in days
+    - `TIMESTAMPDIFF(unit, datetime_expr1, datetime_expr2)` for precise differences
+    - `DATE_FORMAT(date, format)` for formatting dates
+    - `STR_TO_DATE(str, format)` for parsing strings to dates
+- `BITMAP`, `HLL`, and `QUANTILE_STATE` are special aggregate types in Doris used for approximate distinct counting and quantile estimation.
+    - These types cannot be used in regular SELECT queries directly.
+    - Use aggregate functions like `BITMAP_UNION_COUNT`, `HLL_UNION_AGG`, `QUANTILE_PERCENT` to query them.
+- Doris does not support foreign key constraints. Do not generate queries that rely on foreign key relationships from the database schema.
+    - Relationships between tables are defined in the Wren MDL (Manifest Definition Language) and are handled by the Wren Engine.
+- Doris supports the `GROUP BY` clause with column aliases defined in the SELECT clause.
+    - Example: `SELECT column1 AS col1_alias, COUNT(*) FROM table GROUP BY col1_alias` is valid in Doris.
+- Doris supports window functions with the standard `OVER (PARTITION BY ... ORDER BY ...)` syntax.
+- For string concatenation, use `CONCAT()` function or `||` operator.
+    - Example: `CONCAT(col1, '-', col2)` or `col1 || '-' || col2`
+- Doris supports `CASE WHEN ... THEN ... ELSE ... END` expressions.
+- For NULL handling, use `IFNULL(expr, default)`, `COALESCE(expr1, expr2, ...)`, or `NULLIF(expr1, expr2)`.
+- Doris supports `LIMIT offset, count` syntax for pagination.
+    - Example: `SELECT * FROM table LIMIT 10, 20` (skip 10 rows, return 20 rows)
+    - Also supports `LIMIT count OFFSET offset` syntax.
+- `ARRAY`, `MAP`, `STRUCT`, and `VARIANT` (semi-structured JSON) types are supported in newer Doris versions.
+    - Use `ARRAY` functions like `ARRAY_CONTAINS`, `ARRAY_SIZE`, `EXPLODE` for array operations.
+    - Use `JSON_EXTRACT`, `JSON_OBJECT`, `JSON_ARRAY` for JSON/VARIANT operations.
+- `DATETIME` and `TIMESTAMP` are equivalent in Doris and do NOT carry time zone information.
+    - If timezone-aware operations are needed, handle timezone conversion explicitly using `CONVERT_TZ(datetime, from_tz, to_tz)`.

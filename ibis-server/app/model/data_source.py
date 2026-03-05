@@ -24,6 +24,7 @@ from app.model import (
     ConnectionUrl,
     DatabricksServicePrincipalConnectionInfo,
     DatabricksTokenConnectionInfo,
+    DorisConnectionInfo,
     GcsFileConnectionInfo,
     LocalFileConnectionInfo,
     MinioFileConnectionInfo,
@@ -36,6 +37,7 @@ from app.model import (
     QueryCannerDTO,
     QueryClickHouseDTO,
     QueryDatabricksDTO,
+    QueryDorisDTO,
     QueryDTO,
     QueryGcsFileDTO,
     QueryLocalFileDTO,
@@ -69,6 +71,7 @@ class DataSource(StrEnum):
     clickhouse = auto()
     mssql = auto()
     mysql = auto()
+    doris = auto()
     oracle = auto()
     postgres = auto()
     redshift = auto()
@@ -167,6 +170,8 @@ class DataSource(StrEnum):
                 return MSSqlConnectionInfo.model_validate(data)
             case DataSource.mysql:
                 return MySqlConnectionInfo.model_validate(data)
+            case DataSource.doris:
+                return DorisConnectionInfo.model_validate(data)
             case DataSource.oracle:
                 return OracleConnectionInfo.model_validate(data)
             case DataSource.postgres:
@@ -236,6 +241,7 @@ class DataSourceExtension(Enum):
     clickhouse = QueryClickHouseDTO
     mssql = QueryMSSqlDTO
     mysql = QueryMySqlDTO
+    doris = QueryDorisDTO
     oracle = QueryOracleDTO
     postgres = QueryPostgresDTO
     redshift = QueryRedshiftDTO
@@ -396,6 +402,42 @@ class DataSourceExtension(Enum):
             password=info.password.get_secret_value() if info.password else "",
             **kwargs,
         )
+
+    @classmethod
+    def get_doris_connection(cls, info: DorisConnectionInfo) -> BaseBackend:
+        kwargs = {}
+
+        # utf8mb4 is the actual charset used by Doris (MySQL-compatible)
+        kwargs.setdefault("charset", "utf8mb4")
+
+        if info.kwargs:
+            kwargs.update(info.kwargs)
+        # Doris is MySQL-protocol compatible, reuse ibis.mysql.connect()
+        connection = ibis.mysql.connect(
+            host=info.host.get_secret_value(),
+            port=int(info.port.get_secret_value()),
+            database=info.database.get_secret_value(),
+            user=info.user.get_secret_value(),
+            password=info.password.get_secret_value() if info.password else "",
+            **kwargs,
+        )
+        # Doris does not properly reflect the SERVER_STATUS_AUTOCOMMIT flag
+        # in its MySQL-protocol handshake/OK packets. As a result, the
+        # underlying mysqlclient driver's get_autocommit() always returns
+        # False — even after explicitly calling autocommit(True).
+        #
+        # ibis's raw_sql() checks get_autocommit() and, when it returns
+        # False, wraps every query in BEGIN/ROLLBACK. Doris (an OLAP engine)
+        # does not support transactional SELECT inside BEGIN and will reject
+        # with: "This is in a transaction, only insert, update, delete,
+        # commit, rollback is acceptable."
+        #
+        # Fix: override get_autocommit on THIS connection instance only so
+        # that ibis skips the BEGIN/ROLLBACK wrapping. This is a per-object
+        # attribute override — it does NOT affect the MySQLdb class, other
+        # MySQL connections, or any other data-source driver.
+        connection.con.get_autocommit = lambda: True
+        return connection
 
     @staticmethod
     def get_postgres_connection(info: PostgresConnectionInfo) -> BaseBackend:
