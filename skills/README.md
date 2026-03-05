@@ -29,6 +29,7 @@ Once installed, invoke a skill by name in your conversation:
 | [generate-mdl](generate-mdl/SKILL.md) | Generate a Wren MDL manifest from a live database using ibis-server introspection |
 | [mdl-project](mdl-project/SKILL.md) | Save, load, and build MDL manifests as version-controlled YAML project directories |
 | [wren-sql](wren-sql/SKILL.md) | Write and correct SQL queries for Wren Engine — types, date/time, BigQuery dialect, error diagnosis |
+| [wren-quickstart](wren-quickstart/SKILL.md) | Set up Wren Engine MCP via Docker and connect to Claude Code or other MCP clients |
 
 See [SKILLS.md](SKILLS.md) for full details on each skill.
 

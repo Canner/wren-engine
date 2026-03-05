@@ -112,6 +112,30 @@ Comprehensive SQL authoring and debugging guide for Wren Engine. Covers core que
 
 ---
 
+## wren-quickstart
+
+**File:** [wren-quickstart/SKILL.md](wren-quickstart/SKILL.md)
+
+Sets up Wren Engine MCP server via Docker and connects it to Claude Code (or another MCP client) over streamable-http.
+
+### When to use
+
+- Running Wren MCP in Docker (no local Python/uv install required)
+- Configuring Claude Code MCP to connect to a containerized Wren Engine
+- Setting up Wren MCP for Cline, Cursor, or VS Code MCP Extension
+- Fixing `localhost` → `host.docker.internal` in connection info for Docker
+
+### Workflow summary
+
+1. Ask user for workspace mount path
+2. Create `docker/.env` with `MDL_WORKSPACE`
+3. `docker compose up -d`
+4. Rewrite `localhost` → `host.docker.internal` in connection credentials
+5. Add `wren` MCP server to Claude Code using streamable-http on port 9000
+6. Run `health_check()` to verify
+
+---
+
 ## Installing a skill
 
 ```bash
