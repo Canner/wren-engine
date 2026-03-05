@@ -6,7 +6,9 @@ services:
       - "9000:9000"
     environment:
       ENABLE_MCP_SERVER: "true"
+      MCP_TRANSPORT: "streamable-http"
+      MCP_HOST: "0.0.0.0"
       MCP_PORT: "9000"
+      WREN_URL: "localhost:8000"
     volumes:
-      - ./../etc:/usr/src/app/etc
       - ${MDL_WORKSPACE:-../workspace}:/workspace
