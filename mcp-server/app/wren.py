@@ -647,16 +647,61 @@ async def get_wren_guide() -> str:
 )
 async def health_check() -> str:
     """
-    Check the health of Wren Engine
+    Check the health of Wren Engine and validate required configuration.
+
+    Returns a detailed status report including any missing configuration
+    with actionable guidance on how to fix each issue.
     """
+    issues: list[str] = []
+    guidance: list[str] = []
+
+    # Check MDL deployment
+    if not mdl_cache.is_deployed():
+        issues.append("MDL is not deployed")
+        guidance.append(
+            "- Deploy MDL: call `deploy(mdl_file_path=<path>)` with a path to your MDL JSON file, "
+            "or `deploy_manifest(mdl=<dict>)` if the manifest is already in memory."
+        )
+
+    # Check connection info
+    if connection_info is None:
+        issues.append("Database connection is not configured")
+        guidance.append(
+            "- Configure connection: call `setup_connection(datasource=<type>, conn_info={...})` "
+            "with your data source type (e.g. POSTGRES, BIGQUERY, DUCKDB) and credentials."
+        )
+
+    # Check data source
+    if data_source is None:
+        issues.append("Data source type is not set")
+        guidance.append(
+            "- Set data source: deploy an MDL that has a `dataSource` field, "
+            "or call `setup_connection(datasource=<type>, conn_info={...})`."
+        )
+
+    if issues:
+        lines = ["Wren Engine is not ready. The following issues must be resolved:\n"]
+        for i, issue in enumerate(issues, 1):
+            lines.append(f"{i}. {issue}")
+        lines.append("\nHow to fix:")
+        lines.extend(guidance)
+        return "\n".join(lines)
+
+    # All config present — verify ibis-server connectivity
     try:
         response = await make_query_request("SELECT 1")
         if response.status_code == 200:
-            return "Wren Engine is healthy"
+            return f"Wren Engine is healthy (data source: {data_source}, MDL deployed: yes)"
         else:
-            return "Wren Engine is not healthy"
+            return (
+                f"Wren Engine configuration is complete but ibis-server returned an error "
+                f"(HTTP {response.status_code}). Ensure ibis-server is running at {WREN_URL}."
+            )
     except Exception as e:
-        return "Wren Engine is not healthy"
+        return (
+            f"Wren Engine configuration is complete but ibis-server is unreachable at {WREN_URL}. "
+            f"Ensure ibis-server is running. Error: {e}"
+        )
 
 
 if __name__ == "__main__":
