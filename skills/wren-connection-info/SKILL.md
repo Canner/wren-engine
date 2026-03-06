@@ -4,7 +4,7 @@ description: Set up data source type and connection credentials for Wren Engine.
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.0"
+  version: "1.1"
 ---
 
 # Wren Connection Info
@@ -37,15 +37,26 @@ Ask the user for their **data source type**:
 
 ## Step 2 — Choose connection mode
 
-Two modes are supported. Ask the user which they prefer, or infer from context:
+Two modes are supported. Ask the user which they prefer, or infer from context.
+
+The chosen mode is recorded as `connection_mode` in `wren_project.yml` so every subsequent workflow knows how to handle credentials.
 
 ### Mode A — Secure (default, recommended for production)
+
+`connection_mode: security` in `wren_project.yml`.
 
 The LLM never handles sensitive values. ibis-server reads the connection file directly.
 
 Use this mode by default unless the user explicitly says they are in a test/development environment and willing to share credentials.
 
+**When `connection_mode: security` is in effect** (either set explicitly or because the field is absent):
+- **Never** read `connection.yml` or `target/connection.json` without first asking the user for permission.
+- **Never** display or echo the contents of those files.
+- If debugging requires connection info, ask the user to share only non-sensitive fields (e.g. `host`, `port`, `database`, `user`) — never passwords, tokens, or keys.
+
 ### Mode B — Inline (opt-in, testing only)
+
+`connection_mode: inline` in `wren_project.yml`.
 
 > **How to opt in**: The user must say something like "I'm just testing, you can use my credentials" or "it's a dev environment, here are my connection details". Do not assume this mode.
 
@@ -177,12 +188,14 @@ json.dump(d, open('target/connection.json', 'w'))
 Provide to the calling workflow:
 - `connectionFilePath`: absolute path to `target/connection.json`
 - `data_source`: the data source type string (e.g. `"POSTGRES"`)
+- `connection_mode`: `"security"` — record this in `wren_project.yml`
 
 ### Mode B output
 
 Assemble the inline dict directly. Provide to the calling workflow:
 - `connectionInfo`: camelCase JSON dict (see [Field mapping](#field-mapping) below)
 - `data_source`: the data source type string
+- `connection_mode`: `"inline"` — record this in `wren_project.yml`
 
 ---
 
