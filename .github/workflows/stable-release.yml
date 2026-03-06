@@ -52,6 +52,13 @@ jobs:
           git commit -m "Upgrade ibis version to $version"
           git push
           echo "value=$version" >> $GITHUB_OUTPUT
+      - name: Sync mcp-server version
+        run: |
+          version=${{ steps.next_version.outputs.value }}
+          sed -i "s/^version = \".*\"/version = \"$version\"/" mcp-server/pyproject.toml
+          git add mcp-server/pyproject.toml
+          git commit --amend --no-edit
+          git push --force-with-lease
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
@@ -174,6 +181,7 @@ jobs:
           context: ./ibis-server
           build-args: |
             ENV=prod
+            MCP_SERVER_VERSION=${{ needs.prepare-version.outputs.next_version }}
           build-contexts: |
             wren-core-py=./wren-core-py
             wren-core=./wren-core

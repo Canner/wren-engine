@@ -704,5 +704,27 @@ async def health_check() -> str:
         )
 
 
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Get Version",
+        readOnlyHint=True,
+    ),
+)
+def get_version() -> str:
+    """Return the current version of the Wren MCP server."""
+    try:
+        from importlib.metadata import version
+
+        return version("mcp-server")
+    except Exception:
+        pyproject = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "pyproject.toml")
+        with open(pyproject, "rb") as f:
+            for line in f:
+                line = line.decode()
+                if line.startswith("version"):
+                    return line.split('"')[1]
+        return "unknown"
+
+
 if __name__ == "__main__":
     mcp.run(transport=MCP_TRANSPORT)

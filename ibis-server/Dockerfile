@@ -102,6 +102,11 @@ COPY wren/ ./wren/
 # Copy MCP server
 COPY --from=mcp-server ./app /mcp-server/app/
 COPY --from=mcp-server ./mdl.schema.json /mcp-server/
+COPY --from=mcp-server ./pyproject.toml /mcp-server/
+ARG MCP_SERVER_VERSION
+RUN if [ -n "$MCP_SERVER_VERSION" ]; then \
+    sed -i "s/^version = \".*\"/version = \"$MCP_SERVER_VERSION\"/" /mcp-server/pyproject.toml; \
+    fi
 
 COPY pyproject.toml poetry.lock ./
 
@@ -117,6 +122,8 @@ RUN jupyter lab --generate-config --allow-root
 
 COPY entrypoint.sh ./
 RUN chmod +x ./entrypoint.sh
+
+LABEL org.opencontainers.image.mcp-server.version=${MCP_SERVER_VERSION}
 
 EXPOSE 8000 8888 9000
 

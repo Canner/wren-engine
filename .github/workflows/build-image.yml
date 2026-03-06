@@ -106,6 +106,15 @@ jobs:
           platform=${{ matrix.arch.platform }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
       - uses: actions/checkout@v4
+      - name: Resolve MCP server version
+        id: mcp_version
+        run: |
+          if [ -n "${{ github.event.inputs.docker_image_tag_name }}" ]; then
+            version=${{ github.event.inputs.docker_image_tag_name }}
+          else
+            version=sha-$(git log -1 --pretty=%h)
+          fi
+          echo "value=$version" >> $GITHUB_OUTPUT
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
@@ -126,6 +135,8 @@ jobs:
           platforms: ${{ matrix.arch.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           context: ./ibis-server
+          build-args: |
+            MCP_SERVER_VERSION=${{ steps.mcp_version.outputs.value }}
           build-contexts: |
             wren-core-py=./wren-core-py
             wren-core=./wren-core
