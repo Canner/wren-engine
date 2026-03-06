@@ -25,22 +25,37 @@ jobs:
       - uses: actions/checkout@v4
       - name: Prepare tag name
         id: prepare_tag
+        env:
+          DOCKER_IMAGE_TAG_NAME: ${{ github.event.inputs.docker_image_tag_name }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
             echo "type=sha" > tags.txt
             echo "type=schedule" >> tags.txt
+            mcp_version="sha-$(git rev-parse --short HEAD)"
           fi
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            if [ -n "${{ github.event.inputs.docker_image_tag_name }}" ]; then
-              tag_name=${{ github.event.inputs.docker_image_tag_name }}
+            if [ -n "$DOCKER_IMAGE_TAG_NAME" ]; then
+              if ! echo "$DOCKER_IMAGE_TAG_NAME" | grep -qE '^[A-Za-z0-9_][A-Za-z0-9_.-]*$'; then
+                echo "Invalid docker_image_tag_name: must start with [A-Za-z0-9_] and contain only [A-Za-z0-9_.-]" >&2
+                exit 1
+              fi
+              if [ "${#DOCKER_IMAGE_TAG_NAME}" -gt 128 ]; then
+                echo "docker_image_tag_name exceeds 128 characters" >&2
+                exit 1
+              fi
+              tag_name="$DOCKER_IMAGE_TAG_NAME"
             else
-              tag_name=$(echo ${{ github.ref_name }} | sed 's/[^a-zA-Z0-9]/-/g')-$(git log -1 --pretty=%h)
+              tag_name=$(echo "$REF_NAME" | sed 's/[^a-zA-Z0-9]/-/g')-$(git rev-parse --short HEAD)
             fi
             echo "type=raw,value=$tag_name" > tags.txt
+            mcp_version="$tag_name"
           fi
           echo "tags=$(cat tags.txt)" >> $GITHUB_OUTPUT
+          printf 'mcp_version=%s\n' "$mcp_version" >> $GITHUB_OUTPUT
     outputs:
       tags: ${{ steps.prepare_tag.outputs.tags }}
+      mcp_version: ${{ steps.prepare_tag.outputs.mcp_version }}
   build-image:
     needs: prepare-tag
     runs-on: ubuntu-latest
@@ -126,6 +141,8 @@ jobs:
           platforms: ${{ matrix.arch.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           context: ./ibis-server
+          build-args: |
+            MCP_SERVER_VERSION=${{ needs.prepare-tag.outputs.mcp_version }}
           build-contexts: |
             wren-core-py=./wren-core-py
             wren-core=./wren-core
