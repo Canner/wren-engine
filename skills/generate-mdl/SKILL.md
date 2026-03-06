@@ -246,7 +246,7 @@ When in doubt, use `VARCHAR` as a safe fallback.
 
 ## Connection info format
 
-Pass to `setup_connection(datasource=..., conn_info={...})`:
+Pass to `setup_connection(datasource=..., connectionInfo={...})`:
 
 ```
 POSTGRES    : {"host": "...", "port": "5432", "user": "...", "password": "...", "database": "..."}
