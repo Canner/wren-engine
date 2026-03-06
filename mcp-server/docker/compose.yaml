@@ -2,23 +2,13 @@ services:
   ibis-server:
     image: ghcr.io/canner/wren-engine-ibis:latest
     ports:
-      - "8000:8000"
+      - "${HOST_WREN_PORT:-8000}:8000"
+      - "${HOST_MCP_PORT:-9000}:9000"
     environment:
-      WREN_ENGINE_ENDPOINT: http://java-engine:8080
+      ENABLE_MCP_SERVER: "true"
+      MCP_TRANSPORT: "streamable-http"
+      MCP_HOST: "0.0.0.0"
+      MCP_PORT: "9000"
+      WREN_URL: "localhost:8000"
     volumes:
-      - ./../etc:/usr/src/app/etc
-  java-engine:
-    image: ghcr.io/canner/wren-engine:latest
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./../etc:/usr/src/app/etc
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-    environment:
-      MAX_HEAP_SIZE: 819m
-      MIN_HEAP_SIZE: 819m
-      
+      - ${MDL_WORKSPACE:-../workspace}:/workspace

@@ -7,7 +7,6 @@ import pytest
 from testcontainers.clickhouse import ClickHouseContainer
 
 from app.model.data_source import X_WREN_DB_STATEMENT_TIMEOUT
-from app.model.error import ErrorCode
 from tests.conftest import file_path
 
 pytestmark = pytest.mark.clickhouse
@@ -317,7 +316,8 @@ async def test_query_to_many_relationship(
 
 async def test_query_alias_join(client, manifest_str, clickhouse: ClickHouseContainer):
     connection_info = _to_connection_info(clickhouse)
-    # ClickHouse does not support alias join
+    # ClickHouse does support alias join since 2026.03
+    # refSql models rewrite alias join into a CTE, which ClickHouse supports
     response = await client.post(
         url=f"{base_url}/query",
         json={
@@ -327,8 +327,7 @@ async def test_query_alias_join(client, manifest_str, clickhouse: ClickHouseCont
         },
     )
 
-    assert response.status_code == 422
-    assert response.json()["errorCode"] == ErrorCode.INVALID_SQL.name
+    assert response.status_code == 200
 
 
 async def test_query_without_manifest(client, clickhouse: ClickHouseContainer):

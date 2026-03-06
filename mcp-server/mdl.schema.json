@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Canner/WrenAI/tree/main/wren-mdl/mdl.schema.json",
+  "$id": "https://raw.githubusercontent.com/Canner/WrenAI/main/wren-mdl/mdl.schema.json",
   "title": "WrenMDL Manifest Schema",
   "description": "A schema for WrenMDL manifest file",
   "$defs": {
@@ -17,21 +17,115 @@
           "type": "string",
           "minLength": 1
         },
+        "relationship": {
+          "description": "the relationship used by the column. If the type is a relationship, this field is required",
+          "type": "string"
+        },
         "isCalculated": {
           "description": "whether the column is calculated or not. If the column expression used relationship, this field is required",
+          "type": "boolean"
+        },
+        "notNull": {
+          "description": "whether the column is not null or not",
           "type": "boolean"
         },
         "expression": {
           "description": "the expression of the column. If the column is calculated, this field is required",
           "type": ["string", "null"]
+        },
+        "isHidden": {
+          "description": "whether the column is hidden or not",
+          "type": "boolean"
+        },
+        "columnLevelAccessControl": {
+          "description": "the access-control rule for the column",
+          "type": "object",
+          "properties": {
+            "name": {
+              "description": "the name of the access-control rule",
+              "type": "string"
+            },
+            "operator": {
+              "description": "the operator of the access-control rule",
+              "type": "string",
+              "enum": [
+                "EQUALS",
+                "NOT_EQUALS",
+                "GREATER_THAN",
+                "LESS_THAN",
+                "GREATER_THAN_OR_EQUALS",
+                "LESS_THAN_OR_EQUALS"
+              ]
+            },
+            "requiredProperties": {
+              "description": "the required properties for the access-control rule",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/sessionProperty"
+              },
+              "minItems": 1,
+              "maxItems": 1
+            },
+            "threshold": {
+              "description": "the threshold value of the access-control rule",
+              "type": "object",
+              "properties": {
+                "value": {
+                  "description": "the value of the threshold",
+                  "type": "string"
+                },
+                "dataType": {
+                  "description": "the data type of the threshold",
+                  "type": "string",
+                  "enum": ["NUMERIC", "STRING"]
+                }
+              },
+              "required": ["value", "dataType"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["name", "operator", "requiredProperties"],
+          "additionalProperties": false
+        },
+        "properties": {
+          "description": "the customize properties of the column",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       },
       "required": ["name", "type"],
+      "additionalProperties": false
+    },
+    "sessionProperty": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "the name of the session property",
+          "type": "string",
+          "minLength": 1
+        },
+        "required": {
+          "description": "whether the session property is required or not",
+          "type": "boolean"
+        },
+        "defaultExpr": {
+          "description": "the default SQL expression of the session property",
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["name", "required"],
       "additionalProperties": false
     }
   },
   "type": "object",
   "properties": {
+    "$schema": {
+      "description": "the schema of WrenMDL",
+      "type": "string",
+      "const": "https://raw.githubusercontent.com/Canner/WrenAI/main/wren-mdl/mdl.schema.json"
+    },
     "catalog": {
       "description": "the catalog name of WrenMDL",
       "type": "string",
@@ -40,6 +134,17 @@
     "schema": {
       "description": "the schema name of WrenMDL",
       "type": "string",
+      "minLength": 1
+    },
+    "sampleDataFolder": {
+      "description": "the folder path for sample data",
+      "type": "string",
+      "minLength": 1
+    },
+    "dataSource": {
+      "description": "the data source type (case insensitive). Valid values are: BIGQUERY, CLICKHOUSE, CANNER, TRINO, MSSQL, MYSQL, POSTGRES, SNOWFLAKE, DUCKDB, LOCAL_FILE, S3_FILE, GCS_FILE, MINIO_FILE, ORACLE, ATHENA, REDSHIFT",
+      "type": "string",
+      "pattern": "^(?:[Bb][Ii][Gg][Qq][Uu][Ee][Rr][Yy]|[Cc][Ll][Ii][Cc][Kk][Hh][Oo][Uu][Ss][Ee]|[Cc][Aa][Nn][Nn][Ee][Rr]|[Tt][Rr][Ii][Nn][Oo]|[Mm][Ss][Ss][Qq][Ll]|[Mm][Yy][Ss][Qq][Ll]|[Pp][Oo][Ss][Tt][Gg][Rr][Ee][Ss]|[Ss][Nn][Oo][Ww][Ff][Ll][Aa][Kk][Ee]|[Dd][Uu][Cc][Kk][Dd][Bb]|[Ll][Oo][Cc][Aa][Ll]_[Ff][Ii][Ll][Ee]|[Ss]3_[Ff][Ii][Ll][Ee]|[Gg][Cc][Ss]_[Ff][Ii][Ll][Ee]|[Mm][Ii][Nn][Ii][Oo]_[Ff][Ii][Ll][Ee]|[Oo][Rr][Aa][Cc][Ll][Ee]|[Aa][Tt][Hh][Ee][Nn][Aa]|[Rr][Ee][Dd][Ss][Hh][Ii][Ff][Tt])$",
       "minLength": 1
     },
     "models": {
@@ -51,6 +156,16 @@
         "properties": {
           "name": {
             "description": "the name of the model",
+            "type": "string",
+            "minLength": 1
+          },
+          "refSql": {
+            "description": "(WIP) the sql reference of the model",
+            "type": "string",
+            "minLength": 1
+          },
+          "baseObject": {
+            "description": "(WIP) the base object of the model",
             "type": "string",
             "minLength": 1
           },
@@ -77,85 +192,266 @@
             "items": {
               "$ref": "#/$defs/column"
             }
+          },
+          "primaryKey": {
+            "description": "the primary key of the model. It's required if the model is the one side of any ONE_TO_MANY or MANY_TO_ONE relationship",
+            "type": "string"
+          },
+          "cached": {
+            "description": "(WIP) whether the model is cached or not",
+            "type": "boolean"
+          },
+          "refreshTime": {
+            "description": "(WIP) the cache refresh time of the model",
+            "type": "string",
+            "pattern": "^\\s*(\\d+(?:\\.\\d+)?)\\s*([a-zA-Z]+)\\s*$"
+          },
+          "rowLevelAccessControls": {
+            "type": "array",
+            "items": {
+              "description": "the row-level access-control rule for the model",
+              "type": "object",
+              "properties": {
+                "name": {
+                  "description": "the name of the access-control rule",
+                  "type": "string"
+                },
+                "requiredProperties": {
+                  "description": "the required properties for the access-control rule",
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/sessionProperty"
+                  }
+                },
+                "condition": {
+                  "description": "The condition of the access-control rule. A condition is a SQL expression that evaluates to true or false.",
+                  "type": "string"
+                }
+              },
+              "required": ["name", "requiredProperties", "condition"],
+              "additionalProperties": false
+            }
+          },
+          "properties": {
+            "description": "the customize properties of the model",
+            "type": "object",
+            "additionalProperties": {
+              "type": ["string", "number", "boolean", "object", "array", "null"]
+            }
           }
         },
         "required": ["name"],
         "oneOf": [
+          { "required": ["refSql"] },
+          { "required": ["baseObject"] },
           { "required": ["tableReference"] }
         ],
         "additionalProperties": false
       }
-    }
-  },
-  "relationships": {
-    "description": "the list of relationships",
-    "type": "array",
-    "unevaluatedItems": false,
-    "items": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "description": "the name of the relationship",
-          "type": "string",
-          "minLength": 1
-        },
-        "models": {
-          "description": "the list of models",
-          "type": "array",
-          "items": {
+    },
+    "relationships": {
+      "description": "the list of relationships",
+      "type": "array",
+      "unevaluatedItems": false,
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "the name of the relationship",
             "type": "string",
             "minLength": 1
           },
-          "minItems": 2,
-          "maxItems": 2
-        },
-        "joinType": {
-          "description": "the join type of the relationship",
-          "type": "string",
-          "enum": ["ONE_TO_ONE", "ONE_TO_MANY", "MANY_TO_ONE", "MANY_TO_MANY"]
-        },
-        "condition": {
-          "description": "the condition of the relationship",
-          "type": "string",
-          "minLength": 1
-        },
-        "properties": {
-          "description": "the customize properties of the relationship",
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
+          "models": {
+            "description": "the list of models",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "joinType": {
+            "description": "the join type of the relationship",
+            "type": "string",
+            "enum": ["ONE_TO_ONE", "ONE_TO_MANY", "MANY_TO_ONE", "MANY_TO_MANY"]
+          },
+          "condition": {
+            "description": "the condition of the relationship",
+            "type": "string",
+            "minLength": 1
+          },
+          "properties": {
+            "description": "the customize properties of the relationship",
+            "type": "object",
+            "additionalProperties": {
+              "type": ["string", "number", "boolean", "object", "array", "null"]
+            }
           }
-        }
-      },
-      "required": ["name", "models", "joinType", "condition"]
-    }
-  },
-  "views": {
-    "description": "the list of views",
-    "type": "array",
-    "unevaluatedItems": false,
-    "items": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "description": "the name of the view",
-          "type": "string",
-          "minLength": 1
         },
-        "statement": {
-          "description": "the sql statement of the view",
-          "type": "string",
-          "minLength": 1
-        },
+        "required": ["name", "models", "joinType", "condition"]
+      }
+    },
+    "metrics": {
+      "description": "(WIP) the list of metrics",
+      "type": "array",
+      "unevaluatedItems": false,
+      "items": {
+        "description": "(WIP) the metric",
+        "type": "object",
         "properties": {
-          "description": "the customize properties of the view",
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
+          "name": {
+            "description": "the name of the metric",
+            "type": "string",
+            "minLength": 1
+          },
+          "baseObject": {
+            "description": "the base object of the metric",
+            "type": "string",
+            "minLength": 1
+          },
+          "dimension": {
+            "description": "the list of dimensions",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/column"
+            }
+          },
+          "measure": {
+            "description": "the list of measures",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/column"
+            },
+            "minItems": 1
+          },
+          "timeGrain": {
+            "description": "the time grain fields of the metric",
+            "type": "array",
+            "unevaluatedItems": false,
+            "items": {
+              "description": "the time grain field. It should belong to the dimension fields",
+              "type": "object",
+              "properties": {
+                "name": {
+                  "description": "the name of the time grain field",
+                  "type": "string",
+                  "minLength": 1
+                },
+                "refColumn": {
+                  "description": "the reference column name of the time grain field",
+                  "type": "string",
+                  "minLength": 1
+                },
+                "dateParts": {
+                  "description": "the acceptable time units of the time grain field",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": ["YEAR", "QUARTER", "MONTH", "WEEK", "DAY", "HOUR", "MINUTE", "SECOND"]
+                  }
+                }
+              },
+              "required": ["name", "refColumn", "dateParts"]
+            }
+          },
+          "cached": {
+            "type": "boolean"
+          },
+          "refreshTime": {
+            "type": "string",
+            "description": "the cache refresh time of the metric",
+            "pattern": "^\\s*(\\d+(?:\\.\\d+)?)\\s*([a-zA-Z]+)\\s*$"
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": ["string", "number", "boolean", "object", "array", "null"]
+            }
           }
-        }
-      },
-      "required": ["name", "statement"]
+        },
+        "required": ["name", "baseObject", "dimension", "measure"]
+      }
+    },
+    "views": {
+      "description": "the list of views",
+      "type": "array",
+      "unevaluatedItems": false,
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "the name of the view",
+            "type": "string",
+            "minLength": 1
+          },
+          "statement": {
+            "description": "the sql statement of the view",
+            "type": "string",
+            "minLength": 1
+          },
+          "properties": {
+            "description": "the customize properties of the view",
+            "type": "object",
+            "additionalProperties": {
+              "type": ["string", "number", "boolean", "object", "array", "null"]
+            }
+          }
+        },
+        "required": ["name", "statement"]
+      }
+    },
+    "enumDefinitions": {
+      "description": "(WIP) the list of enum definitions",
+      "type": "array",
+      "unevaluatedItems": false,
+      "items": {
+        "description": "(WIP) the enum definition",
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "the name of the enum",
+            "type": "string",
+            "minLength": 1
+          },
+          "values": {
+            "type": "array",
+            "unevaluatedItems": false,
+            "items": {
+              "description": "the member of enum",
+              "type": "object",
+              "properties": {
+                "name": {
+                  "description": "the name of the member",
+                  "type": "string",
+                  "minLength": 1
+                },
+                "value": {
+                  "description": "the value of the member. If not provided, the value is the same as the name",
+                  "type": "string",
+                  "minLength": 1
+                },
+                "properties": {
+                  "description": "the customize properties of the member",
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": ["string", "number", "boolean", "object", "array", "null"]
+                  }
+                }
+              },
+              "required": ["name"]
+            }
+          },
+          "properties": {
+            "description": "the customize properties of the enum",
+            "type": "object",
+            "additionalProperties": {
+              "type": ["string", "number", "boolean", "object", "array", "null"]
+            }
+          }
+        },
+        "required": ["name", "values"]
+      }
     }
   },
   "required": ["catalog", "schema"],

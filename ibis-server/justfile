@@ -56,12 +56,46 @@ test-verbose MARKER:
 
 image-name := "ghcr.io/canner/wren-engine-ibis:latest"
 
-docker-build:
-    docker buildx build -t {{ image-name }} -f Dockerfile \
+# Build image. platform: ""=current, linux/amd64, linux/arm64, linux/amd64,linux/arm64 (multi-arch needs --push)
+# Single-platform matching current host: Rust built locally via maturin+zig (requires: brew install zig)
+# Multi-arch or cross-platform: Rust built inside Docker with BuildKit cargo cache
+docker-build platform="" *args="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    host_arch=$(uname -m)
+    host_platform=$([[ "$host_arch" = "arm64" || "$host_arch" = "aarch64" ]] && echo "linux/arm64" || echo "linux/amd64")
+    rust_target=$([[ "$host_arch" = "arm64" || "$host_arch" = "aarch64" ]] && echo "aarch64-unknown-linux-gnu" || echo "x86_64-unknown-linux-gnu")
+
+    build_platform="{{ platform }}"
+    [ -z "$build_platform" ] && build_platform="$host_platform"
+
+    platform_arg=""
+    [ -n "{{ platform }}" ] && platform_arg="--platform {{ platform }}"
+
+    wheel_source="docker"
+    if [ "$build_platform" = "$host_platform" ]; then
+        echo "→ Building Rust wheel locally ($rust_target via maturin+zig)"
+        cd ../wren-core-py
+        just install
+        python_ver=$(poetry run python -c "import sys; print(f'python{sys.version_info.major}.{sys.version_info.minor}')")
+        poetry run maturin build --release --target "$rust_target" --zig -i "$python_ver" --out target/wheels/
+        cd -
+        wheel_source="local"
+    else
+        echo "→ Building Rust wheel inside Docker (target: $build_platform)"
+    fi
+
+    docker buildx build \
+        $platform_arg \
+        --build-arg WHEEL_SOURCE="$wheel_source" \
+        -t {{ image-name }} \
+        -f Dockerfile \
         --build-context wren-core-py=../wren-core-py \
         --build-context wren-core=../wren-core \
         --build-context wren-core-base=../wren-core-base \
-        .
+        --build-context mcp-server=../mcp-server \
+        {{ args }} .
 
 docker-run:
     docker run -it --rm -p 8000:8000 --env-file .env {{ image-name }}
