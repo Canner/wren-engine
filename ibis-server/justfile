@@ -64,8 +64,8 @@ docker-build platform="" *args="":
     set -euo pipefail
 
     host_arch=$(uname -m)
-    host_platform=$([ "$host_arch" = "arm64" ] && echo "linux/arm64" || echo "linux/amd64")
-    rust_target=$([ "$host_arch" = "arm64" ] && echo "aarch64-unknown-linux-gnu" || echo "x86_64-unknown-linux-gnu")
+    host_platform=$([[ "$host_arch" = "arm64" || "$host_arch" = "aarch64" ]] && echo "linux/arm64" || echo "linux/amd64")
+    rust_target=$([[ "$host_arch" = "arm64" || "$host_arch" = "aarch64" ]] && echo "aarch64-unknown-linux-gnu" || echo "x86_64-unknown-linux-gnu")
 
     build_platform="{{ platform }}"
     [ -z "$build_platform" ] && build_platform="$host_platform"
