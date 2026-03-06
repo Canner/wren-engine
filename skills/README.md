@@ -4,14 +4,35 @@ This directory contains reusable AI agent skills for working with Wren Engine. S
 
 ## Installation
 
-Copy any skill directory into your local Claude skills folder:
+### Option 1 — install script (recommended)
+
+**From a local clone:**
+```bash
+bash skills/install.sh                        # all skills
+bash skills/install.sh generate-mdl wren-sql  # specific skills
+bash skills/install.sh --force generate-mdl   # overwrite existing
+```
+
+**Remote (one-liner, after pushing to GitHub):**
+```bash
+curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash
+# specific skills:
+curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- generate-mdl
+```
+
+### Option 2 — npx openskills (cross-agent)
+
+Installs into Claude Code, Cursor, Windsurf, and 30+ other agent tools:
+```bash
+npx openskills add Canner/wren-engine
+```
+
+### Option 3 — manual copy
 
 ```bash
-# macOS / Linux
 cp -r skills/generate-mdl ~/.claude/skills/
-
-# Or install all skills at once
-cp -r skills/* ~/.claude/skills/
+# or all at once:
+cp -r skills/generate-mdl skills/mdl-project skills/wren-sql skills/wren-quickstart ~/.claude/skills/
 ```
 
 Once installed, invoke a skill by name in your conversation:
@@ -20,6 +41,7 @@ Once installed, invoke a skill by name in your conversation:
 /generate-mdl
 /mdl-project
 /wren-sql
+/wren-quickstart
 ```
 
 ## Available Skills
