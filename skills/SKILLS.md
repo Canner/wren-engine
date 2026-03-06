@@ -159,10 +159,10 @@ Sets up Wren Engine MCP server via Docker, registers it with an AI agent (Claude
 ### Workflow summary
 
 1. Ask user for workspace mount path
-2. Create `docker/.env` with `MDL_WORKSPACE`
-3. `docker compose up -d`
-4. Rewrite `localhost` → `host.docker.internal` in connection credentials
-5. Add `wren` MCP server to Claude Code using streamable-http on port 9000
+2. `docker run` with workspace mounted at `/workspace`, MCP server enabled on port 9000
+3. Rewrite `localhost` → `host.docker.internal` in connection credentials
+4. Add `wren` MCP server to Claude Code using streamable-http on port 9000 (`claude mcp add`)
+5. Start a new session so the MCP tools are loaded
 6. Run `health_check()` to verify
 
 ---
@@ -183,4 +183,6 @@ Then invoke in your AI client:
 /generate-mdl
 /wren-project
 /wren-sql
+/wren-mcp-setup
+/wren-quickstart
 ```

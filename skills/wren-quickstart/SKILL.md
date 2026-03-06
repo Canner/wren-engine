@@ -43,7 +43,7 @@ bash skills/install.sh
 curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash
 ```
 
-This installs all Wren skills (`generate-mdl`, `wren-project`, `wren-mcp-setup`, `wren-quickstart`) into `~/.claude/skills/`.
+This installs all Wren skills (`generate-mdl`, `wren-project`, `wren-sql`, `wren-mcp-setup`, `wren-quickstart`) into `~/.claude/skills/`.
 
 After installation, the user should **restart their AI client session** so the new skills are loaded.
 
@@ -150,7 +150,9 @@ The wren-mcp-setup skill will:
 
 ## Phase 5 — Verify and confirm
 
-Once the MCP server is registered, ask the AI agent to run a health check in the current session:
+Once the MCP server is registered, the user must **start a new session** for the Wren MCP tools to be loaded. Instruct the user to do this now.
+
+In the new session, ask the AI agent to run a health check:
 
 ```
 Use health_check() to verify Wren Engine is reachable.
@@ -161,8 +163,7 @@ Expected response: `SELECT 1` returns successfully.
 If the health check passes:
 
 - Tell the user setup is complete.
-- Remind them to **start a new session** so the Wren MCP tools are fully loaded.
-- In the new session, they can start querying immediately:
+- In this session, they can start querying immediately:
 
 ```
 Query: How many orders are in the orders table?
