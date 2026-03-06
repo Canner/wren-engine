@@ -54,7 +54,7 @@ test MARKER:
 test-verbose MARKER:
     poetry run pytest -s -v -m '{{ MARKER }}'
 
-image-name := "ghcr.io/canner/wren-engine-ibis:mcp-1"
+image-name := "ghcr.io/canner/wren-engine-ibis:latest"
 
 # Build image. platform: ""=current, linux/amd64, linux/arm64, linux/amd64,linux/arm64 (multi-arch needs --push)
 # Single-platform matching current host: Rust built locally via maturin+zig (requires: brew install zig)
