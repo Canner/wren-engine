@@ -1,7 +1,7 @@
 ---
 name: wren-quickstart
-description: Set up Wren Engine MCP server via Docker. Covers pulling the Docker image, configuring the compose file, mounting a workspace, fixing localhost → host.docker.internal for connection info, and registering the MCP server in Claude Code (or other MCP clients) using streamable-http transport. Trigger when a user wants to run Wren MCP in Docker, configure Claude Code MCP, or connect an AI client to a Dockerized Wren Engine.
-compatibility: Requires Docker Desktop (or Docker Engine) with BuildKit enabled.
+description: Set up Wren Engine MCP server via Docker. Covers pulling the Docker image, running the container with docker run, mounting a workspace, fixing localhost → host.docker.internal for connection info, and registering the MCP server in Claude Code (or other MCP clients) using streamable-http transport. Trigger when a user wants to run Wren MCP in Docker, configure Claude Code MCP, or connect an AI client to a Dockerized Wren Engine.
+compatibility: Requires Docker Desktop (or Docker Engine).
 metadata:
   author: wren-engine
   version: "1.0"
@@ -19,39 +19,53 @@ Ask the user:
 
 > What directory on your host machine should be mounted as the MCP workspace?
 > This is where MDL files and YAML project directories will be read and written.
-> (Default: `mcp-server/workspace` inside the wren-engine repo)
+> (Example: `~/wren-workspace`)
 
-If the user has no preference, use `../workspace` relative to the `docker/` directory (i.e. `mcp-server/workspace`).
-
-Save the answer as `<WORKSPACE_PATH>` for use in the next steps.
-
----
-
-## Step 2 — Create the compose env file
-
-Create `mcp-server/docker/.env` with:
-
-```
-MDL_WORKSPACE=<WORKSPACE_PATH>
-```
-
-Example:
-```
-MDL_WORKSPACE=/Users/me/my-mdl-files
-```
-
-If the user accepted the default, no `.env` file is needed — the compose default (`../workspace`) already points to `mcp-server/workspace/`.
-
----
-
-## Step 3 — Start the container
+If the user has no preference, suggest creating a dedicated directory such as `~/wren-workspace`:
 
 ```bash
-cd mcp-server/docker
-docker compose up -d
+mkdir -p ~/wren-workspace
 ```
 
-This starts the container using the image `ghcr.io/canner/wren-engine-ibis:mcp-2` with:
+Save the answer as `<WORKSPACE_PATH>` (use the absolute path, e.g. `/Users/me/wren-workspace`) for use in the next steps.
+
+---
+
+## Step 2 — Start the container
+
+Run the following command, substituting `<WORKSPACE_PATH>` with the path from Step 1:
+
+```bash
+docker run -d \
+  --name wren-mcp \
+  -p 8000:8000 \
+  -p 9000:9000 \
+  -e ENABLE_MCP_SERVER=true \
+  -e MCP_TRANSPORT=streamable-http \
+  -e MCP_HOST=0.0.0.0 \
+  -e MCP_PORT=9000 \
+  -e WREN_URL=localhost:8000 \
+  -v <WORKSPACE_PATH>:/workspace \
+  ghcr.io/canner/wren-engine-ibis:latest
+```
+
+Example with a concrete path:
+
+```bash
+docker run -d \
+  --name wren-mcp \
+  -p 8000:8000 \
+  -p 9000:9000 \
+  -e ENABLE_MCP_SERVER=true \
+  -e MCP_TRANSPORT=streamable-http \
+  -e MCP_HOST=0.0.0.0 \
+  -e MCP_PORT=9000 \
+  -e WREN_URL=localhost:8000 \
+  -v /Users/me/my-mdl-files:/workspace \
+  ghcr.io/canner/wren-engine-ibis:latest
+```
+
+This starts the container using the image `ghcr.io/canner/wren-engine-ibis:latest` with:
 
 | Service | Port | Purpose |
 |---------|------|---------|
@@ -62,13 +76,13 @@ The workspace directory is mounted at `/workspace` inside the container.
 
 Verify the container is running:
 ```bash
-docker compose ps
-docker compose logs -f
+docker ps --filter name=wren-mcp
+docker logs -f wren-mcp
 ```
 
 ---
 
-## Step 4 — Fix connection info: localhost → host.docker.internal
+## Step 3 — Fix connection info: localhost → host.docker.internal
 
 **Critical:** The container cannot reach the host's `localhost` directly.
 
@@ -86,7 +100,7 @@ When the user provides connection credentials later (via `setup_connection`), ch
 
 ---
 
-## Step 5 — Configure Claude Code MCP
+## Step 4 — Configure Claude Code MCP
 
 Claude Code uses **streamable-http** transport to connect to the containerized MCP server.
 
@@ -116,7 +130,7 @@ claude mcp list
 
 ---
 
-## Step 6 — Configure other MCP clients
+## Step 5 — Configure other MCP clients
 
 ### Cline / Cursor / VS Code MCP Extension
 
@@ -135,11 +149,11 @@ These clients also support HTTP transport. Add to their MCP settings:
 
 ### Claude Desktop (stdio fallback)
 
-Claude Desktop does not support HTTP transport natively. Use a local stdio proxy or run the MCP server locally instead. See the `wren-mcp-usage` skill for the local (non-Docker) stdio setup.
+Claude Desktop does not support HTTP transport natively. Use a local stdio proxy or run the MCP server locally instead.
 
 ---
 
-## Step 7 — Verify the connection
+## Step 6 — Verify the connection
 
 Ask the AI agent to run a health check:
 
@@ -158,15 +172,15 @@ If health check fails, see **Troubleshooting** below.
 ### 1. Check container status and logs
 
 ```bash
-docker compose ps
-docker compose logs ibis-server
+docker ps --filter name=wren-mcp
+docker logs wren-mcp
 ```
 
 Look for startup errors or crash loops. If the container exited, `logs` will show the last output before it stopped.
 
 ### 2. Port already in use
 
-The container exposes ports **8000** (ibis-server) and **9000** (MCP). If either port is already bound by another process on the host, Docker will silently fail to bind it and the health check will time out.
+The container exposes ports **8000** (ibis-server) and **9000** (MCP). If either port is already bound by another process on the host, the `docker run` command will fail with a bind error.
 
 **Check what is using the port:**
 
@@ -187,13 +201,22 @@ If another process is occupying the port you have two options:
 kill $(lsof -ti :9000)
 ```
 
-**Option B — remap the ports in `compose.yaml`:**
+**Option B — remap to different host ports:**
 
-Change the host-side port (left of the colon):
-```yaml
-ports:
-  - "18000:8000"   # ibis-server now on host port 18000
-  - "19000:9000"   # MCP server now on host port 19000
+Stop and remove the existing container first, then re-run with different host-side ports:
+```bash
+docker rm -f wren-mcp
+docker run -d \
+  --name wren-mcp \
+  -p 18000:8000 \
+  -p 19000:9000 \
+  -e ENABLE_MCP_SERVER=true \
+  -e MCP_TRANSPORT=streamable-http \
+  -e MCP_HOST=0.0.0.0 \
+  -e MCP_PORT=9000 \
+  -e WREN_URL=localhost:8000 \
+  -v <WORKSPACE_PATH>:/workspace \
+  ghcr.io/canner/wren-engine-ibis:latest
 ```
 
 Then update the MCP client URL to match:
@@ -203,8 +226,7 @@ claude mcp add --transport http wren http://localhost:19000/mcp
 
 ### 3. Container started but MCP endpoint returns an error
 
-- Confirm `ENABLE_MCP_SERVER: "true"` is set in `compose.yaml`
-- Confirm `MCP_TRANSPORT: "streamable-http"` and `MCP_HOST: "0.0.0.0"` are set
+- Confirm the container was started with `-e ENABLE_MCP_SERVER=true`, `-e MCP_TRANSPORT=streamable-http`, and `-e MCP_HOST=0.0.0.0`
 - Try curling the endpoint directly:
   ```bash
   curl -v http://localhost:9000/mcp
@@ -213,11 +235,11 @@ claude mcp add --transport http wren http://localhost:19000/mcp
 
 ### 4. Database connection refused inside the container
 
-If `health_check()` passes but queries fail with a connection error, the database host is likely still set to `localhost`. See **Step 4** above — change it to `host.docker.internal`.
+If `health_check()` passes but queries fail with a connection error, the database host is likely still set to `localhost`. See **Step 3** above — change it to `host.docker.internal`.
 
 ---
 
-## Step 8 — Load an MDL and start querying
+## Step 7 — Load an MDL and start querying
 
 Place your MDL JSON file in the workspace directory, then in the AI client:
 
@@ -226,29 +248,6 @@ deploy(mdl_file_path="/workspace/my_mdl.json")
 ```
 
 Or generate a new MDL from scratch using the `generate-mdl` skill.
-
----
-
-## Reference: compose.yaml
-
-The full compose file at `mcp-server/docker/compose.yaml`:
-
-```yaml
-services:
-  ibis-server:
-    image: ghcr.io/canner/wren-engine-ibis:latest
-    ports:
-      - "8000:8000"
-      - "9000:9000"
-    environment:
-      ENABLE_MCP_SERVER: "true"
-      MCP_TRANSPORT: "streamable-http"
-      MCP_HOST: "0.0.0.0"
-      MCP_PORT: "9000"
-      WREN_URL: "localhost:8000"
-    volumes:
-      - ${MDL_WORKSPACE:-../workspace}:/workspace
-```
 
 ---
 

@@ -2,8 +2,8 @@ services:
   ibis-server:
     image: ghcr.io/canner/wren-engine-ibis:latest
     ports:
-      - "8000:8000"
-      - "9000:9000"
+      - "${HOST_WREN_PORT:-8000}:8000"
+      - "${HOST_MCP_PORT:-9000}:9000"
     environment:
       ENABLE_MCP_SERVER: "true"
       MCP_TRANSPORT: "streamable-http"

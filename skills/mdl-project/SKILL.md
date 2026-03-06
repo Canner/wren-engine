@@ -14,7 +14,7 @@ YAML files use **snake_case** field names for readability. The compiled `target/
 
 ## Project structure
 
-```
+```text
 my_project/
 ├── wren_project.yml       # Project metadata (catalog, schema, data_source)
 ├── connection.yml         # Data source connection parameters
@@ -196,8 +196,6 @@ After building:
 
 When converting between YAML (snake_case) and JSON (camelCase):
 
-| YAML field (snake_case) | JSON field (camelCase) |
-|-------------------------|------------------------|
 **MDL fields:**
 
 | YAML field (snake_case) | JSON field (camelCase) |

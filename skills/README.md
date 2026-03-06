@@ -37,7 +37,7 @@ cp -r skills/generate-mdl skills/mdl-project skills/wren-sql skills/wren-quickst
 
 Once installed, invoke a skill by name in your conversation:
 
-```
+```text
 /generate-mdl
 /mdl-project
 /wren-sql

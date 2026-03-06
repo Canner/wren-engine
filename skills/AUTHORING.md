@@ -9,7 +9,7 @@ Full specification: https://agentskills.io/specification
 
 Each skill is a subdirectory containing a required `SKILL.md` and optional supporting directories:
 
-```
+```text
 skill-name/
 ├── SKILL.md              # Required — frontmatter + workflow instructions
 ├── references/           # Optional — detail files loaded on demand
