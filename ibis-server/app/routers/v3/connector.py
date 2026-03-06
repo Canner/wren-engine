@@ -47,6 +47,7 @@ from app.util import (
     execute_query_with_timeout,
     execute_validate_with_timeout,
     pushdown_limit,
+    resolve_connection_info,
     safe_strtobool,
     set_attribute,
     to_json,
@@ -91,7 +92,7 @@ async def query(
     ) as span:
         set_attribute(headers, span)
         connection_info = data_source.get_connection_info(
-            dto.connection_info, dict(headers)
+            resolve_connection_info(dto), dict(headers)
         )
         # Convert headers to dict for cache manager
         headers_dict = dict(headers) if headers else None
@@ -357,7 +358,7 @@ async def validate(
     ) as span:
         set_attribute(headers, span)
         connection_info = data_source.get_connection_info(
-            dto.connection_info, dict(headers)
+            resolve_connection_info(dto), dict(headers)
         )
         try:
             validator = Validator(
@@ -485,7 +486,7 @@ async def model_substitute(
     ) as span:
         set_attribute(headers, span)
         connection_info = data_source.get_connection_info(
-            dto.connection_info, dict(headers)
+            resolve_connection_info(dto), dict(headers)
         )
         try:
             sql = ModelSubstitute(data_source, dto.manifest_str, headers).substitute(
@@ -569,7 +570,7 @@ async def get_table_list(
     ) as span:
         set_attribute(headers, span)
         connection_info = data_source.get_connection_info(
-            dto.connection_info, dict(headers)
+            resolve_connection_info(dto), dict(headers)
         )
         metadata = MetadataFactory.get_metadata(data_source, connection_info)
         filter_info = get_filter_info(data_source, dto.filter_info or {})
@@ -595,7 +596,7 @@ async def get_schema_list(
     ) as span:
         set_attribute(headers, span)
         connection_info = data_source.get_connection_info(
-            dto.connection_info, dict(headers)
+            resolve_connection_info(dto), dict(headers)
         )
         metadata = MetadataFactory.get_metadata(data_source, connection_info)
         filter_info = get_filter_info(data_source, dto.filter_info or {})

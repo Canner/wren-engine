@@ -1,5 +1,7 @@
 import asyncio
 import base64
+import json
+import pathlib
 import time
 
 try:
@@ -51,6 +53,15 @@ tracer = trace.get_tracer(__name__)
 
 MIGRATION_MESSAGE = "Wren engine is migrating to Rust version now. \
     Wren AI team are appreciate if you can provide the error messages and related logs for us."
+
+
+def resolve_connection_info(dto) -> dict:
+    """Return connection info dict from either a file path or the inline DTO field."""
+    if getattr(dto, "connection_file_path", None):
+        path = pathlib.Path(dto.connection_file_path).resolve()
+        with open(path) as f:
+            return json.load(f)
+    return dto.connection_info
 
 
 @tracer.start_as_current_span("base64_to_dict", kind=trace.SpanKind.INTERNAL)

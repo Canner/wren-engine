@@ -18,6 +18,9 @@ X_CORRELATION_ID = "X-Correlation-ID"
 
 # Validate the dto by building the specific connection info from the data source
 def verify_query_dto(data_source: DataSource, dto: QueryDTO):
+    # Skip inline validation when using a file path; connection info is validated at query time
+    if dto.connection_file_path:
+        return
     # Use data_source.get_connection_info to validate the connection_info
     # This will ensure the connection_info can be properly parsed for the specific data source
     data_source.get_connection_info(dto.connection_info, {})
