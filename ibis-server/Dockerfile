@@ -103,7 +103,7 @@ COPY wren/ ./wren/
 COPY --from=mcp-server ./app /mcp-server/app/
 COPY --from=mcp-server ./mdl.schema.json /mcp-server/
 COPY --from=mcp-server ./pyproject.toml /mcp-server/
-ARG MCP_SERVER_VERSION
+ARG MCP_SERVER_VERSION=unknown
 RUN if [ -n "$MCP_SERVER_VERSION" ]; then \
     sed -i "s/^version = \".*\"/version = \"$MCP_SERVER_VERSION\"/" /mcp-server/pyproject.toml; \
     fi

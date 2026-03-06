@@ -717,13 +717,17 @@ def get_version() -> str:
 
         return version("mcp-server")
     except Exception:
+        pass
+    try:
         pyproject = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "pyproject.toml")
         with open(pyproject, "rb") as f:
             for line in f:
-                line = line.decode()
-                if line.startswith("version"):
-                    return line.split('"')[1]
-        return "unknown"
+                decoded = line.decode()
+                if decoded.startswith("version"):
+                    return decoded.split('"')[1]
+    except Exception:
+        pass
+    return "unknown"
 
 
 if __name__ == "__main__":

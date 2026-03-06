@@ -110,9 +110,9 @@ jobs:
         id: mcp_version
         run: |
           if [ -n "${{ github.event.inputs.docker_image_tag_name }}" ]; then
-            version=${{ github.event.inputs.docker_image_tag_name }}
+            version="${{ github.event.inputs.docker_image_tag_name }}"
           else
-            version=sha-$(git log -1 --pretty=%h)
+            version="sha-$(git log -1 --pretty=%h)"
           fi
           echo "value=$version" >> $GITHUB_OUTPUT
       - name: Docker meta

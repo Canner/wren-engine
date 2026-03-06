@@ -54,8 +54,9 @@ jobs:
           echo "value=$version" >> $GITHUB_OUTPUT
       - name: Sync mcp-server version
         run: |
-          version=${{ steps.next_version.outputs.value }}
-          sed -i "s/^version = \".*\"/version = \"$version\"/" mcp-server/pyproject.toml
+          version="${{ steps.next_version.outputs.value }}"
+          escaped_version=$(printf '%s\n' "$version" | sed 's/[&/\]/\\&/g')
+          sed -i "s/^version = \".*\"/version = \"$escaped_version\"/" mcp-server/pyproject.toml
           git add mcp-server/pyproject.toml
           git commit --amend --no-edit
           git push --force-with-lease
