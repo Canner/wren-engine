@@ -58,8 +58,8 @@ jobs:
           escaped_version=$(printf '%s\n' "$version" | sed 's/[&/\]/\\&/g')
           sed -i "s/^version = \".*\"/version = \"$escaped_version\"/" mcp-server/pyproject.toml
           git add mcp-server/pyproject.toml
-          git commit --amend --no-edit
-          git push --force-with-lease
+          git commit -m "Sync mcp-server version to $version"
+          git push
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
