@@ -32,28 +32,64 @@ npx openskills add Canner/wren-engine
 ```bash
 cp -r skills/generate-mdl ~/.claude/skills/
 # or all at once:
-cp -r skills/generate-mdl skills/mdl-project skills/wren-sql skills/wren-quickstart ~/.claude/skills/
+cp -r skills/generate-mdl skills/wren-project skills/wren-sql skills/wren-mcp-setup skills/wren-quickstart ~/.claude/skills/
 ```
 
 Once installed, invoke a skill by name in your conversation:
 
 ```text
-/generate-mdl
-/mdl-project
-/wren-sql
 /wren-quickstart
+/generate-mdl
+/wren-project
+/wren-sql
+/wren-mcp-setup
 ```
 
 ## Available Skills
 
 | Skill | Description |
 |-------|-------------|
+| [wren-quickstart](wren-quickstart/SKILL.md) | End-to-end quickstart — install skills, generate MDL, save project, start MCP server, and verify setup |
 | [generate-mdl](generate-mdl/SKILL.md) | Generate a Wren MDL manifest from a live database using ibis-server introspection |
-| [mdl-project](mdl-project/SKILL.md) | Save, load, and build MDL manifests as version-controlled YAML project directories |
+| [wren-project](wren-project/SKILL.md) | Save, load, and build MDL manifests as version-controlled YAML project directories |
 | [wren-sql](wren-sql/SKILL.md) | Write and correct SQL queries for Wren Engine — types, date/time, BigQuery dialect, error diagnosis |
-| [wren-quickstart](wren-quickstart/SKILL.md) | Set up Wren Engine MCP via Docker and connect to Claude Code or other MCP clients |
+| [wren-mcp-setup](wren-mcp-setup/SKILL.md) | Set up Wren Engine MCP via Docker, register with Claude Code or other MCP clients, and start querying |
 
 See [SKILLS.md](SKILLS.md) for full details on each skill.
+
+## Updating Skills
+
+Each skill automatically checks for updates when invoked. If a newer version is available, the AI agent will notify you with the update command before continuing.
+
+To update manually at any time:
+
+```bash
+# Update all skills
+curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force
+
+# Update a specific skill
+curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force generate-mdl
+```
+
+## Releasing a New Skill Version
+
+When updating a skill, two files must be kept in sync:
+
+1. Update `version` in the skill's `SKILL.md` frontmatter:
+   ```yaml
+   metadata:
+     author: wren-engine
+     version: "1.2"   # bump this
+   ```
+
+2. Update the matching entry in [`versions.json`](versions.json):
+   ```json
+   {
+     "generate-mdl": "1.2"
+   }
+   ```
+
+Both files must have the same version number. The `SKILL.md` version is what users have installed locally; `versions.json` is what the update check compares against.
 
 ## Requirements
 

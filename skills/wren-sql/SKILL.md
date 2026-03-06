@@ -9,6 +9,22 @@ metadata:
 
 # Wren SQL
 
+## Version check
+
+Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills/versions.json`.
+Compare the `wren-sql` key with this skill's version (`1.0`).
+If the remote version is newer, notify the user before proceeding:
+
+> A newer version of the **wren-sql** skill is available (remote: X.Y, installed: 1.0).
+> Update with:
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force wren-sql
+> ```
+
+Then continue with the workflow below regardless of update status.
+
+---
+
 Wren Engine translates SQL through a semantic layer (MDL — Model Definition Language) before executing it against a backend database. SQL must target MDL model names, not raw database tables.
 
 For specific topics, load the relevant reference file:

@@ -4,6 +4,37 @@ Skills are instruction files that extend AI agents with Wren-specific workflows.
 
 ---
 
+## wren-quickstart
+
+**File:** [wren-quickstart/SKILL.md](wren-quickstart/SKILL.md)
+
+End-to-end onboarding guide for Wren Engine. Orchestrates the full setup flow — from installing skills and creating a workspace, to generating an MDL, saving it as a versioned project, starting the MCP Docker container, and verifying everything works.
+
+### When to use
+
+- Setting up Wren Engine for the first time
+- Onboarding a new data source from scratch
+- Getting a new team member started with Wren MCP
+
+### Workflow summary
+
+1. Install required skills via `install.sh`
+2. Create a workspace directory on the host machine
+3. Generate MDL from the database (`@generate-mdl`)
+4. Save as a YAML project and compile to `target/` (`@wren-project`)
+5. Start the Docker container and register the MCP server (`@wren-mcp-setup`)
+6. Run `health_check()` to verify — then start a new session and query
+
+### Dependent skills
+
+| Skill | Purpose |
+|-------|---------|
+| `@generate-mdl` | Introspect database and build MDL JSON |
+| `@wren-project` | Save MDL as YAML project + compile to `target/` |
+| `@wren-mcp-setup` | Start Docker container and register MCP server |
+
+---
+
 ## generate-mdl
 
 **File:** [generate-mdl/SKILL.md](generate-mdl/SKILL.md)
@@ -33,14 +64,14 @@ Generates a complete Wren MDL manifest by introspecting a live database through 
 5. Optionally sample data for ambiguous columns
 6. Build the MDL JSON (models, columns, relationships)
 7. Validate via `mdl_validate_manifest`
-8. Optionally save as a YAML project (see `mdl-project`)
+8. Optionally save as a YAML project (see `wren-project`)
 9. Deploy via `deploy_manifest`
 
 ---
 
-## mdl-project
+## wren-project
 
-**File:** [mdl-project/SKILL.md](mdl-project/SKILL.md)
+**File:** [wren-project/SKILL.md](wren-project/SKILL.md)
 
 Manages Wren MDL manifests as human-readable YAML project directories — similar to dbt projects. Makes MDL version-control friendly by splitting the monolithic JSON into one YAML file per model.
 
@@ -112,11 +143,11 @@ Comprehensive SQL authoring and debugging guide for Wren Engine. Covers core que
 
 ---
 
-## wren-quickstart
+## wren-mcp-setup
 
-**File:** [wren-quickstart/SKILL.md](wren-quickstart/SKILL.md)
+**File:** [wren-mcp-setup/SKILL.md](wren-mcp-setup/SKILL.md)
 
-Sets up Wren Engine MCP server via Docker and connects it to Claude Code (or another MCP client) over streamable-http.
+Sets up Wren Engine MCP server via Docker, registers it with an AI agent (Claude Code or other MCP clients), and starts a new session to begin interacting with Wren.
 
 ### When to use
 
@@ -128,10 +159,10 @@ Sets up Wren Engine MCP server via Docker and connects it to Claude Code (or ano
 ### Workflow summary
 
 1. Ask user for workspace mount path
-2. Create `docker/.env` with `MDL_WORKSPACE`
-3. `docker compose up -d`
-4. Rewrite `localhost` → `host.docker.internal` in connection credentials
-5. Add `wren` MCP server to Claude Code using streamable-http on port 9000
+2. `docker run` with workspace mounted at `/workspace`, MCP server enabled on port 9000
+3. Rewrite `localhost` → `host.docker.internal` in connection credentials
+4. Add `wren` MCP server to Claude Code using streamable-http on port 9000 (`claude mcp add`)
+5. Start a new session so the MCP tools are loaded
 6. Run `health_check()` to verify
 
 ---
@@ -150,6 +181,8 @@ Then invoke in your AI client:
 
 ```
 /generate-mdl
-/mdl-project
+/wren-project
 /wren-sql
+/wren-mcp-setup
+/wren-quickstart
 ```

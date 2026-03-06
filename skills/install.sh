@@ -13,7 +13,7 @@ set -euo pipefail
 REPO="Canner/wren-engine"
 BRANCH="${WREN_SKILLS_BRANCH:-main}"
 DEST="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}"
-ALL_SKILLS=(generate-mdl mdl-project wren-sql wren-quickstart)
+ALL_SKILLS=(generate-mdl wren-project wren-sql wren-mcp-setup wren-quickstart)
 
 # Parse --force flag and skill list from arguments
 FORCE=false
@@ -113,3 +113,7 @@ echo "Done. Invoke skills in your AI client:"
 for skill in "${SELECTED_SKILLS[@]}"; do
   echo "  /$skill"
 done
+echo ""
+echo "To update skills later, re-run with --force:"
+echo "  curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force"
+echo "Or check for updates: each skill notifies you automatically when a newer version is available."

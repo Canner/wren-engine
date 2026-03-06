@@ -1,269 +1,201 @@
 ---
 name: wren-quickstart
-description: Set up Wren Engine MCP server via Docker. Covers pulling the Docker image, running the container with docker run, mounting a workspace, fixing localhost → host.docker.internal for connection info, and registering the MCP server in Claude Code (or other MCP clients) using streamable-http transport. Trigger when a user wants to run Wren MCP in Docker, configure Claude Code MCP, or connect an AI client to a Dockerized Wren Engine.
-compatibility: Requires Docker Desktop (or Docker Engine).
+description: End-to-end quickstart for Wren Engine — from zero to querying. Guides the user through installing skills, creating a workspace, generating an MDL from a live database, saving it as a versioned project, starting the Wren MCP Docker container, and verifying the setup with a health check. Trigger when a user wants to set up Wren Engine from scratch, onboard a new data source, or get started with Wren MCP.
+compatibility: Requires Docker Desktop (or Docker Engine). No local database drivers needed.
 metadata:
   author: wren-engine
   version: "1.0"
 ---
 
-# Set Up Wren MCP via Docker
+# Wren Quickstart
 
-Runs the Wren Engine ibis-server + MCP server together in a single Docker container and connects it to Claude Code (or another MCP client) over streamable-http.
+## Version check
+
+Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills/versions.json`.
+Compare the `wren-quickstart` key with this skill's version (`1.0`).
+If the remote version is newer, notify the user before proceeding:
+
+> A newer version of the **wren-quickstart** skill is available (remote: X.Y, installed: 1.0).
+> Update with:
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force wren-quickstart
+> ```
+
+Then continue with the workflow below regardless of update status.
 
 ---
 
-## Step 1 — Ask for workspace path
+This skill walks a user through setting up Wren Engine end-to-end — from installing the required skills to running their first query via MCP. Each phase delegates to a focused skill. Follow the steps in order.
 
-Ask the user:
+---
 
-> What directory on your host machine should be mounted as the MCP workspace?
-> This is where MDL files and YAML project directories will be read and written.
-> (Example: `~/wren-workspace`)
+## Phase 1 — Install skills
 
-If the user has no preference, suggest creating a dedicated directory such as `~/wren-workspace`:
+Before the workflow can proceed, the user needs the dependent skills installed locally.
+
+Tell the user to run the install script once:
+
+```bash
+# From a local clone:
+bash skills/install.sh
+
+# Or remotely (no clone required):
+curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash
+```
+
+This installs all Wren skills (`generate-mdl`, `wren-project`, `wren-sql`, `wren-mcp-setup`, `wren-quickstart`) into `~/.claude/skills/`.
+
+After installation, the user should **restart their AI client session** so the new skills are loaded.
+
+> If the user only wants specific skills, they can pass names as arguments:
+> ```bash
+> bash skills/install.sh generate-mdl wren-project wren-mcp-setup
+> ```
+
+---
+
+## Phase 2 — Create a workspace
+
+Create a dedicated workspace directory on the host machine. This directory will be mounted into the Docker container, so the container can read and write MDL files.
+
+Ask the user where they want the workspace, or suggest a default:
 
 ```bash
 mkdir -p ~/wren-workspace
 ```
 
-Save the answer as `<WORKSPACE_PATH>` (use the absolute path, e.g. `/Users/me/wren-workspace`) for use in the next steps.
+Save the chosen path as `<WORKSPACE_PATH>` (absolute path, e.g. `/Users/me/wren-workspace`). All subsequent steps reference this path.
 
----
+Recommended workspace layout after the quickstart completes:
 
-## Step 2 — Start the container
-
-Run the following command, substituting `<WORKSPACE_PATH>` with the path from Step 1:
-
-```bash
-docker run -d \
-  --name wren-mcp \
-  -p 8000:8000 \
-  -p 9000:9000 \
-  -e ENABLE_MCP_SERVER=true \
-  -e MCP_TRANSPORT=streamable-http \
-  -e MCP_HOST=0.0.0.0 \
-  -e MCP_PORT=9000 \
-  -e WREN_URL=localhost:8000 \
-  -v <WORKSPACE_PATH>:/workspace \
-  ghcr.io/canner/wren-engine-ibis:latest
 ```
-
-Example with a concrete path:
-
-```bash
-docker run -d \
-  --name wren-mcp \
-  -p 8000:8000 \
-  -p 9000:9000 \
-  -e ENABLE_MCP_SERVER=true \
-  -e MCP_TRANSPORT=streamable-http \
-  -e MCP_HOST=0.0.0.0 \
-  -e MCP_PORT=9000 \
-  -e WREN_URL=localhost:8000 \
-  -v /Users/me/my-mdl-files:/workspace \
-  ghcr.io/canner/wren-engine-ibis:latest
-```
-
-This starts the container using the image `ghcr.io/canner/wren-engine-ibis:latest` with:
-
-| Service | Port | Purpose |
-|---------|------|---------|
-| ibis-server | 8000 | REST API for query execution and metadata |
-| mcp-server (streamable-http) | 9000 | MCP endpoint for AI clients |
-
-The workspace directory is mounted at `/workspace` inside the container.
-
-Verify the container is running:
-```bash
-docker ps --filter name=wren-mcp
-docker logs -f wren-mcp
+<WORKSPACE_PATH>/
+├── wren_project.yml
+├── models/
+│   └── *.yml
+├── relationships.yml
+├── views.yml
+├── connection.yml
+└── target/
+    ├── mdl.json          # Compiled MDL — loaded by Docker container
+    └── connection.json   # Connection info — loaded by Docker container
 ```
 
 ---
 
-## Step 3 — Fix connection info: localhost → host.docker.internal
+## Phase 3 — Generate MDL and save project
 
-**Critical:** The container cannot reach the host's `localhost` directly.
+### 3a — Generate MDL
 
-If the user's database connection info references `localhost` or `127.0.0.1` as the host, it must be changed to `host.docker.internal` so the container can reach a database running on the host machine.
+Invoke the **generate-mdl** skill to introspect the user's database and build the MDL manifest:
 
-**Examples:**
+```
+@generate-mdl
+```
 
-| Original | Inside Docker |
-|----------|--------------|
-| `"host": "localhost"` | `"host": "host.docker.internal"` |
-| `"host": "127.0.0.1"` | `"host": "host.docker.internal"` |
-| Cloud/remote host (e.g. `mydb.us-east-1.rds.amazonaws.com`) | No change needed |
+The generate-mdl skill will:
+1. Ask for data source type and connection credentials
+2. Call ibis-server to fetch table schema and foreign key constraints
+3. Build the MDL JSON (models, columns, relationships)
+4. Validate the manifest with a dry-plan
 
-When the user provides connection credentials later (via `setup_connection`), check the `host` field and warn if it is `localhost` or `127.0.0.1`.
+> **Important:** At this stage ibis-server may not be running yet. If the user has not started a container, proceed to Phase 4 first (start the container), then come back to generate the MDL using the running ibis-server on port 8000.
+>
+> Alternatively, if the user already has a running ibis-server, run Phase 3 before Phase 4.
+
+### 3b — Save as YAML project
+
+After the MDL is generated, invoke the **wren-project** skill to save it as a versioned YAML project inside the workspace:
+
+```
+@wren-project
+```
+
+Direct the skill to write the project files into `<WORKSPACE_PATH>`:
+
+- `<WORKSPACE_PATH>/wren_project.yml`
+- `<WORKSPACE_PATH>/models/*.yml`
+- `<WORKSPACE_PATH>/relationships.yml`
+- `<WORKSPACE_PATH>/views.yml`
+- `<WORKSPACE_PATH>/connection.yml`
+
+Then build the compiled targets:
+
+- `<WORKSPACE_PATH>/target/mdl.json`
+- `<WORKSPACE_PATH>/target/connection.json`
+
+The Docker container will auto-load these files at startup.
 
 ---
 
-## Step 4 — Configure Claude Code MCP
+## Phase 4 — Start and register the MCP server
 
-Claude Code uses **streamable-http** transport to connect to the containerized MCP server.
+Invoke the **wren-mcp-setup** skill to start the Docker container and register the MCP server with the AI client:
 
-Add to `~/.claude.json` under `mcpServers` (or run `claude mcp add`):
-
-```json
-{
-  "mcpServers": {
-    "wren": {
-      "type": "http",
-      "url": "http://localhost:9000/mcp"
-    }
-  }
-}
+```
+@wren-mcp-setup
 ```
 
-**Via Claude Code CLI (recommended):**
+Pass `<WORKSPACE_PATH>` as the workspace mount path when the skill asks.
 
-```bash
-claude mcp add --transport http wren http://localhost:9000/mcp
-```
+The wren-mcp-setup skill will:
+1. Start the container with `-v <WORKSPACE_PATH>:/workspace`
+2. Set `MDL_PATH=/workspace/target/mdl.json` and `CONNECTION_INFO_FILE=/workspace/target/connection.json`
+3. Register the MCP server with the AI client (`claude mcp add`)
+4. Verify the container is running
 
-After adding, restart Claude Code or reload the MCP server list. Confirm with:
-```bash
-claude mcp list
-```
+> If the MDL files already exist in `<WORKSPACE_PATH>/target/` before the container starts, they are loaded automatically at boot. No separate `deploy` call is needed.
 
 ---
 
-## Step 5 — Configure other MCP clients
+## Phase 5 — Verify and confirm
 
-### Cline / Cursor / VS Code MCP Extension
+Once the MCP server is registered, the user must **start a new session** for the Wren MCP tools to be loaded. Instruct the user to do this now.
 
-These clients also support HTTP transport. Add to their MCP settings:
+In the new session, ask the AI agent to run a health check:
 
-```json
-{
-  "mcpServers": {
-    "wren": {
-      "type": "streamable-http",
-      "url": "http://localhost:9000/mcp"
-    }
-  }
-}
+```
+Use health_check() to verify Wren Engine is reachable.
 ```
 
-### Claude Desktop (stdio fallback)
+Expected response: `SELECT 1` returns successfully.
 
-Claude Desktop does not support HTTP transport natively. Use a local stdio proxy or run the MCP server locally instead.
+If the health check passes:
+
+- Tell the user setup is complete.
+- In this session, they can start querying immediately:
+
+```
+Query: How many orders are in the orders table?
+```
+
+If the health check fails, follow the troubleshooting steps in the **wren-mcp-setup** skill.
 
 ---
 
-## Step 6 — Verify the connection
+## Quick reference — skill invocations
 
-Ask the AI agent to run a health check:
-
-```
-Use the health_check() tool to verify Wren Engine is reachable.
-```
-
-Expected response: `SELECT 1` returns a successful result.
-
-If health check fails, see **Troubleshooting** below.
+| Phase | Skill | Purpose |
+|-------|-------|---------|
+| 3a | `@generate-mdl` | Introspect database and build MDL JSON |
+| 3b | `@wren-project` | Save MDL as YAML project + compile to `target/` |
+| 4 | `@wren-mcp-setup` | Start Docker container and register MCP server |
 
 ---
 
-## Troubleshooting — MCP server not healthy
+## Troubleshooting
 
-### 1. Check container status and logs
+**Container not finding MDL at startup:**
+- Confirm `<WORKSPACE_PATH>/target/mdl.json` exists before starting the container.
+- Check container logs: `docker logs wren-mcp`
 
-```bash
-docker ps --filter name=wren-mcp
-docker logs wren-mcp
-```
+**generate-mdl fails because ibis-server is not yet running:**
+- Start the container first (Phase 4), then return to Phase 3.
+- ibis-server is available at `http://localhost:8000` once the container is up.
 
-Look for startup errors or crash loops. If the container exited, `logs` will show the last output before it stopped.
+**MCP tools not available after registration:**
+- The MCP server is only loaded at session start. Start a new Claude Code session after registering.
 
-### 2. Port already in use
-
-The container exposes ports **8000** (ibis-server) and **9000** (MCP). If either port is already bound by another process on the host, the `docker run` command will fail with a bind error.
-
-**Check what is using the port:**
-
-```bash
-# macOS / Linux
-lsof -i :9000
-lsof -i :8000
-
-# or with ss (Linux)
-ss -tlnp | grep -E '8000|9000'
-```
-
-If another process is occupying the port you have two options:
-
-**Option A — stop the conflicting process:**
-```bash
-# macOS: kill by port
-kill $(lsof -ti :9000)
-```
-
-**Option B — remap to different host ports:**
-
-Stop and remove the existing container first, then re-run with different host-side ports:
-```bash
-docker rm -f wren-mcp
-docker run -d \
-  --name wren-mcp \
-  -p 18000:8000 \
-  -p 19000:9000 \
-  -e ENABLE_MCP_SERVER=true \
-  -e MCP_TRANSPORT=streamable-http \
-  -e MCP_HOST=0.0.0.0 \
-  -e MCP_PORT=9000 \
-  -e WREN_URL=localhost:8000 \
-  -v <WORKSPACE_PATH>:/workspace \
-  ghcr.io/canner/wren-engine-ibis:latest
-```
-
-Then update the MCP client URL to match:
-```bash
-claude mcp add --transport http wren http://localhost:19000/mcp
-```
-
-### 3. Container started but MCP endpoint returns an error
-
-- Confirm the container was started with `-e ENABLE_MCP_SERVER=true`, `-e MCP_TRANSPORT=streamable-http`, and `-e MCP_HOST=0.0.0.0`
-- Try curling the endpoint directly:
-  ```bash
-  curl -v http://localhost:9000/mcp
-  ```
-  A `405 Method Not Allowed` response means the endpoint is reachable but expects a POST — that is normal and indicates the MCP server is up.
-
-### 4. Database connection refused inside the container
-
-If `health_check()` passes but queries fail with a connection error, the database host is likely still set to `localhost`. See **Step 3** above — change it to `host.docker.internal`.
-
----
-
-## Step 7 — Load an MDL and start querying
-
-Place your MDL JSON file in the workspace directory, then in the AI client:
-
-```
-deploy(mdl_file_path="/workspace/my_mdl.json")
-```
-
-Or generate a new MDL from scratch using the `generate-mdl` skill.
-
----
-
-## Reference: connection info by data source
-
-When calling `setup_connection`, use these formats. **Replace `localhost` with `host.docker.internal`** if the database runs on your host machine.
-
-```
-POSTGRES    : {"host": "host.docker.internal", "port": "5432", "user": "...", "password": "...", "database": "..."}
-MYSQL       : {"host": "host.docker.internal", "port": "3306", "user": "...", "password": "...", "database": "..."}
-MSSQL       : {"host": "host.docker.internal", "port": "1433", "user": "...", "password": "...", "database": "..."}
-CLICKHOUSE  : {"host": "host.docker.internal", "port": "8123", "user": "...", "password": "...", "database": "..."}
-TRINO       : {"host": "host.docker.internal", "port": "8080", "user": "...", "catalog": "...", "schema": "..."}
-DUCKDB      : {"path": "/workspace/<file>.duckdb"}   ← file must be inside workspace
-BIGQUERY    : {"project": "...", "dataset": "...", "credentials_base64": "..."}
-SNOWFLAKE   : {"account": "...", "user": "...", "password": "...", "database": "...", "schema": "..."}
-```
-
-For DuckDB: the database file must be placed in the mounted workspace directory so the container can access it at `/workspace/<file>.duckdb`.
+**Database connection refused inside Docker:**
+- Change `localhost` / `127.0.0.1` to `host.docker.internal` in connection credentials.
+- See the **wren-mcp-setup** skill for the full localhost fix.

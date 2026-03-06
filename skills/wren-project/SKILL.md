@@ -1,5 +1,5 @@
 ---
-name: mdl-project
+name: wren-project
 description: Save, load, and build Wren MDL manifests as YAML project directories for version control. Use when a user wants to persist an MDL as human-readable YAML files, load a YAML project back into MDL JSON, or compile a YAML project to a deployable mdl.json file. Also manages connection info stored in connection.yml and compiled to target/connection.json.
 metadata:
   author: wren-engine
@@ -7,6 +7,22 @@ metadata:
 ---
 
 # MDL Project
+
+## Version check
+
+Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills/versions.json`.
+Compare the `wren-project` key with this skill's version (`1.1`).
+If the remote version is newer, notify the user before proceeding:
+
+> A newer version of the **wren-project** skill is available (remote: X.Y, installed: 1.1).
+> Update with:
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force wren-project
+> ```
+
+Then continue with the workflow below regardless of update status.
+
+---
 
 A Wren MDL project is a directory of YAML files — one file per model — that makes MDL manifests human-readable and version-control friendly (similar to dbt projects).
 
