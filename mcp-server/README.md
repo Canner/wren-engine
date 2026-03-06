@@ -80,7 +80,7 @@ deploy(mdl_file_path="/workspace/my_mdl.json")
 ```
 
 **Output — save a generated MDL:**
-The agent writes YAML project files and compiled MDL JSON back to your host via the `mdl-project` skill:
+The agent writes YAML project files and compiled MDL JSON back to your host via the `wren-project` skill:
 ```
 # agent writes: mcp-server/workspace/my_project/wren_project.yml, models/*.yml, ...
 # agent compiles to: mcp-server/workspace/my_project/target/mdl.json
