@@ -8,6 +8,22 @@ metadata:
 
 # MDL Project
 
+## Version check
+
+Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills/versions.json`.
+Compare the `wren-project` key with this skill's version (`1.1`).
+If the remote version is newer, notify the user before proceeding:
+
+> A newer version of the **wren-project** skill is available (remote: X.Y, installed: 1.1).
+> Update with:
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force wren-project
+> ```
+
+Then continue with the workflow below regardless of update status.
+
+---
+
 A Wren MDL project is a directory of YAML files — one file per model — that makes MDL manifests human-readable and version-control friendly (similar to dbt projects).
 
 YAML files use **snake_case** field names for readability. The compiled `target/mdl.json` uses **camelCase** (the wire format expected by ibis-server). The conversion is documented in [Field mapping](#field-mapping).

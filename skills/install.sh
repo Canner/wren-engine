@@ -113,3 +113,7 @@ echo "Done. Invoke skills in your AI client:"
 for skill in "${SELECTED_SKILLS[@]}"; do
   echo "  /$skill"
 done
+echo ""
+echo "To update skills later, re-run with --force:"
+echo "  curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force"
+echo "Or check for updates: each skill notifies you automatically when a newer version is available."

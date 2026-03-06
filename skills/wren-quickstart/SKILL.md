@@ -9,6 +9,22 @@ metadata:
 
 # Wren Quickstart
 
+## Version check
+
+Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills/versions.json`.
+Compare the `wren-quickstart` key with this skill's version (`1.0`).
+If the remote version is newer, notify the user before proceeding:
+
+> A newer version of the **wren-quickstart** skill is available (remote: X.Y, installed: 1.0).
+> Update with:
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force wren-quickstart
+> ```
+
+Then continue with the workflow below regardless of update status.
+
+---
+
 This skill walks a user through setting up Wren Engine end-to-end — from installing the required skills to running their first query via MCP. Each phase delegates to a focused skill. Follow the steps in order.
 
 ---

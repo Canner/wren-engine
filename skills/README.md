@@ -57,6 +57,40 @@ Once installed, invoke a skill by name in your conversation:
 
 See [SKILLS.md](SKILLS.md) for full details on each skill.
 
+## Updating Skills
+
+Each skill automatically checks for updates when invoked. If a newer version is available, the AI agent will notify you with the update command before continuing.
+
+To update manually at any time:
+
+```bash
+# Update all skills
+curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force
+
+# Update a specific skill
+curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force generate-mdl
+```
+
+## Releasing a New Skill Version
+
+When updating a skill, two files must be kept in sync:
+
+1. Update `version` in the skill's `SKILL.md` frontmatter:
+   ```yaml
+   metadata:
+     author: wren-engine
+     version: "1.2"   # bump this
+   ```
+
+2. Update the matching entry in [`versions.json`](versions.json):
+   ```json
+   {
+     "generate-mdl": "1.2"
+   }
+   ```
+
+Both files must have the same version number. The `SKILL.md` version is what users have installed locally; `versions.json` is what the update check compares against.
+
 ## Requirements
 
 - A running [ibis-server](../ibis-server/) instance

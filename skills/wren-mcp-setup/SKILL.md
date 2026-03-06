@@ -9,6 +9,22 @@ metadata:
 
 # Set Up Wren MCP via Docker
 
+## Version check
+
+Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills/versions.json`.
+Compare the `wren-mcp-setup` key with this skill's version (`1.1`).
+If the remote version is newer, notify the user before proceeding:
+
+> A newer version of the **wren-mcp-setup** skill is available (remote: X.Y, installed: 1.1).
+> Update with:
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force wren-mcp-setup
+> ```
+
+Then continue with the workflow below regardless of update status.
+
+---
+
 Runs the Wren Engine ibis-server + MCP server together in a single Docker container and connects it to Claude Code (or another MCP client) over streamable-http.
 
 ---

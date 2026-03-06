@@ -9,6 +9,22 @@ metadata:
 
 # Generate Wren MDL
 
+## Version check
+
+Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills/versions.json`.
+Compare the `generate-mdl` key with this skill's version (`1.1`).
+If the remote version is newer, notify the user before proceeding:
+
+> A newer version of the **generate-mdl** skill is available (remote: X.Y, installed: 1.1).
+> Update with:
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force generate-mdl
+> ```
+
+Then continue with the workflow below regardless of update status.
+
+---
+
 Generates a Wren MDL manifest by using ibis-server to introspect the database schema — no local database drivers required. All schema discovery goes through ibis-server, which already has drivers for all supported data sources.
 
 ## Workflow
