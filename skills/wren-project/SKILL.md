@@ -1,6 +1,7 @@
 ---
 name: wren-project
 description: Save, load, and build Wren MDL manifests as YAML project directories for version control. Use when a user wants to persist an MDL as human-readable YAML files, load a YAML project back into MDL JSON, or compile a YAML project to a deployable mdl.json file. Also manages connection info stored in connection.yml and compiled to target/connection.json.
+license: Apache-2.0
 metadata:
   author: wren-engine
   version: "1.3"

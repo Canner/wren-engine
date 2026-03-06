@@ -1,6 +1,7 @@
 ---
 name: wren-connection-info
 description: Set up data source type and connection credentials for Wren Engine. Use at the start of any workflow that connects to a database — produces either a connectionFilePath (secure, default) or an inline connectionInfo dict (opt-in for testing). Trigger before generate-mdl, wren-project, or any ibis-server API call that needs credentials.
+license: Apache-2.0
 metadata:
   author: wren-engine
   version: "1.0"

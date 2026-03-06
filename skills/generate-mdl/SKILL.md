@@ -2,6 +2,7 @@
 name: generate-mdl
 description: Generate a Wren MDL manifest from a database using ibis-server metadata endpoints. Use when a user wants to create or set up a new Wren MDL, scaffold a manifest from an existing database, or onboard a new data source without installing any database drivers locally.
 compatibility: Requires a running ibis-server (default port 8000). No local database drivers needed.
+license: Apache-2.0
 metadata:
   author: wren-engine
   version: "1.2"
