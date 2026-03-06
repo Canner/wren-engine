@@ -32,26 +32,28 @@ npx openskills add Canner/wren-engine
 ```bash
 cp -r skills/generate-mdl ~/.claude/skills/
 # or all at once:
-cp -r skills/generate-mdl skills/mdl-project skills/wren-sql skills/wren-quickstart ~/.claude/skills/
+cp -r skills/generate-mdl skills/wren-project skills/wren-sql skills/wren-mcp-setup skills/wren-quickstart ~/.claude/skills/
 ```
 
 Once installed, invoke a skill by name in your conversation:
 
 ```text
-/generate-mdl
-/mdl-project
-/wren-sql
 /wren-quickstart
+/generate-mdl
+/wren-project
+/wren-sql
+/wren-mcp-setup
 ```
 
 ## Available Skills
 
 | Skill | Description |
 |-------|-------------|
+| [wren-quickstart](wren-quickstart/SKILL.md) | End-to-end quickstart — install skills, generate MDL, save project, start MCP server, and verify setup |
 | [generate-mdl](generate-mdl/SKILL.md) | Generate a Wren MDL manifest from a live database using ibis-server introspection |
-| [mdl-project](mdl-project/SKILL.md) | Save, load, and build MDL manifests as version-controlled YAML project directories |
+| [wren-project](wren-project/SKILL.md) | Save, load, and build MDL manifests as version-controlled YAML project directories |
 | [wren-sql](wren-sql/SKILL.md) | Write and correct SQL queries for Wren Engine — types, date/time, BigQuery dialect, error diagnosis |
-| [wren-quickstart](wren-quickstart/SKILL.md) | Set up Wren Engine MCP via Docker and connect to Claude Code or other MCP clients |
+| [wren-mcp-setup](wren-mcp-setup/SKILL.md) | Set up Wren Engine MCP via Docker, register with Claude Code or other MCP clients, and start querying |
 
 See [SKILLS.md](SKILLS.md) for full details on each skill.
 
