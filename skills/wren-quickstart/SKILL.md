@@ -149,10 +149,71 @@ Use the health_check() tool to verify Wren Engine is reachable.
 
 Expected response: `SELECT 1` returns a successful result.
 
-If health check fails:
-- Check that the container is running: `docker compose ps`
-- Check logs: `docker compose logs ibis-server`
-- Confirm port 9000 is not blocked by a firewall or another process
+If health check fails, see **Troubleshooting** below.
+
+---
+
+## Troubleshooting — MCP server not healthy
+
+### 1. Check container status and logs
+
+```bash
+docker compose ps
+docker compose logs ibis-server
+```
+
+Look for startup errors or crash loops. If the container exited, `logs` will show the last output before it stopped.
+
+### 2. Port already in use
+
+The container exposes ports **8000** (ibis-server) and **9000** (MCP). If either port is already bound by another process on the host, Docker will silently fail to bind it and the health check will time out.
+
+**Check what is using the port:**
+
+```bash
+# macOS / Linux
+lsof -i :9000
+lsof -i :8000
+
+# or with ss (Linux)
+ss -tlnp | grep -E '8000|9000'
+```
+
+If another process is occupying the port you have two options:
+
+**Option A — stop the conflicting process:**
+```bash
+# macOS: kill by port
+kill $(lsof -ti :9000)
+```
+
+**Option B — remap the ports in `compose.yaml`:**
+
+Change the host-side port (left of the colon):
+```yaml
+ports:
+  - "18000:8000"   # ibis-server now on host port 18000
+  - "19000:9000"   # MCP server now on host port 19000
+```
+
+Then update the MCP client URL to match:
+```bash
+claude mcp add --transport http wren http://localhost:19000/mcp
+```
+
+### 3. Container started but MCP endpoint returns an error
+
+- Confirm `ENABLE_MCP_SERVER: "true"` is set in `compose.yaml`
+- Confirm `MCP_TRANSPORT: "streamable-http"` and `MCP_HOST: "0.0.0.0"` are set
+- Try curling the endpoint directly:
+  ```bash
+  curl -v http://localhost:9000/mcp
+  ```
+  A `405 Method Not Allowed` response means the endpoint is reachable but expects a POST — that is normal and indicates the MCP server is up.
+
+### 4. Database connection refused inside the container
+
+If `health_check()` passes but queries fail with a connection error, the database host is likely still set to `localhost`. See **Step 4** above — change it to `host.docker.internal`.
 
 ---
 
