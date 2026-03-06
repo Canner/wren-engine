@@ -36,12 +36,14 @@ jobs:
           fi
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             if [ -n "$DOCKER_IMAGE_TAG_NAME" ]; then
-              case "$DOCKER_IMAGE_TAG_NAME" in
-                (*[!A-Za-z0-9._-]*)
-                  echo "Invalid docker_image_tag_name: $DOCKER_IMAGE_TAG_NAME" >&2
-                  exit 1
-                  ;;
-              esac
+              if ! echo "$DOCKER_IMAGE_TAG_NAME" | grep -qE '^[A-Za-z0-9_][A-Za-z0-9_.-]*$'; then
+                echo "Invalid docker_image_tag_name: must start with [A-Za-z0-9_] and contain only [A-Za-z0-9_.-]" >&2
+                exit 1
+              fi
+              if [ "${#DOCKER_IMAGE_TAG_NAME}" -gt 128 ]; then
+                echo "docker_image_tag_name exceeds 128 characters" >&2
+                exit 1
+              fi
               tag_name="$DOCKER_IMAGE_TAG_NAME"
             else
               tag_name=$(echo "$REF_NAME" | sed 's/[^a-zA-Z0-9]/-/g')-$(git rev-parse --short HEAD)
