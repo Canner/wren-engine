@@ -63,7 +63,7 @@ Recommended workspace layout after the quickstart completes:
 
 ## Phase 2 — Generate MDL and save project
 
-### 3a — Generate MDL
+### 2a — Generate MDL
 
 Invoke the **generate-mdl** skill to introspect the user's database and build the MDL manifest:
 

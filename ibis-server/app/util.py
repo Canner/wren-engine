@@ -43,7 +43,7 @@ from app.dependencies import (
     X_WREN_TIMEZONE,
 )
 from app.model.data_source import DataSource
-from app.model.error import DatabaseTimeoutError
+from app.model.error import DatabaseTimeoutError, ErrorCode, WrenError
 from app.model.metadata.bigquery import BigQueryMetadata
 from app.model.metadata.dto import FilterInfo
 from app.model.metadata.metadata import Metadata
@@ -59,8 +59,19 @@ def resolve_connection_info(dto) -> dict:
     """Return connection info dict from either a file path or the inline DTO field."""
     if getattr(dto, "connection_file_path", None):
         path = pathlib.Path(dto.connection_file_path).resolve()
-        with open(path) as f:
-            return json.load(f)
+        try:
+            with open(path) as f:
+                return json.load(f)
+        except FileNotFoundError:
+            raise WrenError(
+                ErrorCode.INVALID_CONNECTION_INFO,
+                f"Connection file not found: {dto.connection_file_path}",
+            )
+        except json.JSONDecodeError as e:
+            raise WrenError(
+                ErrorCode.INVALID_CONNECTION_INFO,
+                f"Invalid JSON in connection file: {e}",
+            )
     return dto.connection_info
 
 

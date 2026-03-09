@@ -199,7 +199,7 @@ Assemble the inline dict directly. Provide to the calling workflow:
 
 ---
 
-## Field mapping (YAML → JSON)
+## Field mapping
 
 When converting `connection.yml` to `target/connection.json`, rename these snake_case keys to camelCase:
 
