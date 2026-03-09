@@ -7,7 +7,9 @@ from pydantic import BaseModel, BeforeValidator, Field, SecretStr, model_validat
 
 from app.model.error import ErrorCode, WrenError
 
-SecretPort = Annotated[SecretStr, BeforeValidator(lambda v: str(v) if isinstance(v, int) else v)]
+SecretPort = Annotated[
+    SecretStr, BeforeValidator(lambda v: str(v) if isinstance(v, int) else v)
+]
 
 manifest_str_field = Field(alias="manifestStr", description="Base64 manifest")
 connection_info_field = Field(alias="connectionInfo", default=None)

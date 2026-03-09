@@ -14,6 +14,8 @@ except ImportError:  # pragma: no cover
         pass
 
 
+import os
+
 import datafusion
 import orjson
 import pandas as pd
@@ -62,7 +64,6 @@ def resolve_connection_info(dto) -> dict:
     directory that is allowed to be read. Requests are rejected if the env var
     is absent or the resolved path escapes that directory.
     """
-    import os
 
     if getattr(dto, "connection_file_path", None):
         allowed_root = os.environ.get("CONNECTION_FILE_ROOT")
