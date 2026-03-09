@@ -73,6 +73,7 @@ docker run -d \
   -e MCP_HOST=0.0.0.0 \
   -e MCP_PORT=9000 \
   -e WREN_URL=localhost:8000 \
+  -e CONNECTION_FILE_ROOT=/workspace \
   -e MDL_PATH=/workspace/target/mdl.json \
   -e CONNECTION_INFO_FILE=/workspace/target/connection.json \
   -v <WORKSPACE_PATH>:/workspace \
@@ -91,6 +92,7 @@ docker run -d \
   -e MCP_HOST=0.0.0.0 \
   -e MCP_PORT=9000 \
   -e WREN_URL=localhost:8000 \
+  -e CONNECTION_FILE_ROOT=/workspace \
   -e MDL_PATH=/workspace/target/mdl.json \
   -e CONNECTION_INFO_FILE=/workspace/target/connection.json \
   -v /Users/me/my-mdl-files:/workspace \

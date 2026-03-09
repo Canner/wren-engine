@@ -185,8 +185,10 @@ json.dump(d, open('target/connection.json', 'w'))
 
 **Do NOT read or display the contents of `target/connection.json` after building.**
 
+> **Server requirement:** ibis-server must have the `CONNECTION_FILE_ROOT` environment variable set to the directory containing `target/connection.json`. When running via Docker (the standard deployment), the workspace is mounted at `/workspace` and `CONNECTION_FILE_ROOT=/workspace` is set by default. For local dev, set `CONNECTION_FILE_ROOT` to the project root before starting ibis-server.
+
 Provide to the calling workflow:
-- `connectionFilePath`: absolute path to `target/connection.json`
+- `connectionFilePath`: absolute path to `target/connection.json` — use the **container-internal** path (e.g. `/workspace/target/connection.json`) when ibis-server runs in Docker, or the host path for local dev
 - `data_source`: the data source type string (e.g. `"POSTGRES"`)
 - `connection_mode`: `"security"` — record this in `wren_project.yml`
 
