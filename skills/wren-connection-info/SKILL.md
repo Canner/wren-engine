@@ -209,8 +209,16 @@ When converting `connection.yml` to `target/connection.json`, rename these snake
 | `dataset_id` | `datasetId` |
 | `credentials_json_string` | `credentialsJsonString` |
 | `sf_schema` | `sfSchema` |
+| `ssl_mode` | `sslMode` |
+| `ssl_ca` | `sslCA` |
+| `connection_url` | `connectionUrl` |
+| `http_path` | `httpPath` |
+| `access_token` | `accessToken` |
+| `s3_staging_dir` | `s3StagingDir` |
+| `aws_access_key_id` | `awsAccessKeyId` |
+| `aws_secret_access_key` | `awsSecretAccessKey` |
 
-All other fields (`host`, `port`, `user`, `password`, `database`, `account`, `url`) remain unchanged.
+Fields without underscores (`host`, `port`, `user`, `password`, `database`, `account`, `url`, `catalog`, `schema`, `region`) remain unchanged. All other snake_case fields should be converted to camelCase for JSON.
 
 ---
 
