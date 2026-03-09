@@ -45,7 +45,18 @@ print(match)
   else
     echo "OK (index.json):    $skill_name @ $index_version"
   fi
-done < <(python3 -c "import json,sys; [print(k) for k in json.load(open('$VERSIONS_JSON')).keys()]")
+done < <(python3 -c "
+import json
+from pathlib import Path
+
+root = Path('$SCRIPT_DIR')
+versions = set(json.load(open('$VERSIONS_JSON')).keys())
+index = {s['name'] for s in json.load(open('$INDEX_JSON')).get('skills', [])}
+skill_dirs = {p.parent.name for p in root.glob('*/SKILL.md')}
+
+for name in sorted(versions | index | skill_dirs):
+    print(name)
+")
 
 if [ "$ERRORS" -gt 0 ]; then
   echo "" >&2

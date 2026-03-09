@@ -51,6 +51,9 @@
         "project",
         "git"
       ],
+      "dependencies": [
+        "wren-connection-info"
+      ],
       "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-project"
     },
     {
