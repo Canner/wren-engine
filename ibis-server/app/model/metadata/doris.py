@@ -89,7 +89,7 @@ class DorisMetadata(Metadata):
                 ON c.TABLE_SCHEMA = t.TABLE_SCHEMA
                 AND c.TABLE_NAME = t.TABLE_NAME
             WHERE
-                c.TABLE_SCHEMA NOT IN ('mysql', 'information_schema', 'performance_schema', 'sys');
+                c.TABLE_SCHEMA NOT IN ('information_schema', '__internal_schema', 'mysql', 'performance_schema', 'sys');
             """
         response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
 
@@ -144,7 +144,7 @@ class DorisMetadata(Metadata):
         sql = """
             SELECT SCHEMA_NAME
             FROM information_schema.SCHEMATA
-            WHERE SCHEMA_NAME NOT IN ('information_schema', '__internal_schema', 'mysql', 'performance_schema')
+            WHERE SCHEMA_NAME NOT IN ('information_schema', '__internal_schema', 'mysql', 'performance_schema', 'sys')
             ORDER BY SCHEMA_NAME
         """
         if limit is not None:
