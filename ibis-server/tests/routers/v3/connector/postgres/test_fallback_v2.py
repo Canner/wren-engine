@@ -370,7 +370,10 @@ async def test_validate(client, manifest_str, connection_info):
     assert response.status_code == 422
 
 
-async def test_connection_info_file(client, manifest_str, connection_info, tmp_path):
+async def test_connection_info_file(
+    client, manifest_str, connection_info, tmp_path, monkeypatch
+):
+    monkeypatch.setenv("CONNECTION_FILE_ROOT", str(tmp_path))
     conn_file = tmp_path / "connection.json"
     conn_file.write_bytes(orjson.dumps(connection_info))
 

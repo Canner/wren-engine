@@ -56,18 +56,27 @@ MIGRATION_MESSAGE = "Wren engine is migrating to Rust version now. \
 
 
 def resolve_connection_info(dto) -> dict:
-    """Return connection info dict from either a file path or the inline DTO field."""
+    """Return connection info dict from either a file path or the inline DTO field.
+
+    When connectionFilePath is used, CONNECTION_FILE_ROOT must be set to the
+    directory that is allowed to be read. Requests are rejected if the env var
+    is absent or the resolved path escapes that directory.
+    """
     import os
 
     if getattr(dto, "connection_file_path", None):
-        path = pathlib.Path(dto.connection_file_path).resolve()
         allowed_root = os.environ.get("CONNECTION_FILE_ROOT")
-        if allowed_root:
-            if not path.is_relative_to(pathlib.Path(allowed_root).resolve()):
-                raise WrenError(
-                    ErrorCode.INVALID_CONNECTION_INFO,
-                    f"Connection file path is outside the allowed directory: {dto.connection_file_path}",
-                )
+        if not allowed_root:
+            raise WrenError(
+                ErrorCode.INVALID_CONNECTION_INFO,
+                "connectionFilePath requires the CONNECTION_FILE_ROOT environment variable to be set",
+            )
+        path = pathlib.Path(dto.connection_file_path).resolve()
+        if not path.is_relative_to(pathlib.Path(allowed_root).resolve()):
+            raise WrenError(
+                ErrorCode.INVALID_CONNECTION_INFO,
+                f"Connection file path is outside the allowed directory: {dto.connection_file_path}",
+            )
         try:
             with open(path) as f:
                 return json.load(f)
