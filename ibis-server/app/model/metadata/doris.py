@@ -8,7 +8,6 @@ from app.model.metadata.dto import (
     Catalog,
     Column,
     Constraint,
-    FilterInfo,
     RustWrenEngineColumnType,
     Table,
     TableProperties,
@@ -73,7 +72,7 @@ class DorisMetadata(Metadata):
         self.database = connection_info.database.get_secret_value()
 
     def get_table_list(self) -> list[Table]:
-        sql = f"""
+        sql = """
             SELECT
                 c.TABLE_SCHEMA AS table_schema,
                 c.TABLE_NAME AS table_name,
@@ -133,9 +132,9 @@ class DorisMetadata(Metadata):
                 existing_pk = unique_tables[schema_table].primaryKey
                 if existing_pk:
                     # Support composite keys
-                    unique_tables[schema_table].primaryKey = (
-                        f"{existing_pk},{row['column_name']}"
-                    )
+                    unique_tables[
+                        schema_table
+                    ].primaryKey = f"{existing_pk},{row['column_name']}"
                 else:
                     unique_tables[schema_table].primaryKey = row["column_name"]
         return list(unique_tables.values())
@@ -168,9 +167,7 @@ class DorisMetadata(Metadata):
         # listed as schemas.
         try:
             catalog_name = (
-                self.connection.sql("SELECT CURRENT_CATALOG()")
-                .to_pandas()
-                .iloc[0, 0]
+                self.connection.sql("SELECT CURRENT_CATALOG()").to_pandas().iloc[0, 0]
             )
         except Exception:
             catalog_name = "internal"

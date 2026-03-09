@@ -340,7 +340,8 @@ class DorisConnectionInfo(BaseConnectionInfo):
         description="the username of your Doris database", examples=["root"]
     )
     password: SecretStr | None = Field(
-        description="the password of your Doris database", examples=["password"],
+        description="the password of your Doris database",
+        examples=["password"],
         default=None,
     )
     kwargs: dict[str, str] | None = Field(
