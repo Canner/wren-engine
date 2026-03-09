@@ -14,6 +14,8 @@ except ImportError:  # pragma: no cover
         pass
 
 
+import os
+
 import datafusion
 import orjson
 import pandas as pd
@@ -62,7 +64,6 @@ def resolve_connection_info(dto) -> dict:
     directory that is allowed to be read. Requests are rejected if the env var
     is absent or the resolved path escapes that directory.
     """
-    import os
 
     if getattr(dto, "connection_file_path", None):
         allowed_root = os.environ.get("CONNECTION_FILE_ROOT")
@@ -74,7 +75,10 @@ def resolve_connection_info(dto) -> dict:
         allowed_root_resolved = str(pathlib.Path(allowed_root).resolve())
         path = pathlib.Path(dto.connection_file_path).resolve()
         # Explicit string prefix check — recognized by static analysis as a path sanitizer
-        if not str(path).startswith(allowed_root_resolved + os.sep) and str(path) != allowed_root_resolved:
+        if (
+            not str(path).startswith(allowed_root_resolved + os.sep)
+            and str(path) != allowed_root_resolved
+        ):
             raise WrenError(
                 ErrorCode.INVALID_CONNECTION_INFO,
                 f"Connection file path is outside the allowed directory: {dto.connection_file_path}",
