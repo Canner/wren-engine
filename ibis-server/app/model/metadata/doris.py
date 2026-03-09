@@ -8,6 +8,7 @@ from app.model.metadata.dto import (
     Catalog,
     Column,
     Constraint,
+    FilterInfo,
     RustWrenEngineColumnType,
     Table,
     TableProperties,
@@ -71,7 +72,9 @@ class DorisMetadata(Metadata):
         self.connection = DataSource.doris.get_connection(connection_info)
         self.database = connection_info.database.get_secret_value()
 
-    def get_table_list(self) -> list[Table]:
+    def get_table_list(
+        self, filter_info: FilterInfo | None = None, limit: int | None = None
+    ) -> list[Table]:
         sql = f"""
             SELECT
                 c.TABLE_SCHEMA AS table_schema,
