@@ -104,7 +104,7 @@ After creating a new skill:
 4. Add an entry to [index.json](index.json) with `name`, `version`, `description`, `tags`, `dependencies` (if any), and `repository`.
 5. Add the skill to the `ALL_SKILLS` array in [install.sh](install.sh).
 
-Both `versions.json` and `index.json` must stay in sync with the `version` field in the skill's `SKILL.md` frontmatter. Run `bash skills/check-versions.sh` to verify `versions.json` parity before merging. Note: `index.json` sync is not validated by the script — update it manually alongside `versions.json`.
+Both `versions.json` and `index.json` must stay in sync with the `version` field in the skill's `SKILL.md` frontmatter. Run `bash skills/check-versions.sh` to verify parity before merging — the script validates both files.
 
 ---
 
