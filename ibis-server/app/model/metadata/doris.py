@@ -92,7 +92,11 @@ class DorisMetadata(Metadata):
                 ON c.TABLE_SCHEMA = t.TABLE_SCHEMA
                 AND c.TABLE_NAME = t.TABLE_NAME
             WHERE
-                c.TABLE_SCHEMA NOT IN ('information_schema', '__internal_schema', 'mysql', 'performance_schema', 'sys');
+                c.TABLE_SCHEMA NOT IN ('information_schema', '__internal_schema', 'mysql', 'performance_schema', 'sys')
+            ORDER BY
+                c.TABLE_SCHEMA,
+                c.TABLE_NAME,
+                c.ORDINAL_POSITION;
             """
         response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
 
@@ -113,7 +117,7 @@ class DorisMetadata(Metadata):
                         catalog="",
                         table=row["table_name"],
                     ),
-                    primaryKey="",
+                    primaryKey=None,
                 )
 
             # table exists, and add column to the table
@@ -151,7 +155,13 @@ class DorisMetadata(Metadata):
             ORDER BY SCHEMA_NAME
         """
         if limit is not None:
-            sql += f" LIMIT {limit}"
+            try:
+                validated_limit = int(limit)
+            except (TypeError, ValueError) as exc:
+                raise ValueError("limit must be an integer") from exc
+            if validated_limit < 0:
+                raise ValueError("limit must be non-negative")
+            sql += f" LIMIT {validated_limit}"
         response = self.connection.sql(sql).to_pandas()
         schemas = response["SCHEMA_NAME"].tolist()
         # Doris has a flat namespace (no multi-catalog).
