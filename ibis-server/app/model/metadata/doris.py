@@ -89,7 +89,7 @@ class DorisMetadata(Metadata):
                 ON c.TABLE_SCHEMA = t.TABLE_SCHEMA
                 AND c.TABLE_NAME = t.TABLE_NAME
             WHERE
-                c.TABLE_SCHEMA = '{self.database}';
+                c.TABLE_SCHEMA NOT IN ('mysql', 'information_schema', 'performance_schema', 'sys');
             """
         response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
 
@@ -190,7 +190,8 @@ class DorisMetadata(Metadata):
             The corresponding RustWrenEngineColumnType
         """
         # Strip precision/length info: int(11) -> int, decimalv3(10,2) -> decimalv3
-        normalized_type = re.sub(r"\(.*\)", "", data_type.strip()).lower()
+        # Also strip angle-bracket generics: ARRAY<INT> -> array, MAP<STRING,INT> -> map
+        normalized_type = re.sub(r"(<.*>|\(.*\))", "", data_type.strip()).lower()
 
         # Use the module-level mapping table
         mapped_type = DORIS_TYPE_MAPPING.get(

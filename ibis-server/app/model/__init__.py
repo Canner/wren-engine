@@ -54,7 +54,7 @@ class QueryMySqlDTO(QueryDTO):
 
 
 class QueryDorisDTO(QueryDTO):
-    connection_info: ConnectionUrl | DorisConnectionInfo = connection_info_field
+    connection_info: DorisConnectionInfo = connection_info_field
 
 
 class QueryOracleDTO(QueryDTO):
