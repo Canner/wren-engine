@@ -1,6 +1,6 @@
 {
   "name": "wren-engine",
-  "description": "AI agent skills for Wren Engine \u2014 semantic SQL layer and MCP server for 20+ data sources.",
+  "description": "AI agent skills for Wren Engine — semantic SQL layer and MCP server for 20+ data sources.",
   "homepage": "https://wren.ai",
   "repository": "https://github.com/Canner/wren-engine",
   "license": "Apache-2.0",
@@ -56,7 +56,7 @@
     {
       "name": "wren-sql",
       "version": "1.0",
-      "description": "Write and correct SQL queries targeting Wren Engine \u2014 types, date/time, BigQuery dialect, error diagnosis.",
+      "description": "Write and correct SQL queries targeting Wren Engine — types, date/time, BigQuery dialect, error diagnosis.",
       "tags": [
         "wren",
         "sql",
@@ -86,7 +86,7 @@
     {
       "name": "wren-quickstart",
       "version": "1.0",
-      "description": "End-to-end quickstart for Wren Engine \u2014 from zero to querying.",
+      "description": "End-to-end quickstart for Wren Engine — from zero to querying.",
       "tags": [
         "wren",
         "quickstart",
@@ -105,7 +105,7 @@
     {
       "name": "wren-usage",
       "version": "1.0",
-      "description": "Daily usage guide for Wren Engine \u2014 connect, query, manage MDL, and operate the MCP server via AI agents.",
+      "description": "Daily usage guide for Wren Engine — connect, query, manage MDL, and operate the MCP server via AI agents.",
       "tags": [
         "wren",
         "usage",
