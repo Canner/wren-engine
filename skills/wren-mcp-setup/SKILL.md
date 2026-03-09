@@ -5,7 +5,7 @@ compatibility: Requires Docker Desktop (or Docker Engine).
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.1"
+  version: "1.2"
 ---
 
 # Set Up Wren MCP via Docker
@@ -13,10 +13,10 @@ metadata:
 ## Version check
 
 Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills/versions.json`.
-Compare the `wren-mcp-setup` key with this skill's version (`1.1`).
+Compare the `wren-mcp-setup` key with this skill's version (`1.2`).
 If the remote version is newer, notify the user before proceeding:
 
-> A newer version of the **wren-mcp-setup** skill is available (remote: X.Y, installed: 1.1).
+> A newer version of the **wren-mcp-setup** skill is available (remote: X.Y, installed: 1.2).
 > Update with:
 > ```bash
 > curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force wren-mcp-setup
@@ -49,6 +49,40 @@ Save the answer as `<WORKSPACE_PATH>` (use the absolute path, e.g. `/Users/me/wr
 ---
 
 ## Step 2 — Prepare workspace and start the container
+
+### Check for a newer image
+
+Before starting the container, verify whether a newer `wren-engine-ibis` image is available on the registry.
+
+**If the image has never been pulled** (first-time setup), just pull it:
+
+```bash
+docker pull ghcr.io/canner/wren-engine-ibis:latest
+```
+
+**If the image already exists locally**, compare the local digest with the remote one to detect updates:
+
+```bash
+# Save current local digest (empty string if image not present)
+LOCAL_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/canner/wren-engine-ibis:latest 2>/dev/null || echo "")
+
+# Pull from registry (downloads only if remote digest differs)
+docker pull ghcr.io/canner/wren-engine-ibis:latest
+
+# Compare digests
+NEW_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/canner/wren-engine-ibis:latest 2>/dev/null || echo "")
+
+if [ "$LOCAL_DIGEST" != "$NEW_DIGEST" ]; then
+  echo "✓ New image pulled — container will use the updated version."
+else
+  echo "✓ Already up to date. No update was needed."
+fi
+```
+
+> **Note:** If a `wren-mcp` container is already running and a new image was pulled, stop and remove the old container before proceeding:
+> ```bash
+> docker rm -f wren-mcp
+> ```
 
 The workspace directory is mounted at `/workspace` inside the container. The container auto-loads the MDL and connection info at startup if you provide `MDL_PATH` and `CONNECTION_INFO_FILE` pointing to files inside the workspace.
 
