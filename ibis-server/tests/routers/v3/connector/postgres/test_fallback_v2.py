@@ -370,6 +370,28 @@ async def test_validate(client, manifest_str, connection_info):
     assert response.status_code == 422
 
 
+async def test_connection_info_file(
+    client, manifest_str, connection_info, tmp_path, monkeypatch
+):
+    monkeypatch.setenv("CONNECTION_FILE_ROOT", str(tmp_path))
+    conn_file = tmp_path / "connection.json"
+    conn_file.write_bytes(orjson.dumps(connection_info))
+
+    # v3 will fail with this manifest and fall back to v2 — connectionFilePath must survive the fallback
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionFilePath": str(conn_file),
+            "manifestStr": manifest_str,
+            "sql": "SELECT orderkey FROM orders LIMIT 1",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["columns"]) == 1
+    assert len(result["data"]) == 1
+
+
 async def test_query_rlac(client, manifest_str, connection_info):
     response = await client.post(
         url=f"{base_url}/query",

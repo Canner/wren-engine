@@ -4,6 +4,38 @@ Skills are instruction files that extend AI agents with Wren-specific workflows.
 
 ---
 
+## wren-usage
+
+**File:** [wren-usage/SKILL.md](wren-usage/SKILL.md)
+
+**Primary entry point** for day-to-day Wren Engine usage. Identifies the user's task and delegates to the appropriate focused skill. Covers SQL queries, MDL management, database connections, and MCP server operations.
+
+### When to use
+
+- Writing or debugging SQL queries against a deployed MDL
+- Adding or modifying models, columns, or relationships in the MDL
+- Changing database credentials or data source
+- Rebuilding `target/mdl.json` after project changes
+- Restarting or reconfiguring the MCP server
+- Any ongoing Wren task after initial setup is complete
+
+### Dependent skills
+
+| Skill | Purpose |
+|-------|---------|
+| `@wren-sql` | Write and debug SQL queries |
+| `@wren-connection-info` | Set up or change database credentials |
+| `@generate-mdl` | Regenerate MDL from a changed database schema |
+| `@wren-project` | Save, load, and build MDL YAML projects |
+| `@wren-mcp-setup` | Reconfigure the MCP server |
+
+> Installing `wren-usage` via `install.sh` automatically installs all dependent skills:
+> ```bash
+> bash skills/install.sh wren-usage
+> ```
+
+---
+
 ## wren-quickstart
 
 **File:** [wren-quickstart/SKILL.md](wren-quickstart/SKILL.md)
@@ -170,16 +202,17 @@ Sets up Wren Engine MCP server via Docker, registers it with an AI agent (Claude
 ## Installing a skill
 
 ```bash
-# Single skill
-cp -r skills/generate-mdl ~/.claude/skills/
+# Install wren-usage (auto-installs all dependencies)
+bash skills/install.sh wren-usage
 
-# All skills
-cp -r skills/* ~/.claude/skills/
+# Or install everything
+bash skills/install.sh
 ```
 
 Then invoke in your AI client:
 
 ```
+/wren-usage
 /generate-mdl
 /wren-project
 /wren-sql

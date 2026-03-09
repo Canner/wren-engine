@@ -1,9 +1,10 @@
 ---
 name: wren-project
 description: Save, load, and build Wren MDL manifests as YAML project directories for version control. Use when a user wants to persist an MDL as human-readable YAML files, load a YAML project back into MDL JSON, or compile a YAML project to a deployable mdl.json file. Also manages connection info stored in connection.yml and compiled to target/connection.json.
+license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.1"
+  version: "1.4"
 ---
 
 # MDL Project
@@ -11,14 +12,16 @@ metadata:
 ## Version check
 
 Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills/versions.json`.
-Compare the `wren-project` key with this skill's version (`1.1`).
+Compare the `wren-project` key with this skill's version (`1.4`).
 If the remote version is newer, notify the user before proceeding:
 
-> A newer version of the **wren-project** skill is available (remote: X.Y, installed: 1.1).
+> A newer version of the **wren-project** skill is available (remote: X.Y, installed: 1.4).
 > Update with:
 > ```bash
 > curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force wren-project
 > ```
+
+
 
 Then continue with the workflow below regardless of update status.
 
@@ -50,7 +53,11 @@ my_project/
     └── connection.json    # Connection info JSON (camelCase)
 ```
 
-> **Security note**: `connection.yml` may contain credentials. Add `target/` and `connection.yml` to `.gitignore` or use environment variable substitution (see `connection.yml` below) before committing.
+> **Security note**: `connection.yml` may contain credentials. Add `target/` and `connection.yml` to `.gitignore` before committing.
+>
+> **Secrets policy (default)**: When generating `connection.yml`, leave sensitive fields empty with a `# TODO` comment — never ask the user for passwords or credentials in this conversation. ibis-server reads `target/connection.json` directly via its `connectionFilePath` parameter, so secrets stay in the file and out of the LLM context.
+>
+> **Testing / inline mode (opt-in)**: If the user explicitly says they are in a test/development environment and willing to share their credentials, you may help construct the full `connection.yml` or `connectionInfo` dict with actual values inline. Always confirm this intent before proceeding — do not assume.
 
 ---
 
@@ -66,7 +73,22 @@ version: "1.0"
 catalog: wren
 schema: public
 data_source: POSTGRES
+connection_mode: security   # "security" | "inline" (default: "security")
 ```
+
+`connection_mode` records how the user has chosen to manage connection credentials:
+
+| Value | Meaning |
+|-------|---------|
+| `security` | `connection.yml` / `target/connection.json` contain sensitive credentials. **Never read these files without explicit user confirmation.** |
+| `inline` | Credentials are provided inline (test/dev environment). Connection files may be read freely. |
+
+**Security mode rules** — enforced whenever `connection_mode: security` (or the field is absent):
+
+1. **Never** read `connection.yml` or `target/connection.json` without first asking the user for permission.
+2. **Never** display, log, or echo the contents of those files.
+3. If debugging requires connection info, ask the user to share only the non-sensitive fields (e.g. `host`, `port`, `database`, `user`) and leave out passwords, tokens, and keys.
+4. After building the project, do **not** read `target/connection.json` to verify — confirm success by other means (e.g. checking that the file exists).
 
 ### `models/<model_name>.yml`
 
@@ -122,45 +144,7 @@ views: []
 
 Connection parameters for the data source. Field names use **snake_case** in YAML and are converted to **camelCase** in `target/connection.json`.
 
-**PostgreSQL / MySQL / MSSQL / ClickHouse / Trino / Oracle:**
-```yaml
-host: localhost
-port: 5432
-user: my_user
-password: my_password
-database: my_db
-```
-
-**BigQuery:**
-```yaml
-project_id: my-gcp-project
-dataset_id: my_dataset
-credentials_json_string: '{"type":"service_account","project_id":"..."}'
-```
-
-**Snowflake:**
-```yaml
-user: my_user
-password: my_password
-account: my_account
-database: my_db
-sf_schema: public
-```
-
-**DuckDB (local file):**
-```yaml
-url: /path/to/my.duckdb
-```
-
-**Environment variable substitution** — to avoid committing secrets, reference env vars with `${VAR_NAME}`:
-```yaml
-host: ${DB_HOST}
-port: ${DB_PORT}
-user: ${DB_USER}
-password: ${DB_PASSWORD}
-database: ${DB_NAME}
-```
-When building, resolve each `${VAR_NAME}` value from the environment before writing `target/connection.json`.
+Follow the **wren-connection-info** skill (`skills/wren-connection-info/SKILL.md`) for the per-connector field reference, secrets policy, and how to generate `connection.yml` with sensitive fields left as `# TODO` comments.
 
 ---
 
@@ -168,7 +152,7 @@ When building, resolve each `${VAR_NAME}` value from the environment before writ
 
 To assemble a YAML project back into an MDL JSON dict:
 
-1. Read `wren_project.yml` → extract `catalog`, `schema`, `data_source`
+1. Read `wren_project.yml` → extract `catalog`, `schema`, `data_source`, `connection_mode`
 2. Read every file in `models/*.yml` → collect into `models` list
 3. Read `relationships.yml` → extract `relationships` list
 4. Read `views.yml` → extract `views` list
@@ -188,10 +172,11 @@ To assemble a YAML project back into an MDL JSON dict:
 
 To load connection info:
 
-1. Read `connection.yml`
-2. Resolve any `${VAR_NAME}` placeholders from environment variables
-3. **Rename snake_case keys to camelCase** (see Field mapping section below)
-4. Result is a flat JSON object ready to pass as `connectionInfo` to ibis-server APIs
+1. Check `connection_mode` from `wren_project.yml`. If it is `security` (or absent), **ask the user for permission before reading `connection.yml`**.
+2. Read `connection.yml`
+3. Resolve any `${VAR_NAME}` placeholders from environment variables
+4. **Rename snake_case keys to camelCase** (see Field mapping section below)
+5. Result is a flat JSON object ready to pass as `connectionInfo` to ibis-server APIs
 
 ---
 
@@ -200,11 +185,14 @@ To load connection info:
 Same as **Load** above, but write both compiled files:
 
 - `<project_dir>/target/mdl.json` — assembled MDL JSON (camelCase)
-- `<project_dir>/target/connection.json` — connection info JSON (camelCase, env vars resolved)
+- `<project_dir>/target/connection.json` — connection info JSON (camelCase)
+
+**Important**: If `connection_mode` is `security` (or absent), do NOT read `connection.yml` without user confirmation, and do NOT read or display `target/connection.json` after building — it contains credentials.
 
 After building:
 - Pass `mdl_file_path="<project_dir>/target/mdl.json"` to `deploy()` to activate the MDL
-- Pass the contents of `target/connection.json` as the `connectionInfo` field in API requests
+- Pass `connectionFilePath="<absolute_path>/target/connection.json"` in API requests instead of inline `connectionInfo`
+  — ibis-server reads the file directly, so secret values never enter the LLM context
 
 ---
 
@@ -228,28 +216,38 @@ All other MDL fields (`name`, `type`, `catalog`, `schema`, `table`, `condition`,
 
 **Connection fields:**
 
-| YAML field (snake_case) | JSON field (camelCase) |
-|-------------------------|------------------------|
-| `project_id` | `projectId` |
-| `dataset_id` | `datasetId` |
-| `credentials_json_string` | `credentialsJsonString` |
-| `sf_schema` | `sfSchema` |
-
-All other connection fields (`host`, `port`, `user`, `password`, `database`, `account`, `url`) are the same in both formats.
+See the **wren-connection-info** skill (`skills/wren-connection-info/SKILL.md`) for the full field mapping and secrets policy.
 
 ---
 
 ## Typical workflow
 
 ```
-1. Have MDL JSON dict (from generate-mdl skill or manual construction)
-2. Save:  write wren_project.yml + connection.yml + models/*.yml + relationships.yml + views.yml
-          (convert camelCase → snake_case)
-3. Add target/ and optionally connection.yml to .gitignore
-4. Commit project directory to version control
-5. Later — Load: read all YAML files, resolve ${ENV_VAR} placeholders in connection.yml,
-                  rename snake_case → camelCase, assemble MDL JSON dict + connection info dict
-6. Build:  write assembled JSON to target/mdl.json and target/connection.json
+1. Set up data source and connection info
+   Follow the wren-connection-info skill to choose data source type, gather credentials,
+   and produce connection.yml (sensitive fields as # TODO) + target/connection.json.
+   Use connectionFilePath="<abs_path>/target/connection.json" in all subsequent API calls.
+
+2. Generate MDL
+   Follow the generate-mdl skill to introspect the database and build the MDL JSON dict,
+   using the connectionFilePath from step 1 for all ibis-server calls.
+
+3. Save project
+   Write wren_project.yml + models/*.yml + relationships.yml + views.yml
+   (convert camelCase → snake_case from the MDL JSON).
+   Set connection_mode in wren_project.yml based on the user's chosen mode (default: security).
+   connection.yml was already written in step 1.
+
+4. Add target/ and connection.yml to .gitignore
+5. Commit project directory to version control (without secrets)
+
+6. Later — Build: read wren_project.yml first to check connection_mode.
+                   If security mode, ask user before reading connection.yml.
+                   Read remaining YAML files, rename snake_case → camelCase,
+                   write target/mdl.json and target/connection.json.
+                   Do NOT read or display target/connection.json (security mode).
+
 7. Deploy: deploy(mdl_file_path="./target/mdl.json")
-           use target/connection.json as connectionInfo in API requests
+           use connectionFilePath="<absolute_path>/target/connection.json" in API requests
+           (ibis-server reads the file directly — secrets stay out of this conversation)
 ```

@@ -531,10 +531,9 @@ async def test_query_without_connection_info(client, manifest_str):
     )
     assert response.status_code == 422
     result = response.json()
-    assert result["detail"][0] is not None
-    assert result["detail"][0]["type"] == "missing"
-    assert result["detail"][0]["loc"] == ["body", "connectionInfo"]
-    assert result["detail"][0]["msg"] == "Field required"
+    assert result["errorCode"] == "INVALID_CONNECTION_INFO"
+    assert "connectionInfo" in result["message"]
+    assert "connectionFilePath" in result["message"]
 
 
 async def test_query_with_dry_run(client, manifest_str, postgres: PostgresContainer):
@@ -1087,6 +1086,27 @@ async def test_order_by_nulls_last(client, manifest_str, postgres: PostgresConta
     assert result["data"][0][0] == "one"
     assert result["data"][1][0] == "two"
     assert result["data"][2][0] == "three"
+
+
+async def test_connection_info_file(
+    client, manifest_str, postgres: PostgresContainer, tmp_path, monkeypatch
+):
+    monkeypatch.setenv("CONNECTION_FILE_ROOT", str(tmp_path))
+    conn_file = tmp_path / "connection.json"
+    conn_file.write_bytes(orjson.dumps(_to_connection_info(postgres)))
+
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionFilePath": str(conn_file),
+            "manifestStr": manifest_str,
+            "sql": 'SELECT * FROM "Orders" LIMIT 1',
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["columns"]) == len(manifest["models"][0]["columns"])
+    assert len(result["data"]) == 1
 
 
 def _to_connection_info(pg: PostgresContainer):

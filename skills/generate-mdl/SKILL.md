@@ -2,9 +2,10 @@
 name: generate-mdl
 description: Generate a Wren MDL manifest from a database using ibis-server metadata endpoints. Use when a user wants to create or set up a new Wren MDL, scaffold a manifest from an existing database, or onboard a new data source without installing any database drivers locally.
 compatibility: Requires a running ibis-server (default port 8000). No local database drivers needed.
+license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.1"
+  version: "1.2"
 ---
 
 # Generate Wren MDL
@@ -12,10 +13,10 @@ metadata:
 ## Version check
 
 Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills/versions.json`.
-Compare the `generate-mdl` key with this skill's version (`1.1`).
+Compare the `generate-mdl` key with this skill's version (`1.2`).
 If the remote version is newer, notify the user before proceeding:
 
-> A newer version of the **generate-mdl** skill is available (remote: X.Y, installed: 1.1).
+> A newer version of the **generate-mdl** skill is available (remote: X.Y, installed: 1.2).
 > Update with:
 > ```bash
 > curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force generate-mdl
@@ -31,28 +32,30 @@ Generates a Wren MDL manifest by using ibis-server to introspect the database sc
 
 Follow these steps in order. Do not skip steps or ask unnecessary questions between them.
 
-### Step 1 — Gather connection info
+### Step 1 — Set up data source and connection info
 
-Ask the user for:
-1. **Data source type** — one of: `POSTGRES`, `MYSQL`, `MSSQL`, `DUCKDB`, `BIGQUERY`, `SNOWFLAKE`, `CLICKHOUSE`, `TRINO`, `ATHENA`, `ORACLE`, `DATABRICKS`
-2. **Connection credentials** — see [Connection info format](#connection-info-format) below
-3. **Schema filter** (optional) — if the database has many schemas, ask which schema(s) to include
+Follow the **wren-connection-info** skill (`skills/wren-connection-info/SKILL.md`) to:
+1. Choose the data source type (e.g. `POSTGRES`, `BIGQUERY`, `SNOWFLAKE`, …)
+2. Choose connection mode (Mode A: secure file path, or Mode B: inline for testing)
+3. Gather credentials and produce either a `connectionFilePath` or inline `connectionInfo`
 
-Do not ask for a SQLAlchemy connection string. Use the structured `connectionInfo` dict instead.
+Also ask the user for a **schema filter** (optional) — if the database has many schemas, ask which schema(s) to include.
 
-> **Important:** If the database runs on the host machine and ibis-server runs inside Docker, replace `localhost` / `127.0.0.1` with `host.docker.internal` in the host field.
+After this step you will have:
+- `data_source`: e.g. `"POSTGRES"`
+- Either `connectionFilePath` (Mode A) or `connectionInfo` dict (Mode B) — used in all subsequent API calls
 
 ### Step 2 — Fetch table schema
 
-Call the ibis-server metadata endpoint directly:
+Call the ibis-server metadata endpoint directly, using the connection output from Step 1:
 
 ```
 POST http://localhost:8000/v3/connector/<data_source>/metadata/tables
 Content-Type: application/json
 
-{
-  "connectionInfo": { <credentials dict> }
-}
+{ "connectionFilePath": "/abs/path/to/target/connection.json" }
+  — or —
+{ "connectionInfo": { <credentials dict> } }
 ```
 
 ibis-server returns a list of tables with their column names and types. Each table entry has a `properties.schema` field — use it to filter to the user's target schema if specified.
@@ -65,9 +68,9 @@ If this fails, report the error and ask the user to correct the credentials.
 POST http://localhost:8000/v3/connector/<data_source>/metadata/constraints
 Content-Type: application/json
 
-{
-  "connectionInfo": { <credentials dict> }
-}
+{ "connectionFilePath": "/abs/path/to/target/connection.json" }
+  — or —
+{ "connectionInfo": { <credentials dict> } }
 ```
 
 Returns foreign key constraints. Use these to build `Relationship` entries in the MDL. If the response is empty (`[]`), infer relationships from column naming conventions (e.g. `order_id` → `orders.id`).
@@ -83,8 +86,9 @@ Content-Type: application/json
 {
   "sql": "SELECT * FROM <schema>.<table> LIMIT 3",
   "manifestStr": "",
-  "connectionInfo": { <credentials dict> }
+  "connectionFilePath": "/abs/path/to/target/connection.json"
 }
+  — or use "connectionInfo": { <credentials dict> } in Mode B
 ```
 
 Note: use the raw `schema.table` reference at this stage, since the MDL is not yet deployed.
@@ -246,19 +250,4 @@ When in doubt, use `VARCHAR` as a safe fallback.
 
 ## Connection info format
 
-Pass to `setup_connection(datasource=..., connectionInfo={...})`:
-
-```
-POSTGRES    : {"host": "...", "port": "5432", "user": "...", "password": "...", "database": "..."}
-MYSQL       : {"host": "...", "port": "3306", "user": "...", "password": "...", "database": "..."}
-MSSQL       : {"host": "...", "port": "1433", "user": "...", "password": "...", "database": "..."}
-DUCKDB      : {"path": "<file path>"}
-BIGQUERY    : {"project": "...", "dataset": "...", "credentials_base64": "..."}
-SNOWFLAKE   : {"account": "...", "user": "...", "password": "...", "database": "...", "schema": "..."}
-CLICKHOUSE  : {"host": "...", "port": "8123", "user": "...", "password": "...", "database": "..."}
-TRINO       : {"host": "...", "port": "8080", "user": "...", "catalog": "...", "schema": "..."}
-ORACLE      : {"host": "...", "port": "1521", "user": "...", "password": "...", "database": "..."}
-DATABRICKS  : {"host": "...", "httpPath": "...", "token": "..."}
-```
-
-The `datasource` value must match the `dataSource` field in the MDL exactly.
+See the **wren-connection-info** skill (`skills/wren-connection-info/SKILL.md`) for the full per-connector field reference, secrets policy, and Mode A / Mode B workflow.

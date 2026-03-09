@@ -3,12 +3,12 @@ from __future__ import annotations
 from enum import Enum
 from typing import Annotated, Any, Literal, Union
 
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, Field, SecretStr, model_validator
 
 from app.model.error import ErrorCode, WrenError
 
 manifest_str_field = Field(alias="manifestStr", description="Base64 manifest")
-connection_info_field = Field(alias="connectionInfo")
+connection_info_field = Field(alias="connectionInfo", default=None)
 
 
 class BaseConnectionInfo(BaseModel):
@@ -26,7 +26,17 @@ class BaseConnectionInfo(BaseModel):
 class QueryDTO(BaseModel):
     sql: str
     manifest_str: str = manifest_str_field
-    connection_info: dict[str, Any] | ConnectionInfo = connection_info_field
+    connection_info: dict[str, Any] | ConnectionInfo | None = connection_info_field
+    connection_file_path: str | None = Field(alias="connectionFilePath", default=None)
+
+    @model_validator(mode="after")
+    def check_connection_source(self):
+        if self.connection_info is None and self.connection_file_path is None:
+            raise WrenError(
+                ErrorCode.INVALID_CONNECTION_INFO,
+                "Either connectionInfo or connectionFilePath must be provided",
+            )
+        return self
 
 
 class QueryBigQueryDTO(QueryDTO):
@@ -654,7 +664,17 @@ ConnectionInfo = (
 class ValidateDTO(BaseModel):
     manifest_str: str = manifest_str_field
     parameters: dict
-    connection_info: dict[str, Any] | ConnectionInfo = connection_info_field
+    connection_info: dict[str, Any] | ConnectionInfo | None = connection_info_field
+    connection_file_path: str | None = Field(alias="connectionFilePath", default=None)
+
+    @model_validator(mode="after")
+    def check_connection_source(self):
+        if self.connection_info is None and self.connection_file_path is None:
+            raise WrenError(
+                ErrorCode.INVALID_CONNECTION_INFO,
+                "Either connectionInfo or connectionFilePath must be provided",
+            )
+        return self
 
 
 class AnalyzeSQLDTO(BaseModel):
@@ -674,8 +694,18 @@ class DryPlanDTO(BaseModel):
 
 class TranspileDTO(BaseModel):
     manifest_str: str = manifest_str_field
-    connection_info: dict[str, Any] | ConnectionInfo = connection_info_field
+    connection_info: dict[str, Any] | ConnectionInfo | None = connection_info_field
+    connection_file_path: str | None = Field(alias="connectionFilePath", default=None)
     sql: str
+
+    @model_validator(mode="after")
+    def check_connection_source(self):
+        if self.connection_info is None and self.connection_file_path is None:
+            raise WrenError(
+                ErrorCode.INVALID_CONNECTION_INFO,
+                "Either connectionInfo or connectionFilePath must be provided",
+            )
+        return self
 
 
 class ConfigModel(BaseModel):

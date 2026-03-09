@@ -2,6 +2,7 @@
 name: wren-mcp-setup
 description: Set up Wren Engine MCP server via Docker and register it with an AI agent. Covers pulling the Docker image, running the container with docker run, mounting a workspace, fixing localhost → host.docker.internal for connection info, registering the MCP server in Claude Code (or other MCP clients) using streamable-http transport, and starting a new session to interact with Wren MCP. Trigger when a user wants to run Wren MCP in Docker, configure Claude Code MCP, or connect an AI client to a Dockerized Wren Engine.
 compatibility: Requires Docker Desktop (or Docker Engine).
+license: Apache-2.0
 metadata:
   author: wren-engine
   version: "1.1"
@@ -72,6 +73,7 @@ docker run -d \
   -e MCP_HOST=0.0.0.0 \
   -e MCP_PORT=9000 \
   -e WREN_URL=localhost:8000 \
+  -e CONNECTION_FILE_ROOT=/workspace \
   -e MDL_PATH=/workspace/target/mdl.json \
   -e CONNECTION_INFO_FILE=/workspace/target/connection.json \
   -v <WORKSPACE_PATH>:/workspace \
@@ -90,6 +92,7 @@ docker run -d \
   -e MCP_HOST=0.0.0.0 \
   -e MCP_PORT=9000 \
   -e WREN_URL=localhost:8000 \
+  -e CONNECTION_FILE_ROOT=/workspace \
   -e MDL_PATH=/workspace/target/mdl.json \
   -e CONNECTION_INFO_FILE=/workspace/target/connection.json \
   -v /Users/me/my-mdl-files:/workspace \

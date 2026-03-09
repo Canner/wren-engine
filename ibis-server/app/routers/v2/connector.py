@@ -45,6 +45,7 @@ from app.util import (
     execute_validate_with_timeout,
     get_fallback_message,
     pushdown_limit,
+    resolve_connection_info,
     set_attribute,
     to_json,
     update_response_headers,
@@ -93,7 +94,7 @@ async def query(
     if cache_enable:
         span_name += "_cache_enable"
     connection_info = data_source.get_connection_info(
-        dto.connection_info, dict(headers)
+        resolve_connection_info(dto), dict(headers)
     )
     # Convert headers to dict for cache manager
     headers_dict = dict(headers) if headers else None
@@ -232,7 +233,7 @@ async def validate(
     ) as span:
         set_attribute(headers, span)
         connection_info = data_source.get_connection_info(
-            dto.connection_info, dict(headers)
+            resolve_connection_info(dto), dict(headers)
         )
         validator = Validator(
             Connector(data_source, connection_info),
@@ -273,7 +274,7 @@ async def get_table_list(
     ) as span:
         set_attribute(headers, span)
         connection_info = data_source.get_connection_info(
-            dto.connection_info, dict(headers)
+            resolve_connection_info(dto), dict(headers)
         )
         if isinstance(connection_info, BigQueryProjectConnectionInfo):
             raise WrenError(
@@ -302,7 +303,7 @@ async def get_constraints(
     ) as span:
         set_attribute(headers, span)
         connection_info = data_source.get_connection_info(
-            dto.connection_info, dict(headers)
+            resolve_connection_info(dto), dict(headers)
         )
         if isinstance(connection_info, BigQueryProjectConnectionInfo):
             raise WrenError(
@@ -324,7 +325,7 @@ async def get_db_version(
     headers: Annotated[Headers, Depends(get_wren_headers)] = None,
 ) -> str:
     connection_info = data_source.get_connection_info(
-        dto.connection_info, dict(headers)
+        resolve_connection_info(dto), dict(headers)
     )
     metadata = MetadataFactory.get_metadata(data_source, connection_info)
     return await execute_get_version_with_timeout(metadata)
@@ -398,7 +399,7 @@ async def model_substitute(
     ) as span:
         set_attribute(headers, span)
         connection_info = data_source.get_connection_info(
-            dto.connection_info, dict(headers)
+            resolve_connection_info(dto), dict(headers)
         )
         sql = ModelSubstitute(data_source, dto.manifest_str, headers).substitute(
             dto.sql, write="trino"

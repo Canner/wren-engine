@@ -30,14 +30,15 @@ npx openskills add Canner/wren-engine
 ### Option 3 — manual copy
 
 ```bash
-cp -r skills/generate-mdl ~/.claude/skills/
+cp -r skills/wren-usage ~/.claude/skills/
 # or all at once:
-cp -r skills/generate-mdl skills/wren-project skills/wren-sql skills/wren-mcp-setup skills/wren-quickstart ~/.claude/skills/
+cp -r skills/wren-usage skills/generate-mdl skills/wren-project skills/wren-sql skills/wren-mcp-setup skills/wren-connection-info ~/.claude/skills/
 ```
 
 Once installed, invoke a skill by name in your conversation:
 
 ```text
+/wren-usage
 /wren-quickstart
 /generate-mdl
 /wren-project
@@ -45,15 +46,22 @@ Once installed, invoke a skill by name in your conversation:
 /wren-mcp-setup
 ```
 
+> **Tip:** Installing `wren-usage` via `install.sh` automatically installs all its dependencies.
+> ```bash
+> bash skills/install.sh wren-usage
+> ```
+
 ## Available Skills
 
 | Skill | Description |
 |-------|-------------|
-| [wren-quickstart](wren-quickstart/SKILL.md) | End-to-end quickstart — install skills, generate MDL, save project, start MCP server, and verify setup |
+| [wren-usage](wren-usage/SKILL.md) | **Primary skill** — daily usage guide: query data, manage MDL, connect databases, operate MCP server |
+| [wren-quickstart](wren-quickstart/SKILL.md) | End-to-end first-time setup — install skills, generate MDL, save project, start MCP server, verify setup |
 | [generate-mdl](generate-mdl/SKILL.md) | Generate a Wren MDL manifest from a live database using ibis-server introspection |
 | [wren-project](wren-project/SKILL.md) | Save, load, and build MDL manifests as version-controlled YAML project directories |
 | [wren-sql](wren-sql/SKILL.md) | Write and correct SQL queries for Wren Engine — types, date/time, BigQuery dialect, error diagnosis |
 | [wren-mcp-setup](wren-mcp-setup/SKILL.md) | Set up Wren Engine MCP via Docker, register with Claude Code or other MCP clients, and start querying |
+| [wren-connection-info](wren-connection-info/SKILL.md) | Set up data source credentials — produces `connectionFilePath` or inline dict |
 
 See [SKILLS.md](SKILLS.md) for full details on each skill.
 

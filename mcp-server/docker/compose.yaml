@@ -10,5 +10,6 @@ services:
       MCP_HOST: "0.0.0.0"
       MCP_PORT: "9000"
       WREN_URL: "localhost:8000"
+      CONNECTION_FILE_ROOT: "/workspace"
     volumes:
       - ${MDL_WORKSPACE:-../workspace}:/workspace

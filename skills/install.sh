@@ -13,7 +13,7 @@ set -euo pipefail
 REPO="Canner/wren-engine"
 BRANCH="${WREN_SKILLS_BRANCH:-main}"
 DEST="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}"
-ALL_SKILLS=(generate-mdl wren-project wren-sql wren-mcp-setup wren-quickstart)
+ALL_SKILLS=(generate-mdl wren-project wren-sql wren-mcp-setup wren-quickstart wren-connection-info wren-usage)
 
 # Parse --force flag and skill list from arguments
 FORCE=false
@@ -48,6 +48,69 @@ done
 SCRIPT_DIR=""
 if [ -n "${BASH_SOURCE[0]:-}" ] && [ "${BASH_SOURCE[0]}" != "/dev/stdin" ]; then
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
+
+# Locate index.json for dependency resolution (local or remote)
+INDEX_JSON=""
+if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/index.json" ]; then
+  INDEX_JSON="$SCRIPT_DIR/index.json"
+fi
+
+# Expand SELECTED_SKILLS to include dependencies declared in index.json.
+# Only runs when python3 is available and index.json is accessible.
+expand_with_deps() {
+  local json_file="$1"
+  shift
+  local -a input=("$@")
+  local -a result=()
+
+  skill_in_result() {
+    local s="$1"
+    for r in "${result[@]:-}"; do [ "$r" = "$s" ] && return 0; done
+    return 1
+  }
+
+  is_known_skill() {
+    local s="$1"
+    for known in "${ALL_SKILLS[@]}"; do [ "$s" = "$known" ] && return 0; done
+    return 1
+  }
+
+  for skill in "${input[@]}"; do
+    skill_in_result "$skill" || result+=("$skill")
+
+    if [ -n "$json_file" ] && command -v python3 &>/dev/null; then
+      while IFS= read -r dep; do
+        [ -z "$dep" ] && continue
+        is_known_skill "$dep" || continue
+        if ! skill_in_result "$dep"; then
+          echo "  + $dep (dependency of $skill)" >&2
+          result+=("$dep")
+        fi
+      done < <(python3 -c "
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+    s = next((x for x in d.get('skills', []) if x['name'] == sys.argv[2]), None)
+    if s:
+        for dep in s.get('dependencies', []):
+            print(dep)
+except Exception:
+    pass
+" "$json_file" "$skill" 2>/dev/null)
+    fi
+  done
+
+  printf '%s\n' "${result[@]}"
+}
+
+# Only expand deps when installing specific skills (not the full set)
+if [ "${#SELECTED_SKILLS[@]}" -lt "${#ALL_SKILLS[@]}" ] && [ -n "$INDEX_JSON" ]; then
+  EXPANDED=()
+  while IFS= read -r line; do
+    [ -n "$line" ] && EXPANDED+=("$line")
+  done < <(expand_with_deps "$INDEX_JSON" "${SELECTED_SKILLS[@]}")
+  SELECTED_SKILLS=("${EXPANDED[@]}")
 fi
 
 install_from_local() {

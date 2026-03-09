@@ -1,5 +1,7 @@
 import asyncio
 import base64
+import json
+import pathlib
 import time
 
 try:
@@ -41,7 +43,7 @@ from app.dependencies import (
     X_WREN_TIMEZONE,
 )
 from app.model.data_source import DataSource
-from app.model.error import DatabaseTimeoutError
+from app.model.error import DatabaseTimeoutError, ErrorCode, WrenError
 from app.model.metadata.bigquery import BigQueryMetadata
 from app.model.metadata.dto import FilterInfo
 from app.model.metadata.metadata import Metadata
@@ -51,6 +53,44 @@ tracer = trace.get_tracer(__name__)
 
 MIGRATION_MESSAGE = "Wren engine is migrating to Rust version now. \
     Wren AI team are appreciate if you can provide the error messages and related logs for us."
+
+
+def resolve_connection_info(dto) -> dict:
+    """Return connection info dict from either a file path or the inline DTO field.
+
+    When connectionFilePath is used, CONNECTION_FILE_ROOT must be set to the
+    directory that is allowed to be read. Requests are rejected if the env var
+    is absent or the resolved path escapes that directory.
+    """
+    import os
+
+    if getattr(dto, "connection_file_path", None):
+        allowed_root = os.environ.get("CONNECTION_FILE_ROOT")
+        if not allowed_root:
+            raise WrenError(
+                ErrorCode.INVALID_CONNECTION_INFO,
+                "connectionFilePath requires the CONNECTION_FILE_ROOT environment variable to be set",
+            )
+        path = pathlib.Path(dto.connection_file_path).resolve()
+        if not path.is_relative_to(pathlib.Path(allowed_root).resolve()):
+            raise WrenError(
+                ErrorCode.INVALID_CONNECTION_INFO,
+                f"Connection file path is outside the allowed directory: {dto.connection_file_path}",
+            )
+        try:
+            with open(path) as f:
+                return json.load(f)
+        except FileNotFoundError:
+            raise WrenError(
+                ErrorCode.INVALID_CONNECTION_INFO,
+                f"Connection file not found: {dto.connection_file_path}",
+            )
+        except json.JSONDecodeError as e:
+            raise WrenError(
+                ErrorCode.INVALID_CONNECTION_INFO,
+                f"Invalid JSON in connection file: {e}",
+            )
+    return dto.connection_info
 
 
 @tracer.start_as_current_span("base64_to_dict", kind=trace.SpanKind.INTERNAL)
