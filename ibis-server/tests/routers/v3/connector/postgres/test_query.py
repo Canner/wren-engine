@@ -1320,3 +1320,22 @@ async def test_connection_info_file(
     result = response.json()
     assert len(result["columns"]) == 10
     assert len(result["data"]) == 1
+
+
+async def test_connection_info_port_as_integer(client, manifest_str, connection_info):
+    connection_info_with_int_port = {
+        **connection_info,
+        "port": int(connection_info["port"]),
+    }
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info_with_int_port,
+            "manifestStr": manifest_str,
+            "sql": "SELECT 1 AS result",
+        },
+        headers={X_WREN_FALLBACK_DISABLE: "true"},
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert result["data"][0][0] == 1

@@ -3,9 +3,11 @@ from __future__ import annotations
 from enum import Enum
 from typing import Annotated, Any, Literal, Union
 
-from pydantic import BaseModel, Field, SecretStr, model_validator
+from pydantic import BaseModel, BeforeValidator, Field, SecretStr, model_validator
 
 from app.model.error import ErrorCode, WrenError
+
+SecretPort = Annotated[SecretStr, BeforeValidator(lambda v: str(v) if isinstance(v, int) else v)]
 
 manifest_str_field = Field(alias="manifestStr", description="Base64 manifest")
 connection_info_field = Field(alias="connectionInfo", default=None)
@@ -235,7 +237,7 @@ class CannerConnectionInfo(BaseConnectionInfo):
     host: SecretStr = Field(
         description="the hostname of your database", examples=["localhost"]
     )
-    port: SecretStr = Field(description="the port of your database", examples=["8080"])
+    port: SecretPort = Field(description="the port of your database", examples=["8080"])
     user: SecretStr = Field(
         description="the username of your database", examples=["admin"]
     )
@@ -254,7 +256,7 @@ class ClickHouseConnectionInfo(BaseConnectionInfo):
     host: SecretStr = Field(
         description="the hostname of your database", examples=["localhost"]
     )
-    port: SecretStr = Field(description="the port of your database", examples=["8123"])
+    port: SecretPort = Field(description="the port of your database", examples=["8123"])
     database: SecretStr = Field(
         description="the database name of your database", examples=["default"]
     )
@@ -283,7 +285,7 @@ class MSSqlConnectionInfo(BaseConnectionInfo):
     host: SecretStr = Field(
         description="the hostname of your database", examples=["localhost"]
     )
-    port: SecretStr = Field(description="the port of your database", examples=["1433"])
+    port: SecretPort = Field(description="the port of your database", examples=["1433"])
     database: SecretStr = Field(
         description="the database name of your database", examples=["master"]
     )
@@ -308,7 +310,7 @@ class MySqlConnectionInfo(BaseConnectionInfo):
     host: SecretStr = Field(
         description="the hostname of your database", examples=["localhost"]
     )
-    port: SecretStr = Field(description="the port of your database", examples=["3306"])
+    port: SecretPort = Field(description="the port of your database", examples=["3306"])
     database: SecretStr = Field(
         description="the database name of your database", examples=["default"]
     )
@@ -336,7 +338,7 @@ class PostgresConnectionInfo(BaseConnectionInfo):
     host: SecretStr = Field(
         examples=["localhost"], description="the hostname of your database"
     )
-    port: SecretStr = Field(examples=[5432], description="the port of your database")
+    port: SecretPort = Field(examples=["5432"], description="the port of your database")
     database: SecretStr = Field(
         examples=["postgres"], description="the database name of your database"
     )
@@ -358,7 +360,7 @@ class OracleConnectionInfo(BaseConnectionInfo):
         description="the hostname of your database",
         default="localhost",
     )
-    port: SecretStr = Field(
+    port: SecretPort = Field(
         examples=[1521], description="the port of your database", default="1521"
     )
     database: SecretStr = Field(
@@ -384,7 +386,7 @@ class RedshiftConnectionInfo(BaseConnectionInfo):
     host: SecretStr = Field(
         description="the hostname of your database", examples=["localhost"]
     )
-    port: SecretStr = Field(description="the port of your database", examples=["5439"])
+    port: SecretPort = Field(description="the port of your database", examples=["5439"])
     database: SecretStr = Field(
         description="the database name of your database", examples=["dev"]
     )
@@ -466,7 +468,7 @@ class SparkConnectionInfo(BaseConnectionInfo):
         description="Spark Connect server hostname",
         examples=["localhost", "spark-connect.mycompany.internal"],
     )
-    port: SecretStr = Field(description="the port of your spark connect server")
+    port: SecretPort = Field(description="the port of your spark connect server")
 
 
 class DatabricksTokenConnectionInfo(BaseConnectionInfo):
@@ -529,7 +531,7 @@ class TrinoConnectionInfo(BaseConnectionInfo):
     host: SecretStr = Field(
         description="the hostname of your database", examples=["localhost"]
     )
-    port: SecretStr = Field(default="8080", description="the port of your database")
+    port: SecretPort = Field(default="8080", description="the port of your database")
     catalog: SecretStr = Field(
         description="the catalog name of your database", examples=["hive"]
     )
