@@ -94,7 +94,7 @@ When prompted for connection details, provide:
 | Field | Value |
 |-------|-------|
 | Data source type | `duckdb` |
-| Database file path | `/data/jaffle_shop.duckdb` |
+| Database folder path | `/data` (the folder containing `jaffle_shop.duckdb`) |
 | Workspace path | `~/wren-workspace` |
 | jaffle_shop directory | your absolute path to `jaffle_shop_duckdb/` |
 
@@ -153,7 +153,7 @@ In Claude Code, run each skill in sequence:
 
 When prompted, enter:
 - Data source type: `duckdb`
-- Database file path: `/data/jaffle_shop.duckdb`
+- Database folder path: `/data` (the folder containing `jaffle_shop.duckdb`)
 
 Then save the MDL as a versioned YAML project:
 
