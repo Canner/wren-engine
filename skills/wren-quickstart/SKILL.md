@@ -5,7 +5,7 @@ compatibility: Requires Docker Desktop (or Docker Engine). No local database dri
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.0"
+  version: "1.1"
 ---
 
 # Wren Quickstart
@@ -13,10 +13,10 @@ metadata:
 ## Version check
 
 Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills/versions.json`.
-Compare the `wren-quickstart` key with this skill's version (`1.0`).
+Compare the `wren-quickstart` key with this skill's version (`1.1`).
 If the remote version is newer, notify the user before proceeding:
 
-> A newer version of the **wren-quickstart** skill is available (remote: X.Y, installed: 1.0).
+> A newer version of the **wren-quickstart** skill is available (remote: X.Y, installed: 1.1).
 > Update with:
 > ```bash
 > curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force wren-quickstart
@@ -34,12 +34,27 @@ This skill walks a user through setting up Wren Engine end-to-end — from creat
 
 ## Phase 1 — Create a workspace
 
+### 1a — Set up Python virtual environment
+
+Before creating the workspace, ensure a Python virtual environment is available. This is required if the user will run **ibis-server locally** (instead of relying solely on Docker). Skip this step if the user will use only the Dockerized ibis-server.
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate        # macOS / Linux
+# .venv\Scripts\activate         # Windows
+pip install --upgrade pip
+```
+
+> **Tip:** Place the venv inside or adjacent to the workspace directory so it is easy to find. Avoid committing it to version control — add `.venv/` to `.gitignore`.
+
+### 1b — Create a workspace directory
+
 Create a dedicated workspace directory on the host machine. This directory will be mounted into the Docker container, so the container can read and write MDL files.
 
 Ask the user where they want the workspace, or suggest a default:
 
 ```bash
-mkdir -p ~/wren-workspace
+mkdir -p ${PWD}/wren-workspace
 ```
 
 Save the chosen path as `<WORKSPACE_PATH>` (absolute path, e.g. `/Users/me/wren-workspace`). All subsequent steps reference this path.

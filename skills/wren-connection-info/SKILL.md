@@ -4,12 +4,13 @@ description: Set up data source type and connection credentials for Wren Engine.
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.1"
+  version: "1.2"
 ---
 
 # Wren Connection Info
 
 Sets up the data source type and credentials before any workflow that queries a database.
+Find the specification of the connection info format in the `model` section of [API reference](https://docs.getwren.ai/oss/wren_engine_api).
 
 ---
 
@@ -116,10 +117,23 @@ database:  <database name>
 sf_schema: <schema name>
 ```
 
-### DuckDB
-
+### File based (S3, Minio, GCS, local file)
+For the object storage connectors (S3, Minio, GCS) and local file sources, use this format:
 ```
-url: <path to .duckdb file>
+format: <FILE_FORMAT>   # e.g. "csv", "parquet"
+url:    <file path or bucket URL>
+```
+If credentials are needed (e.g. S3 access key and secret), include these fields as well:
+```
+access_key: <SECRET>
+secret_key: <SECRET>
+```
+
+### DuckDB
+It leverages the same connection info format as file-based sources, but with `format: duckdb` to indicate that it's a DuckDB data source rather than a generic file source.
+```
+format: duckdb
+url: <path to folder containing .duckdb file>
 ```
 
 ### Athena

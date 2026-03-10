@@ -65,13 +65,13 @@ If you prefer to run each step yourself, follow these phases in order.
 Create a directory on your host machine. This directory will be mounted into the Docker container so it can read and write MDL files.
 
 ```bash
-mkdir -p /${PWD}/wren-workspace
+mkdir -p ${PWD}/wren-workspace
 ```
 
 The completed workspace will look like:
 
 ```
-/${PWD}/wren-workspace/
+${PWD}/wren-workspace/
 ├── wren_project.yml
 ├── connection.yml
 ├── models/
