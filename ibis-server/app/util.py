@@ -1,7 +1,6 @@
 import asyncio
 import base64
 import json
-import pathlib
 import time
 
 try:
@@ -78,23 +77,23 @@ def resolve_connection_info(dto) -> dict:
                 ErrorCode.INVALID_CONNECTION_INFO,
                 "connectionFilePath requires the CONNECTION_FILE_ROOT environment variable to be set",
             )
-        allowed_root_path = pathlib.Path(allowed_root).resolve()
-        # Construct path by joining with the trusted root first, then normalize.
-        # This follows the CodeQL-recognized safe pattern: join trusted base with
-        # user input, normalize, then ensure the final path is still inside the
-        # trusted root directory.
-        user_path = pathlib.Path(dto.connection_file_path)
-        resolved_path = (allowed_root_path / user_path).resolve()
-        try:
-            # Raises ValueError if 'resolved_path' is not inside 'allowed_root_path'
-            resolved_path.relative_to(allowed_root_path)
-        except ValueError:
+        # Resolve the trusted root (no user input involved)
+        allowed_root_str = os.path.realpath(allowed_root)
+        # Build the candidate path by joining the trusted root with the user
+        # value, then normalise. Using os.path.normpath(os.path.join(base, user))
+        # is the pattern recognised by CodeQL as safe for path-injection checks.
+        # realpath additionally resolves symlinks so a symlink inside the allowed
+        # root cannot escape to a file outside it.
+        fullpath = os.path.realpath(
+            os.path.normpath(os.path.join(allowed_root_str, dto.connection_file_path))
+        )
+        if not fullpath.startswith(allowed_root_str + os.sep):
             raise WrenError(
                 ErrorCode.INVALID_CONNECTION_INFO,
                 f"Connection file path is outside the allowed directory: {dto.connection_file_path}",
             )
         try:
-            with open(resolved_path) as f:
+            with open(fullpath) as f:
                 return _normalize_port(json.load(f))
         except FileNotFoundError:
             raise WrenError(
