@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd wren-core && cargo fmt:*)",
+      "Bash(cd wren-core && cargo check:*)",
+      "Bash(cd wren-core && cargo clippy:*)",
+      "Bash(cd wren-core && RUST_MIN_STACK=8388608 cargo test:*)",
+      "Bash(cd wren-core-py && just:*)",
+      "Bash(cd ibis-server && just:*)",
+      "Bash(cd ibis-server && poetry run ruff:*)",
+      "Bash(taplo fmt:*)",
+      "Bash(taplo format:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git branch:*)",
+      "Bash(gh pr:*)",
+      "Bash(gh run:*)",
+      "Bash(gh api:*)",
+      "Bash(ls:*)",
+      "Bash(wc:*)"
+    ]
+  }
+}
