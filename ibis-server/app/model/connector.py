@@ -92,6 +92,7 @@ class Connector:
             DataSource.s3_file,
             DataSource.minio_file,
             DataSource.gcs_file,
+            DataSource.duckdb,
         }:
             self._connector = DuckDBConnector(connection_info)
         elif data_source == DataSource.redshift:

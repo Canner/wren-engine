@@ -37,6 +37,7 @@ from app.model import (
     QueryClickHouseDTO,
     QueryDatabricksDTO,
     QueryDTO,
+    QueryDuckDBDTO,
     QueryGcsFileDTO,
     QueryLocalFileDTO,
     QueryMinioFileDTO,
@@ -78,6 +79,7 @@ class DataSource(StrEnum):
     s3_file = auto()
     minio_file = auto()
     gcs_file = auto()
+    duckdb = auto()
     spark = auto()
     databricks = auto()
 
@@ -179,6 +181,8 @@ class DataSource(StrEnum):
                 return SnowflakeConnectionInfo.model_validate(data)
             case DataSource.trino:
                 return TrinoConnectionInfo.model_validate(data)
+            case DataSource.duckdb:
+                return LocalFileConnectionInfo.model_validate(data)
             case DataSource.local_file:
                 return LocalFileConnectionInfo.model_validate(data)
             case DataSource.s3_file:
@@ -242,6 +246,7 @@ class DataSourceExtension(Enum):
     snowflake = QuerySnowflakeDTO
     trino = QueryTrinoDTO
     local_file = QueryLocalFileDTO
+    duckdb = QueryDuckDBDTO
     s3_file = QueryS3FileDTO
     minio_file = QueryMinioFileDTO
     gcs_file = QueryGcsFileDTO
@@ -256,7 +261,7 @@ class DataSourceExtension(Enum):
             if hasattr(info, "connection_url"):
                 kwargs = info.kwargs if info.kwargs else {}
                 return ibis.connect(info.connection_url.get_secret_value(), **kwargs)
-            if self.name in {"local_file", "redshift", "spark"}:
+            if self.name in {"local_file", "redshift", "spark", "duckdb"}:
                 raise NotImplementedError(
                     f"{self.name} connection is not implemented to get ibis backend"
                 )

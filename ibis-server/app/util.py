@@ -1,7 +1,6 @@
 import asyncio
 import base64
 import json
-import pathlib
 import time
 
 try:
@@ -78,19 +77,28 @@ def resolve_connection_info(dto) -> dict:
                 ErrorCode.INVALID_CONNECTION_INFO,
                 "connectionFilePath requires the CONNECTION_FILE_ROOT environment variable to be set",
             )
-        allowed_root_resolved = str(pathlib.Path(allowed_root).resolve())
-        path = pathlib.Path(dto.connection_file_path).resolve()
-        # Explicit string prefix check — recognized by static analysis as a path sanitizer
-        if (
-            not str(path).startswith(allowed_root_resolved + os.sep)
-            and str(path) != allowed_root_resolved
-        ):
+        # Resolve the trusted root (no user input involved)
+        allowed_root_str = os.path.realpath(allowed_root)
+        # Build the candidate path by joining the trusted root with the user
+        # value, then normalise. Using os.path.normpath(os.path.join(base, user))
+        # is the pattern recognised by CodeQL as safe for path-injection checks.
+        # realpath additionally resolves symlinks so a symlink inside the allowed
+        # root cannot escape to a file outside it.
+        fullpath = os.path.realpath(
+            os.path.normpath(os.path.join(allowed_root_str, dto.connection_file_path))
+        )
+        root_prefix = (
+            allowed_root_str
+            if allowed_root_str.endswith(os.sep)
+            else allowed_root_str + os.sep
+        )
+        if not fullpath.startswith(root_prefix):
             raise WrenError(
                 ErrorCode.INVALID_CONNECTION_INFO,
                 f"Connection file path is outside the allowed directory: {dto.connection_file_path}",
             )
         try:
-            with open(path) as f:
+            with open(fullpath) as f:
                 return _normalize_port(json.load(f))
         except FileNotFoundError:
             raise WrenError(

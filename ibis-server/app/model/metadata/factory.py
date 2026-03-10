@@ -39,6 +39,7 @@ mapping = {
     DataSource.gcs_file: GcsFileMetadata,
     DataSource.databricks: DatabricksMetadata,
     DataSource.spark: SparkMetadata,
+    DataSource.duckdb: DuckDBMetadata,
 }
 
 
