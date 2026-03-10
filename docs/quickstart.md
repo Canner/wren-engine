@@ -233,7 +233,7 @@ The MDL manifest acts as a semantic layer — it tells Wren how your tables rela
 ## Troubleshooting
 
 **`dbt build` fails — adapter not found:**
-Install the duckdb adapter: `uv tool install dbt-duckdb`
+Activate the virtual environment from Step 1 and install the adapter there: `python -m pip install dbt-duckdb`
 
 **Container can't find the DuckDB file:**
 Check that the `-v` flag points to the directory containing `jaffle_shop.duckdb`, and that the path inside the container (`/data/jaffle_shop.duckdb`) matches what you gave for the connection.

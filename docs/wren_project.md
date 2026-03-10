@@ -73,7 +73,6 @@ columns:
     type: INTEGER
     is_calculated: false
     not_null: true
-    is_primary_key: true
     properties: {}
   - name: customer_id
     type: INTEGER
@@ -142,7 +141,6 @@ When converting between YAML (snake_case) and JSON (camelCase):
 | `table_reference` | `tableReference` |
 | `is_calculated` | `isCalculated` |
 | `not_null` | `notNull` |
-| `is_primary_key` | `isPrimaryKey` |
 | `primary_key` | `primaryKey` |
 | `join_type` | `joinType` |
 
@@ -189,7 +187,7 @@ target/
 connection.yml
 ```
 
-**5. Commit to version control**v
+**5. Commit to version control**
 
 Commit the model files without secrets — `connection.yml` and `target/` are excluded.
 

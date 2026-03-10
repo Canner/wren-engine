@@ -70,7 +70,7 @@ mkdir -p /${PWD}/wren-workspace
 
 The completed workspace will look like:
 
-```
+```text
 /${PWD}/wren-workspace/
 ├── wren_project.yml
 ├── connection.yml
@@ -136,7 +136,7 @@ docker run -d \
   -e CONNECTION_FILE_ROOT=/workspace \
   -e MDL_PATH=/workspace/target/mdl.json \
   -e CONNECTION_INFO_FILE=/workspace/target/connection.json \
-  -v ~/wren-workspace:/workspace \
+  -v /${PWD}/wren-workspace:/workspace \
   ghcr.io/canner/wren-engine-ibis:latest
 ```
 
@@ -264,7 +264,7 @@ docker restart wren-mcp            # restart
 Start a new Claude Code session. MCP servers are only loaded at session start.
 
 **Container not finding the MDL at startup:**
-Confirm `~/wren-workspace/target/mdl.json` exists before starting the container. Check logs with `docker logs wren-mcp`.
+Confirm `/${PWD}/wren-workspace/target/mdl.json` exists before starting the container. Check logs with `docker logs wren-mcp`.
 
 **Database connection refused inside Docker:**
 Change `localhost` / `127.0.0.1` to `host.docker.internal` in your connection credentials.
