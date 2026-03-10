@@ -130,10 +130,10 @@ secret_key: <SECRET>
 ```
 
 ### DuckDB
-It levages the same connection info format as file-based sources, but with `format: duckdb` to indicate that it's a DuckDB database file rather than a generic file source.
+It leverages the same connection info format as file-based sources, but with `format: duckdb` to indicate that it's a DuckDB data source rather than a generic file source.
 ```
 format: duckdb
-url: <path to .duckdb file>
+url: <path to folder containing .duckdb file>
 ```
 
 ### Athena
