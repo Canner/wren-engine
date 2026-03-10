@@ -79,8 +79,12 @@ def resolve_connection_info(dto) -> dict:
                 "connectionFilePath requires the CONNECTION_FILE_ROOT environment variable to be set",
             )
         allowed_root_resolved = str(pathlib.Path(allowed_root).resolve())
-        path = pathlib.Path(dto.connection_file_path).resolve()
-        # Explicit string prefix check — recognized by static analysis as a path sanitizer
+        # Construct path by joining with the trusted root first, then normalize.
+        # This follows the CodeQL-recognized safe pattern: join trusted base with
+        # user input, normalize, then check the prefix. When user supplies an
+        # absolute path, pathlib / keeps it absolute (same as os.path.join), so
+        # the startswith guard still catches escapes.
+        path = (pathlib.Path(allowed_root_resolved) / dto.connection_file_path).resolve()
         if (
             not str(path).startswith(allowed_root_resolved + os.sep)
             and str(path) != allowed_root_resolved
