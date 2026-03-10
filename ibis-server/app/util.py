@@ -14,6 +14,8 @@ except ImportError:  # pragma: no cover
         pass
 
 
+import os
+
 import datafusion
 import orjson
 import pandas as pd
@@ -55,6 +57,12 @@ MIGRATION_MESSAGE = "Wren engine is migrating to Rust version now. \
     Wren AI team are appreciate if you can provide the error messages and related logs for us."
 
 
+def _normalize_port(info: dict | None) -> dict | None:
+    if isinstance(info, dict) and type(info.get("port")) is int:
+        return {**info, "port": str(info["port"])}
+    return info
+
+
 def resolve_connection_info(dto) -> dict:
     """Return connection info dict from either a file path or the inline DTO field.
 
@@ -62,7 +70,6 @@ def resolve_connection_info(dto) -> dict:
     directory that is allowed to be read. Requests are rejected if the env var
     is absent or the resolved path escapes that directory.
     """
-    import os
 
     if getattr(dto, "connection_file_path", None):
         allowed_root = os.environ.get("CONNECTION_FILE_ROOT")
@@ -79,7 +86,7 @@ def resolve_connection_info(dto) -> dict:
             )
         try:
             with open(path) as f:
-                return json.load(f)
+                return _normalize_port(json.load(f))
         except FileNotFoundError:
             raise WrenError(
                 ErrorCode.INVALID_CONNECTION_INFO,
@@ -90,7 +97,7 @@ def resolve_connection_info(dto) -> dict:
                 ErrorCode.INVALID_CONNECTION_INFO,
                 f"Invalid JSON in connection file: {e}",
             )
-    return dto.connection_info
+    return _normalize_port(dto.connection_info)
 
 
 @tracer.start_as_current_span("base64_to_dict", kind=trace.SpanKind.INTERNAL)
