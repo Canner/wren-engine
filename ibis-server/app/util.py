@@ -83,17 +83,18 @@ def resolve_connection_info(dto) -> dict:
         # This follows the CodeQL-recognized safe pattern: join trusted base with
         # user input, normalize, then ensure the final path is still inside the
         # trusted root directory.
-        path = (allowed_root_path / dto.connection_file_path).resolve()
+        user_path = pathlib.Path(dto.connection_file_path)
+        resolved_path = (allowed_root_path / user_path).resolve()
         try:
-            # Raises ValueError if 'path' is not inside 'allowed_root_path'
-            path.relative_to(allowed_root_path)
+            # Raises ValueError if 'resolved_path' is not inside 'allowed_root_path'
+            resolved_path.relative_to(allowed_root_path)
         except ValueError:
             raise WrenError(
                 ErrorCode.INVALID_CONNECTION_INFO,
                 f"Connection file path is outside the allowed directory: {dto.connection_file_path}",
             )
         try:
-            with open(path) as f:
+            with open(resolved_path) as f:
                 return _normalize_port(json.load(f))
         except FileNotFoundError:
             raise WrenError(
