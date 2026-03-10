@@ -4,7 +4,7 @@ description: Set up data source type and connection credentials for Wren Engine.
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.1"
+  version: "1.2"
 ---
 
 # Wren Connection Info

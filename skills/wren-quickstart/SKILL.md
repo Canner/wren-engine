@@ -5,7 +5,7 @@ compatibility: Requires Docker Desktop (or Docker Engine). No local database dri
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.0"
+  version: "1.1"
 ---
 
 # Wren Quickstart
@@ -13,10 +13,10 @@ metadata:
 ## Version check
 
 Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills/versions.json`.
-Compare the `wren-quickstart` key with this skill's version (`1.0`).
+Compare the `wren-quickstart` key with this skill's version (`1.1`).
 If the remote version is newer, notify the user before proceeding:
 
-> A newer version of the **wren-quickstart** skill is available (remote: X.Y, installed: 1.0).
+> A newer version of the **wren-quickstart** skill is available (remote: X.Y, installed: 1.1).
 > Update with:
 > ```bash
 > curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force wren-quickstart
