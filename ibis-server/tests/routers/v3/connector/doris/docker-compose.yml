@@ -1,0 +1,18 @@
+services:
+  doris:
+    image: apache/doris:4.0.3-all-slim
+    container_name: doris-test
+    hostname: doris
+    privileged: true
+    ports:
+      - "9030:9030"    # FE MySQL protocol port
+      - "8030:8030"    # FE HTTP port (Web UI)
+      - "8040:8040"    # BE HTTP port
+    environment:
+      - SKIP_CHECK_ULIMIT=true
+    healthcheck:
+      test: ["CMD-SHELL", "mysql -h 127.0.0.1 -P 9030 -uroot -e 'SHOW BACKENDS\\G' | grep -q 'Alive: true' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 180s

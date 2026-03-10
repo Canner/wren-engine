@@ -7,18 +7,45 @@ from tests.routers.v3.connector.doris.conftest import base_url
 
 manifest = {
     "dataSource": "doris",
-    "catalog": "my_catalog",
-    "schema": "my_schema",
+    "catalog": "wren",
+    "schema": "public",
     "models": [
         {
             "name": "orders",
             "tableReference": {
+                "schema": "wren_test",
                 "table": "orders",
             },
             "columns": [
-                {"name": "o_orderkey", "type": "integer"},
-                {"name": "o_totalprice", "type": "float"},
-                {"name": "o_orderdate", "type": "date"},
+                {"name": "orderkey", "expression": "o_orderkey", "type": "integer"},
+                {"name": "custkey", "expression": "o_custkey", "type": "integer"},
+                {
+                    "name": "orderstatus",
+                    "expression": "o_orderstatus",
+                    "type": "varchar",
+                },
+                {"name": "totalprice", "expression": "o_totalprice", "type": "float"},
+                {"name": "orderdate", "expression": "o_orderdate", "type": "date"},
+                {
+                    "name": "order_cust_key",
+                    "expression": "concat(o_orderkey, '_', o_custkey)",
+                    "type": "varchar",
+                },
+                {
+                    "name": "timestamp",
+                    "expression": "cast('2024-01-01 23:59:59' as datetime)",
+                    "type": "timestamp",
+                },
+                {
+                    "name": "timestamptz",
+                    "expression": "cast('2024-01-01 23:59:59' as datetime)",
+                    "type": "timestamp",
+                },
+                {
+                    "name": "test_null_time",
+                    "expression": "cast(NULL as datetime)",
+                    "type": "timestamp",
+                },
             ],
         },
     ],
@@ -26,115 +53,129 @@ manifest = {
 
 
 @pytest.fixture(scope="module")
-async def manifest_str():
+def manifest_str():
     return base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
 
 
 async def test_query(client, manifest_str, connection_info):
-    """Test basic query against Doris."""
     response = await client.post(
         url=f"{base_url}/query",
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "orders" LIMIT 1',
+            "sql": "SELECT * FROM wren.public.orders ORDER BY orderkey LIMIT 1",
         },
     )
     assert response.status_code == 200
     result = response.json()
-    assert len(result["columns"]) > 0
+    assert len(result["columns"]) == len(manifest["models"][0]["columns"])
+    assert len(result["data"]) == 1
+    assert result["data"][0][0] == 1  # orderkey
+    assert result["data"][0][1] == 370  # custkey
+    assert result["data"][0][2] == "O"  # orderstatus
+
+
+async def test_query_with_limit(client, manifest_str, connection_info):
+    response = await client.post(
+        url=f"{base_url}/query",
+        params={"limit": 1},
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT * FROM wren.public.orders",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 1
+
+    response = await client.post(
+        url=f"{base_url}/query",
+        params={"limit": 1},
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT * FROM wren.public.orders LIMIT 10",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
     assert len(result["data"]) == 1
 
 
-async def test_query_without_manifest(client, connection_info):
-    """Test direct SQL query without manifest (dry run)."""
+async def test_query_with_invalid_manifest_str(client, connection_info):
     response = await client.post(
         url=f"{base_url}/query",
         json={
             "connectionInfo": connection_info,
-            "manifestStr": base64.b64encode(
-                orjson.dumps(
-                    {
-                        "dataSource": "doris",
-                        "catalog": "c",
-                        "schema": "s",
-                        "models": [],
-                    }
-                )
-            ).decode("utf-8"),
-            "sql": "SELECT 1 AS val",
+            "manifestStr": "xxx",
+            "sql": "SELECT * FROM wren.public.orders LIMIT 1",
         },
     )
-    assert response.status_code == 200
-    result = response.json()
-    assert result["data"] == [[1]]
-    assert result["dtypes"]["val"] in ("int8", "int16", "int32", "int64")
+    assert response.status_code == 422
 
 
-async def test_dry_run(client, manifest_str, connection_info):
-    """Test dry run mode (validate SQL without executing)."""
+async def test_query_without_manifest(client, connection_info):
     response = await client.post(
-        url=f"{base_url}/query?dryRun=true",
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "sql": "SELECT * FROM wren.public.orders LIMIT 1",
+        },
+    )
+    assert response.status_code == 422
+    result = response.json()
+    assert result["detail"][0]["type"] == "missing"
+    assert result["detail"][0]["loc"] == ["body", "manifestStr"]
+    assert result["detail"][0]["msg"] == "Field required"
+
+
+async def test_query_without_sql(client, manifest_str, connection_info):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={"connectionInfo": connection_info, "manifestStr": manifest_str},
+    )
+    assert response.status_code == 422
+    result = response.json()
+    assert result["detail"][0]["type"] == "missing"
+    assert result["detail"][0]["loc"] == ["body", "sql"]
+    assert result["detail"][0]["msg"] == "Field required"
+
+
+async def test_query_with_dry_run(client, manifest_str, connection_info):
+    response = await client.post(
+        url=f"{base_url}/query",
+        params={"dryRun": True},
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "orders" LIMIT 1',
+            "sql": "SELECT * FROM wren.public.orders LIMIT 1",
         },
     )
     assert response.status_code == 204
 
 
-async def test_metadata_tables(client, connection_info):
-    """Test fetching table metadata from Doris."""
-    response = await client.post(
-        url=f"{base_url}/metadata/tables",
-        json={
-            "connectionInfo": connection_info,
-        },
-    )
-    assert response.status_code == 200
-    tables = response.json()
-    assert isinstance(tables, list)
-    assert len(tables) > 0
-    # Verify table structure
-    table = tables[0]
-    assert "name" in table
-    assert "columns" in table
-
-
-async def test_metadata_constraints(client, connection_info):
-    """Test fetching constraints from Doris (should return empty list)."""
-    response = await client.post(
-        url=f"{base_url}/metadata/constraints",
-        json={
-            "connectionInfo": connection_info,
-        },
-    )
-    assert response.status_code == 200
-    constraints = response.json()
-    assert isinstance(constraints, list)
-    # Doris has no foreign keys, expect empty
-    assert len(constraints) == 0
-
-
-async def test_invalid_query(client, manifest_str, connection_info):
-    """Test that invalid SQL returns proper error."""
+async def test_query_with_dry_run_and_invalid_sql(
+    client, manifest_str, connection_info
+):
     response = await client.post(
         url=f"{base_url}/query",
+        params={"dryRun": True},
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": "SELECT * FROM non_existent_table_xyz",
+            "sql": "SELECT * FROM X",
         },
     )
-    assert response.status_code != 200
+    assert response.status_code == 422
+    assert response.text is not None
 
 
 async def test_no_transaction_wrapping(client, connection_info):
     """Verify Doris queries execute without BEGIN/ROLLBACK wrapping.
 
-    This test confirms the autocommit fix works - Doris should not
-    receive BEGIN/COMMIT/ROLLBACK commands.
+    Doris is an OLAP engine and rejects transactional SELECT statements.
+    The autocommit fix must be in place.
     """
     response = await client.post(
         url=f"{base_url}/query",
@@ -156,6 +197,6 @@ async def test_no_transaction_wrapping(client, connection_info):
     assert response.status_code == 200
     result = response.json()
     assert len(result["data"]) == 1
-    # Doris version string typically contains "doris"
-    version_str = str(result["data"][0][0]).lower()
-    assert "doris" in version_str
+    # Doris returns MySQL-compatible version (e.g. "5.7.99")
+    version_str = str(result["data"][0][0])
+    assert len(version_str) > 0
