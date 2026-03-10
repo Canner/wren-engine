@@ -83,6 +83,7 @@ pre-commit = "4.2.0"
 ruff = "0.11.2"
 trino = ">=0.321,<1"
 psycopg2 = ">=2.8.4,<3"
+pymysql = ">=1.1.0,<2"
 clickhouse-connect = "0.8.15"
 asgi-lifespan = "2.1.0"
 polars = ">=1.32.0"
@@ -97,6 +98,7 @@ markers = [
   "functions: mark a test as a functions test",
   "mssql: mark a test as a mssql test",
   "mysql: mark a test as a mysql test",
+  "doris: mark a test as a doris test",
   "oracle: mark a test  as a oracle test",
   "postgres: mark a test as a postgres test",
   "redshift: mark a test as a redshift test",

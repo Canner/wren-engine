@@ -142,6 +142,75 @@ docker compose down -v
 ```
 
 
+### Running Doris Tests Locally
+Doris-related tests require a running Apache Doris instance.
+Our GitHub CI already handles this automatically, but you must start Doris manually when running tests locally.
+
+Prerequisites
+
+- Docker & Docker Compose
+- Python dependencies installed (`just install`)
+- `pymysql` installed in the dev environment (already included in dev dependencies)
+
+#### Config Doris Cluster
+
+1. Start the Doris Container
+
+From the `ibis-server` directory:
+```bash
+cd tests/routers/v3/connector/doris
+docker compose up -d
+```
+
+The container uses `apache/doris:4.0.3-all-slim` (all-in-one image with FE + BE).
+
+> ⚠️ The all-in-one Doris image requires sufficient memory (at least 8 GB recommended).
+> If you see `MEM_ALLOC_FAILED` errors, increase Docker's memory limit.
+
+Wait until Doris is healthy. Check the status:
+```bash
+mysql -h 127.0.0.1 -P 9030 -uroot -e "SHOW BACKENDS\G" | grep "Alive"
+# Alive: true
+```
+
+2. Update Connection Info (if needed)
+
+The default connection in `tests/routers/v3/connector/doris/conftest.py`:
+```python
+DORIS_HOST = "127.0.0.1"
+DORIS_PORT = 9030
+DORIS_USER = "root"
+DORIS_PASSWORD = ""
+```
+
+
+Adjust these values if your Doris instance has different credentials.
+
+If you already have a remote Doris cluster, update the connection constants in `conftest.py`:
+```python
+DORIS_HOST = "<your-doris-host>"
+DORIS_PORT = 9030
+DORIS_USER = "<user>"
+DORIS_PASSWORD = "<password>"
+```
+
+#### Run Doris Tests
+
+Go back to the `ibis-server` directory and run:
+```bash
+just test doris
+```
+
+⚠️ Doris tests will fail if the Doris instance is not reachable.
+
+#### Cleanup (Local Docker)
+
+After tests finish:
+```bash
+cd tests/routers/v3/connector/doris
+docker compose down -v
+```
+
 
 ### Start with Python Interactive Mode
 Install the dependencies

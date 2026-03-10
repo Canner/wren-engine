@@ -4,6 +4,7 @@ from app.model.metadata.bigquery import BigQueryMetadata
 from app.model.metadata.canner import CannerMetadata
 from app.model.metadata.clickhouse import ClickHouseMetadata
 from app.model.metadata.databricks import DatabricksMetadata
+from app.model.metadata.doris import DorisMetadata
 from app.model.metadata.metadata import Metadata
 from app.model.metadata.mssql import MSSQLMetadata
 from app.model.metadata.mysql import MySQLMetadata
@@ -28,6 +29,7 @@ mapping = {
     DataSource.clickhouse: ClickHouseMetadata,
     DataSource.mssql: MSSQLMetadata,
     DataSource.mysql: MySQLMetadata,
+    DataSource.doris: DorisMetadata,
     DataSource.oracle: OracleMetadata,
     DataSource.postgres: PostgresMetadata,
     DataSource.redshift: RedshiftMetadata,

@@ -163,10 +163,10 @@ def _with_session_timezone(
                     )
                 )
                 continue
-            if data_source == DataSource.mysql:
+            if data_source in {DataSource.mysql, DataSource.doris}:
                 timezone = headers.get(X_WREN_TIMEZONE, "UTC")
                 # TODO: ibis mysql loss the timezone information
-                # we cast timestamp to timestamp with session timezone for mysql
+                # we cast timestamp to timestamp with session timezone for mysql/doris
                 fields.append(
                     pa.field(
                         field.name,

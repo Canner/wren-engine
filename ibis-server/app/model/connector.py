@@ -105,6 +105,8 @@ class Connector:
             self._connector = DatabricksConnector(connection_info)
         elif data_source == DataSource.mysql:
             self._connector = MySqlConnector(connection_info)
+        elif data_source == DataSource.doris:
+            self._connector = DorisConnector(connection_info)
         else:
             self._connector = IbisConnector(data_source, connection_info)
 
@@ -354,6 +356,43 @@ class MySqlConnector(IbisConnector):
     def _cast_json_columns(self, result_table: Table, col_name: str) -> Table:
         col = result_table[col_name]
         # Convert JSON to string for compatibility
+        casted_col = col.cast("string")
+        return result_table.mutate(**{col_name: casted_col})
+
+
+class DorisConnector(IbisConnector):
+    """Doris connector - reuses MySQL protocol via ibis.mysql backend.
+
+    Doris is an analytical database that is MySQL-protocol compatible.
+    Autocommit is forced on in get_doris_connection() because Doris may not
+    properly reflect the SERVER_STATUS_AUTOCOMMIT flag, which would cause
+    ibis's raw_sql() to wrap every query in BEGIN/ROLLBACK unnecessarily.
+    """
+
+    def __init__(self, connection_info: ConnectionInfo):
+        super().__init__(DataSource.doris, connection_info)
+
+    def _handle_pyarrow_unsupported_type(self, ibis_table: Table, **kwargs) -> Table:
+        result_table = ibis_table
+        for name, dtype in ibis_table.schema().items():
+            if isinstance(dtype, Decimal):
+                result_table = self._round_decimal_columns(
+                    result_table=result_table, col_name=name, **kwargs
+                )
+            elif isinstance(dtype, UUID):
+                result_table = self._cast_uuid_columns(
+                    result_table=result_table, col_name=name
+                )
+            elif isinstance(dtype, dt.JSON):
+                # Doris JSON columns need the same handling as MySQL
+                result_table = self._cast_json_columns(
+                    result_table=result_table, col_name=name
+                )
+
+        return result_table
+
+    def _cast_json_columns(self, result_table: Table, col_name: str) -> Table:
+        col = result_table[col_name]
         casted_col = col.cast("string")
         return result_table.mutate(**{col_name: casted_col})
 

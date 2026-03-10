@@ -67,6 +67,10 @@ class QueryMySqlDTO(QueryDTO):
     connection_info: ConnectionUrl | MySqlConnectionInfo = connection_info_field
 
 
+class QueryDorisDTO(QueryDTO):
+    connection_info: DorisConnectionInfo = connection_info_field
+
+
 class QueryOracleDTO(QueryDTO):
     connection_info: ConnectionUrl | OracleConnectionInfo = connection_info_field
 
@@ -334,6 +338,29 @@ class MySqlConnectionInfo(BaseConnectionInfo):
     )
     ssl_ca: SecretStr | None = Field(
         alias="sslCA", default=None, description="The path to the CA certificate file"
+    )
+    kwargs: dict[str, str] | None = Field(
+        description="Additional keyword arguments to pass to PyMySQL", default=None
+    )
+
+
+class DorisConnectionInfo(BaseConnectionInfo):
+    host: SecretStr = Field(
+        description="the hostname of your Doris FE", examples=["localhost"]
+    )
+    port: SecretStr = Field(
+        description="the query port of your Doris FE", examples=["9030"]
+    )
+    database: SecretStr = Field(
+        description="the database name of your Doris database", examples=["default"]
+    )
+    user: SecretStr = Field(
+        description="the username of your Doris database", examples=["root"]
+    )
+    password: SecretStr | None = Field(
+        description="the password of your Doris database",
+        examples=["password"],
+        default=None,
     )
     kwargs: dict[str, str] | None = Field(
         description="Additional keyword arguments to pass to PyMySQL", default=None
@@ -654,6 +681,7 @@ ConnectionInfo = (
     | ConnectionUrl
     | MSSqlConnectionInfo
     | MySqlConnectionInfo
+    | DorisConnectionInfo
     | OracleConnectionInfo
     | PostgresConnectionInfo
     | RedshiftConnectionInfo
