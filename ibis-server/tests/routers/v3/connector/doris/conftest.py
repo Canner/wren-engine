@@ -26,7 +26,7 @@ function_list_path = file_path("../resources/function_list")
 DORIS_HOST = "127.0.0.1"
 DORIS_PORT = 9030
 DORIS_USER = "root"
-DORIS_PASSWORD = "123456"
+DORIS_PASSWORD = ""
 DORIS_DATABASE = "wren_test"
 
 
