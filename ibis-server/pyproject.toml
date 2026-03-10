@@ -104,6 +104,7 @@ markers = [
   "trino: mark a test as a trino test",
   "databricks: mark a test as a databricks test",
   "spark: mark a test as a spark test",
+  "duckdb: mark a test as a duckdb test",
   "local_file: mark a test as a local file test",
   "s3_file: mark a test as a s3 file test",
   "minio_file: mark a test as a minio file test",

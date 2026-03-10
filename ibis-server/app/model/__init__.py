@@ -99,6 +99,10 @@ class QueryLocalFileDTO(QueryDTO):
     connection_info: LocalFileConnectionInfo = connection_info_field
 
 
+class QueryDuckDBDTO(QueryDTO):
+    connection_info: LocalFileConnectionInfo = connection_info_field
+
+
 class QueryS3FileDTO(QueryDTO):
     connection_info: S3FileConnectionInfo = connection_info_field
 
