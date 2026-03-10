@@ -87,7 +87,11 @@ def resolve_connection_info(dto) -> dict:
         fullpath = os.path.realpath(
             os.path.normpath(os.path.join(allowed_root_str, dto.connection_file_path))
         )
-        root_prefix = allowed_root_str if allowed_root_str.endswith(os.sep) else allowed_root_str + os.sep
+        root_prefix = (
+            allowed_root_str
+            if allowed_root_str.endswith(os.sep)
+            else allowed_root_str + os.sep
+        )
         if not fullpath.startswith(root_prefix):
             raise WrenError(
                 ErrorCode.INVALID_CONNECTION_INFO,
