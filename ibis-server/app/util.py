@@ -78,8 +78,13 @@ def resolve_connection_info(dto) -> dict:
                 ErrorCode.INVALID_CONNECTION_INFO,
                 "connectionFilePath requires the CONNECTION_FILE_ROOT environment variable to be set",
             )
+        allowed_root_resolved = str(pathlib.Path(allowed_root).resolve())
         path = pathlib.Path(dto.connection_file_path).resolve()
-        if not path.is_relative_to(pathlib.Path(allowed_root).resolve()):
+        # Explicit string prefix check — recognized by static analysis as a path sanitizer
+        if (
+            not str(path).startswith(allowed_root_resolved + os.sep)
+            and str(path) != allowed_root_resolved
+        ):
             raise WrenError(
                 ErrorCode.INVALID_CONNECTION_INFO,
                 f"Connection file path is outside the allowed directory: {dto.connection_file_path}",

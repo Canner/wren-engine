@@ -5,6 +5,9 @@ on:
     paths:
       - "skills/**"
 
+permissions:
+  contents: read
+
 jobs:
   version-parity:
     name: Check skills/versions.json parity
