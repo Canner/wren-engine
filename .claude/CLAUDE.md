@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Wren Engine is a semantic engine for MCP clients and AI agents. It translates SQL queries through a semantic layer (MDL - Modeling Definition Language) and executes them against 22+ data sources (PostgreSQL, BigQuery, Snowflake, Spark, etc.). The engine is powered by Apache DataFusion (Canner fork).
+Wren Engine (OSS) is an open source semantic engine for MCP clients and AI agents. It translates SQL queries through a semantic layer (MDL - Modeling Definition Language) and executes them against 22+ data sources (PostgreSQL, BigQuery, Snowflake, Spark, etc.). The engine is powered by Apache DataFusion (Canner fork).
 
 ## Repository Structure
 
@@ -54,7 +54,7 @@ just lint                           # ruff format check + ruff check
 just format                         # ruff auto-fix + taplo
 ```
 
-Available test markers: `postgres`, `mysql`, `mssql`, `bigquery`, `snowflake`, `clickhouse`, `trino`, `oracle`, `athena`, `duckdb`, `athena_spark`, `databricks`, `spark`, `local_file`, `s3_file`, `gcs_file`, `minio_file`, `functions`, `profile`, `cache`, `unit`, `enterprise`, `beta`.
+Available test markers: `postgres`, `mysql`, `mssql`, `bigquery`, `snowflake`, `clickhouse`, `trino`, `oracle`, `athena`, `duckdb`, `athena_spark`, `databricks`, `spark`, `doris`, `local_file`, `s3_file`, `gcs_file`, `minio_file`, `functions`, `profile`, `cache`, `unit`, `enterprise`, `beta`.
 
 ### mcp-server
 Uses `uv` for dependency management. See `mcp-server/README.md`.
