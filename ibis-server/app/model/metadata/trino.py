@@ -45,7 +45,11 @@ TRINO_TYPE_MAPPING = {
     # Date and Time Types
     "date": RustWrenEngineColumnType.DATE,
     "datetime": RustWrenEngineColumnType.TIMESTAMP,
-    "timestamp": RustWrenEngineColumnType.TIMESTAMPTZ,
+    "timestamp": RustWrenEngineColumnType.TIMESTAMP,
+    "timestamp with time zone": RustWrenEngineColumnType.TIMESTAMPTZ,
+    "time": RustWrenEngineColumnType.TIME,
+    "time with time zone": RustWrenEngineColumnType.TIME,
+    "interval": RustWrenEngineColumnType.INTERVAL,
     # JSON Type
     "json": RustWrenEngineColumnType.JSON,
 }
