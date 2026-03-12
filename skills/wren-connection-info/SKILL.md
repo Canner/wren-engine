@@ -199,7 +199,7 @@ json.dump(d, open('target/connection.json', 'w'))
 
 **Do NOT read or display the contents of `target/connection.json` after building.**
 
-> **Server requirement:** ibis-server must have the `CONNECTION_FILE_ROOT` environment variable set to the directory containing `target/connection.json`. When running via Docker (the standard deployment), the workspace is mounted at `/workspace` and `CONNECTION_FILE_ROOT=/workspace` is set by default. For local dev, set `CONNECTION_FILE_ROOT` to the project root before starting ibis-server.
+> **Server requirement:** ibis-server must have the `CONNECTION_FILE_ROOT` environment variable set to the directory containing `target/connection.json`. For local dev, set `CONNECTION_FILE_ROOT` to the project root before starting ibis-server. For MCP Docker deployments, connection info is configured via the Web UI (`http://localhost:9001`) — the file path approach is only needed for direct ibis-server API calls (e.g. `generate-mdl` introspection).
 
 Provide to the calling workflow:
 - `connectionFilePath`: absolute path to `target/connection.json` — use the **container-internal** path (e.g. `/workspace/target/connection.json`) when ibis-server runs in Docker, or the host path for local dev
