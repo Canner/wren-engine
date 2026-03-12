@@ -8,6 +8,7 @@ env := env("ENV", "dev")
 release_flag := if env == "prod" { "--release" } else { "" }
 
 build:
+    rm -rf target/wheels
     poetry run maturin build {{ release_flag }}
 
 develop:
