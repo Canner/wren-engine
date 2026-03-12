@@ -82,7 +82,7 @@
     },
     {
       "name": "wren-quickstart",
-      "version": "1.1",
+      "version": "1.2",
       "description": "End-to-end quickstart for Wren Engine — from zero to querying.",
       "tags": [
         "wren",
