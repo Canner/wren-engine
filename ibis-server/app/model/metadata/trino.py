@@ -79,7 +79,7 @@ class TrinoMetadata(Metadata):
                     ON t.table_catalog = c.table_catalog
                     AND t.table_schema = c.table_schema
                     AND t.table_name = c.table_name
-                INNER JOIN
+                LEFT JOIN
                     system.metadata.table_comments AS tc
                     ON t.table_catalog = tc.catalog_name
                     AND t.table_schema = tc.schema_name
