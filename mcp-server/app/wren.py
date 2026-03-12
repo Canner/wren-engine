@@ -27,6 +27,7 @@ WREN_URL = os.getenv("WREN_URL", "localhost:8000")
 USER_AGENT = "wren-app/1.0"
 MDL_SCHEMA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "mdl.schema.json")
 connection_info_path = os.path.expanduser(os.getenv("CONNECTION_INFO_FILE", "~/.wren/connection_info.json"))
+settings_path = os.path.expanduser(os.getenv("SETTINGS_FILE", "~/.wren/mcp-ui-settings.json"))
 mdl_path = os.getenv("MDL_PATH")
 
 
@@ -115,6 +116,34 @@ class MdlCache:
 mdl_cache = MdlCache()
 data_source = None
 connection_info = None
+read_only_mode = False
+
+
+def _read_only_error(tool_name: str) -> str:
+    return f"ERROR: '{tool_name}' is disabled because read-only mode is active. Toggle it off in the Wren Engine Web UI."
+
+
+def _load_settings() -> None:
+    global read_only_mode
+    try:
+        with open(settings_path) as f:
+            settings = json.load(f)
+        read_only_mode = bool(settings.get("read_only_mode", False))
+        print(f"Loaded settings {settings_path} (read_only_mode={read_only_mode})")  # noqa: T201
+    except FileNotFoundError:
+        pass
+
+
+def _save_settings() -> None:
+    try:
+        os.makedirs(os.path.dirname(settings_path), exist_ok=True)
+        with open(settings_path, "w") as f:
+            json.dump({"read_only_mode": read_only_mode}, f, indent=2)
+    except Exception as e:
+        print(f"Warning: could not save settings to {settings_path}: {e}")  # noqa: T201
+
+
+_load_settings()
 
 if mdl_path:
     with open(mdl_path) as f:
@@ -226,6 +255,8 @@ async def deploy(mdl_file_path: str) -> str:
         mdl_file_path: Absolute or relative path to the MDL JSON file (e.g. `target/mdl.json`).
                        Use `build_mdl_project` to generate this file from a YAML project directory.
     """
+    if read_only_mode:
+        return _read_only_error("deploy")
     global data_source
     expanded = os.path.expanduser(mdl_file_path)
     if not os.path.isfile(expanded):
@@ -258,6 +289,8 @@ async def deploy_manifest(mdl: dict) -> str:
     Args:
         mdl: The MDL manifest as a dictionary.
     """
+    if read_only_mode:
+        return _read_only_error("deploy_manifest")
     global data_source
     data_source = mdl.get("dataSource", "").lower()
     mdl_base64 = dict_to_base64_string(mdl)
@@ -330,6 +363,8 @@ async def list_remote_constraints() -> str:
     """
     Get the available constraints of connected Database
     """
+    if read_only_mode:
+        return _read_only_error("list_remote_constraints")
     response = await make_constraints_list_request()
     return response
 
@@ -344,6 +379,8 @@ async def list_remote_tables() -> str:
     """
     Get the available tables of connected Database
     """
+    if read_only_mode:
+        return _read_only_error("list_remote_tables")
     response = await make_table_list_request()
     return response
 
@@ -730,7 +767,14 @@ def _web_get_state() -> dict:
         "connection_info_path": connection_info_path,
         "mdl_dict": mdl_dict,
         "wren_url": WREN_URL,
+        "read_only_mode": read_only_mode,
     }
+
+
+def _web_set_read_only_mode(enabled: bool) -> None:
+    global read_only_mode
+    read_only_mode = enabled
+    _save_settings()
 
 
 def _web_set_connection(ds: str, conn_info: dict) -> None:
@@ -759,7 +803,7 @@ if WEB_UI_ENABLED:
         from web import init as _web_init, start as _web_start
     except ImportError:
         from app.web import init as _web_init, start as _web_start
-    _web_init(_web_get_state, _web_set_connection, _web_deploy_from_dict)
+    _web_init(_web_get_state, _web_set_connection, _web_deploy_from_dict, _web_set_read_only_mode)
     _web_start(host=MCP_HOST, port=WEB_UI_PORT)
 
 

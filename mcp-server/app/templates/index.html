@@ -15,12 +15,33 @@
       font-size: .82em;
       font-weight: 600;
     }
-    .badge-ok  { background: #d1fae5; color: #065f46; }
-    .badge-off { background: #fef3c7; color: #92400e; }
+    .badge-ok       { background: #d1fae5; color: #065f46; }
+    .badge-off      { background: #fef3c7; color: #92400e; }
+    .badge-readonly { background: #fee2e2; color: #991b1b; }
     #deploy-result, #connection-result { min-height: 1.4em; margin-top: .4rem; }
     article header { font-weight: 600; margin-bottom: .75rem; }
     label { margin-bottom: .5rem; }
     ::placeholder { opacity: 0.35 !important; }
+
+    /* iOS-style toggle — pure div, no checkbox, avoids PicoCSS conflicts */
+    .switch-track {
+      position: relative; display: inline-block;
+      width: 52px; height: 28px; flex-shrink: 0;
+      background: #d1d5db; border-radius: 28px;
+      cursor: pointer; transition: background .2s;
+    }
+    .switch-track.switch-on { background: #ef4444; }
+    .switch-thumb {
+      position: absolute;
+      width: 22px; height: 22px;
+      top: 3px; left: 3px;
+      background: #fff; border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0,0,0,.3);
+      transition: transform .2s;
+    }
+    .switch-track.switch-on .switch-thumb { transform: translateX(24px); }
+    .toggle-row { display: flex; align-items: center; gap: .75rem; }
+    .toggle-label { font-size: 1rem; font-weight: 500; cursor: pointer; user-select: none; }
   </style>
 </head>
 <body>
@@ -30,6 +51,42 @@
     <h2 style="margin-bottom:0">Wren Engine</h2>
     <p style="margin:0;color:var(--pico-muted-color)">Configuration &amp; MDL Status</p>
   </hgroup>
+
+  <!-- Read-only Mode card -->
+  <article>
+    <header>
+      Read-only Mode
+      &nbsp;
+      <span id="read-only-badge">
+        {% if read_only_mode %}
+          <span class="badge badge-readonly">Read-only ON</span>
+        {% else %}
+          <span class="badge badge-off">Read-only OFF</span>
+        {% endif %}
+      </span>
+    </header>
+    <p style="margin-bottom:.75rem;color:var(--pico-muted-color);font-size:.9em">
+      When enabled, the AI agent cannot call <code>deploy</code>, <code>deploy_manifest</code>,
+      <code>list_remote_tables</code>, or <code>list_remote_constraints</code>.
+    </p>
+    <form
+      id="read-only-form"
+      hx-post="/read-only-mode"
+      hx-target="#read-only-result"
+      hx-swap="innerHTML"
+      style="margin:0">
+      <input type="hidden" id="read-only-value" name="read_only_mode" value="{% if read_only_mode %}on{% endif %}">
+      <div class="toggle-row">
+        <div class="switch-track {% if read_only_mode %}switch-on{% endif %}"
+             id="switch-track"
+             onclick="roToggle()">
+          <div class="switch-thumb"></div>
+        </div>
+        <span class="toggle-label" onclick="roToggle()">Enable read-only mode</span>
+      </div>
+    </form>
+    <div id="read-only-result" style="min-height:1.4em;margin-top:.4rem"></div>
+  </article>
 
   <!-- MDL Status card -->
   <article>
@@ -107,6 +164,16 @@
   </article>
 
 </main>
+
+<script>
+  function roToggle() {
+    const track = document.getElementById('switch-track');
+    const input = document.getElementById('read-only-value');
+    const on = track.classList.toggle('switch-on');
+    input.value = on ? 'on' : '';
+    document.getElementById('read-only-form').requestSubmit();
+  }
+</script>
 
 <script>
   // Show non-2xx responses in the HTMX target instead of silently failing

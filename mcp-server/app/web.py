@@ -136,17 +136,20 @@ DATASOURCE_FIELDS: dict[str, list[dict]] = {
 _get_state: Callable[[], dict] | None = None
 _set_connection: Callable[[str, dict], None] | None = None
 _deploy_from_dict: Callable[[dict], tuple[bool, str]] | None = None
+_set_read_only_mode: Callable[[bool], None] | None = None
 
 
 def init(
     get_state: Callable[[], dict],
     set_connection: Callable[[str, dict], None],
     deploy_from_dict: Callable[[dict], tuple[bool, str]],
+    set_read_only_mode: Callable[[bool], None],
 ) -> None:
-    global _get_state, _set_connection, _deploy_from_dict
+    global _get_state, _set_connection, _deploy_from_dict, _set_read_only_mode
     _get_state = get_state
     _set_connection = set_connection
     _deploy_from_dict = deploy_from_dict
+    _set_read_only_mode = set_read_only_mode
 
 
 def _base_ctx(state: dict) -> dict:
@@ -162,6 +165,7 @@ def _base_ctx(state: dict) -> dict:
         "connection_info_path": state.get("connection_info_path"),
         "mdl_json": json.dumps(state.get("mdl_dict") or {}, indent=2),
         "is_docker": is_docker(),
+        "read_only_mode": state.get("read_only_mode", False),
     }
 
 
@@ -281,6 +285,21 @@ async def post_mdl(request: Request):
     )
 
 
+async def post_read_only_mode(request: Request):
+    form = await request.form()
+    enabled = form.get("read_only_mode") == "on"
+    _set_read_only_mode(enabled)
+    badge = (
+        '<span class="badge badge-readonly">Read-only ON</span>'
+        if enabled
+        else '<span class="badge badge-off">Read-only OFF</span>'
+    )
+    return HTMLResponse(
+        f'<div id="read-only-badge" hx-swap-oob="innerHTML">{badge}</div>'
+        + _msg("✓ Read-only mode updated.", ok=True)
+    )
+
+
 def _msg(text: str, ok: bool) -> str:
     color = "var(--pico-color-green-500)" if ok else "var(--pico-color-red-500)"
     return f'<small style="color:{color}">{text}</small>'
@@ -293,6 +312,7 @@ app = Starlette(
         Route("/connection", post_connection, methods=["POST"]),
         Route("/mdl", get_mdl),
         Route("/mdl", post_mdl, methods=["POST"]),
+        Route("/read-only-mode", post_read_only_mode, methods=["POST"]),
     ]
 )
 
