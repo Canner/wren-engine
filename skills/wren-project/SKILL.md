@@ -45,7 +45,7 @@ my_project/
 ```
 
 After building, the compiled file is written to:
-```
+```text
 my_project/
 └── target/
     └── mdl.json           # Deployable MDL JSON (camelCase)
@@ -193,7 +193,8 @@ All other MDL fields (`name`, `type`, `catalog`, `schema`, `table`, `condition`,
 5. Later — Build: read wren_project.yml, then models/*.yml, relationships.yml, views.yml.
                    Rename snake_case → camelCase, write target/mdl.json.
 
-6. Deploy: deploy(mdl_file_path="./target/mdl.json")
+6. Connection info: configure via the MCP server Web UI
+                   (typically http://localhost:9001; use the Docker host hint when running in a container)
 
-7. Connection info: configure via the MCP server Web UI (http://localhost:9001)
+7. Deploy: deploy(mdl_file_path="./target/mdl.json")
 ```

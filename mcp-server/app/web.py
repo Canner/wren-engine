@@ -224,11 +224,15 @@ async def post_connection(request: Request):
     _set_connection(ds, conn_info)
 
     conn_path = state.get("connection_info_path")
-    # if path not exits, create parent dir if possible, but don't fail if it can't be created (e.g. due to permissions)
     if conn_path:
-        os.makedirs(os.path.dirname(conn_path), exist_ok=True)
-        with open(conn_path, "w") as f:
-            json.dump({"type": ds.lower(), "properties": conn_info}, f, indent=2)
+        try:
+            os.makedirs(os.path.dirname(conn_path), exist_ok=True)
+            with open(conn_path, "w") as f:
+                json.dump({"type": ds.lower(), "properties": conn_info}, f, indent=2)
+        except OSError as e:
+            return HTMLResponse(
+                _msg(f"✗ Connection info updated in memory but could not be written to disk: {e}", ok=False)
+            )
 
     # Test the connection against ibis-server
     wren_url = state.get("wren_url", "localhost:8000")

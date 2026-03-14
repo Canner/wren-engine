@@ -181,9 +181,13 @@
     const targetId = evt.detail.requestConfig && evt.detail.requestConfig.target;
     const el = targetId ? document.querySelector(targetId) : null;
     const status = evt.detail.xhr ? evt.detail.xhr.status : '?';
-    const body = evt.detail.xhr ? evt.detail.xhr.responseText.slice(0, 200) : '';
-    const msg = `<small style="color:var(--pico-color-red-500)">✗ Server error ${status}: ${body}</small>`;
-    if (el) el.innerHTML = msg;
+    const rawBody = evt.detail.xhr ? evt.detail.xhr.responseText.slice(0, 200) : '';
+    const body = document.createTextNode(rawBody);
+    const small = document.createElement('small');
+    small.style.color = 'var(--pico-color-red-500)';
+    small.appendChild(document.createTextNode(`✗ Server error ${status}: `));
+    small.appendChild(body);
+    if (el) { el.textContent = ''; el.appendChild(small); }
   });
 </script>
 

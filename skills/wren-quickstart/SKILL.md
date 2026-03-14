@@ -16,7 +16,7 @@ Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills
 Compare the `wren-quickstart` key with this skill's version (`1.2`).
 If the remote version is newer, notify the user before proceeding:
 
-> A newer version of the **wren-quickstart** skill is available (remote: X.Y, installed: 1.1).
+> A newer version of the **wren-quickstart** skill is available (remote: X.Y, installed: 1.2).
 > Update with:
 > ```bash
 > curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force wren-quickstart
@@ -139,8 +139,8 @@ The wren-mcp-setup skill will:
 
 Once the container is running, open the MCP server Web UI to configure connection info:
 
-```
-http://localhost:8077
+```text
+http://localhost:9001
 ```
 
 Enter the data source credentials (host, port, database, user, password, etc.) in the UI form and save. The MCP server stores and applies the connection info without exposing credentials to this conversation.

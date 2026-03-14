@@ -176,7 +176,7 @@ The skill will:
 
 Then save the MDL as a versioned YAML project:
 
-```
+```text
 /wren-project
 ```
 

@@ -156,13 +156,13 @@ Before running `/generate-mdl`, configure the connection via the Web UI at `http
 
 Then run:
 
-```
+```text
 /generate-mdl
 ```
 
 Then save the MDL as a versioned YAML project:
 
-```
+```text
 /wren-project
 ```
 

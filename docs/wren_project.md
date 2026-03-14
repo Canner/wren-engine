@@ -139,7 +139,7 @@ Building compiles the YAML project into `target/mdl.json`:
 
 After building, deploy the MDL via the MCP server:
 
-```
+```text
 deploy(mdl_file_path="/workspace/target/mdl.json")
 ```
 
@@ -165,7 +165,7 @@ Write `wren_project.yml`, `models/*.yml`, `relationships.yml`, and `views.yml` b
 
 **4. Add `target/` to `.gitignore`**
 
-```
+```text
 target/
 ```
 
@@ -179,7 +179,7 @@ Read the YAML files, rename snake_case → camelCase, and write `target/mdl.json
 
 **7. Deploy**
 
-```
+```text
 deploy(mdl_file_path="/workspace/target/mdl.json")
 ```
 

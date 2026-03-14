@@ -94,7 +94,7 @@ The workspace directory is mounted at `/workspace` inside the container. Place y
     └── mdl.json           # Compiled MDL (from wren-project build)
 ```
 
-> **Note:** Connection info is no longer stored in the workspace. It is managed via the MCP server Web UI (see Step 3).
+> **Note:** Connection info is managed via the MCP server Web UI (see Step 3) and persisted to `~/.wren/connection_info.json`. You can also pre-configure this file before starting the container.
 
 Run the following command, substituting `<WORKSPACE_PATH>` with the path from Step 1:
 

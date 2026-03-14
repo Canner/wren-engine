@@ -36,7 +36,7 @@ Follow these steps in order. Do not skip steps or ask unnecessary questions betw
 
 Confirm the MCP server has a working connection before proceeding:
 
-```
+```text
 health_check()
 ```
 
@@ -52,21 +52,25 @@ After this step you will have:
 
 ### Step 2 — Fetch table schema
 
-```
+```text
 list_remote_tables()
 ```
 
 Returns a list of tables with their column names and types. Each table entry has a `properties.schema` field — use it to filter to the user's target schema if specified.
 
-If this fails, ask the user to check the connection info in the Web UI (`http://localhost:9001`).
+If this fails:
+1. Check that read-only mode is **disabled** in the Web UI (`http://localhost:9001`) — `list_remote_tables()` will fail when read-only mode is on, even if the connection is healthy.
+2. Ask the user to verify connection info in the Web UI if read-only mode is already off.
 
 ### Step 3 — Fetch relationships
 
-```
+```text
 list_remote_constraints()
 ```
 
 Returns foreign key constraints. Use these to build `Relationship` entries in the MDL. If the response is empty (`[]`), infer relationships from column naming conventions (e.g. `order_id` → `orders.id`).
+
+If this fails, verify that read-only mode is disabled in the Web UI (`http://localhost:9001`).
 
 ### Step 4 — Build MDL JSON
 
@@ -87,7 +91,7 @@ Rules:
 
 Deploy the draft MDL and validate it with a dry run:
 
-```
+```text
 deploy_manifest(mdl=<manifest dict>)
 dry_run(sql="SELECT * FROM <any_model_name> LIMIT 1")
 ```
@@ -204,3 +208,5 @@ When in doubt, use `VARCHAR` as a safe fallback.
 ## Connection setup
 
 Connection info is configured via the MCP server Web UI at `http://localhost:9001`. See the **wren-mcp-setup** skill for Docker setup instructions.
+
+> **Note:** If the Web UI is disabled (`WEB_UI_ENABLED=false`), connection info must be pre-configured in `~/.wren/connection_info.json` before starting the container. Use `/wren-connection-info` in Claude Code for the required fields per data source.
