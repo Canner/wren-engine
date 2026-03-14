@@ -1,9 +1,9 @@
 {
-  "generate-mdl": "1.2",
-  "wren-connection-info": "1.2",
-  "wren-project": "1.4",
+  "generate-mdl": "1.3",
+  "wren-connection-info": "1.3",
+  "wren-project": "1.5",
   "wren-sql": "1.0",
-  "wren-mcp-setup": "1.2",
-  "wren-quickstart": "1.1",
+  "wren-mcp-setup": "1.3",
+  "wren-quickstart": "1.2",
   "wren-usage": "1.0"
 }

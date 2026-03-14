@@ -1,0 +1,25 @@
+{% set fields = datasource_fields.get(datasource, []) %}
+{% if fields %}
+  {% for field in fields %}
+  <label>
+    {{ field.label }}
+    <input
+      type="{{ field.type }}"
+      name="{{ field.name }}"
+      placeholder="{{ field.placeholder }}"
+      {% if field.type != 'password' %}value="{{ connection_info.get(field.name, '') }}"{% endif %}
+    >
+    {% if is_docker and field.name == 'host' %}
+    <small style="color:var(--pico-muted-color)">Running in Docker? Use <code>host.docker.internal</code> instead of <code>localhost</code>.</small>
+    {% endif %}
+  </label>
+  {% endfor %}
+{% elif datasource %}
+  <label>
+    Connection JSON
+    <textarea name="_json" rows="5" placeholder='{"key": "value"}'></textarea>
+  </label>
+  <small style="color:var(--pico-muted-color)">
+    No predefined fields for <code>{{ datasource }}</code>. Enter connection parameters as JSON.
+  </small>
+{% endif %}

@@ -7,8 +7,8 @@
   "skills": [
     {
       "name": "wren-connection-info",
-      "version": "1.2",
-      "description": "Set up data source type and connection credentials for Wren Engine.",
+      "version": "1.3",
+      "description": "Reference guide for Wren Engine connection info — required fields, sensitive values, Docker host hints, and BigQuery credential encoding.",
       "tags": [
         "wren",
         "credentials",
@@ -20,8 +20,8 @@
     },
     {
       "name": "generate-mdl",
-      "version": "1.2",
-      "description": "Generate a Wren MDL manifest from a live database using ibis-server introspection.",
+      "version": "1.3",
+      "description": "Generate a Wren MDL manifest from a live database using MCP server introspection tools.",
       "tags": [
         "wren",
         "mdl",
@@ -34,14 +34,11 @@
         "clickhouse",
         "trino"
       ],
-      "dependencies": [
-        "wren-connection-info"
-      ],
       "repository": "https://github.com/Canner/wren-engine/tree/main/skills/generate-mdl"
     },
     {
       "name": "wren-project",
-      "version": "1.4",
+      "version": "1.5",
       "description": "Save, load, and build Wren MDL manifests as YAML project directories for version control.",
       "tags": [
         "wren",
@@ -50,9 +47,6 @@
         "version-control",
         "project",
         "git"
-      ],
-      "dependencies": [
-        "wren-connection-info"
       ],
       "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-project"
     },
@@ -74,7 +68,7 @@
     },
     {
       "name": "wren-mcp-setup",
-      "version": "1.2",
+      "version": "1.3",
       "description": "Set up Wren Engine MCP server via Docker and register it with an AI agent.",
       "tags": [
         "wren",
@@ -88,7 +82,7 @@
     },
     {
       "name": "wren-quickstart",
-      "version": "1.1",
+      "version": "1.2",
       "description": "End-to-end quickstart for Wren Engine — from zero to querying.",
       "tags": [
         "wren",
@@ -98,7 +92,6 @@
         "docker"
       ],
       "dependencies": [
-        "wren-connection-info",
         "generate-mdl",
         "wren-project",
         "wren-mcp-setup"
@@ -117,7 +110,6 @@
         "mcp"
       ],
       "dependencies": [
-        "wren-connection-info",
         "generate-mdl",
         "wren-project",
         "wren-sql",

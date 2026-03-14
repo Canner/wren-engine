@@ -73,15 +73,15 @@ The completed workspace will look like:
 ```
 ${PWD}/wren-workspace/
 ├── wren_project.yml
-├── connection.yml
 ├── models/
 │   └── *.yml
 ├── relationships.yml
 ├── views.yml
 └── target/
-    ├── mdl.json          # Compiled MDL — loaded by the container
-    └── connection.json   # Connection info — loaded by the container
+    └── mdl.json          # Compiled MDL — loaded by the container
 ```
+
+> **Connection info** is configured via the MCP server Web UI (`http://localhost:9001`) — it is not stored in the workspace.
 
 ### Phase 2 — Start the Docker container
 
@@ -128,24 +128,24 @@ docker run -d \
   --name wren-mcp \
   -p 8000:8000 \
   -p 9000:9000 \
+  -p 9001:9001 \
   -e ENABLE_MCP_SERVER=true \
   -e MCP_TRANSPORT=streamable-http \
   -e MCP_HOST=0.0.0.0 \
   -e MCP_PORT=9000 \
   -e WREN_URL=localhost:8000 \
-  -e CONNECTION_FILE_ROOT=/workspace \
   -e MDL_PATH=/workspace/target/mdl.json \
-  -e CONNECTION_INFO_FILE=/workspace/target/connection.json \
   -v ~/wren-workspace:/workspace \
   ghcr.io/canner/wren-engine-ibis:latest
 ```
 
-Two services start inside the container:
+Three services start inside the container:
 
 | Service | Port | Purpose |
 |---------|------|---------|
 | wren-ibis-server | 8000 | REST API for query execution and metadata |
 | MCP server | 9000 | MCP endpoint for AI clients |
+| Web UI | 9001 | Configuration UI (connection info, MDL editor, read-only mode) |
 
 Verify it is running:
 
@@ -166,25 +166,21 @@ In Claude Code, run:
 
 The skill will:
 
-1. Ask for your data source type (PostgreSQL, BigQuery, Snowflake, etc.)
-2. Ask for connection credentials — **sensitive fields are never stored in the conversation**; they go directly into `connection.yml` for you to fill in
-3. Call wren-ibis-server to introspect your database schema (tables, columns, types, foreign keys)
+1. Run `health_check()` to verify the connection is configured
+2. Ask for your data source type (PostgreSQL, BigQuery, Snowflake, etc.) and optional schema filter
+3. Call `list_remote_tables()` and `list_remote_constraints()` via the MCP server to introspect your database schema
 4. Build the MDL JSON (models, columns, relationships)
-5. Validate the manifest with a dry-plan
+5. Validate the manifest with `deploy_manifest()` + `dry_run()`
+
+> **Connection info** must be configured in the Web UI (`http://localhost:9001`) before running `/generate-mdl`. Use `/wren-connection-info` in Claude Code for field reference per data source.
 
 Then save the MDL as a versioned YAML project:
 
-```
+```text
 /wren-project
 ```
 
-This writes human-readable YAML files to your workspace and compiles `target/mdl.json` + `target/connection.json`.
-
-> **Security note:** `connection.yml` and `target/connection.json` may contain credentials. Add them to `.gitignore` before committing:
-> ```
-> target/
-> connection.yml
-> ```
+This writes human-readable YAML files to your workspace and compiles `target/mdl.json`.
 
 ### Phase 4 — Register the MCP server
 
@@ -233,7 +229,8 @@ Once set up, use `/wren-usage` in Claude Code for ongoing tasks:
 | Task | Skill |
 |------|-------|
 | Write or debug SQL | `/wren-sql` |
-| Change database credentials | `/wren-connection-info` |
+| Look up connection field reference | `/wren-connection-info` |
+| Reconfigure connection via Web UI | `http://localhost:9001` |
 | Add a model or column to the MDL | `/wren-project` |
 | Regenerate MDL after schema changes | `/generate-mdl` |
 | Restart or reconfigure the MCP server | `/wren-mcp-setup` |

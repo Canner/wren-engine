@@ -1,11 +1,11 @@
 ---
 name: wren-mcp-setup
-description: Set up Wren Engine MCP server via Docker and register it with an AI agent. Covers pulling the Docker image, running the container with docker run, mounting a workspace, fixing localhost → host.docker.internal for connection info, registering the MCP server in Claude Code (or other MCP clients) using streamable-http transport, and starting a new session to interact with Wren MCP. Trigger when a user wants to run Wren MCP in Docker, configure Claude Code MCP, or connect an AI client to a Dockerized Wren Engine.
+description: Set up Wren Engine MCP server via Docker and register it with an AI agent. Covers pulling the Docker image, running the container with docker run, mounting a workspace, configuring connection info via the Web UI (with Docker host hint), registering the MCP server in Claude Code (or other MCP clients) using streamable-http transport, and starting a new session to interact with Wren MCP. Trigger when a user wants to run Wren MCP in Docker, configure Claude Code MCP, or connect an AI client to a Dockerized Wren Engine.
 compatibility: Requires Docker Desktop (or Docker Engine).
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.2"
+  version: "1.3"
 ---
 
 # Set Up Wren MCP via Docker
@@ -13,10 +13,10 @@ metadata:
 ## Version check
 
 Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills/versions.json`.
-Compare the `wren-mcp-setup` key with this skill's version (`1.2`).
+Compare the `wren-mcp-setup` key with this skill's version (`1.3`).
 If the remote version is newer, notify the user before proceeding:
 
-> A newer version of the **wren-mcp-setup** skill is available (remote: X.Y, installed: 1.2).
+> A newer version of the **wren-mcp-setup** skill is available (remote: X.Y, installed: 1.3).
 > Update with:
 > ```bash
 > curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force wren-mcp-setup
@@ -84,16 +84,17 @@ fi
 > docker rm -f wren-mcp
 > ```
 
-The workspace directory is mounted at `/workspace` inside the container. The container auto-loads the MDL and connection info at startup if you provide `MDL_PATH` and `CONNECTION_INFO_FILE` pointing to files inside the workspace.
+The workspace directory is mounted at `/workspace` inside the container. Place your compiled MDL at `<WORKSPACE_PATH>/target/mdl.json` so the container can load it at startup via `MDL_PATH`.
 
 **Recommended workspace layout:**
 
 ```
 <WORKSPACE_PATH>/
 └── target/
-    ├── mdl.json           # Compiled MDL (from wren-project build)
-    └── connection.json    # Connection info JSON
+    └── mdl.json           # Compiled MDL (from wren-project build)
 ```
+
+> **Note:** Connection info is managed via the MCP server Web UI (see Step 3) and persisted to `~/.wren/connection_info.json`. You can also pre-configure this file before starting the container.
 
 Run the following command, substituting `<WORKSPACE_PATH>` with the path from Step 1:
 
@@ -102,14 +103,13 @@ docker run -d \
   --name wren-mcp \
   -p 8000:8000 \
   -p 9000:9000 \
+  -p 9001:9001 \
   -e ENABLE_MCP_SERVER=true \
   -e MCP_TRANSPORT=streamable-http \
   -e MCP_HOST=0.0.0.0 \
   -e MCP_PORT=9000 \
   -e WREN_URL=localhost:8000 \
-  -e CONNECTION_FILE_ROOT=/workspace \
   -e MDL_PATH=/workspace/target/mdl.json \
-  -e CONNECTION_INFO_FILE=/workspace/target/connection.json \
   -v <WORKSPACE_PATH>:/workspace \
   ghcr.io/canner/wren-engine-ibis:latest
 ```
@@ -121,19 +121,18 @@ docker run -d \
   --name wren-mcp \
   -p 8000:8000 \
   -p 9000:9000 \
+  -p 9001:9001 \
   -e ENABLE_MCP_SERVER=true \
   -e MCP_TRANSPORT=streamable-http \
   -e MCP_HOST=0.0.0.0 \
   -e MCP_PORT=9000 \
   -e WREN_URL=localhost:8000 \
-  -e CONNECTION_FILE_ROOT=/workspace \
   -e MDL_PATH=/workspace/target/mdl.json \
-  -e CONNECTION_INFO_FILE=/workspace/target/connection.json \
-  -v /Users/me/my-mdl-files:/workspace \
+  -v /Users/me/wren-workspace:/workspace \
   ghcr.io/canner/wren-engine-ibis:latest
 ```
 
-> If `MDL_PATH` or `CONNECTION_INFO_FILE` are not set (or the files don't exist yet), the container starts without a loaded MDL. You can deploy later using the `deploy` MCP tool.
+> If `MDL_PATH` is not set (or the file doesn't exist yet), the container starts without a loaded MDL. You can deploy later using the `deploy` MCP tool or the Web UI.
 
 This starts the container using the image `ghcr.io/canner/wren-engine-ibis:latest` with:
 
@@ -141,6 +140,7 @@ This starts the container using the image `ghcr.io/canner/wren-engine-ibis:lates
 |---------|------|---------|
 | ibis-server | 8000 | REST API for query execution and metadata |
 | mcp-server (streamable-http) | 9000 | MCP endpoint for AI clients |
+| Web UI | 9001 | Configuration UI (connection info, MDL editor, read-only mode) |
 
 The workspace directory is mounted at `/workspace` inside the container.
 
@@ -152,21 +152,30 @@ docker logs -f wren-mcp
 
 ---
 
-## Step 3 — Fix connection info: localhost → host.docker.internal
+## Step 3 — Configure connection info via Web UI
 
-**Critical:** The container cannot reach the host's `localhost` directly.
+Open the Web UI at **http://localhost:9001**.
 
-If the user's database connection info references `localhost` or `127.0.0.1` as the host, it must be changed to `host.docker.internal` so the container can reach a database running on the host machine.
+The Web UI provides:
 
-**Examples:**
+- **Read-only Mode** — toggle to prevent the AI agent from calling `deploy`, `deploy_manifest`, `list_remote_tables`, or `list_remote_constraints`. Useful for read-only query access.
+- **MDL Status** — shows the currently deployed MDL (models, columns, data source).
+- **Connection Info** — select the data source type and fill in credentials. Click **Save Connection** to test and persist.
+- **MDL Editor** — view and edit the live MDL JSON inline. Click **Save & Deploy** to update.
+
+### Docker host hint
+
+**Critical:** The container cannot reach the host's `localhost` directly. If your database runs on the host machine, use `host.docker.internal` instead of `localhost` or `127.0.0.1` as the hostname.
+
+The Web UI shows a hint for this when it detects you may be connecting to a local database:
 
 | Original | Inside Docker |
 |----------|--------------|
-| `"host": "localhost"` | `"host": "host.docker.internal"` |
-| `"host": "127.0.0.1"` | `"host": "host.docker.internal"` |
+| `localhost` | `host.docker.internal` |
+| `127.0.0.1` | `host.docker.internal` |
 | Cloud/remote host (e.g. `mydb.us-east-1.rds.amazonaws.com`) | No change needed |
 
-When the user provides connection credentials later (via `setup_connection`), check the `host` field and warn if it is `localhost` or `127.0.0.1`.
+Fill in the connection credentials in the Web UI form, apply the Docker host hint if needed, and click **Save Connection**.
 
 ---
 
@@ -174,7 +183,13 @@ When the user provides connection credentials later (via `setup_connection`), ch
 
 Claude Code uses **streamable-http** transport to connect to the containerized MCP server.
 
-Add to `~/.claude/settings.json` under `mcpServers`:
+**Via Claude Code CLI (recommended):**
+
+```bash
+claude mcp add --transport http wren http://localhost:9000/mcp
+```
+
+Or add manually to `~/.claude/settings.json` under `mcpServers`:
 
 ```json
 {
@@ -185,12 +200,6 @@ Add to `~/.claude/settings.json` under `mcpServers`:
     }
   }
 }
-```
-
-**Via Claude Code CLI (recommended):**
-
-```bash
-claude mcp add --transport http wren http://localhost:9000/mcp
 ```
 
 After adding, **restart Claude Code** for the new MCP server to be loaded into the session. Confirm with:
@@ -252,7 +261,7 @@ Look for startup errors or crash loops. If the container exited, `logs` will sho
 
 ### 2. Port already in use
 
-The container exposes ports **8000** (ibis-server) and **9000** (MCP). If either port is already bound by another process on the host, the `docker run` command will fail with a bind error.
+The container exposes ports **8000** (ibis-server), **9000** (MCP), and **9001** (Web UI). If any port is already bound by another process on the host, the `docker run` command will fail with a bind error.
 
 **Check what is using the port:**
 
@@ -260,9 +269,7 @@ The container exposes ports **8000** (ibis-server) and **9000** (MCP). If either
 # macOS / Linux
 lsof -i :9000
 lsof -i :8000
-
-# or with ss (Linux)
-ss -tlnp | grep -E '8000|9000'
+lsof -i :9001
 ```
 
 If another process is occupying the port you have two options:
@@ -282,18 +289,22 @@ docker run -d \
   --name wren-mcp \
   -p 18000:8000 \
   -p 19000:9000 \
+  -p 19001:9001 \
   -e ENABLE_MCP_SERVER=true \
   -e MCP_TRANSPORT=streamable-http \
   -e MCP_HOST=0.0.0.0 \
   -e MCP_PORT=9000 \
   -e WREN_URL=localhost:8000 \
+  -e WEB_UI_PORT=9001 \
+  -e MDL_PATH=/workspace/target/mdl.json \
   -v <WORKSPACE_PATH>:/workspace \
   ghcr.io/canner/wren-engine-ibis:latest
 ```
 
-Then update the MCP client URL to match:
+Then update the MCP client URL and Web UI address to match:
 ```bash
 claude mcp add --transport http wren http://localhost:19000/mcp
+# Web UI: http://localhost:19001
 ```
 
 ### 3. Container started but MCP endpoint returns an error
@@ -307,7 +318,7 @@ claude mcp add --transport http wren http://localhost:19000/mcp
 
 ### 4. Database connection refused inside the container
 
-If `health_check()` passes but queries fail with a connection error, the database host is likely still set to `localhost`. See **Step 3** above — change it to `host.docker.internal`.
+If `health_check()` passes but queries fail with a connection error, the database host is likely still set to `localhost`. Open the Web UI at `http://localhost:9001`, edit the connection info, and change the host to `host.docker.internal`.
 
 ---
 
@@ -315,14 +326,17 @@ If `health_check()` passes but queries fail with a connection error, the databas
 
 **Option A — Auto-load at startup (recommended):**
 
-Place your compiled `mdl.json` in `<WORKSPACE_PATH>/target/mdl.json` and `connection.json` in `<WORKSPACE_PATH>/target/connection.json` before starting the container. The container reads `MDL_PATH` and `CONNECTION_INFO_FILE` at startup and logs:
+Place your compiled `mdl.json` in `<WORKSPACE_PATH>/target/mdl.json` before starting the container. The container reads `MDL_PATH` at startup and logs:
 
 ```
 Loaded MDL /workspace/target/mdl.json (9 models, 47 columns)
-Loaded connection info /workspace/target/connection.json
 ```
 
-**Option B — Deploy via MCP tool (after container is running):**
+**Option B — Deploy via Web UI:**
+
+Open `http://localhost:9001`, paste or edit your MDL JSON in the MDL Editor, and click **Save & Deploy**.
+
+**Option C — Deploy via MCP tool (after container is running):**
 
 In the AI client (after MCP is connected):
 
@@ -337,25 +351,6 @@ deploy_manifest(mdl=<manifest dict>)
 ```
 
 **To generate an MDL from scratch**, use the `generate-mdl` skill. It will introspect your database schema via ibis-server and build the manifest for you.
-
----
-
-## Reference: connection info by data source
-
-When calling `setup_connection`, use these formats. **Replace `localhost` with `host.docker.internal`** if the database runs on your host machine.
-
-```
-POSTGRES    : {"host": "host.docker.internal", "port": "5432", "user": "...", "password": "...", "database": "..."}
-MYSQL       : {"host": "host.docker.internal", "port": "3306", "user": "...", "password": "...", "database": "..."}
-MSSQL       : {"host": "host.docker.internal", "port": "1433", "user": "...", "password": "...", "database": "..."}
-CLICKHOUSE  : {"host": "host.docker.internal", "port": "8123", "user": "...", "password": "...", "database": "..."}
-TRINO       : {"host": "host.docker.internal", "port": "8080", "user": "...", "catalog": "...", "schema": "..."}
-DUCKDB      : {"path": "/workspace/<file>.duckdb"}   ← file must be inside workspace
-BIGQUERY    : {"project": "...", "dataset": "...", "credentials_base64": "..."}
-SNOWFLAKE   : {"account": "...", "user": "...", "password": "...", "database": "...", "schema": "..."}
-```
-
-For DuckDB: the database file must be placed in the mounted workspace directory so the container can access it at `/workspace/<file>.duckdb`.
 
 ---
 

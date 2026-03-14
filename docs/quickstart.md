@@ -121,14 +121,13 @@ docker run -d \
   --name wren-mcp \
   -p 8000:8000 \
   -p 9000:9000 \
+  -p 9001:9001 \
   -e ENABLE_MCP_SERVER=true \
   -e MCP_TRANSPORT=streamable-http \
   -e MCP_HOST=0.0.0.0 \
   -e MCP_PORT=9000 \
   -e WREN_URL=localhost:8000 \
-  -e CONNECTION_FILE_ROOT=/workspace \
   -e MDL_PATH=/workspace/target/mdl.json \
-  -e CONNECTION_INFO_FILE=/workspace/target/connection.json \
   -v ~/wren-workspace:/workspace \
   -v "$JAFFLE_SHOP_DIR":/data \
   ghcr.io/canner/wren-engine-ibis:latest
@@ -151,19 +150,23 @@ In Claude Code, run each skill in sequence:
 /generate-mdl
 ```
 
-When prompted, enter:
-- Data source type: `duckdb`
+Before running `/generate-mdl`, configure the connection via the Web UI at `http://localhost:9001`:
+- Data source type: `DUCKDB`
 - Database folder path: `/data` (the folder containing `jaffle_shop.duckdb`)
+
+Then run:
+
+```text
+/generate-mdl
+```
 
 Then save the MDL as a versioned YAML project:
 
-```
+```text
 /wren-project
 ```
 
-This writes human-readable YAML files to `~/wren-workspace/` and compiles `target/mdl.json` + `target/connection.json`.
-
-> **Security note:** `connection.yml` and `target/connection.json` may contain credentials. Add them to `.gitignore` before committing.
+This writes human-readable YAML files to `~/wren-workspace/` and compiles `target/mdl.json`.
 
 #### Phase 3 — Register the MCP server
 
@@ -245,7 +248,7 @@ The container must be running first. Run `docker ps --filter name=wren-mcp` to c
 Start a new Claude Code session after running `claude mcp add`. MCP servers are loaded at session start only.
 
 **`health_check()` returns an error:**
-Check container logs: `docker logs wren-mcp`. Confirm both ports (8000, 9000) are listening: `curl http://localhost:8000/health`.
+Check container logs: `docker logs wren-mcp`. Confirm ports are listening: `curl http://localhost:8000/health`. Check connection info in the Web UI: `http://localhost:9001`.
 
 ---
 

@@ -5,7 +5,7 @@ compatibility: Requires a running ibis-server (default port 8000). No local data
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.2"
+  version: "1.3"
 ---
 
 # Generate Wren MDL
@@ -13,10 +13,10 @@ metadata:
 ## Version check
 
 Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills/versions.json`.
-Compare the `generate-mdl` key with this skill's version (`1.2`).
+Compare the `generate-mdl` key with this skill's version (`1.3`).
 If the remote version is newer, notify the user before proceeding:
 
-> A newer version of the **generate-mdl** skill is available (remote: X.Y, installed: 1.2).
+> A newer version of the **generate-mdl** skill is available (remote: X.Y, installed: 1.3).
 > Update with:
 > ```bash
 > curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force generate-mdl
@@ -32,68 +32,47 @@ Generates a Wren MDL manifest by using ibis-server to introspect the database sc
 
 Follow these steps in order. Do not skip steps or ask unnecessary questions between them.
 
-### Step 1 — Set up data source and connection info
+### Step 1 — Verify connection and choose data source
 
-Follow the **wren-connection-info** skill (`skills/wren-connection-info/SKILL.md`) to:
-1. Choose the data source type (e.g. `POSTGRES`, `BIGQUERY`, `SNOWFLAKE`, …)
-2. Choose connection mode (Mode A: secure file path, or Mode B: inline for testing)
-3. Gather credentials and produce either a `connectionFilePath` or inline `connectionInfo`
+Confirm the MCP server has a working connection before proceeding:
 
-Also ask the user for a **schema filter** (optional) — if the database has many schemas, ask which schema(s) to include.
+```text
+health_check()
+```
+
+If the health check fails, ask the user to configure the connection via the Web UI at `http://localhost:9001` before continuing.
+
+Ask the user for:
+1. **Data source type** (e.g. `POSTGRES`, `BIGQUERY`, `SNOWFLAKE`, …) — needed to set `dataSource` in the MDL
+2. **Schema filter** (optional) — if the database has many schemas, ask which schema(s) to include
 
 After this step you will have:
 - `data_source`: e.g. `"POSTGRES"`
-- Either `connectionFilePath` (Mode A) or `connectionInfo` dict (Mode B) — used in all subsequent API calls
+- Optional `schema_filter`: used to narrow down results in subsequent steps
 
 ### Step 2 — Fetch table schema
 
-Call the ibis-server metadata endpoint directly, using the connection output from Step 1:
-
-```
-POST http://localhost:8000/v3/connector/<data_source>/metadata/tables
-Content-Type: application/json
-
-{ "connectionFilePath": "/abs/path/to/target/connection.json" }
-  — or —
-{ "connectionInfo": { <credentials dict> } }
+```text
+list_remote_tables()
 ```
 
-ibis-server returns a list of tables with their column names and types. Each table entry has a `properties.schema` field — use it to filter to the user's target schema if specified.
+Returns a list of tables with their column names and types. Each table entry has a `properties.schema` field — use it to filter to the user's target schema if specified.
 
-If this fails, report the error and ask the user to correct the credentials.
+If this fails:
+1. Check that read-only mode is **disabled** in the Web UI (`http://localhost:9001`) — `list_remote_tables()` will fail when read-only mode is on, even if the connection is healthy.
+2. Ask the user to verify connection info in the Web UI if read-only mode is already off.
 
 ### Step 3 — Fetch relationships
 
-```
-POST http://localhost:8000/v3/connector/<data_source>/metadata/constraints
-Content-Type: application/json
-
-{ "connectionFilePath": "/abs/path/to/target/connection.json" }
-  — or —
-{ "connectionInfo": { <credentials dict> } }
+```text
+list_remote_constraints()
 ```
 
 Returns foreign key constraints. Use these to build `Relationship` entries in the MDL. If the response is empty (`[]`), infer relationships from column naming conventions (e.g. `order_id` → `orders.id`).
 
-### Step 4 — Sample data (optional)
+If this fails, verify that read-only mode is disabled in the Web UI (`http://localhost:9001`).
 
-For columns where purpose is unclear from the name and type alone, query a few rows using the raw table name with schema prefix:
-
-```
-POST http://localhost:8000/v3/connector/<data_source>/query
-Content-Type: application/json
-
-{
-  "sql": "SELECT * FROM <schema>.<table> LIMIT 3",
-  "manifestStr": "",
-  "connectionFilePath": "/abs/path/to/target/connection.json"
-}
-  — or use "connectionInfo": { <credentials dict> } in Mode B
-```
-
-Note: use the raw `schema.table` reference at this stage, since the MDL is not yet deployed.
-
-### Step 5 — Build MDL JSON
+### Step 4 — Build MDL JSON
 
 Construct the manifest following the [MDL structure](#mdl-structure) below.
 
@@ -108,50 +87,28 @@ Rules:
 - For FK columns, add a `Relationship` entry linking the two models
 - Omit calculated columns for now — they can be added later
 
-### Step 6 — Validate
+### Step 5 — Validate
 
-Validate the MDL by running a dry-plan against a simple query. Base64-encode the manifest first:
+Deploy the draft MDL and validate it with a dry run:
 
-```python
-import json, base64
-manifest_b64 = base64.b64encode(json.dumps(mdl).encode()).decode()
+```text
+deploy_manifest(mdl=<manifest dict>)
+dry_run(sql="SELECT * FROM <any_model_name> LIMIT 1")
 ```
 
-Then call:
+If `dry_run` succeeds, the MDL is valid. If it fails, fix the reported errors, call `deploy_manifest` again with the corrected MDL, and retry.
 
-```
-POST http://localhost:8000/v3/connector/<data_source>/dry-plan
-Content-Type: application/json
-
-{
-  "manifestStr": "<base64-encoded manifest>",
-  "sql": "SELECT * FROM <any_model_name> LIMIT 1"
-}
-```
-
-If validation succeeds, the response is the planned SQL string. If it fails, fix the reported errors and validate again.
-
-> **Note:** Use the `/v3/` endpoint, not `/v2/`. The v2 dry-plan requires a separate Wren Engine Java process (`WREN_ENGINE_ENDPOINT`) which is not part of the standard Docker setup.
-
-### Step 7 — Save project (optional)
+### Step 6 — Save project (optional)
 
 Ask the user if they want to save the MDL as a YAML project directory (useful for version control).
 
-If yes, follow the **wren-project** skill (`skills/wren-project/SKILL.md`) to write the YAML files and build `target/mdl.json` + `target/connection.json`.
+If yes, follow the **wren-project** skill (`skills/wren-project/SKILL.md`) to write the YAML files and build `target/mdl.json`.
 
-### Step 8 — Deploy
-
-**If Wren MCP tools are available** (i.e., Claude Code has the `wren` MCP server registered):
+### Step 7 — Deploy final MDL
 
 ```
 deploy_manifest(mdl=<manifest dict>)
 ```
-
-**If MCP tools are not available**, deploy by writing the MDL to the workspace file that the container watches:
-
-1. Build `target/mdl.json` from the YAML project (see wren-project skill)
-2. Ensure the container was started with `-e MDL_PATH=/workspace/target/mdl.json`
-3. Restart the container to reload — or call the `deploy` MCP tool after connecting
 
 Confirm success to the user. The MDL is now active and queries can run.
 
@@ -248,6 +205,8 @@ When in doubt, use `VARCHAR` as a safe fallback.
 
 ---
 
-## Connection info format
+## Connection setup
 
-See the **wren-connection-info** skill (`skills/wren-connection-info/SKILL.md`) for the full per-connector field reference, secrets policy, and Mode A / Mode B workflow.
+Connection info is configured via the MCP server Web UI at `http://localhost:9001`. See the **wren-mcp-setup** skill for Docker setup instructions.
+
+> **Note:** If the Web UI is disabled (`WEB_UI_ENABLED=false`), connection info must be pre-configured in `~/.wren/connection_info.json` before starting the container. Use `/wren-connection-info` in Claude Code for the required fields per data source.

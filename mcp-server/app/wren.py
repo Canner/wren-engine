@@ -26,7 +26,8 @@ mcp = FastMCP("Wren Engine", host=MCP_HOST, port=MCP_PORT)
 WREN_URL = os.getenv("WREN_URL", "localhost:8000")
 USER_AGENT = "wren-app/1.0"
 MDL_SCHEMA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "mdl.schema.json")
-connection_info_path = os.getenv("CONNECTION_INFO_FILE")
+connection_info_path = os.path.expanduser(os.getenv("CONNECTION_INFO_FILE", "~/.wren/connection_info.json"))
+settings_path = os.path.expanduser(os.getenv("SETTINGS_FILE", "~/.wren/mcp-ui-settings.json"))
 mdl_path = os.getenv("MDL_PATH")
 
 
@@ -115,6 +116,34 @@ class MdlCache:
 mdl_cache = MdlCache()
 data_source = None
 connection_info = None
+read_only_mode = False
+
+
+def _read_only_error(tool_name: str) -> str:
+    return f"ERROR: '{tool_name}' is disabled because read-only mode is active. Toggle it off in the Wren Engine Web UI."
+
+
+def _load_settings() -> None:
+    global read_only_mode
+    try:
+        with open(settings_path) as f:
+            settings = json.load(f)
+        read_only_mode = bool(settings.get("read_only_mode", False))
+        print(f"Loaded settings {settings_path} (read_only_mode={read_only_mode})")  # noqa: T201
+    except FileNotFoundError:
+        pass
+
+
+def _save_settings() -> None:
+    try:
+        os.makedirs(os.path.dirname(settings_path), exist_ok=True)
+        with open(settings_path, "w") as f:
+            json.dump({"read_only_mode": read_only_mode}, f, indent=2)
+    except Exception as e:
+        print(f"Warning: could not save settings to {settings_path}: {e}")  # noqa: T201
+
+
+_load_settings()
 
 if mdl_path:
     with open(mdl_path) as f:
@@ -128,9 +157,18 @@ else:
     print("No MDL_PATH environment variable found")
 
 if connection_info_path:
-    with open(connection_info_path) as f:
-        connection_info = json.load(f)
-        print(f"Loaded connection info {f.name}")  # noqa: T201
+    try:
+        with open(connection_info_path) as f:
+            _conn_data = json.load(f)
+        _saved_ds = _conn_data.get("type")
+        connection_info = _conn_data.get("properties", {})
+        if _saved_ds and data_source is None:
+            data_source = _saved_ds.lower()
+        print(f"Loaded connection info {connection_info_path}")  # noqa: T201
+
+        
+    except FileNotFoundError:
+        print(f"Connection info file not found at {connection_info_path}")
 else:
     print("No CONNECTION_INFO_FILE environment variable found")
 
@@ -217,6 +255,8 @@ async def deploy(mdl_file_path: str) -> str:
         mdl_file_path: Absolute or relative path to the MDL JSON file (e.g. `target/mdl.json`).
                        Use `build_mdl_project` to generate this file from a YAML project directory.
     """
+    if read_only_mode:
+        return _read_only_error("deploy")
     global data_source
     expanded = os.path.expanduser(mdl_file_path)
     if not os.path.isfile(expanded):
@@ -235,32 +275,6 @@ async def deploy(mdl_file_path: str) -> str:
 
 @mcp.tool(
     annotations=ToolAnnotations(
-        title="Setup Connection",
-        destructiveHint=False,
-    ),
-)
-async def setup_connection(datasource: str, conn_info: dict) -> str:
-    """
-    Configure the database connection for query execution at runtime.
-
-    Call this after deploying the MDL so that `query` and `dry_run` know
-    which database to connect to.
-
-    Args:
-        datasource: Data source type, e.g. "POSTGRES", "MYSQL", "DUCKDB", "BIGQUERY".
-        conn_info: Connection credentials dict. Fields vary by data source:
-            - POSTGRES/MYSQL: {"host": ..., "port": ..., "user": ..., "password": ..., "database": ...}
-            - DUCKDB: {"path": "<file path>"}
-            - BIGQUERY: {"project": ..., "dataset": ..., "credentials_base64": ...}
-    """
-    global data_source, connection_info
-    data_source = datasource.lower()
-    connection_info = conn_info
-    return f"Connection configured for {data_source}"
-
-
-@mcp.tool(
-    annotations=ToolAnnotations(
         title="Deploy MDL Manifest",
         destructiveHint=True,
     ),
@@ -275,6 +289,8 @@ async def deploy_manifest(mdl: dict) -> str:
     Args:
         mdl: The MDL manifest as a dictionary.
     """
+    if read_only_mode:
+        return _read_only_error("deploy_manifest")
     global data_source
     data_source = mdl.get("dataSource", "").lower()
     mdl_base64 = dict_to_base64_string(mdl)
@@ -347,6 +363,8 @@ async def list_remote_constraints() -> str:
     """
     Get the available constraints of connected Database
     """
+    if read_only_mode:
+        return _read_only_error("list_remote_constraints")
     response = await make_constraints_list_request()
     return response
 
@@ -361,6 +379,8 @@ async def list_remote_tables() -> str:
     """
     Get the available tables of connected Database
     """
+    if read_only_mode:
+        return _read_only_error("list_remote_tables")
     response = await make_table_list_request()
     return response
 
@@ -594,7 +614,7 @@ async def get_wren_guide() -> str:
 
     ## Manual Setup (if you already have an MDL file)
     1. Call `deploy(mdl_file_path=<path>)` to load the MDL.
-    2. Call `setup_connection(datasource=<type>, conn_info={...})` with your DB credentials.
+    2. Configure your database connection via the Web UI (available on the MCP server's web port).
     3. Call `health_check()` to verify everything is working.
     """
 
@@ -667,8 +687,8 @@ async def health_check() -> str:
     if connection_info is None:
         issues.append("Database connection is not configured")
         guidance.append(
-            "- Configure connection: call `setup_connection(datasource=<type>, conn_info={...})` "
-            "with your data source type (e.g. POSTGRES, BIGQUERY, DUCKDB) and credentials."
+            "- Configure connection: open the Wren Engine Web UI and set your data source "
+            "type (e.g. POSTGRES, BIGQUERY, DUCKDB) and credentials there."
         )
 
     # Check data source
@@ -676,7 +696,7 @@ async def health_check() -> str:
         issues.append("Data source type is not set")
         guidance.append(
             "- Set data source: deploy an MDL that has a `dataSource` field, "
-            "or call `setup_connection(datasource=<type>, conn_info={...})`."
+            "or configure the connection via the Wren Engine Web UI."
         )
 
     if issues:
@@ -728,6 +748,63 @@ def get_version() -> str:
     except Exception:
         pass
     return "unknown"
+
+
+WEB_UI_PORT = int(os.getenv("WEB_UI_PORT", "9001"))
+WEB_UI_ENABLED = os.getenv("WEB_UI_ENABLED", "true").lower() != "false"
+
+
+def _web_get_state() -> dict:
+    mdl_dict = mdl_cache.get_mdl_dict() if mdl_cache.is_deployed() else {}
+    models = mdl_dict.get("models", [])
+    return {
+        "data_source": data_source,
+        "connection_info": connection_info,
+        "is_deployed": mdl_cache.is_deployed(),
+        "model_count": len(models),
+        "column_count": sum(len(m.get("columns", [])) for m in models),
+        "mdl_path": mdl_path,
+        "connection_info_path": connection_info_path,
+        "mdl_dict": mdl_dict,
+        "wren_url": WREN_URL,
+        "read_only_mode": read_only_mode,
+    }
+
+
+def _web_set_read_only_mode(enabled: bool) -> None:
+    global read_only_mode
+    read_only_mode = enabled
+    _save_settings()
+
+
+def _web_set_connection(ds: str, conn_info: dict) -> None:
+    global data_source, connection_info
+    data_source = ds.lower()
+    connection_info = conn_info
+
+
+def _web_deploy_from_dict(mdl_dict: dict) -> tuple[bool, str]:
+    global data_source
+    data_source = mdl_dict.get("dataSource", "").lower()
+    mdl_cache.set_mdl(dict_to_base64_string(mdl_dict))
+    models = mdl_dict.get("models", [])
+    total_columns = sum(len(m.get("columns", [])) for m in models)
+    if mdl_path:
+        try:
+            with open(mdl_path, "w") as f:
+                json.dump(mdl_dict, f, indent=2)
+        except Exception:
+            pass  # best-effort write-back
+    return True, f"{len(models)} models, {total_columns} columns"
+
+
+if WEB_UI_ENABLED:
+    try:
+        from web import init as _web_init, start as _web_start
+    except ImportError:
+        from app.web import init as _web_init, start as _web_start
+    _web_init(_web_get_state, _web_set_connection, _web_deploy_from_dict, _web_set_read_only_mode)
+    _web_start(host=MCP_HOST, port=WEB_UI_PORT)
 
 
 if __name__ == "__main__":

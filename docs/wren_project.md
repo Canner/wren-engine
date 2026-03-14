@@ -11,7 +11,6 @@ YAML files use **snake_case** field names for readability. The compiled `target/
 ```text
 my_project/
 ├── wren_project.yml       # Project metadata (catalog, schema, data_source)
-├── connection.yml         # Data source connection parameters
 ├── models/
 │   ├── orders.yml         # One file per model
 │   ├── customers.yml
@@ -20,18 +19,15 @@ my_project/
 └── views.yml              # All views
 ```
 
-After building, compiled files are written to:
+After building, the compiled file is written to:
 
 ```text
 my_project/
 └── target/
-    ├── mdl.json           # Deployable MDL JSON (camelCase)
-    └── connection.json    # Connection info JSON (camelCase)
+    └── mdl.json           # Deployable MDL JSON (camelCase)
 ```
 
-:::caution Security note
-`connection.yml` and `target/connection.json` may contain credentials. Add both `target/` and `connection.yml` to `.gitignore` before committing.
-:::
+> **Connection info** is managed via the MCP server Web UI (`http://localhost:9001`) — it is not stored in the project directory.
 
 ---
 
@@ -47,7 +43,6 @@ version: "1.0"
 catalog: wren
 schema: public
 data_source: POSTGRES
-connection_mode: security   # "security" (default) | "inline"
 ```
 
 | Field | Description |
@@ -56,7 +51,6 @@ connection_mode: security   # "security" (default) | "inline"
 | `catalog` | MDL catalog (matches the `catalog` in your MDL manifest) |
 | `schema` | MDL schema |
 | `data_source` | Data source type (e.g. `POSTGRES`, `BIGQUERY`, `SNOWFLAKE`) |
-| `connection_mode` | `security` — credentials are in files and never shown; `inline` — test/dev mode where credentials may be provided inline |
 
 ### `models/<model_name>.yml`
 
@@ -115,21 +109,6 @@ views:
     properties: {}
 ```
 
-### `connection.yml`
-
-Connection parameters for the data source. Fields use **snake_case** and are converted to **camelCase** when compiled to `target/connection.json`.
-
-Example for PostgreSQL:
-
-```yaml
-connector: POSTGRES
-host: localhost
-port: 5432
-database: my_database
-user: my_user
-password: ""   # TODO: fill in before building
-```
-
 ---
 
 ## Field Mapping
@@ -152,56 +131,57 @@ All other fields (`name`, `type`, `catalog`, `schema`, `table`, `condition`, `mo
 
 ## Building the Project
 
-Building compiles the YAML project into two JSON files under `target/`:
+Building compiles the YAML project into `target/mdl.json`:
 
 ```bash
-# target/mdl.json — assembled MDL manifest
-# target/connection.json — connection info
+# target/mdl.json — assembled MDL manifest (camelCase)
 ```
 
-After building, you can use the compiled output in two ways:
+After building, deploy the MDL via the MCP server:
 
-- **Wren Engine API directly** — pass `mdl_file_path` and `connectionFilePath` as parameters in ibis-server REST API calls. See the [Wren Engine API reference](/oss/wren_engine_api/) for details.
-- **Wren MCP Server** — mount the `target/` directory when starting the MCP server. The MCP server calls `deploy()` on startup to activate the MDL and handles subsequent API calls for you.
+```text
+deploy(mdl_file_path="/workspace/target/mdl.json")
+```
 
-In both cases, `connectionFilePath` points to `target/connection.json` so ibis-server reads credentials from the file directly — they never appear in API payloads or LLM context.
+Or place it in the workspace before starting the container so it is auto-loaded via `MDL_PATH`.
+
+Connection info is configured separately via the Web UI (`http://localhost:9001`) — it is not part of the build output.
 
 ---
 
 ## Typical Workflow
 
-**1. Set up connection info**
+**1. Configure connection info**
 
-Create `connection.yml` with host, port, database, and user. Leave sensitive fields (password, token) empty with a `# TODO` comment. Fill them in before building, then compile to `target/connection.json`.
+Open the Web UI at `http://localhost:9001`, select the data source type, and fill in connection credentials. Use `/wren-connection-info` in Claude Code for per-connector field reference.
 
 **2. Generate MDL**
 
-Use ibis-server metadata endpoints to introspect the database. Pass `connectionFilePath="<abs_path>/target/connection.json"` in all API calls.
+Run `/generate-mdl` in Claude Code. The skill uses MCP tools (`list_remote_tables`, `list_remote_constraints`) to introspect the database and build the MDL JSON.
 
 **3. Save project**
 
 Write `wren_project.yml`, `models/*.yml`, `relationships.yml`, and `views.yml` by converting the MDL JSON (camelCase) to snake_case YAML.
 
-**4. Add to `.gitignore`**
+**4. Add `target/` to `.gitignore`**
 
-```
+```text
 target/
-connection.yml
 ```
 
-**5. Commit to version control**v
+**5. Commit to version control**
 
-Commit the model files without secrets — `connection.yml` and `target/` are excluded.
+Commit the model YAML files — `target/` is excluded.
 
 **6. Build**
 
-Read the YAML files, rename snake_case → camelCase, and write `target/mdl.json` and `target/connection.json`.
+Read the YAML files, rename snake_case → camelCase, and write `target/mdl.json`.
 
-**7. Use the compiled output**
+**7. Deploy**
 
-- **Option A — Wren Engine API directly**: Pass `mdl_file_path` and `connectionFilePath` as parameters when calling the ibis-server REST API. See the [Wren Engine API reference](/oss/wren_engine_api/) for details.
-
-- **Option B — Wren MCP Server**: Start the MCP server with the project's `target/` directory mounted. The MCP server calls `deploy(mdl_file_path="./target/mdl.json")` on startup to activate the MDL, then handles API calls on your behalf. See the Wren MCP Server guide for setup details.
+```text
+deploy(mdl_file_path="/workspace/target/mdl.json")
+```
 
 ---
 
@@ -211,5 +191,5 @@ Storing MDL as a YAML project (rather than a single JSON blob) gives you:
 
 - **Readable diffs** — model changes show up as clear line-level diffs in pull requests
 - **One file per model** — merge conflicts are isolated to the affected model file
-- **Separation of secrets** — `connection.yml` and `target/` are gitignored; everything else is safe to commit
+- **Separation of secrets** — connection info lives in the Web UI, not in the project; `target/` is gitignored
 - **Reproducible builds** — `target/mdl.json` is always regenerated from source, never committed
