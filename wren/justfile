@@ -1,0 +1,25 @@
+default:
+    @just --list
+
+install:
+    uv sync --all-extras
+
+install-extra extra:
+    uv sync --extra {{extra}}
+
+dev:
+    uv run wren
+
+test:
+    uv run pytest tests/ -v
+
+lint:
+    uv run ruff format --check src/
+    uv run ruff check src/
+
+format:
+    uv run ruff format src/
+    uv run ruff check --fix src/
+
+build:
+    uv build

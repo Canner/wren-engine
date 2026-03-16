@@ -1,0 +1,105 @@
+import os
+
+import opendal
+import pyarrow as pa
+from loguru import logger
+
+from wren.connector.base import ConnectorABC
+from wren.model import GcsFileConnectionInfo, MinioFileConnectionInfo, S3FileConnectionInfo
+from wren.model.error import ErrorCode, WrenError
+
+
+def _init_duckdb_s3(connection, info: S3FileConnectionInfo):
+    connection.execute(f"""
+    CREATE SECRET wren_s3 (
+        TYPE S3,
+        KEY_ID '{info.access_key.get_secret_value()}',
+        SECRET '{info.secret_key.get_secret_value()}',
+        REGION '{info.region.get_secret_value()}'
+    )""")
+
+
+def _init_duckdb_minio(connection, info: MinioFileConnectionInfo):
+    connection.execute(f"""
+    CREATE SECRET wren_minio (
+        TYPE S3,
+        KEY_ID '{info.access_key.get_secret_value()}',
+        SECRET '{info.secret_key.get_secret_value()}',
+        REGION 'ap-northeast-1'
+    )""")
+    connection.execute("SET s3_endpoint=?", [info.endpoint.get_secret_value()])
+    connection.execute("SET s3_url_style='path'")
+    connection.execute("SET s3_use_ssl=?", [info.ssl_enabled])
+
+
+def _init_duckdb_gcs(connection, info: GcsFileConnectionInfo):
+    connection.execute(f"""
+    CREATE SECRET wren_gcs (
+        TYPE GCS,
+        KEY_ID '{info.key_id.get_secret_value()}',
+        SECRET '{info.secret_key.get_secret_value()}'
+    )""")
+
+
+class DuckDBConnector(ConnectorABC):
+    def __init__(self, connection_info):
+        import duckdb  # noqa: PLC0415
+        from duckdb import HTTPException, IOException  # noqa: PLC0415
+
+        self._HTTPException = HTTPException
+        self._IOException = IOException
+        self.connection = duckdb.connect()
+
+        if isinstance(connection_info, S3FileConnectionInfo):
+            _init_duckdb_s3(self.connection, connection_info)
+        if isinstance(connection_info, MinioFileConnectionInfo):
+            _init_duckdb_minio(self.connection, connection_info)
+        if isinstance(connection_info, GcsFileConnectionInfo):
+            _init_duckdb_gcs(self.connection, connection_info)
+
+        if connection_info.format == "duckdb":
+            self._attach_database(connection_info)
+
+    def query(self, sql: str, limit: int | None = None) -> pa.Table:
+        if limit is None:
+            return self.connection.execute(sql).fetch_arrow_table()
+        return self.connection.execute(sql).fetch_arrow_table().slice(length=limit)
+
+    def dry_run(self, sql: str) -> None:
+        self.connection.execute(sql)
+
+    def _attach_database(self, connection_info) -> None:
+        db_files = self._list_duckdb_files(connection_info)
+        if not db_files:
+            raise WrenError(ErrorCode.DUCKDB_FILE_NOT_FOUND, "No DuckDB files found.")
+
+        for file in db_files:
+            try:
+                self.connection.execute(
+                    f"ATTACH DATABASE '{file}' AS \"{os.path.splitext(os.path.basename(file))[0]}\" (READ_ONLY);"
+                )
+            except (self._IOException, self._HTTPException) as e:
+                raise WrenError(ErrorCode.ATTACH_DUCKDB_ERROR, f"Failed to attach: {e!s}")
+
+    def _list_duckdb_files(self, connection_info) -> list[str]:
+        op = opendal.Operator("fs", root=connection_info.url.get_secret_value())
+        files = []
+        try:
+            for file in op.list("/"):
+                if file.path != "/":
+                    stat = op.stat(file.path)
+                    if not stat.mode.is_dir() and file.path.endswith(".duckdb"):
+                        files.append(f"{connection_info.url.get_secret_value()}/{file.path}")
+        except Exception as e:
+            raise WrenError(ErrorCode.GENERIC_USER_ERROR, f"Failed to list files: {e!s}")
+        return files
+
+    def close(self) -> None:
+        try:
+            self.connection.close()
+        except Exception as e:
+            logger.warning(f"Error closing DuckDB connection: {e}")
+
+
+def create_connector(connection_info) -> DuckDBConnector:
+    return DuckDBConnector(connection_info)
