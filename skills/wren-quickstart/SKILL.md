@@ -5,7 +5,7 @@ compatibility: Requires Docker Desktop (or Docker Engine). No local database dri
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.1"
+  version: "1.2"
 ---
 
 # Wren Quickstart
@@ -13,10 +13,10 @@ metadata:
 ## Version check
 
 Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills/versions.json`.
-Compare the `wren-quickstart` key with this skill's version (`1.1`).
+Compare the `wren-quickstart` key with this skill's version (`1.2`).
 If the remote version is newer, notify the user before proceeding:
 
-> A newer version of the **wren-quickstart** skill is available (remote: X.Y, installed: 1.1).
+> A newer version of the **wren-quickstart** skill is available (remote: X.Y, installed: 1.2).
 > Update with:
 > ```bash
 > curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force wren-quickstart
@@ -68,10 +68,8 @@ Recommended workspace layout after the quickstart completes:
 │   └── *.yml
 ├── relationships.yml
 ├── views.yml
-├── connection.yml
 └── target/
-    ├── mdl.json          # Compiled MDL — loaded by Docker container
-    └── connection.json   # Connection info — loaded by Docker container
+    └── mdl.json          # Compiled MDL — loaded by Docker container
 ```
 
 ---
@@ -110,14 +108,12 @@ Direct the skill to write the project files into `<WORKSPACE_PATH>`:
 - `<WORKSPACE_PATH>/models/*.yml`
 - `<WORKSPACE_PATH>/relationships.yml`
 - `<WORKSPACE_PATH>/views.yml`
-- `<WORKSPACE_PATH>/connection.yml`
 
-Then build the compiled targets:
+Then build the compiled target:
 
 - `<WORKSPACE_PATH>/target/mdl.json`
-- `<WORKSPACE_PATH>/target/connection.json`
 
-The Docker container will auto-load these files at startup.
+The Docker container will auto-load this file at startup.
 
 ---
 
@@ -133,11 +129,23 @@ Pass `<WORKSPACE_PATH>` as the workspace mount path when the skill asks.
 
 The wren-mcp-setup skill will:
 1. Start the container with `-v <WORKSPACE_PATH>:/workspace`
-2. Set `MDL_PATH=/workspace/target/mdl.json` and `CONNECTION_INFO_FILE=/workspace/target/connection.json`
+2. Set `MDL_PATH=/workspace/target/mdl.json`
 3. Register the MCP server with the AI client (`claude mcp add`)
 4. Verify the container is running
 
-> If the MDL files already exist in `<WORKSPACE_PATH>/target/` before the container starts, they are loaded automatically at boot. No separate `deploy` call is needed.
+> If `<WORKSPACE_PATH>/target/mdl.json` already exists before the container starts, it is loaded automatically at boot. No separate `deploy` call is needed.
+
+### 3b — Configure connection info via Web UI
+
+Once the container is running, open the MCP server Web UI to configure connection info:
+
+```text
+http://localhost:9001
+```
+
+Enter the data source credentials (host, port, database, user, password, etc.) in the UI form and save. The MCP server stores and applies the connection info without exposing credentials to this conversation.
+
+> **Tip:** If your database is running locally, use `host.docker.internal` instead of `localhost` as the host address.
 
 ---
 

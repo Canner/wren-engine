@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wren Engine</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <style>
+    body { padding-top: 2rem; }
+    .badge {
+      display: inline-block;
+      padding: .15em .55em;
+      border-radius: 4px;
+      font-size: .82em;
+      font-weight: 600;
+    }
+    .badge-ok       { background: #d1fae5; color: #065f46; }
+    .badge-off      { background: #fef3c7; color: #92400e; }
+    .badge-readonly { background: #fee2e2; color: #991b1b; }
+    #deploy-result, #connection-result { min-height: 1.4em; margin-top: .4rem; }
+    article header { font-weight: 600; margin-bottom: .75rem; }
+    label { margin-bottom: .5rem; }
+    ::placeholder { opacity: 0.35 !important; }
+
+    /* iOS-style toggle — pure div, no checkbox, avoids PicoCSS conflicts */
+    .switch-track {
+      position: relative; display: inline-block;
+      width: 52px; height: 28px; flex-shrink: 0;
+      background: #d1d5db; border-radius: 28px;
+      cursor: pointer; transition: background .2s;
+    }
+    .switch-track.switch-on { background: #ef4444; }
+    .switch-thumb {
+      position: absolute;
+      width: 22px; height: 22px;
+      top: 3px; left: 3px;
+      background: #fff; border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0,0,0,.3);
+      transition: transform .2s;
+    }
+    .switch-track.switch-on .switch-thumb { transform: translateX(24px); }
+    .toggle-row { display: flex; align-items: center; gap: .75rem; }
+    .toggle-label { font-size: 1rem; font-weight: 500; cursor: pointer; user-select: none; }
+  </style>
+</head>
+<body>
+<main class="container" style="max-width:600px">
+
+  <hgroup style="margin-bottom:1.5rem">
+    <h2 style="margin-bottom:0">Wren Engine</h2>
+    <p style="margin:0;color:var(--pico-muted-color)">Configuration &amp; MDL Status</p>
+  </hgroup>
+
+  <!-- Read-only Mode card -->
+  <article>
+    <header>
+      Read-only Mode
+      &nbsp;
+      <span id="read-only-badge">
+        {% if read_only_mode %}
+          <span class="badge badge-readonly">Read-only ON</span>
+        {% else %}
+          <span class="badge badge-off">Read-only OFF</span>
+        {% endif %}
+      </span>
+    </header>
+    <p style="margin-bottom:.75rem;color:var(--pico-muted-color);font-size:.9em">
+      When enabled, the AI agent cannot call <code>deploy</code>, <code>deploy_manifest</code>,
+      <code>list_remote_tables</code>, or <code>list_remote_constraints</code>.
+    </p>
+    <form
+      id="read-only-form"
+      hx-post="/read-only-mode"
+      hx-target="#read-only-result"
+      hx-swap="innerHTML"
+      style="margin:0">
+      <input type="hidden" id="read-only-value" name="read_only_mode" value="{% if read_only_mode %}on{% endif %}">
+      <div class="toggle-row">
+        <div class="switch-track {% if read_only_mode %}switch-on{% endif %}"
+             id="switch-track"
+             onclick="roToggle()">
+          <div class="switch-thumb"></div>
+        </div>
+        <span class="toggle-label" onclick="roToggle()">Enable read-only mode</span>
+      </div>
+    </form>
+    <div id="read-only-result" style="min-height:1.4em;margin-top:.4rem"></div>
+  </article>
+
+  <!-- MDL Status card -->
+  <article>
+    <header>MDL Status</header>
+    <div id="mdl-status-content">
+      {% if is_deployed %}
+        <span class="badge badge-ok">✓ Deployed</span>
+        &nbsp;{{ model_count }} models&nbsp;·&nbsp;{{ column_count }} columns
+        {% if data_source %}&nbsp;·&nbsp;<code>{{ data_source | upper }}</code>{% endif %}
+      {% else %}
+        <span class="badge badge-off">Not deployed</span>
+      {% endif %}
+    </div>
+    {% if mdl_path %}
+    <footer style="margin-top:.5rem">
+      <small style="color:var(--pico-muted-color)">File: <code>{{ mdl_path }}</code></small>
+    </footer>
+    {% endif %}
+  </article>
+
+  <!-- Connection Info card -->
+  <article>
+    <header>Connection Info</header>
+    {% if is_docker %}
+    <div style="background:#fef9c3;border:1px solid #fde68a;border-radius:var(--pico-border-radius);padding:.5rem .75rem;margin-bottom:.75rem;font-size:.875rem">
+      ⚠️ Running inside Docker — use <code>host.docker.internal</code> instead of <code>localhost</code> to reach services on your host machine.
+    </div>
+    {% endif %}
+    {% if connection_info_path %}
+      <small style="color:var(--pico-muted-color)">
+        Saves to <code>{{ connection_info_path }}</code>
+      </small>
+    {% endif %}
+    <form
+      hx-post="/connection"
+      hx-target="#connection-result"
+      hx-swap="innerHTML"
+      style="margin-top:.75rem">
+
+      <label>
+        Data Source
+        <select
+          name="datasource"
+          hx-get="/connection/fields"
+          hx-target="#connection-fields"
+          hx-swap="innerHTML"
+          hx-trigger="change"
+          hx-include="[name='datasource']">
+          <option value="">— select —</option>
+          {% for ds in datasource_options %}
+          <option value="{{ ds }}"{% if ds == (data_source or '')|upper %} selected{% endif %}>{{ ds }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <div id="connection-fields">
+        {% include "_fields.html" %}
+      </div>
+
+      <button type="submit" style="width:auto"
+        hx-indicator="#conn-spinner">Save Connection</button>
+      <span id="conn-spinner" class="htmx-indicator" aria-busy="true" style="display:none"></span>
+    </form>
+    <div id="connection-result"></div>
+  </article>
+
+  <!-- MDL Editor card -->
+  <article>
+    <header>MDL Editor (JSON)</header>
+    <div id="monaco-container" style="height:420px;border:1px solid var(--pico-form-element-border-color);border-radius:var(--pico-border-radius)"></div>
+    <div style="margin-top:.6rem;display:flex;align-items:center;gap:.75rem">
+      <button id="mdl-save-btn" style="width:auto">Save &amp; Deploy</button>
+      <div id="mdl-editor-result"></div>
+    </div>
+  </article>
+
+</main>
+
+<script>
+  function roToggle() {
+    const track = document.getElementById('switch-track');
+    const input = document.getElementById('read-only-value');
+    const on = track.classList.toggle('switch-on');
+    input.value = on ? 'on' : '';
+    document.getElementById('read-only-form').requestSubmit();
+  }
+</script>
+
+<script>
+  // Show non-2xx responses in the HTMX target instead of silently failing
+  document.body.addEventListener('htmx:responseError', function (evt) {
+    const targetId = evt.detail.requestConfig && evt.detail.requestConfig.target;
+    const el = targetId ? document.querySelector(targetId) : null;
+    const status = evt.detail.xhr ? evt.detail.xhr.status : '?';
+    const rawBody = evt.detail.xhr ? evt.detail.xhr.responseText.slice(0, 200) : '';
+    const body = document.createTextNode(rawBody);
+    const small = document.createElement('small');
+    small.style.color = 'var(--pico-color-red-500)';
+    small.appendChild(document.createTextNode(`✗ Server error ${status}: `));
+    small.appendChild(body);
+    if (el) { el.textContent = ''; el.appendChild(small); }
+  });
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/loader.min.js"></script>
+<script>
+  require.config({
+    paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs' }
+  });
+
+  require(['vs/editor/editor.main'], function () {
+    const initialValue = {{ mdl_json | tojson }};
+
+    const editor = monaco.editor.create(document.getElementById('monaco-container'), {
+      value: initialValue,
+      language: 'json',
+      theme: 'vs',
+      minimap: { enabled: false },
+      automaticLayout: true,
+      scrollBeyondLastLine: false,
+      fontSize: 13,
+    });
+
+    document.getElementById('mdl-save-btn').addEventListener('click', async () => {
+      const result = document.getElementById('mdl-editor-result');
+      result.innerHTML = '<small style="color:var(--pico-muted-color)">Saving…</small>';
+      try {
+        const resp = await fetch('/mdl', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: editor.getValue(),
+        });
+        const html = await resp.text();
+        // HTMX OOB elements in the response are handled manually
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        tmp.querySelectorAll('[hx-swap-oob]').forEach(el => {
+          const target = document.getElementById(el.id);
+          if (target) target.innerHTML = el.innerHTML;
+          el.remove();
+        });
+        result.innerHTML = tmp.innerHTML;
+      } catch (e) {
+        result.innerHTML = `<small style="color:var(--pico-color-red-500)">✗ ${e}</small>`;
+      }
+    });
+  });
+</script>
+</body>
+</html>
