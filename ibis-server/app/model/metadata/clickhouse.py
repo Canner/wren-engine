@@ -144,7 +144,7 @@ class ClickHouseMetadata(Metadata):
 
         # Support LowCardinality wrapper — unwrap and recurse
         if normalized_type.startswith("lowcardinality("):
-            inner_type = normalized_type[len("lowcardinality("):-1]
+            inner_type = normalized_type[len("lowcardinality(") : -1]
             return self._transform_column_type(inner_type)
 
         # Support Nullable wrapper — unwrap and recurse
@@ -160,10 +160,16 @@ class ClickHouseMetadata(Metadata):
         if normalized_type.startswith("datetime64("):
             return RustWrenEngineColumnType.TIMESTAMP
 
+        # Support DateTime([timezone]) — e.g. DateTime('UTC')
+        if normalized_type.startswith("datetime("):
+            return RustWrenEngineColumnType.TIMESTAMP
+
+        # Support JSON(...) with options — e.g. JSON(max_dynamic_paths=1024)
+        if normalized_type.startswith("json("):
+            return RustWrenEngineColumnType.JSON
+
         # Support Enum8/Enum16 with values — e.g. Enum8('a'=1, 'b'=2)
-        if normalized_type.startswith("enum8(") or normalized_type.startswith(
-            "enum16("
-        ):
+        if normalized_type.startswith(("enum8(", "enum16(")):
             return RustWrenEngineColumnType.STRING
 
         # Support Array, Map, Tuple — treat as VARCHAR (serialized as strings)
