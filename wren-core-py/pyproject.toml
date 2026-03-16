@@ -10,7 +10,7 @@ description = ""
 authors = ["Canner <dev@cannerdata.com>"]
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.12"
+python = ">=3.11"
 maturin = "1.9.4"
 
 [tool.poetry.group.dev.dependencies]

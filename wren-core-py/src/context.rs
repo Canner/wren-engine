@@ -306,7 +306,7 @@ impl PySessionContext {
         // DataFusion normalizes function names to lowercase during SQL parsing,
         // so we need to normalize the function name before registration
         remote_function.name = remote_function.name.to_lowercase();
-        
+
         match &remote_function.function_type {
             FunctionType::Scalar => {
                 let func: ByPassScalarUDF = remote_function.into();
