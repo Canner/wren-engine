@@ -38,6 +38,7 @@ TRINO_TYPE_MAPPING = {
     "bool": RustWrenEngineColumnType.BOOL,
     "boolean": RustWrenEngineColumnType.BOOL,
     # Decimal Types
+    "real": RustWrenEngineColumnType.REAL,
     "float": RustWrenEngineColumnType.FLOAT4,
     "double": RustWrenEngineColumnType.DOUBLE,
     "decimal": RustWrenEngineColumnType.DECIMAL,
@@ -148,8 +149,15 @@ class TrinoMetadata(Metadata):
         Returns:
             The corresponding RustWrenEngineColumnType
         """
+        lower_type = data_type.strip().lower()
+
+        # Handle complex/parametric types: preserve original type string
+        # (consistent with BigQuery and Databricks implementations)
+        if lower_type.startswith(("array", "map", "row")):
+            return data_type
+
         # Remove parameter specifications like VARCHAR(255) -> VARCHAR
-        normalized_type = re.sub(r"\(.*\)", "", data_type).strip().lower()
+        normalized_type = re.sub(r"\(.*\)", "", lower_type).strip()
 
         # Use the module-level mapping table
         mapped_type = TRINO_TYPE_MAPPING.get(
