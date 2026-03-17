@@ -2,7 +2,6 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-
 DIALECT_SQL = "dialectSql"
 PLANNED_SQL = "plannedSql"
 

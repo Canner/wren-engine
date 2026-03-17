@@ -5,7 +5,11 @@ import pyarrow as pa
 from loguru import logger
 
 from wren.connector.base import ConnectorABC
-from wren.model import GcsFileConnectionInfo, MinioFileConnectionInfo, S3FileConnectionInfo
+from wren.model import (
+    GcsFileConnectionInfo,
+    MinioFileConnectionInfo,
+    S3FileConnectionInfo,
+)
 from wren.model.error import ErrorCode, WrenError
 
 
@@ -79,7 +83,9 @@ class DuckDBConnector(ConnectorABC):
                     f"ATTACH DATABASE '{file}' AS \"{os.path.splitext(os.path.basename(file))[0]}\" (READ_ONLY);"
                 )
             except (self._IOException, self._HTTPException) as e:
-                raise WrenError(ErrorCode.ATTACH_DUCKDB_ERROR, f"Failed to attach: {e!s}")
+                raise WrenError(
+                    ErrorCode.ATTACH_DUCKDB_ERROR, f"Failed to attach: {e!s}"
+                )
 
     def _list_duckdb_files(self, connection_info) -> list[str]:
         op = opendal.Operator("fs", root=connection_info.url.get_secret_value())
@@ -89,9 +95,13 @@ class DuckDBConnector(ConnectorABC):
                 if file.path != "/":
                     stat = op.stat(file.path)
                     if not stat.mode.is_dir() and file.path.endswith(".duckdb"):
-                        files.append(f"{connection_info.url.get_secret_value()}/{file.path}")
+                        files.append(
+                            f"{connection_info.url.get_secret_value()}/{file.path}"
+                        )
         except Exception as e:
-            raise WrenError(ErrorCode.GENERIC_USER_ERROR, f"Failed to list files: {e!s}")
+            raise WrenError(
+                ErrorCode.GENERIC_USER_ERROR, f"Failed to list files: {e!s}"
+            )
         return files
 
     def close(self) -> None:

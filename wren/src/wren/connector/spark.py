@@ -1,5 +1,4 @@
 import pyarrow as pa
-from loguru import logger
 
 from wren.connector.base import ConnectorABC
 from wren.model import SparkConnectionInfo
@@ -16,12 +15,20 @@ class SparkConnector(ConnectorABC):
 
         host = self.connection_info.host.get_secret_value()
         port = self.connection_info.port.get_secret_value()
-        return SparkSession.builder.remote(f"sc://{host}:{port}").appName("wren").getOrCreate()
+        return (
+            SparkSession.builder.remote(f"sc://{host}:{port}")
+            .appName("wren")
+            .getOrCreate()
+        )
 
     def query(self, sql: str, limit: int | None = None) -> pa.Table:
         df = self.connection.sql(sql).toPandas()
         if hasattr(df, "attrs") and df.attrs:
-            df.attrs = {k: v for k, v in df.attrs.items() if k not in ("metrics", "observed_metrics")}
+            df.attrs = {
+                k: v
+                for k, v in df.attrs.items()
+                if k not in ("metrics", "observed_metrics")
+            }
         arrow_table = pa.Table.from_pandas(df)
         if limit is not None:
             arrow_table = arrow_table.slice(0, limit)

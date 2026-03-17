@@ -30,7 +30,9 @@ class DatabricksConnector(ConnectorABC):
                 "client_secret": connection_info.client_secret.get_secret_value(),
             }
             if connection_info.azure_tenant_id is not None:
-                kwargs["azure_tenant_id"] = connection_info.azure_tenant_id.get_secret_value()
+                kwargs["azure_tenant_id"] = (
+                    connection_info.azure_tenant_id.get_secret_value()
+                )
 
             def credential_provider():
                 return oauth_service_principal(DbConfig(**kwargs))

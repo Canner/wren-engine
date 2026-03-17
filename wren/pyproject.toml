@@ -46,7 +46,7 @@ spark       = ["pyspark>=3.5"]
 athena      = ["ibis-framework[athena]"]
 oracle      = ["ibis-framework[oracle]", "oracledb"]
 all         = ["wren[postgres,mysql,bigquery,snowflake,clickhouse,trino,mssql,databricks,redshift,athena,oracle]"]
-dev         = ["pytest>=8", "ruff>=0.4"]
+dev         = ["pytest>=8", "ruff>=0.4", "orjson>=3", "testcontainers[postgres]>=4"]
 
 [project.scripts]
 wren = "wren.cli:app"
@@ -68,3 +68,6 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "PLC"]
+ignore = [
+  "E501", # line-too-long, enforced by ruff format
+]

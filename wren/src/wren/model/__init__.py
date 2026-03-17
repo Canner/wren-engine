@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Annotated, Any, Literal, Union
+from typing import Annotated, Literal, Union
 
-from pydantic import BaseModel, BeforeValidator, Field, SecretStr, model_validator
+from pydantic import BaseModel, BeforeValidator, Field, SecretStr
 
 from wren.model.error import ErrorCode, WrenError
 
@@ -194,7 +194,9 @@ class SparkConnectionInfo(BaseConnectionInfo):
 
 class DatabricksTokenConnectionInfo(BaseConnectionInfo):
     databricks_type: Literal["token"] = "token"
-    server_hostname: SecretStr = Field(alias="serverHostname", examples=["dbc-xxx.cloud.databricks.com"])
+    server_hostname: SecretStr = Field(
+        alias="serverHostname", examples=["dbc-xxx.cloud.databricks.com"]
+    )
     http_path: SecretStr = Field(alias="httpPath", examples=["/sql/1.0/warehouses/xxx"])
     access_token: SecretStr = Field(alias="accessToken", examples=["dapi..."])
 

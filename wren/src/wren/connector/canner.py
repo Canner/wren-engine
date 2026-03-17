@@ -3,7 +3,6 @@ from functools import cache
 from typing import Any
 
 import ibis
-import ibis.expr.datatypes as dt
 import ibis.expr.schema as sch
 import pyarrow as pa
 from ibis import BaseBackend
@@ -44,7 +43,9 @@ class CannerConnector(ConnectorABC):
                 rounded_col = col.cast(decimal_type).round(9)
                 result_table = result_table.mutate(**{name: rounded_col})
             elif isinstance(dtype, UUID):
-                result_table = result_table.mutate(**{name: result_table[name].cast("string")})
+                result_table = result_table.mutate(
+                    **{name: result_table[name].cast("string")}
+                )
         return result_table
 
     def dry_run(self, sql: str) -> Any:
@@ -52,7 +53,9 @@ class CannerConnector(ConnectorABC):
 
     def close(self) -> None:
         try:
-            if hasattr(self.connection, "con") and hasattr(self.connection.con, "close"):
+            if hasattr(self.connection, "con") and hasattr(
+                self.connection.con, "close"
+            ):
                 self.connection.con.close()
             elif hasattr(self.connection, "close"):
                 self.connection.close()
@@ -63,7 +66,12 @@ class CannerConnector(ConnectorABC):
         cur = self.dry_run(sql)
         type_names = _get_pg_type_names(self.connection)
         return ibis.schema(
-            {desc.name: postgres_compiler.type_mapper.from_string(type_names[desc.type_code]) for desc in cur.description}
+            {
+                desc.name: postgres_compiler.type_mapper.from_string(
+                    type_names[desc.type_code]
+                )
+                for desc in cur.description
+            }
         )
 
 

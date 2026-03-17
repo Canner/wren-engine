@@ -1,7 +1,6 @@
 from contextlib import closing
 from decimal import Decimal as PyDecimal
 
-import pandas as pd
 import pyarrow as pa
 import sqlglot.expressions as sge
 from ibis.expr.datatypes import Decimal
@@ -31,7 +30,11 @@ class MSSqlConnector(IbisConnector):
             d = PyDecimal(str(val))
             return d.quantize(PyDecimal("1." + "0" * scale))
 
-        decimal_columns = [name for name, dtype in ibis_table.schema().items() if isinstance(dtype, Decimal)]
+        decimal_columns = [
+            name
+            for name, dtype in ibis_table.schema().items()
+            if isinstance(dtype, Decimal)
+        ]
         if not decimal_columns:
             return ibis_table.to_pyarrow()
 
@@ -40,7 +43,9 @@ class MSSqlConnector(IbisConnector):
             pandas_df[col_name] = pandas_df[col_name].apply(round_decimal)
         return pa.Table.from_pandas(pandas_df)
 
-    def _flatten_pagination_limit(self, sql_query: str, input_dialect: str = "tsql") -> str:
+    def _flatten_pagination_limit(
+        self, sql_query: str, input_dialect: str = "tsql"
+    ) -> str:
         try:
             parsed = parse_one(sql_query, dialect=input_dialect)
             if not isinstance(parsed, exp.Select) or not parsed.args.get("limit"):

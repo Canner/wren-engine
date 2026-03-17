@@ -79,7 +79,9 @@ class IbisConnector(ConnectorABC):
                     f"Closing connection for {self.data_source.value} is not implemented."
                 )
         except Exception as e:
-            logger.warning(f"Error closing connection for {self.data_source.value}: {e}")
+            logger.warning(
+                f"Error closing connection for {self.data_source.value}: {e}"
+            )
         finally:
             self._closed = True
             self.connection = None

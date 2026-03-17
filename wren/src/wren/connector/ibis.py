@@ -1,4 +1,5 @@
 """Generic ibis-backed connectors with data-source-specific error handling."""
+
 import pyarrow as pa
 
 from wren.connector.base import IbisConnector
@@ -26,7 +27,12 @@ class TrinoConnector(IbisConnector):
             return super().query(sql, limit)
         except trino.exceptions.TrinoQueryError as e:
             if not e.error_name == "EXCEEDED_TIME_LIMIT":
-                raise WrenError(ErrorCode.INVALID_SQL, str(e), phase=ErrorPhase.SQL_EXECUTION, metadata={DIALECT_SQL: sql}) from e
+                raise WrenError(
+                    ErrorCode.INVALID_SQL,
+                    str(e),
+                    phase=ErrorPhase.SQL_EXECUTION,
+                    metadata={DIALECT_SQL: sql},
+                ) from e
             raise
         except (WrenError, TimeoutError):
             raise
@@ -38,7 +44,12 @@ class TrinoConnector(IbisConnector):
             super().dry_run(sql)
         except trino.exceptions.TrinoQueryError as e:
             if not e.error_name == "EXCEEDED_TIME_LIMIT":
-                raise WrenError(ErrorCode.INVALID_SQL, str(e), phase=ErrorPhase.SQL_DRY_RUN, metadata={DIALECT_SQL: sql}) from e
+                raise WrenError(
+                    ErrorCode.INVALID_SQL,
+                    str(e),
+                    phase=ErrorPhase.SQL_DRY_RUN,
+                    metadata={DIALECT_SQL: sql},
+                ) from e
             raise
         except (WrenError, TimeoutError):
             raise
@@ -53,7 +64,12 @@ class ClickHouseConnector(IbisConnector):
             return super().query(sql, limit)
         except _ClickHouseDbError as e:
             if "TIMEOUT_EXCEEDED" not in str(e):
-                raise WrenError(ErrorCode.INVALID_SQL, str(e), phase=ErrorPhase.SQL_EXECUTION, metadata={DIALECT_SQL: sql}) from e
+                raise WrenError(
+                    ErrorCode.INVALID_SQL,
+                    str(e),
+                    phase=ErrorPhase.SQL_EXECUTION,
+                    metadata={DIALECT_SQL: sql},
+                ) from e
             raise
         except (WrenError, TimeoutError):
             raise
@@ -63,7 +79,12 @@ class ClickHouseConnector(IbisConnector):
             super().dry_run(sql)
         except _ClickHouseDbError as e:
             if "TIMEOUT_EXCEEDED" not in str(e):
-                raise WrenError(ErrorCode.INVALID_SQL, str(e), phase=ErrorPhase.SQL_DRY_RUN, metadata={DIALECT_SQL: sql}) from e
+                raise WrenError(
+                    ErrorCode.INVALID_SQL,
+                    str(e),
+                    phase=ErrorPhase.SQL_DRY_RUN,
+                    metadata={DIALECT_SQL: sql},
+                ) from e
             raise
         except (WrenError, TimeoutError):
             raise

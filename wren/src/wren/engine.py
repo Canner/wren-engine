@@ -20,14 +20,13 @@ Example usage:
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 import pyarrow as pa
 import sqlglot
 
 from wren.connector.factory import get_connector
-from wren.mdl import get_session_context, to_json_base64, get_manifest_extractor
+from wren.mdl import get_manifest_extractor, get_session_context, to_json_base64
 from wren.model.data_source import DataSource
 from wren.model.error import DIALECT_SQL, PLANNED_SQL, ErrorCode, ErrorPhase, WrenError
 
@@ -35,7 +34,12 @@ from wren.model.error import DIALECT_SQL, PLANNED_SQL, ErrorCode, ErrorPhase, Wr
 def _get_write_dialect(data_source: DataSource) -> str:
     if data_source == DataSource.canner:
         return "trino"
-    if data_source in {DataSource.local_file, DataSource.s3_file, DataSource.minio_file, DataSource.gcs_file}:
+    if data_source in {
+        DataSource.local_file,
+        DataSource.s3_file,
+        DataSource.minio_file,
+        DataSource.gcs_file,
+    }:
         return "duckdb"
     return data_source.name
 

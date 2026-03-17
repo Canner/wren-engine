@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 from typing import Annotated, Optional
 
@@ -25,14 +24,19 @@ def _load_connection_info(
     if connection_file_path:
         path = Path(connection_file_path)
         if not path.exists():
-            typer.echo(f"Error: connection file not found: {connection_file_path}", err=True)
+            typer.echo(
+                f"Error: connection file not found: {connection_file_path}", err=True
+            )
             raise typer.Exit(1)
         try:
             return json.loads(path.read_text())
         except json.JSONDecodeError as e:
             typer.echo(f"Error: invalid JSON in {connection_file_path}: {e}", err=True)
             raise typer.Exit(1)
-    typer.echo("Error: either --connection-info or --connection-file must be provided", err=True)
+    typer.echo(
+        "Error: either --connection-info or --connection-file must be provided",
+        err=True,
+    )
     raise typer.Exit(1)
 
 
@@ -71,17 +75,31 @@ def _make_engine(
         typer.echo(f"Error: unknown datasource '{datasource}'", err=True)
         raise typer.Exit(1)
 
-    return WrenEngine(manifest_str=manifest_str, data_source=ds, connection_info=conn_dict)
+    return WrenEngine(
+        manifest_str=manifest_str, data_source=ds, connection_info=conn_dict
+    )
 
 
 # ── Common options ─────────────────────────────────────────────────────────
 
 SqlArg = Annotated[str, typer.Option("--sql", "-s", help="SQL query to execute")]
-DatasourceOpt = Annotated[str, typer.Option("--datasource", "-d", help="Data source name (e.g. postgres, duckdb)")]
-MdlOpt = Annotated[str, typer.Option("--mdl", "-m", help="Path to MDL JSON file or base64 MDL string")]
-ConnInfoOpt = Annotated[Optional[str], typer.Option("--connection-info", help="JSON connection info string")]
-ConnFileOpt = Annotated[Optional[str], typer.Option("--connection-file", help="Path to JSON connection info file")]
-LimitOpt = Annotated[Optional[int], typer.Option("--limit", "-l", help="Max rows to return")]
+DatasourceOpt = Annotated[
+    str,
+    typer.Option("--datasource", "-d", help="Data source name (e.g. postgres, duckdb)"),
+]
+MdlOpt = Annotated[
+    str, typer.Option("--mdl", "-m", help="Path to MDL JSON file or base64 MDL string")
+]
+ConnInfoOpt = Annotated[
+    Optional[str], typer.Option("--connection-info", help="JSON connection info string")
+]
+ConnFileOpt = Annotated[
+    Optional[str],
+    typer.Option("--connection-file", help="Path to JSON connection info file"),
+]
+LimitOpt = Annotated[
+    Optional[int], typer.Option("--limit", "-l", help="Max rows to return")
+]
 
 
 @app.command()
@@ -92,7 +110,9 @@ def query(
     connection_info: ConnInfoOpt = None,
     connection_file: ConnFileOpt = None,
     limit: LimitOpt = None,
-    output: Annotated[str, typer.Option("--output", "-o", help="Output format: json|csv|table")] = "table",
+    output: Annotated[
+        str, typer.Option("--output", "-o", help="Output format: json|csv|table")
+    ] = "table",
 ):
     """Execute a SQL query through the Wren semantic layer."""
     engine = _make_engine(sql, datasource, mdl, connection_info, connection_file)
@@ -176,12 +196,10 @@ def validate(
 
 # ── Output formatting ──────────────────────────────────────────────────────
 
+
 def _print_result(table, output: str) -> None:
-    import pyarrow as pa  # noqa: PLC0415
 
     if output == "json":
-        import pyarrow.ipc as ipc  # noqa: PLC0415
-
         # Simple JSON lines
         for batch in table.to_batches():
             for row in batch.to_pydict():

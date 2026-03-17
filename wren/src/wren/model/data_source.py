@@ -104,7 +104,9 @@ class DataSource(StrEnum):
                     info.kwargs = {}
                 session_properties = info.kwargs.get("session_properties", {})
                 if "query_max_execution_time" not in session_properties:
-                    session_properties["query_max_execution_time"] = f"{session_timeout}s"
+                    session_properties["query_max_execution_time"] = (
+                        f"{session_timeout}s"
+                    )
                 info.kwargs["session_properties"] = session_properties
             case DataSource.bigquery:
                 session_timeout = headers.get(X_WREN_DB_STATEMENT_TIMEOUT, 180)
@@ -269,7 +271,9 @@ class DataSourceExtension(Enum):
             kwargs["aws_session_token"] = creds["SessionToken"]
         elif info.aws_access_key_id and info.aws_secret_access_key:
             kwargs["aws_access_key_id"] = info.aws_access_key_id.get_secret_value()
-            kwargs["aws_secret_access_key"] = info.aws_secret_access_key.get_secret_value()
+            kwargs["aws_secret_access_key"] = (
+                info.aws_secret_access_key.get_secret_value()
+            )
             if info.aws_session_token:
                 kwargs["aws_session_token"] = info.aws_session_token.get_secret_value()
 
@@ -283,7 +287,9 @@ class DataSourceExtension(Enum):
         credits_json = loads(
             base64.b64decode(info.credentials.get_secret_value()).decode("utf-8")
         )
-        credentials = service_account.Credentials.from_service_account_info(credits_json)
+        credentials = service_account.Credentials.from_service_account_info(
+            credits_json
+        )
         credentials = credentials.with_scopes(
             [
                 "https://www.googleapis.com/auth/drive",

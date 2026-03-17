@@ -5,7 +5,11 @@ import pyarrow as pa
 from loguru import logger
 
 from wren.connector.base import ConnectorABC
-from wren.model import RedshiftConnectionInfo, RedshiftConnectionUnion, RedshiftIAMConnectionInfo
+from wren.model import (
+    RedshiftConnectionInfo,
+    RedshiftConnectionUnion,
+    RedshiftIAMConnectionInfo,
+)
 from wren.model.error import ErrorCode, WrenError
 
 
@@ -32,7 +36,10 @@ class RedshiftConnector(ConnectorABC):
                 password=connection_info.password.get_secret_value(),
             )
         else:
-            raise WrenError(ErrorCode.GENERIC_INTERNAL_ERROR, "Invalid Redshift connection_info type")
+            raise WrenError(
+                ErrorCode.GENERIC_INTERNAL_ERROR,
+                "Invalid Redshift connection_info type",
+            )
 
         self.connection.autocommit = True
 

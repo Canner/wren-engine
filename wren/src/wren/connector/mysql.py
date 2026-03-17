@@ -15,11 +15,17 @@ class MySqlConnector(IbisConnector):
         result_table = ibis_table
         for name, dtype in ibis_table.schema().items():
             if isinstance(dtype, Decimal):
-                result_table = self._round_decimal_columns(result_table=result_table, col_name=name, **kwargs)
+                result_table = self._round_decimal_columns(
+                    result_table=result_table, col_name=name, **kwargs
+                )
             elif isinstance(dtype, UUID):
-                result_table = self._cast_uuid_columns(result_table=result_table, col_name=name)
+                result_table = self._cast_uuid_columns(
+                    result_table=result_table, col_name=name
+                )
             elif isinstance(dtype, dt.JSON):
-                result_table = result_table.mutate(**{name: result_table[name].cast("string")})
+                result_table = result_table.mutate(
+                    **{name: result_table[name].cast("string")}
+                )
         return result_table
 
 
@@ -31,11 +37,17 @@ class DorisConnector(IbisConnector):
         result_table = ibis_table
         for name, dtype in ibis_table.schema().items():
             if isinstance(dtype, Decimal):
-                result_table = self._round_decimal_columns(result_table=result_table, col_name=name, **kwargs)
+                result_table = self._round_decimal_columns(
+                    result_table=result_table, col_name=name, **kwargs
+                )
             elif isinstance(dtype, UUID):
-                result_table = self._cast_uuid_columns(result_table=result_table, col_name=name)
+                result_table = self._cast_uuid_columns(
+                    result_table=result_table, col_name=name
+                )
             elif isinstance(dtype, dt.JSON):
-                result_table = result_table.mutate(**{name: result_table[name].cast("string")})
+                result_table = result_table.mutate(
+                    **{name: result_table[name].cast("string")}
+                )
         return result_table
 
 

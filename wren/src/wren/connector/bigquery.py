@@ -5,7 +5,6 @@ import pyarrow as pa
 from loguru import logger
 
 from wren.connector.base import ConnectorABC
-from wren.model.data_source import DataSource
 
 
 class BigQueryConnector(ConnectorABC):
@@ -15,9 +14,13 @@ class BigQueryConnector(ConnectorABC):
 
         self.connection_info = connection_info
         credits_json = loads(
-            base64.b64decode(connection_info.credentials.get_secret_value()).decode("utf-8")
+            base64.b64decode(connection_info.credentials.get_secret_value()).decode(
+                "utf-8"
+            )
         )
-        credentials = service_account.Credentials.from_service_account_info(credits_json)
+        credentials = service_account.Credentials.from_service_account_info(
+            credits_json
+        )
         credentials = credentials.with_scopes(
             [
                 "https://www.googleapis.com/auth/drive",

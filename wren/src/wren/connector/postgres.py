@@ -58,6 +58,7 @@ class PostgresConnector(IbisConnector):
                     with suppress(Exception):
                         self.connection.con.cancel()
                     import time  # noqa: PLC0415
+
                     time.sleep(0.1)
                     self.connection.con.close()
             elif hasattr(self.connection, "close"):
