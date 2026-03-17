@@ -209,7 +209,7 @@ The MCP server includes:
 ### Learn the concepts
 
 - [Quick start with Wren Engine](https://docs.getwren.ai/oss/engine/get_started/quickstart)
-- [What is semantics?](https://docs.getwren.ai/oss/engine/concept/what_is_semantics)
+- [What is context?](https://docs.getwren.ai/oss/engine/concept/what_is_context)
 - [What is Modeling Definition Language (MDL)?](https://docs.getwren.ai/oss/engine/concept/what_is_mdl)
 - [Benefits of Wren Engine with LLMs](https://docs.getwren.ai/oss/engine/concept/benefits_llm)
 - [Your Data Agents Need Context](https://a16z.com/your-data-agents-need-context/)
