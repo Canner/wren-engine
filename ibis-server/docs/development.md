@@ -53,6 +53,7 @@ To start the server:
   ```
   WREN_ENGINE_ENDPOINT=http://localhost:8080
   ```
+  Install the dependencies for testing by `just install --with dev`. Then you can run the tests by `just test`. \
   More information about the environment variables can be found in the [Environment Variables](#Environment-Variables) section.
 - Run specific data source test using [pytest marker](https://docs.pytest.org/en/stable/example/markers.html). There are some markers for different data sources. See the list
   in [pyproject.toml](../pyproject.toml).
