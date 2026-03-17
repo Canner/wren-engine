@@ -77,12 +77,6 @@ mkdir -p ~/wren-workspace
 
 ## Step 4 — Set up Wren Engine
 
-Choose either the **automated path** (recommended) or **manual path** depending on your preference.
-
----
-
-### Option A — Automated with `/wren-quickstart` (recommended)
-
 In your Claude Code session, run:
 
 ```
@@ -98,11 +92,16 @@ When prompted for connection details, provide:
 | Workspace path | `~/wren-workspace` |
 | jaffle_shop directory | your absolute path to `jaffle_shop_duckdb/` |
 
-The skill handles everything: pulling the Docker image, starting the container (with the DuckDB file mounted at `/data`), introspecting the schema, generating the MDL, saving the YAML project, and registering the MCP server.
+The skill handles everything: pulling the Docker image, starting the container (with the DuckDB file mounted at `/data`), configuring the connection, introspecting the schema, generating the MDL, saving the YAML project, and registering the MCP server.
 
 When it finishes, **start a new Claude Code session** and jump to [Step 5 — Start querying](#step-5--start-querying).
 
+> **Why use the skill?** DuckDB connection setup has several non-obvious requirements (the connection URL must point to a *directory*, not a `.duckdb` file; the catalog name is derived from the filename). The `/wren-quickstart` skill handles these details automatically. Manual setup is documented below for reference, but we strongly recommend using the skill for the first run.
+
 ---
+
+<details>
+<summary><b>Manual setup</b> (click to expand — for advanced users only)</summary>
 
 ### Option B — Manual setup
 
@@ -142,19 +141,27 @@ docker ps --filter name=wren-mcp
 curl http://localhost:8000/health
 ```
 
-#### Phase 2 — Generate the MDL
+#### Phase 2 — Configure the connection and generate the MDL
 
-In Claude Code, run each skill in sequence:
+Before generating the MDL, configure the DuckDB connection via the Web UI at `http://localhost:9001`:
 
+1. Open `http://localhost:9001` in your browser
+2. Select data source type: **DUCKDB**
+3. Set the connection info:
+
+| Field | Value | Description |
+|-------|-------|-------------|
+| `format` | `duckdb` | Must be `"duckdb"` |
+| `url` | `/data` | Path to the **folder** containing `.duckdb` files (not the file itself) |
+
+The JSON looks like:
+```json
+{ "url": "/data", "format": "duckdb" }
 ```
-/generate-mdl
-```
 
-Before running `/generate-mdl`, configure the connection via the Web UI at `http://localhost:9001`:
-- Data source type: `DUCKDB`
-- Database folder path: `/data` (the folder containing `jaffle_shop.duckdb`)
+> **Common mistake:** Do not point `url` to the `.duckdb` file directly (e.g. `/data/jaffle_shop.duckdb`). The ibis-server expects a **directory** — it scans for all `.duckdb` files in that directory and attaches them automatically. Pointing to the binary file causes a UTF-8 decode error.
 
-Then run:
+After saving the connection, run the skills in sequence in Claude Code:
 
 ```text
 /generate-mdl
@@ -181,6 +188,8 @@ claude mcp list
 ```
 
 **Start a new Claude Code session** — MCP servers are only loaded at session start.
+
+</details>
 
 ---
 
@@ -240,6 +249,12 @@ Install the duckdb adapter: `uv tool install dbt-duckdb`
 
 **Container can't find the DuckDB file:**
 Check that the `-v` flag points to the directory containing `jaffle_shop.duckdb`, and that the path inside the container (`/data/jaffle_shop.duckdb`) matches what you gave for the connection.
+
+**`'utf-8' codec can't decode byte …` error when querying DuckDB:**
+The connection info `url` is pointing to the `.duckdb` file instead of its parent directory. The ibis-server tries to read the path as JSON, hits the binary file, and fails. Fix: set `url` to the **folder** (e.g. `/data`), not the file (e.g. `/data/jaffle_shop.duckdb`). See the [connection info table in Phase 2](#phase-2--configure-the-connection-and-generate-the-mdl).
+
+**`Catalog "xxx" does not exist` error:**
+When ibis-server attaches a DuckDB file, the catalog name is derived from the filename (e.g. `jaffle_shop.duckdb` → catalog `jaffle_shop`). Make sure the `catalog` in your MDL matches the DuckDB filename without the extension.
 
 **`/generate-mdl` fails immediately:**
 The container must be running first. Run `docker ps --filter name=wren-mcp` to confirm, then retry.
