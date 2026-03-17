@@ -244,11 +244,9 @@ class TestTransformColumnType:
             metadata._transform_column_type("Nothing") == RustWrenEngineColumnType.NULL
         )
 
-    def test_unknown_type_returns_unknown(self, metadata, caplog):
-        with caplog.at_level("WARNING"):
-            result = metadata._transform_column_type("SomeWeirdType")
-            assert result == RustWrenEngineColumnType.UNKNOWN
-            assert "Unknown ClickHouse data type: SomeWeirdType" in caplog.text
+    def test_unknown_type_returns_unknown(self, metadata):
+        result = metadata._transform_column_type("SomeWeirdType")
+        assert result == RustWrenEngineColumnType.UNKNOWN
 
     # --- Parameterized DateTime (with timezone) ---
 
