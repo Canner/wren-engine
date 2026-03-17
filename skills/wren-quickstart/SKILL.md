@@ -5,7 +5,7 @@ compatibility: Requires Docker Desktop (or Docker Engine). No local database dri
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.2"
+  version: "1.3"
 ---
 
 # Wren Quickstart
@@ -13,10 +13,10 @@ metadata:
 ## Version check
 
 Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills/versions.json`.
-Compare the `wren-quickstart` key with this skill's version (`1.2`).
+Compare the `wren-quickstart` key with this skill's version (`1.3`).
 If the remote version is newer, notify the user before proceeding:
 
-> A newer version of the **wren-quickstart** skill is available (remote: X.Y, installed: 1.2).
+> A newer version of the **wren-quickstart** skill is available (remote: X.Y, installed: 1.3).
 > Update with:
 > ```bash
 > curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force wren-quickstart
@@ -74,9 +74,47 @@ Recommended workspace layout after the quickstart completes:
 
 ---
 
-## Phase 2 — Generate MDL and save project
+## Phase 2 — Start Docker container and register MCP server
 
-### 2a — Generate MDL
+Invoke the **wren-mcp-setup** skill to start the Docker container and register the MCP server with the AI client:
+
+```
+@wren-mcp-setup
+```
+
+Pass `<WORKSPACE_PATH>` as the workspace mount path when the skill asks.
+
+The wren-mcp-setup skill will:
+1. Start the container with `-v <WORKSPACE_PATH>:/workspace`
+2. Set `MDL_PATH=/workspace/target/mdl.json`
+3. Register the MCP server with the AI client (`claude mcp add`)
+4. Verify the container is running
+
+### 2b — Configure connection info via Web UI
+
+Once the container is running, open the MCP server Web UI to configure connection info:
+
+```text
+http://localhost:9001
+```
+
+Enter the data source credentials (host, port, database, user, password, etc.) in the UI form and save. The MCP server stores and applies the connection info without exposing credentials to this conversation.
+
+> **Tip:** If your database is running locally, use `host.docker.internal` instead of `localhost` as the host address.
+
+### 2c — Start a new session
+
+The user must **start a new Claude Code session** for the Wren MCP tools to be loaded. Instruct the user to do this now and come back to continue with Phase 3.
+
+> **Important:** Do not proceed to Phase 3 until the new session is started. The `generate-mdl` skill requires MCP tools (`health_check()`, `list_remote_tables()`, etc.) which are only available after the MCP server is registered and a new session is started.
+
+---
+
+## Phase 3 — Generate MDL and save project
+
+> **Prerequisite:** The MCP server must be registered and a new session started (Phase 2c). The `generate-mdl` skill uses MCP tools — do not call ibis-server API directly.
+
+### 3a — Generate MDL
 
 Invoke the **generate-mdl** skill to introspect the user's database and build the MDL manifest:
 
@@ -85,16 +123,13 @@ Invoke the **generate-mdl** skill to introspect the user's database and build th
 ```
 
 The generate-mdl skill will:
-1. Ask for data source type and connection credentials
-2. Call ibis-server to fetch table schema and foreign key constraints
-3. Build the MDL JSON (models, columns, relationships)
-4. Validate the manifest with a dry-plan
+1. Run `health_check()` to verify the connection is working
+2. Ask for data source type and optional schema filter
+3. Call `list_remote_tables()` and `list_remote_constraints()` via MCP to fetch schema
+4. Build the MDL JSON (models, columns, relationships)
+5. Validate the manifest with `deploy_manifest()` + `dry_run()`
 
-> **Important:** At this stage ibis-server may not be running yet. If the user has not started a container, proceed to Phase 3 first (start the container), then come back to generate the MDL using the running ibis-server on port 8000.
->
-> Alternatively, if the user already has a running ibis-server, run Phase 2 before Phase 3.
-
-### 2b — Save as YAML project
+### 3b — Save as YAML project
 
 After the MDL is generated, invoke the **wren-project** skill to save it as a versioned YAML project inside the workspace:
 
@@ -113,47 +148,11 @@ Then build the compiled target:
 
 - `<WORKSPACE_PATH>/target/mdl.json`
 
-The Docker container will auto-load this file at startup.
-
 ---
 
-## Phase 3 — Start and register the MCP server
+## Phase 4 — Verify and start querying
 
-Invoke the **wren-mcp-setup** skill to start the Docker container and register the MCP server with the AI client:
-
-```
-@wren-mcp-setup
-```
-
-Pass `<WORKSPACE_PATH>` as the workspace mount path when the skill asks.
-
-The wren-mcp-setup skill will:
-1. Start the container with `-v <WORKSPACE_PATH>:/workspace`
-2. Set `MDL_PATH=/workspace/target/mdl.json`
-3. Register the MCP server with the AI client (`claude mcp add`)
-4. Verify the container is running
-
-> If `<WORKSPACE_PATH>/target/mdl.json` already exists before the container starts, it is loaded automatically at boot. No separate `deploy` call is needed.
-
-### 3b — Configure connection info via Web UI
-
-Once the container is running, open the MCP server Web UI to configure connection info:
-
-```text
-http://localhost:9001
-```
-
-Enter the data source credentials (host, port, database, user, password, etc.) in the UI form and save. The MCP server stores and applies the connection info without exposing credentials to this conversation.
-
-> **Tip:** If your database is running locally, use `host.docker.internal` instead of `localhost` as the host address.
-
----
-
-## Phase 4 — Verify and confirm
-
-Once the MCP server is registered, the user must **start a new session** for the Wren MCP tools to be loaded. Instruct the user to do this now.
-
-In the new session, ask the AI agent to run a health check:
+Run a health check to confirm everything is working:
 
 ```
 Use health_check() to verify Wren Engine is reachable.
@@ -164,7 +163,7 @@ Expected response: `SELECT 1` returns successfully.
 If the health check passes:
 
 - Tell the user setup is complete.
-- In this session, they can start querying immediately:
+- They can start querying immediately:
 
 ```
 Query: How many orders are in the orders table?
@@ -178,24 +177,22 @@ If the health check fails, follow the troubleshooting steps in the **wren-mcp-se
 
 | Phase | Skill | Purpose |
 |-------|-------|---------|
-| 2a | `@generate-mdl` | Introspect database and build MDL JSON |
-| 2b | `@wren-project` | Save MDL as YAML project + compile to `target/` |
-| 3 | `@wren-mcp-setup` | Start Docker container and register MCP server |
+| 2 | `@wren-mcp-setup` | Start Docker container and register MCP server |
+| 3a | `@generate-mdl` | Introspect database and build MDL JSON |
+| 3b | `@wren-project` | Save MDL as YAML project + compile to `target/` |
 
 ---
 
 ## Troubleshooting
 
-**Container not finding MDL at startup:**
-- Confirm `<WORKSPACE_PATH>/target/mdl.json` exists before starting the container.
-- Check container logs: `docker logs wren-mcp`
-
-**generate-mdl fails because ibis-server is not yet running:**
-- Start the container first (Phase 3), then return to Phase 2.
-- ibis-server is available at `http://localhost:8000` once the container is up.
-
-**MCP tools not available after registration:**
+**MCP tools not available:**
 - The MCP server is only loaded at session start. Start a new Claude Code session after registering.
+- Do not attempt to call ibis-server API directly — always use MCP tools.
+
+**generate-mdl fails:**
+- Ensure the container is running: `docker ps --filter name=wren-mcp`
+- Ensure connection info is configured in the Web UI (`http://localhost:9001`)
+- Ensure a new session was started after `claude mcp add`
 
 **Database connection refused inside Docker:**
 - Change `localhost` / `127.0.0.1` to `host.docker.internal` in connection credentials.

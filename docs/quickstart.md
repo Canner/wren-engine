@@ -141,9 +141,9 @@ docker ps --filter name=wren-mcp
 curl http://localhost:8000/health
 ```
 
-#### Phase 2 — Configure the connection and generate the MDL
+#### Phase 2 — Configure connection and register MCP server
 
-Before generating the MDL, configure the DuckDB connection via the Web UI at `http://localhost:9001`:
+Configure the DuckDB connection via the Web UI at `http://localhost:9001`:
 
 1. Open `http://localhost:9001` in your browser
 2. Select data source type: **DUCKDB**
@@ -161,21 +161,7 @@ The JSON looks like:
 
 > **Common mistake:** Do not point `url` to the `.duckdb` file directly (e.g. `/data/jaffle_shop.duckdb`). The ibis-server expects a **directory** — it scans for all `.duckdb` files in that directory and attaches them automatically. Pointing to the binary file causes a UTF-8 decode error.
 
-After saving the connection, run the skills in sequence in Claude Code:
-
-```text
-/generate-mdl
-```
-
-Then save the MDL as a versioned YAML project:
-
-```text
-/wren-project
-```
-
-This writes human-readable YAML files to `~/wren-workspace/` and compiles `target/mdl.json`.
-
-#### Phase 3 — Register the MCP server
+Then register the MCP server with Claude Code:
 
 ```bash
 claude mcp add --transport http wren http://localhost:9000/mcp
@@ -188,6 +174,24 @@ claude mcp list
 ```
 
 **Start a new Claude Code session** — MCP servers are only loaded at session start.
+
+#### Phase 3 — Generate the MDL
+
+In the new session, run the skills in sequence:
+
+```text
+/generate-mdl
+```
+
+The skill uses MCP tools (`health_check()`, `list_remote_tables()`, etc.) to introspect the database — these tools are only available after the MCP server is registered and a new session is started.
+
+Then save the MDL as a versioned YAML project:
+
+```text
+/wren-project
+```
+
+This writes human-readable YAML files to `~/wren-workspace/` and compiles `target/mdl.json`.
 
 </details>
 

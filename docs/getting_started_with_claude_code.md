@@ -156,35 +156,13 @@ docker logs wren-mcp
 
 > **Database on localhost?** If your database runs on your host machine, replace `localhost` / `127.0.0.1` with `host.docker.internal` in your connection settings — the container cannot reach the host's `localhost` directly.
 
-### Phase 3 — Generate the MDL
+### Phase 3 — Configure connection and register MCP server
 
-In Claude Code, run:
+Configure connection info in the Web UI at `http://localhost:9001` — select the data source type and enter credentials. Use `/wren-connection-info` in Claude Code for field reference per data source.
 
-```
-/generate-mdl
-```
+> **Connection info can only be configured through the Web UI.** Do not attempt to set it programmatically.
 
-The skill will:
-
-1. Run `health_check()` to verify the connection is configured
-2. Ask for your data source type (PostgreSQL, BigQuery, Snowflake, etc.) and optional schema filter
-3. Call `list_remote_tables()` and `list_remote_constraints()` via the MCP server to introspect your database schema
-4. Build the MDL JSON (models, columns, relationships)
-5. Validate the manifest with `deploy_manifest()` + `dry_run()`
-
-> **Connection info** must be configured in the Web UI (`http://localhost:9001`) before running `/generate-mdl`. Use `/wren-connection-info` in Claude Code for field reference per data source.
-
-Then save the MDL as a versioned YAML project:
-
-```text
-/wren-project
-```
-
-This writes human-readable YAML files to your workspace and compiles `target/mdl.json`.
-
-### Phase 4 — Register the MCP server
-
-Add Wren to Claude Code's MCP configuration:
+Then register the MCP server with Claude Code:
 
 ```bash
 claude mcp add --transport http wren http://localhost:9000/mcp
@@ -197,6 +175,32 @@ claude mcp list
 ```
 
 **Start a new Claude Code session** — MCP servers are only loaded at session start.
+
+### Phase 4 — Generate the MDL
+
+In the new session, run:
+
+```
+/generate-mdl
+```
+
+The skill will:
+
+1. Run `health_check()` to verify the connection is working
+2. Ask for your data source type (PostgreSQL, BigQuery, Snowflake, etc.) and optional schema filter
+3. Call `list_remote_tables()` and `list_remote_constraints()` via MCP tools to introspect your database schema
+4. Build the MDL JSON (models, columns, relationships)
+5. Validate the manifest with `deploy_manifest()` + `dry_run()`
+
+> **Prerequisite:** The MCP server must be registered and a new session started (Phase 3). The `/generate-mdl` skill uses MCP tools — do not call ibis-server API directly.
+
+Then save the MDL as a versioned YAML project:
+
+```text
+/wren-project
+```
+
+This writes human-readable YAML files to your workspace and compiles `target/mdl.json`.
 
 ---
 
