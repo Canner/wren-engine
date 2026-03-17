@@ -33,7 +33,7 @@ This installs the following skills into `~/.claude/skills/`:
 | Skill | Purpose |
 |-------|---------|
 | `wren-quickstart` | End-to-end guided setup |
-| `wren-connection-info` | Configure database credentials |
+| `wren-connection-info` | Connection field reference per data source |
 | `generate-mdl` | Generate MDL from a live database |
 | `wren-project` | Save and build MDL as YAML files |
 | `wren-mcp-setup` | Start the Docker container and register MCP |
@@ -156,35 +156,13 @@ docker logs wren-mcp
 
 > **Database on localhost?** If your database runs on your host machine, replace `localhost` / `127.0.0.1` with `host.docker.internal` in your connection settings — the container cannot reach the host's `localhost` directly.
 
-### Phase 3 — Generate the MDL
+### Phase 3 — Configure connection and register MCP server
 
-In Claude Code, run:
+Configure connection info in the Web UI at `http://localhost:9001` — select the data source type and enter credentials. Use `/wren-connection-info` in Claude Code for field reference per data source.
 
-```
-/generate-mdl
-```
+> **Connection info can only be configured through the Web UI.** Do not attempt to set it programmatically.
 
-The skill will:
-
-1. Run `health_check()` to verify the connection is configured
-2. Ask for your data source type (PostgreSQL, BigQuery, Snowflake, etc.) and optional schema filter
-3. Call `list_remote_tables()` and `list_remote_constraints()` via the MCP server to introspect your database schema
-4. Build the MDL JSON (models, columns, relationships)
-5. Validate the manifest with `deploy_manifest()` + `dry_run()`
-
-> **Connection info** must be configured in the Web UI (`http://localhost:9001`) before running `/generate-mdl`. Use `/wren-connection-info` in Claude Code for field reference per data source.
-
-Then save the MDL as a versioned YAML project:
-
-```text
-/wren-project
-```
-
-This writes human-readable YAML files to your workspace and compiles `target/mdl.json`.
-
-### Phase 4 — Register the MCP server
-
-Add Wren to Claude Code's MCP configuration:
+Then register the MCP server with Claude Code:
 
 ```bash
 claude mcp add --transport http wren http://localhost:9000/mcp
@@ -197,6 +175,32 @@ claude mcp list
 ```
 
 **Start a new Claude Code session** — MCP servers are only loaded at session start.
+
+### Phase 4 — Generate the MDL
+
+In the new session, run:
+
+```
+/generate-mdl
+```
+
+The skill will:
+
+1. Run `health_check()` to verify the connection is working
+2. Ask for your data source type (PostgreSQL, BigQuery, Snowflake, etc.) and optional schema filter
+3. Call `list_remote_tables()` and `list_remote_constraints()` via MCP tools to introspect your database schema
+4. Build the MDL JSON (models, columns, relationships)
+5. Validate the manifest with `deploy_manifest()` + `dry_run()`
+
+> **Prerequisite:** The MCP server must be registered and a new session started (Phase 3). The `/generate-mdl` skill uses MCP tools — do not call ibis-server API directly.
+
+Then save the MDL as a versioned YAML project:
+
+```text
+/wren-project
+```
+
+This writes human-readable YAML files to your workspace and compiles `target/mdl.json`.
 
 ---
 
@@ -250,8 +254,9 @@ docker restart wren-mcp            # restart
 | `health_check()` | Verify Wren Engine is reachable |
 | `query(sql=...)` | Execute SQL against the deployed MDL |
 | `deploy(mdl_file_path=...)` | Load a compiled `mdl.json` |
-| `setup_connection(...)` | Configure data source credentials |
 | `list_remote_tables(...)` | Introspect database schema |
+
+> **Note:** Connection info is configured exclusively through the Web UI at `http://localhost:9001` — there is no MCP tool for setting credentials.
 
 ---
 
@@ -289,3 +294,20 @@ To update a single skill:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force generate-mdl
 ```
+
+---
+
+## Locking down with read-only mode
+
+Once you have confirmed that queries are returning correct results and the MDL is working as expected, enable **read-only mode** in the Web UI:
+
+1. Open `http://localhost:9001`
+2. Toggle **Read-Only Mode** to on
+
+When read-only mode is enabled:
+
+- The AI agent can **query data** and **read metadata** through the deployed MDL as usual
+- The AI agent **cannot** modify connection info, change the data source, or call `list_remote_tables()` / `list_remote_constraints()` to introspect the database directly
+- This limits the agent to operating within the boundaries of the MDL you have defined, preventing it from accessing tables or schemas you have not explicitly modeled
+
+We recommend enabling read-only mode for day-to-day use. Turn it off temporarily when you need to regenerate the MDL or change connection settings.

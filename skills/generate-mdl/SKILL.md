@@ -5,7 +5,7 @@ compatibility: Requires a running ibis-server (default port 8000). No local data
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.3"
+  version: "1.4"
 ---
 
 # Generate Wren MDL
@@ -13,10 +13,10 @@ metadata:
 ## Version check
 
 Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills/versions.json`.
-Compare the `generate-mdl` key with this skill's version (`1.3`).
+Compare the `generate-mdl` key with this skill's version (`1.4`).
 If the remote version is newer, notify the user before proceeding:
 
-> A newer version of the **generate-mdl** skill is available (remote: X.Y, installed: 1.3).
+> A newer version of the **generate-mdl** skill is available (remote: X.Y, installed: 1.4).
 > Update with:
 > ```bash
 > curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force generate-mdl
@@ -34,13 +34,15 @@ Follow these steps in order. Do not skip steps or ask unnecessary questions betw
 
 ### Step 1 — Verify connection and choose data source
 
+> **Connection info can ONLY be configured through the Web UI at `http://localhost:9001`.** Do not attempt to set connection info programmatically via ibis-server API calls, curl, or any other method. The ibis-server does not expose a public API for writing connection info — only the Web UI can do this.
+
 Confirm the MCP server has a working connection before proceeding:
 
 ```text
 health_check()
 ```
 
-If the health check fails, ask the user to configure the connection via the Web UI at `http://localhost:9001` before continuing.
+If the health check fails, or if the user has not yet configured a connection, direct them to the Web UI at `http://localhost:9001` to enter their data source credentials. Wait for the user to confirm the connection is saved before continuing.
 
 Ask the user for:
 1. **Data source type** (e.g. `POSTGRES`, `BIGQUERY`, `SNOWFLAKE`, …) — needed to set `dataSource` in the MDL
@@ -207,6 +209,6 @@ When in doubt, use `VARCHAR` as a safe fallback.
 
 ## Connection setup
 
-Connection info is configured via the MCP server Web UI at `http://localhost:9001`. See the **wren-mcp-setup** skill for Docker setup instructions.
+Connection info is configured **exclusively** via the MCP server Web UI at `http://localhost:9001`. There is no API endpoint for setting connection info — do not attempt to configure it programmatically. See the **wren-mcp-setup** skill for Docker setup instructions.
 
 > **Note:** If the Web UI is disabled (`WEB_UI_ENABLED=false`), connection info must be pre-configured in `~/.wren/connection_info.json` before starting the container. Use `/wren-connection-info` in Claude Code for the required fields per data source.

@@ -4,7 +4,7 @@ description: Daily usage guide for Wren Engine — connect to a database, write 
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.0"
+  version: "1.1"
 ---
 
 # Wren Engine — Usage Guide
@@ -89,10 +89,9 @@ For type-specific patterns (ARRAY, STRUCT, JSON), date/time arithmetic, or BigQu
 
 ### Update connection credentials
 
-Invoke `@wren-connection-info` to:
-- Change the data source type or credentials
-- Produce a new `connection.yml` + `target/connection.json`
-- Switch between `connectionFilePath` (secure) and inline dict
+To change credentials, direct the user to the MCP server Web UI at `http://localhost:9001`. Connection info can only be configured through the Web UI — do not attempt to set it programmatically.
+
+Invoke `@wren-connection-info` for a reference of required fields per data source (so you can guide the user on what to enter in the Web UI).
 
 ---
 

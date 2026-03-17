@@ -141,9 +141,9 @@ docker ps --filter name=wren-mcp
 curl http://localhost:8000/health
 ```
 
-#### Phase 2 — Configure the connection and generate the MDL
+#### Phase 2 — Configure connection and register MCP server
 
-Before generating the MDL, configure the DuckDB connection via the Web UI at `http://localhost:9001`:
+Configure the DuckDB connection via the Web UI at `http://localhost:9001`:
 
 1. Open `http://localhost:9001` in your browser
 2. Select data source type: **DUCKDB**
@@ -161,21 +161,7 @@ The JSON looks like:
 
 > **Common mistake:** Do not point `url` to the `.duckdb` file directly (e.g. `/data/jaffle_shop.duckdb`). The ibis-server expects a **directory** — it scans for all `.duckdb` files in that directory and attaches them automatically. Pointing to the binary file causes a UTF-8 decode error.
 
-After saving the connection, run the skills in sequence in Claude Code:
-
-```text
-/generate-mdl
-```
-
-Then save the MDL as a versioned YAML project:
-
-```text
-/wren-project
-```
-
-This writes human-readable YAML files to `~/wren-workspace/` and compiles `target/mdl.json`.
-
-#### Phase 3 — Register the MCP server
+Then register the MCP server with Claude Code:
 
 ```bash
 claude mcp add --transport http wren http://localhost:9000/mcp
@@ -188,6 +174,24 @@ claude mcp list
 ```
 
 **Start a new Claude Code session** — MCP servers are only loaded at session start.
+
+#### Phase 3 — Generate the MDL
+
+In the new session, run the skills in sequence:
+
+```text
+/generate-mdl
+```
+
+The skill uses MCP tools (`health_check()`, `list_remote_tables()`, etc.) to introspect the database — these tools are only available after the MCP server is registered and a new session is started.
+
+Then save the MDL as a versioned YAML project:
+
+```text
+/wren-project
+```
+
+This writes human-readable YAML files to `~/wren-workspace/` and compiles `target/mdl.json`.
 
 </details>
 
@@ -273,7 +277,24 @@ Check container logs: `docker logs wren-mcp`. Confirm ports are listening: `curl
 |------|---------|
 | Add or edit MDL models | `/wren-project` |
 | Write custom SQL | `/wren-sql` |
-| Connect a different database | `/wren-connection-info` |
+| Connect a different database | Web UI at `http://localhost:9001` (use `/wren-connection-info` for field reference) |
 | Day-to-day usage guide | `/wren-usage` |
 
 For a deeper dive into how skills work or how to connect a cloud database, see [Getting Started with Claude Code](./getting_started_with_claude_code.md).
+
+---
+
+## Locking down with read-only mode
+
+Once you have confirmed that queries are returning correct results and the MDL is working as expected, enable **read-only mode** in the Web UI:
+
+1. Open `http://localhost:9001`
+2. Toggle **Read-Only Mode** to on
+
+When read-only mode is enabled:
+
+- The AI agent can **query data** and **read metadata** through the deployed MDL as usual
+- The AI agent **cannot** modify connection info, change the data source, or call `list_remote_tables()` / `list_remote_constraints()` to introspect the database directly
+- This limits the agent to operating within the boundaries of the MDL you have defined, preventing it from accessing tables or schemas you have not explicitly modeled
+
+We recommend enabling read-only mode for day-to-day use. Turn it off temporarily when you need to regenerate the MDL or change connection settings.
