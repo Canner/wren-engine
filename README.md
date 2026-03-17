@@ -39,6 +39,8 @@ AI agents can already call tools, browse docs, and write code. What they still s
 
 Enterprise data is not just rows in a warehouse. It is definitions, metrics, relationships, permissions, lineage, and intent. An agent that can connect to PostgreSQL or Snowflake still does not know what "net revenue", "active customer", or "pipeline coverage" actually mean in your company.
 
+That is why the category is moving beyond raw data access. In [Your Data Agents Need Context](https://a16z.com/your-data-agents-need-context/), a16z makes the case that data agents need business definitions, institutional knowledge, and system-level context to be useful in production. That is exactly the problem Wren Engine is built to solve in the open.
+
 <p align="center">
   <img width="920" height="638" alt="without_wren_engine" src="https://github.com/user-attachments/assets/3295dde5-ce41-4e56-a8ad-daff6a0c3459" />
 </p>
@@ -58,6 +60,8 @@ This is the open source context engine for teams building the next generation of
 ## The Vision
 
 We believe the future of AI is not tool calling alone. It is context-rich systems where agents can reason, retrieve, plan, and act on top of a shared understanding of business reality.
+
+Or more simply: agents need more than connectivity. They need context.
 
 Wren Engine is our open source contribution to that future.
 
@@ -81,6 +85,8 @@ At a high level:
 2. Wren Engine analyzes intent, models, relationships, and access rules.
 3. It plans and generates correct queries across your underlying data sources.
 4. MCP clients and AI agents interact with that context through a clean interface.
+
+This is the practical open source path from text-to-SQL toward context-aware data agents.
 
 That means your agent is no longer asking, "Which raw table should I query?"
 
@@ -120,6 +126,8 @@ Wren Engine is open source so the community can:
 - contribute connectors, optimizations, and semantic capabilities
 - build opinionated agent products on a transparent foundation
 - help define what a real context layer for AI should look like
+
+We want this layer to be inspectable, composable, and community-owned, not hidden behind a single proprietary experience.
 
 ## Architecture At A Glance
 
@@ -171,10 +179,10 @@ Current open source support includes connectors such as:
 - MySQL
 - Oracle
 - PostgreSQL
+- Redshift
 - SQL Server
 - Snowflake
 - Trino
-- Redshift
 
 See the connector API docs in the project documentation for the latest connection schemas and capabilities.
 
@@ -239,5 +247,6 @@ If you are building with agents today, this is a great time to get involved.
 - Open a [GitHub issue](https://github.com/Canner/wren-engine/issues)
 - Explore [Wren AI](https://github.com/Canner/WrenAI) to see the broader product vision
 - Read our mission piece: [Fueling the Next Wave of AI Agents](https://getwren.ai/post/fueling-the-next-wave-of-ai-agents-building-the-foundation-for-future-mcp-clients-and-enterprise-data-access)
+- Read the a16z perspective: [Your Data Agents Need Context](https://a16z.com/your-data-agents-need-context/)
 
 Wren Engine is for builders who believe AI needs better context, not just better prompts.
