@@ -11,7 +11,7 @@ metadata:
 
 This skill answers questions about how to configure connection info for each data source in Wren Engine. Use it to explain required fields, flag sensitive values, and guide the user through any data-source-specific setup steps.
 
-The connection info is entered by the user — in the MCP server Web UI (`http://localhost:9001`) for normal use, or directly in API calls for advanced workflows.
+Connection info can **only** be configured through the MCP server Web UI at `http://localhost:9001`. There is no ibis-server API for writing connection info — do not attempt to set it programmatically via API calls, curl, or any other method. Always direct the user to the Web UI to enter or update credentials.
 
 ---
 
