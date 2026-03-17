@@ -15,6 +15,7 @@ from app.model.metadata.metadata import Metadata
 CLICKHOUSE_TYPE_MAPPING = {
     # Boolean Types
     "boolean": RustWrenEngineColumnType.BOOL,
+    "bool": RustWrenEngineColumnType.BOOL,
     # Integer Types
     "int8": RustWrenEngineColumnType.TINYINT,
     "uint8": RustWrenEngineColumnType.INT2,
@@ -24,6 +25,10 @@ CLICKHOUSE_TYPE_MAPPING = {
     "uint32": RustWrenEngineColumnType.INT4,
     "int64": RustWrenEngineColumnType.INT8,
     "uint64": RustWrenEngineColumnType.INT8,
+    "int128": RustWrenEngineColumnType.NUMERIC,
+    "int256": RustWrenEngineColumnType.NUMERIC,
+    "uint128": RustWrenEngineColumnType.NUMERIC,
+    "uint256": RustWrenEngineColumnType.NUMERIC,
     # Float Types
     "float32": RustWrenEngineColumnType.FLOAT4,
     "float64": RustWrenEngineColumnType.FLOAT8,
@@ -31,7 +36,9 @@ CLICKHOUSE_TYPE_MAPPING = {
     "numeric": RustWrenEngineColumnType.NUMERIC,
     # Date/Time Types
     "date": RustWrenEngineColumnType.DATE,
+    "date32": RustWrenEngineColumnType.DATE,
     "datetime": RustWrenEngineColumnType.TIMESTAMP,
+    "datetime64": RustWrenEngineColumnType.TIMESTAMP,
     # String Types
     "string": RustWrenEngineColumnType.VARCHAR,
     "fixedstring": RustWrenEngineColumnType.CHAR,
@@ -41,6 +48,8 @@ CLICKHOUSE_TYPE_MAPPING = {
     "enum16": RustWrenEngineColumnType.STRING,  # Enums can be mapped to strings
     "ipv4": RustWrenEngineColumnType.INET,
     "ipv6": RustWrenEngineColumnType.INET,
+    "nothing": RustWrenEngineColumnType.NULL,
+    "json": RustWrenEngineColumnType.JSON,
 }
 
 
@@ -113,6 +122,9 @@ class ClickHouseMetadata(Metadata):
     def _transform_column_type(self, data_type: str) -> RustWrenEngineColumnType:
         """Transform ClickHouse data type to RustWrenEngineColumnType.
 
+        Handles wrapper types (LowCardinality, Nullable) by recursively
+        unwrapping them to extract the inner type.
+
         Args:
             data_type: The ClickHouse data type string
 
@@ -120,9 +132,9 @@ class ClickHouseMetadata(Metadata):
             The corresponding RustWrenEngineColumnType
         """
         # Convert to lowercase for comparison
-        normalized_type = data_type.lower()
+        normalized_type = data_type.lower().strip()
 
-        # Decimal type with precision and scale
+        # Decimal type with precision and scale, e.g. Decimal(15,2)
         if normalized_type.startswith("decimal"):
             return RustWrenEngineColumnType.DECIMAL
 
@@ -130,12 +142,41 @@ class ClickHouseMetadata(Metadata):
         if normalized_type.startswith("numeric"):
             return RustWrenEngineColumnType.NUMERIC
 
-        # Support to Nullable wrapper
+        # Support LowCardinality wrapper — unwrap and recurse
+        if normalized_type.startswith("lowcardinality("):
+            inner_type = normalized_type[len("lowcardinality(") : -1]
+            return self._transform_column_type(inner_type)
+
+        # Support Nullable wrapper — unwrap and recurse
         if normalized_type.startswith("nullable("):
             inner_type = normalized_type[9:-1]
             return self._transform_column_type(inner_type)
 
-        # Use the module-level mapping table
+        # Support FixedString(N) — e.g. FixedString(32)
+        if normalized_type.startswith("fixedstring("):
+            return RustWrenEngineColumnType.CHAR
+
+        # Support DateTime64(precision[, timezone]) — e.g. DateTime64(3, 'UTC')
+        if normalized_type.startswith("datetime64("):
+            return RustWrenEngineColumnType.TIMESTAMP
+
+        # Support DateTime([timezone]) — e.g. DateTime('UTC')
+        if normalized_type.startswith("datetime("):
+            return RustWrenEngineColumnType.TIMESTAMP
+
+        # Support JSON(...) with options — e.g. JSON(max_dynamic_paths=1024)
+        if normalized_type.startswith("json("):
+            return RustWrenEngineColumnType.JSON
+
+        # Support Enum8/Enum16 with values — e.g. Enum8('a'=1, 'b'=2)
+        if normalized_type.startswith(("enum8(", "enum16(")):
+            return RustWrenEngineColumnType.STRING
+
+        # Support Array, Map, Tuple — treat as VARCHAR (serialized as strings)
+        if normalized_type.startswith(("array(", "map(", "tuple(")):
+            return RustWrenEngineColumnType.VARCHAR
+
+        # Use the module-level mapping table for simple types
         mapped_type = CLICKHOUSE_TYPE_MAPPING.get(
             normalized_type, RustWrenEngineColumnType.UNKNOWN
         )
