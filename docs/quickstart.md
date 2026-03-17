@@ -281,3 +281,20 @@ Check container logs: `docker logs wren-mcp`. Confirm ports are listening: `curl
 | Day-to-day usage guide | `/wren-usage` |
 
 For a deeper dive into how skills work or how to connect a cloud database, see [Getting Started with Claude Code](./getting_started_with_claude_code.md).
+
+---
+
+## Locking down with read-only mode
+
+Once you have confirmed that queries are returning correct results and the MDL is working as expected, enable **read-only mode** in the Web UI:
+
+1. Open `http://localhost:9001`
+2. Toggle **Read-Only Mode** to on
+
+When read-only mode is enabled:
+
+- The AI agent can **query data** and **read metadata** through the deployed MDL as usual
+- The AI agent **cannot** modify connection info, change the data source, or call `list_remote_tables()` / `list_remote_constraints()` to introspect the database directly
+- This limits the agent to operating within the boundaries of the MDL you have defined, preventing it from accessing tables or schemas you have not explicitly modeled
+
+We recommend enabling read-only mode for day-to-day use. Turn it off temporarily when you need to regenerate the MDL or change connection settings.
