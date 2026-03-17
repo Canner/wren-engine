@@ -34,13 +34,15 @@ Follow these steps in order. Do not skip steps or ask unnecessary questions betw
 
 ### Step 1 — Verify connection and choose data source
 
+> **Connection info can ONLY be configured through the Web UI at `http://localhost:9001`.** Do not attempt to set connection info programmatically via ibis-server API calls, curl, or any other method. The ibis-server does not expose a public API for writing connection info — only the Web UI can do this.
+
 Confirm the MCP server has a working connection before proceeding:
 
 ```text
 health_check()
 ```
 
-If the health check fails, ask the user to configure the connection via the Web UI at `http://localhost:9001` before continuing.
+If the health check fails, or if the user has not yet configured a connection, direct them to the Web UI at `http://localhost:9001` to enter their data source credentials. Wait for the user to confirm the connection is saved before continuing.
 
 Ask the user for:
 1. **Data source type** (e.g. `POSTGRES`, `BIGQUERY`, `SNOWFLAKE`, …) — needed to set `dataSource` in the MDL
@@ -207,6 +209,6 @@ When in doubt, use `VARCHAR` as a safe fallback.
 
 ## Connection setup
 
-Connection info is configured via the MCP server Web UI at `http://localhost:9001`. See the **wren-mcp-setup** skill for Docker setup instructions.
+Connection info is configured **exclusively** via the MCP server Web UI at `http://localhost:9001`. There is no API endpoint for setting connection info — do not attempt to configure it programmatically. See the **wren-mcp-setup** skill for Docker setup instructions.
 
 > **Note:** If the Web UI is disabled (`WEB_UI_ENABLED=false`), connection info must be pre-configured in `~/.wren/connection_info.json` before starting the container. Use `/wren-connection-info` in Claude Code for the required fields per data source.
