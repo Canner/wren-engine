@@ -4,7 +4,7 @@ description: Reference guide for Wren Engine connection info — explains requir
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.3"
+  version: "1.4"
 ---
 
 # Wren Connection Info Reference

@@ -5,7 +5,7 @@ compatibility: Requires a running ibis-server (default port 8000). No local data
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.3"
+  version: "1.4"
 ---
 
 # Generate Wren MDL
@@ -13,10 +13,10 @@ metadata:
 ## Version check
 
 Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills/versions.json`.
-Compare the `generate-mdl` key with this skill's version (`1.3`).
+Compare the `generate-mdl` key with this skill's version (`1.4`).
 If the remote version is newer, notify the user before proceeding:
 
-> A newer version of the **generate-mdl** skill is available (remote: X.Y, installed: 1.3).
+> A newer version of the **generate-mdl** skill is available (remote: X.Y, installed: 1.4).
 > Update with:
 > ```bash
 > curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force generate-mdl

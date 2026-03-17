@@ -4,7 +4,7 @@ description: Daily usage guide for Wren Engine — connect to a database, write 
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.0"
+  version: "1.1"
 ---
 
 # Wren Engine — Usage Guide
