@@ -11,6 +11,7 @@ from app.model.metadata.clickhouse import ClickHouseMetadata
 from app.model.metadata.dto import RustWrenEngineColumnType
 
 
+@pytest.mark.clickhouse
 class TestTransformColumnType:
     """Tests for ClickHouseMetadata._transform_column_type."""
 
