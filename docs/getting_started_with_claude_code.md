@@ -33,7 +33,7 @@ This installs the following skills into `~/.claude/skills/`:
 | Skill | Purpose |
 |-------|---------|
 | `wren-quickstart` | End-to-end guided setup |
-| `wren-connection-info` | Configure database credentials |
+| `wren-connection-info` | Connection field reference per data source |
 | `generate-mdl` | Generate MDL from a live database |
 | `wren-project` | Save and build MDL as YAML files |
 | `wren-mcp-setup` | Start the Docker container and register MCP |
@@ -250,8 +250,9 @@ docker restart wren-mcp            # restart
 | `health_check()` | Verify Wren Engine is reachable |
 | `query(sql=...)` | Execute SQL against the deployed MDL |
 | `deploy(mdl_file_path=...)` | Load a compiled `mdl.json` |
-| `setup_connection(...)` | Configure data source credentials |
 | `list_remote_tables(...)` | Introspect database schema |
+
+> **Note:** Connection info is configured exclusively through the Web UI at `http://localhost:9001` — there is no MCP tool for setting credentials.
 
 ---
 

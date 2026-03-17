@@ -273,7 +273,7 @@ Check container logs: `docker logs wren-mcp`. Confirm ports are listening: `curl
 |------|---------|
 | Add or edit MDL models | `/wren-project` |
 | Write custom SQL | `/wren-sql` |
-| Connect a different database | `/wren-connection-info` |
+| Connect a different database | Web UI at `http://localhost:9001` (use `/wren-connection-info` for field reference) |
 | Day-to-day usage guide | `/wren-usage` |
 
 For a deeper dive into how skills work or how to connect a cloud database, see [Getting Started with Claude Code](./getting_started_with_claude_code.md).

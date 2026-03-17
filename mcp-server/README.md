@@ -203,13 +203,15 @@ schema discovery. No local database drivers need to be installed on the MCP serv
 
 ### How it works
 
-The agent calls ibis-server tools in sequence:
+The agent calls MCP tools in sequence:
 
 ```
 User  → "Generate an MDL for my PostgreSQL ecommerce database"
 
-Agent → setup_connection(datasource="POSTGRES",
-          conn_info={"host":"localhost","port":"5432","user":"...","database":"shop"})
+User  → (configures connection info via Web UI at http://localhost:9001)
+
+Agent → health_check()
+      ← "Wren Engine is reachable."
 
 Agent → list_remote_tables()
       ← [{"name":"orders","columns":[...]}, {"name":"customers","columns":[...]}, ...]
@@ -226,6 +228,8 @@ Agent → mdl_validate_manifest({"catalog":"wren","schema":"public",
 Agent → deploy_manifest({"catalog":"wren","schema":"public","dataSource":"POSTGRES","models":[...]})
       ← "MDL deployed successfully (5 models, 23 columns)"
 ```
+
+> **Note:** Connection info can only be configured through the Web UI — there is no MCP tool for setting credentials.
 
 ### Environment Variables
 
