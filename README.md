@@ -47,7 +47,7 @@ This is not just our thesis. In [Your Data Agents Need Context](https://a16z.com
 
 Wren Engine exists to solve that gap.
 
-It gives AI agents a semantic layer they can reason over, so they can:
+It gives AI agents a semantic engine they can reason over, so they can:
 
 - understand models instead of raw tables
 - use trusted metrics instead of inventing SQL
@@ -60,8 +60,6 @@ This is the open source context engine for teams building the next generation of
 ## The Vision
 
 We believe the future of AI is not tool calling alone. It is context-rich systems where agents can reason, retrieve, plan, and act on top of a shared understanding of business reality.
-
-The a16z post captures this shift well: the market is moving beyond text-to-SQL and toward a living context layer that combines semantic meaning, system structure, governance, and human refinement.
 
 Wren Engine is our open source contribution to that future.
 
@@ -100,7 +98,7 @@ People often compare Wren Engine to catalog services like DataHub, raw database 
 The simple difference is:
 
 - those tools usually help an agent find data or generate SQL
-- Wren helps an agent understand business meaning and produce the right query through a semantic layer
+- Wren helps an agent understand business meaning and produce the right query through a semantic engine
 
 | Tool type | What it gives the agent | What Wren Engine adds |
 | --- | --- | --- |
@@ -168,7 +166,7 @@ We want that context layer to be inspectable, composable, and community-owned, n
 User / Agent
   -> MCP Client or App (OpenClaw, Cloud Code, VS Code, Claude Desktop, Cline, Cursor, etc.)
   -> Wren MCP Server or HTTP API
-  -> Wren Engine semantic layer
+  -> Wren Engine semantic engine
   -> Query planning and optimization
   -> Your warehouse, database, or file-backed data source
 ```
@@ -188,7 +186,7 @@ This repository contains the core engine modules:
 
 | Module | What it does |
 | --- | --- |
-| [`wren-core`](./wren-core) | Rust semantic engine powered by Apache DataFusion for MDL analysis, planning, and optimization |
+| [`wren-core`](./wren-core) | Rust context engine powered by Apache DataFusion for MDL analysis, planning, and optimization |
 | [`wren-core-base`](./wren-core-base) | Shared manifest and modeling types |
 | [`wren-core-py`](./wren-core-py) | PyO3 bindings that expose the engine to Python |
 | [`ibis-server`](./ibis-server/) | FastAPI server for query execution, validation, metadata, and connectors |
@@ -258,7 +256,7 @@ The MCP server includes:
 Common workflows:
 
 ```bash
-# Rust semantic engine
+# Rust context engine
 cd wren-core
 cargo check --all-targets
 
@@ -274,7 +272,7 @@ cd mcp-server
 
 ## Project Status
 
-Wren Engine is actively evolving in the open. The current focus is to make the semantic layer, execution path, and MCP integration stronger for real-world agent workflows.
+Wren Engine is actively evolving in the open. The current focus is to make the semantic engine, execution path, and MCP integration stronger for real-world agent workflows.
 
 If you are building with agents today, this is a great time to get involved.
 
