@@ -93,40 +93,35 @@ That means your agent is no longer asking, "Which raw table should I query?"
 
 It is asking, "Which business concept, metric, or governed slice of context do I need to answer this task correctly?"
 
-## Where Wren Engine Fits Compared To Other Approaches
+## Wren Engine vs. Other Data Tools
 
-Teams sometimes ask how Wren Engine differs from connecting an agent to a catalog service such as DataHub through MCP, or from other tools that already expose metadata, BI models, or text-to-SQL access.
+People often compare Wren Engine to catalog services like DataHub, raw database MCP servers, BI semantic tools, or text-to-SQL agents.
 
-The short answer is: many tools help agents discover data or generate queries, while Wren helps agents reason over business meaning and execute governed data access through a semantic layer.
+The simple difference is:
 
-| Approach people often compare | Examples | What it is great at | What is still typically left unresolved for the agent | How Wren Engine differs |
-| --- | --- | --- | --- | --- |
-| Data catalog service via MCP | DataHub, similar catalog and metadata platforms | Metadata discovery, lineage, ownership, documentation, asset search | Choosing trusted metrics, resolving joins correctly, and turning metadata into governed runtime query behavior | Wren adds semantic models, relationships, metrics, and runtime query planning |
-| Database connector or schema browser | Direct warehouse/database MCP servers, JDBC-style access, raw schema inspection tools | Fast access to tables, columns, and SQL execution endpoints | Business meaning is mostly implicit, so agents still have to infer intent from physical schema | Wren gives agents a business layer above raw tables and columns |
-| BI or semantic tooling | Semantic layers, metrics layers, BI modeling tools | Defining curated metrics and business-friendly entities for analytics consumers | Many are designed first for dashboards or analyst workflows, not as an open runtime context layer for MCP-native agents | Wren is designed to expose semantic context directly to agent workflows through MCP and APIs |
-| Text-to-SQL or SQL agent tooling | NL-to-SQL assistants, generic SQL copilots, LLM agents with database tools | Turning questions into SQL quickly when schema is simple or well-known | Accuracy drops when business definitions, joins, governance, or ambiguity matter | Wren reduces guessing by grounding generation in explicit semantic definitions |
-| Knowledge base or documentation retrieval | Wiki search, docs search, RAG over data docs | Retrieving written explanations, runbooks, definitions, and usage notes | Retrieved docs may be stale, inconsistent, or not executable at query time | Wren operationalizes business context so it can be used consistently during planning and execution |
+- those tools usually help an agent find data or generate SQL
+- Wren helps an agent understand business meaning and produce the right query through a semantic layer
 
-Another way to frame it:
-
-| Dimension | Many adjacent tools | Wren Engine |
+| Tool type | What it gives the agent | What Wren Engine adds |
 | --- | --- | --- |
-| Primary role | Discovery, retrieval, documentation, or raw access | Semantic modeling, query planning, and governed execution context |
-| What the agent mainly sees | Tables, columns, lineage, tags, owners, descriptions, docs, or SQL endpoints | Models, metrics, relationships, business definitions, and access rules |
-| Main question it answers | "What data exists, and how can I inspect or query it?" | "What business concept or trusted metric should I use to answer this question correctly?" |
-| SQL generation | Often left to the agent or a generic LLM layer | Built around translating intent through a semantic layer into correct queries |
-| Join logic | Agent often has to infer joins from schema, lineage, or examples | Relationships are modeled explicitly so joins are not guessed ad hoc |
-| Metric consistency | Definitions may exist in docs or dashboards, but enforcement is indirect | Metrics are defined in the semantic model and reused consistently |
-| Governance at query time | Often visible as metadata or policy hints | Designed to carry governed business context into runtime query planning |
-| Runtime role in an agent workflow | Helps the agent find, read, or access candidate data assets | Serves as the context and execution layer the agent uses to answer questions |
+| Data catalog services | Tables, columns, lineage, owners, descriptions | Business models, metrics, relationships, and governed query planning |
+| Raw database or schema access | Direct access to schemas and SQL execution | A business layer above raw tables so the agent does not have to guess intent |
+| BI or semantic tools | Curated metrics and entities for analytics workflows | An open context layer designed for MCP and agent workflows |
+| Text-to-SQL agents | Fast SQL generation from natural language | Better accuracy by grounding generation in explicit business definitions |
 
-In practice, many teams may want multiple layers working together:
+Many teams will want both:
 
-- a catalog service to inventory and govern the data estate
-- documentation and lineage tools to help humans understand the environment
-- Wren Engine to turn that estate into a semantic, agent-ready context layer
+- a catalog to inventory and document the data estate
+- Wren to turn that data into agent-ready context
 
-If you only give an agent metadata, docs, or raw database access, it may still need to guess which joins, filters, and metric definitions are actually correct. Wren exists to reduce that gap between discovery and trustworthy execution.
+Why that matters:
+
+- more accurate answers because joins and metrics are defined instead of guessed
+- more consistent answers because every agent uses the same business definitions
+- safer data access because governance can be carried into query planning
+- less prompt engineering because the context lives in the engine, not in the prompt
+
+Without Wren, an agent may know where the data is but still not know how to answer the question correctly.
 
 ## Built For Agent Builders
 
@@ -230,9 +225,11 @@ See the connector API docs in the project documentation for the latest connectio
 
 ### Use Wren through MCP
 
-If you want to use Wren Engine from an AI agent or MCP-capable IDE, start here:
+If you want to use Wren Engine from an Claude Code or MCP-capable IDE, start here:
 
-- [MCP Server README](./mcp-server/README.md)
+- [Quick start: Chat with jaffle_shop using Wren Engine + Claude Code](https://docs.getwren.ai/oss/engine/get_started/quickstart)
+- [Quick start with Claude Desktop](https://docs.getwren.ai/oss/engine/get_started/quickstart_claude)
+- [Understanding Wren AI project structure](https://docs.getwren.ai/oss/engine/get_started/structure)
 
 The MCP server includes:
 
@@ -243,7 +240,6 @@ The MCP server includes:
 
 ### Learn the concepts
 
-- [Quick start with Wren Engine](https://docs.getwren.ai/oss/engine/get_started/quickstart)
 - [What is context?](https://docs.getwren.ai/oss/engine/concept/what_is_context)
 - [What is Modeling Definition Language (MDL)?](https://docs.getwren.ai/oss/engine/concept/what_is_mdl)
 - [Benefits of Wren Engine with LLMs](https://docs.getwren.ai/oss/engine/concept/benefits_llm)
