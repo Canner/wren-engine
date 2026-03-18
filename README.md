@@ -98,7 +98,7 @@ People often compare Wren Engine to catalog services like DataHub, raw database 
 The simple difference is:
 
 - those tools usually help an agent find data or generate SQL
-- Wren helps an agent understand business meaning and produce the right query through a semantic engine
+- Wren Engine helps an agent understand business meaning and produce the right query through a semantic engine
 
 | Tool type | What it gives the agent | What Wren Engine adds |
 | --- | --- | --- |
@@ -110,7 +110,7 @@ The simple difference is:
 Many teams will want both:
 
 - a catalog to inventory and document the data estate
-- Wren to turn that data into agent-ready context
+- Wren Engine to turn that data into agent-ready context
 
 Why that matters:
 
@@ -221,7 +221,7 @@ See the connector API docs in the project documentation for the latest connectio
 
 ## Get Started
 
-### Use Wren through MCP
+### Use Wren Engine through MCP
 
 If you want to use Wren Engine from an Claude Code or MCP-capable IDE, start here:
 
