@@ -38,7 +38,8 @@ DATASOURCE_FIELDS: dict[str, list[dict]] = {
         {"name": "password", "label": "Password", "type": "password", "placeholder": ""},
     ],
     "DUCKDB": [
-        {"name": "path", "label": "File Path", "type": "text", "placeholder": "/path/to/db.duckdb"},
+        {"name": "url", "label": "Directory Path", "type": "text", "placeholder": "/data", "hint": "Path to a directory containing .duckdb files, not the .duckdb file itself."},
+        {"name": "format", "label": "Format", "type": "hidden", "value": "duckdb"},
     ],
     "BIGQUERY": [
         {"name": "project", "label": "Project ID", "type": "text", "placeholder": "my-gcp-project"},

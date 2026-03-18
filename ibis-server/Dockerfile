@@ -46,11 +46,8 @@ RUN apt-get update && apt-get -y install libpq-dev && rm -rf /var/lib/apt/lists/
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    # pip
-    PIP_NO_CACHE_DIR=off \
     PIP_DISABLE_PIP_VERSION_CHECK=on \
     PIP_DEFAULT_TIMEOUT=100 \
-    # poetry
     POETRY_NO_INTERACTION=1 \
     POETRY_VIRTUALENVS_IN_PROJECT=1 \
     POETRY_VIRTUALENVS_CREATE=1
@@ -61,7 +58,9 @@ WORKDIR /app
 
 # Copy dependency files first so this layer is cached when only source changes
 COPY pyproject.toml poetry.lock ./
-RUN poetry install --without dev --with jupyter --no-root
+RUN --mount=type=cache,target=/root/.cache/pypoetry/cache \
+    --mount=type=cache,target=/root/.cache/pypoetry/artifacts \
+    poetry install --without dev --with jupyter --no-root
 
 # Install wheel (either from host or from wheel-docker stage)
 COPY --from=wheel-final /wheel/ /tmp/wheels/
