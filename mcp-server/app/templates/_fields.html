@@ -1,6 +1,9 @@
 {% set fields = datasource_fields.get(datasource, []) %}
 {% if fields %}
   {% for field in fields %}
+  {% if field.type == 'hidden' %}
+    <input type="hidden" name="{{ field.name }}" value="{{ field.get('value', '') }}">
+  {% else %}
   <label>
     {{ field.label }}
     <input
@@ -9,10 +12,14 @@
       placeholder="{{ field.placeholder }}"
       {% if field.type != 'password' %}value="{{ connection_info.get(field.name, '') }}"{% endif %}
     >
+    {% if field.get('hint') %}
+    <small style="color:var(--pico-muted-color)">{{ field.hint }}</small>
+    {% endif %}
     {% if is_docker and field.name == 'host' %}
     <small style="color:var(--pico-muted-color)">Running in Docker? Use <code>host.docker.internal</code> instead of <code>localhost</code>.</small>
     {% endif %}
   </label>
+  {% endif %}
   {% endfor %}
 {% elif datasource %}
   <label>
