@@ -200,6 +200,27 @@ Why that matters:
 
 Without Wren, an agent may know where the data is but still not know how to answer the question correctly.
 
+### Developer entry points
+
+- [`wren-core/README.md`](./wren-core/README.md)
+- [`wren-core-py/README.md`](./wren-core-py/README.md)
+- [`ibis-server/README.md`](./ibis-server/README.md)
+- [`mcp-server/README.md`](./mcp-server/README.md)
+
+## Repository Map
+
+This repository contains the core engine modules:
+
+| Module | What it does |
+| --- | --- |
+| [`wren-core`](./wren-core) | Rust context engine powered by Apache DataFusion for MDL analysis, planning, and optimization |
+| [`wren-core-base`](./wren-core-base) | Shared manifest and modeling types |
+| [`wren-core-py`](./wren-core-py) | PyO3 bindings that expose the engine to Python |
+| [`ibis-server`](./ibis-server/) | FastAPI server for query execution, validation, metadata, and connectors |
+| [`mcp-server`](./mcp-server/) | MCP server for AI agents and MCP-compatible clients |
+
+Supporting modules include `wren-core-legacy`, `example`, `mock-web-server`, and benchmarking utilities.
+
 ## Local Development
 
 Common workflows:
