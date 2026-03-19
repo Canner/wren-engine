@@ -42,7 +42,7 @@ Enterprise data is not just rows in a warehouse. It is definitions, metrics, rel
 This is not just our thesis. In [Your Data Agents Need Context](https://a16z.com/your-data-agents-need-context/), a16z argues that data agents break down when they only have connectivity and SQL generation, but lack business definitions, source-of-truth context, and the operational knowledge that explains how a company actually runs.
 
 <p align="center">
-  <img width="920" height="638" alt="without_wren_engine" src="https://github.com/user-attachments/assets/3295dde5-ce41-4e56-a8ad-daff6a0c3459" />
+  <img width="888" height="678" alt="before Wren Engine Challenge" src="https://github.com/user-attachments/assets/62e2cbe6-ee28-4417-ba69-805de35d3187" />
 </p>
 
 Wren Engine exists to solve that gap.
