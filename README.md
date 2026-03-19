@@ -200,13 +200,6 @@ Why that matters:
 
 Without Wren, an agent may know where the data is but still not know how to answer the question correctly.
 
-### Developer entry points
-
-- [`wren-core/README.md`](./wren-core/README.md)
-- [`wren-core-py/README.md`](./wren-core-py/README.md)
-- [`ibis-server/README.md`](./ibis-server/README.md)
-- [`mcp-server/README.md`](./mcp-server/README.md)
-
 ## Repository Map
 
 This repository contains the core engine modules:
@@ -220,6 +213,13 @@ This repository contains the core engine modules:
 | [`mcp-server`](./mcp-server/) | MCP server for AI agents and MCP-compatible clients |
 
 Supporting modules include `wren-core-legacy`, `example`, `mock-web-server`, and benchmarking utilities.
+
+### Developer entry points
+
+- [`wren-core/README.md`](./wren-core/README.md)
+- [`wren-core-py/README.md`](./wren-core-py/README.md)
+- [`ibis-server/README.md`](./ibis-server/README.md)
+- [`mcp-server/README.md`](./mcp-server/README.md)
 
 ## Local Development
 
