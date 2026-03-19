@@ -126,7 +126,7 @@ Without Wren, an agent may know where the data is but still not know how to answ
 Wren Engine is especially useful for the open source community building agent-native workflows in tools like:
 
 - OpenClaw
-- Cloud Code
+- Claude Code
 - VS Code
 - Claude Desktop
 - Cline
@@ -164,7 +164,7 @@ We want that context layer to be inspectable, composable, and community-owned, n
 
 ```text
 User / Agent
-  -> MCP Client or App (OpenClaw, Cloud Code, VS Code, Claude Desktop, Cline, Cursor, etc.)
+  -> MCP Client or App (OpenClaw, Claude Code, VS Code, Claude Desktop, Cline, Cursor, etc.)
   -> Wren MCP Server or HTTP API
   -> Wren Engine semantic engine
   -> Query planning and optimization
