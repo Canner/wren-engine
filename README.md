@@ -126,7 +126,7 @@ Without Wren, an agent may know where the data is but still not know how to answ
 Wren Engine is especially useful for the open source community building agent-native workflows in tools like:
 
 - OpenClaw
-- Cloud Code
+- Claude Code
 - VS Code
 - Claude Desktop
 - Cline
