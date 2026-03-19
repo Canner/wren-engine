@@ -4,7 +4,7 @@ FastAPI web server powering Wren Engine. Receives SQL queries, processes them th
 
 ## Architecture
 
-```
+```text
 REST client (MCP server / Wren Studio)
   → POST /v3/connector/{dataSource}/query (SQL + MDL base64 + connectionInfo)
   → MDL parsing & validation
@@ -63,6 +63,7 @@ export PROFILING_STORE_PATH=file:///tmp/profiling
 ```
 
 **Runtime:**
+
 | Variable | Default | Description |
 |---|---|---|
 | `WREN_ENGINE_ENDPOINT` | — | Java engine fallback URL |
@@ -76,7 +77,7 @@ export PROFILING_STORE_PATH=file:///tmp/profiling
 
 Tests use testcontainers (Docker required). Each connector has its own marker:
 
-```
+```text
 postgres  mysql  mssql  bigquery  snowflake  clickhouse  trino  oracle
 athena  athena_spark  databricks  spark  local_file  s3_file  gcs_file
 minio_file  functions  profile  cache  unit  enterprise  beta

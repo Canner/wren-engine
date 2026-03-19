@@ -4,7 +4,7 @@ MCP (Model Context Protocol) server exposing Wren Engine to AI agents (Claude, C
 
 ## Architecture
 
-```
+```text
 AI Agent (Claude/Cline/Cursor)
   → MCP protocol (stdio or streamable-http)
   → app/wren.py (FastMCP server, 25+ tools)

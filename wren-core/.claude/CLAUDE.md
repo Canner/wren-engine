@@ -24,7 +24,7 @@ Cargo workspace with four crates:
 
 ```bash
 cargo check --all-targets                               # Compile check
-cargo test --lib --tests --bins                         # Run tests (set RUST_MIN_STACK=8388608)
+RUST_MIN_STACK=8388608 cargo test --lib --tests --bins  # Run tests
 cargo fmt --all                                         # Format
 cargo clippy --all-targets --all-features -- -D warnings  # Lint
 taplo fmt                                               # Format Cargo.toml files
