@@ -126,8 +126,10 @@ Current open source support includes connectors such as:
 
 - Amazon S3
 - Apache Spark
+- Apache Doris
 - Athena
 - BigQuery
+- ClickHouse
 - Databricks
 - DuckDB
 - Google Cloud Storage
