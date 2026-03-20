@@ -4,27 +4,19 @@ This directory contains reusable AI agent skills for working with Wren Engine. S
 
 ## Installation
 
-### Option 1 — install script (recommended)
+### Option 1 — npx skills (recommended)
 
-**From a local clone:**
+Installs into Claude Code, Cursor, Windsurf, and 30+ other agent tools:
+```bash
+npx skills add Canner/wren-engine --skill '*' --agent claude-code
+```
+
+### Option 2 — install script (from a local clone)
+
 ```bash
 bash skills/install.sh                        # all skills
 bash skills/install.sh generate-mdl wren-sql  # specific skills
 bash skills/install.sh --force generate-mdl   # overwrite existing
-```
-
-**Remote (one-liner, after pushing to GitHub):**
-```bash
-curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash
-# specific skills:
-curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- generate-mdl
-```
-
-### Option 2 — npx openskills (cross-agent)
-
-Installs into Claude Code, Cursor, Windsurf, and 30+ other agent tools:
-```bash
-npx openskills add Canner/wren-engine
 ```
 
 ### Option 3 — manual copy
@@ -46,10 +38,7 @@ Once installed, invoke a skill by name in your conversation:
 /wren-mcp-setup
 ```
 
-> **Tip:** Installing `wren-usage` via `install.sh` automatically installs all its dependencies.
-> ```bash
-> bash skills/install.sh wren-usage
-> ```
+> **Tip:** Use `--skill '*'` to install all skills at once, or specify individual skill names.
 
 ## Available Skills
 
@@ -73,10 +62,10 @@ To update manually at any time:
 
 ```bash
 # Update all skills
-curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force
+npx skills add Canner/wren-engine --skill '*' --agent claude-code
 
 # Update a specific skill
-curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force generate-mdl
+npx skills add Canner/wren-engine --skill generate-mdl --agent claude-code
 ```
 
 ## Releasing a New Skill Version

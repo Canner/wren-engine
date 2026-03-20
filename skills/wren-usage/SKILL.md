@@ -12,13 +12,13 @@ metadata:
 ## Version check
 
 Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills/versions.json`.
-Compare the `wren-usage` key with this skill's version (`1.0`).
+Compare the `wren-usage` key with this skill's version (from the frontmatter above).
 If the remote version is newer, notify the user before proceeding:
 
-> A newer version of the **wren-usage** skill is available (remote: X.Y, installed: 1.0).
+> A newer version of the **wren-usage** skill is available.
 > Update with:
-> ```bash
-> curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force wren-usage
+> ```
+> npx skills add Canner/wren-engine --skill wren-usage --agent claude-code
 > ```
 
 Then continue with the workflow below regardless of update status.
@@ -33,9 +33,8 @@ This skill is your day-to-day reference for working with Wren Engine. It delegat
 
 Check whether the required skills are already installed in `~/.claude/skills/`. If any are missing, tell the user to run:
 
-```bash
-# Install wren-usage and all its dependencies in one command:
-curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- wren-usage
+```
+npx skills add Canner/wren-engine --skill '*' --agent claude-code
 ```
 
 This installs `wren-usage`, `wren-connection-info`, `generate-mdl`, `wren-project`, `wren-sql`, and `wren-mcp-setup` into `~/.claude/skills/`.
