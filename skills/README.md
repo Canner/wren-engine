@@ -6,10 +6,12 @@ This directory contains reusable AI agent skills for working with Wren Engine. S
 
 ### Option 1 — npx skills (recommended)
 
-Installs into Claude Code, Cursor, Windsurf, and 30+ other agent tools:
+Install all skills for Claude Code:
 ```bash
 npx skills add Canner/wren-engine --skill '*' --agent claude-code
 ```
+
+`npx skills` also supports Cursor, Windsurf, and 30+ other agent tools — replace `--agent claude-code` with your agent of choice.
 
 ### Option 2 — install script (from a local clone)
 
@@ -38,7 +40,7 @@ Once installed, invoke a skill by name in your conversation:
 /wren-mcp-setup
 ```
 
-> **Tip:** Use `--skill '*'` to install all skills at once, or specify individual skill names.
+> **Tip:** Use `--skill '*'` to install all skills at once, or specify individual skills (e.g., `--skill generate-mdl --skill wren-sql`).
 
 ## Available Skills
 
