@@ -25,6 +25,12 @@ Wren Engine provides Claude Code **skills** — reusable AI agent workflows for 
 Install all Wren skills with one command:
 
 ```bash
+npx skills add Canner/wren-engine --skill '*' --agent claude-code
+```
+
+Or use the install script directly:
+
+```bash
 curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash
 ```
 
@@ -286,12 +292,16 @@ For more detailed troubleshooting, invoke `/wren-mcp-setup` in Claude Code.
 Each skill checks for updates automatically and notifies you when a newer version is available. To force-update all skills:
 
 ```bash
+npx skills add Canner/wren-engine --skill '*' --agent claude-code
+# or:
 curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force
 ```
 
 To update a single skill:
 
 ```bash
+npx skills add Canner/wren-engine --skill generate-mdl --agent claude-code
+# or:
 curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force generate-mdl
 ```
 

@@ -58,6 +58,8 @@ The database contains:
 Wren Engine provides Claude Code **skills** — AI agent workflows for connecting databases, generating MDL, and managing the MCP server.
 
 ```bash
+npx skills add Canner/wren-engine --skill '*' --agent claude-code
+# or:
 curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash
 ```
 

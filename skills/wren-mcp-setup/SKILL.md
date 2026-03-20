@@ -13,13 +13,13 @@ metadata:
 ## Version check
 
 Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills/versions.json`.
-Compare the `wren-mcp-setup` key with this skill's version (`1.3`).
+Compare the `wren-mcp-setup` key with this skill's version (from the frontmatter above).
 If the remote version is newer, notify the user before proceeding:
 
-> A newer version of the **wren-mcp-setup** skill is available (remote: X.Y, installed: 1.3).
+> A newer version of the **wren-mcp-setup** skill is available.
 > Update with:
-> ```bash
-> curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force wren-mcp-setup
+> ```
+> npx skills add Canner/wren-engine --skill wren-mcp-setup --agent claude-code
 > ```
 
 Then continue with the workflow below regardless of update status.
