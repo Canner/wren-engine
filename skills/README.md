@@ -63,10 +63,10 @@ Each skill automatically checks for updates when invoked. If a newer version is 
 To update manually at any time:
 
 ```bash
-# Update all skills
+# Re-add to reinstall the latest version
 npx skills add Canner/wren-engine --skill '*' --agent claude-code
 
-# Update a specific skill
+# Or reinstall a specific skill
 npx skills add Canner/wren-engine --skill generate-mdl --agent claude-code
 ```
 
