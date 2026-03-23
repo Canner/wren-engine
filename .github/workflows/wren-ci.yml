@@ -24,17 +24,12 @@ jobs:
         working-directory: wren
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
       - name: Install uv
         uses: astral-sh/setup-uv@v4
-      - name: Install dependencies
-        run: uv sync --no-install-project
       - name: Lint
         run: |
-          uv run ruff format --check src/
-          uv run ruff check src/
+          uvx ruff format --check src/
+          uvx ruff check src/
 
   test-unit:
     name: unit tests
