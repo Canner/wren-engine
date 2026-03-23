@@ -1,0 +1,74 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "wren"
+dynamic = ["version"]
+description = "Wren Engine CLI and Python SDK — semantic SQL layer for 20+ data sources"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+keywords = ["wren", "sql", "semantic", "mdl", "datafusion"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "wren-core-py>=0.1",
+    "ibis-framework>=10",
+    "duckdb>=1.0",
+    "sqlglot>=27",
+    "typer>=0.12",
+    "pydantic>=2",
+    "pyarrow>=14",
+    "pyarrow-hotfix>=0.6",
+    "loguru>=0.7",
+    "opendal>=0.45",
+    "pandas>=2",
+    "boto3>=1.26",
+]
+
+[project.optional-dependencies]
+postgres    = ["psycopg>=3", "ibis-framework[postgres]"]
+mysql       = ["mysqlclient>=2.2", "ibis-framework[mysql]"]
+bigquery    = ["ibis-framework[bigquery]", "google-auth"]
+snowflake   = ["ibis-framework[snowflake]"]
+clickhouse  = ["ibis-framework[clickhouse]"]
+trino       = ["ibis-framework[trino]", "trino>=0.321"]
+mssql       = ["ibis-framework[mssql]"]
+databricks  = ["databricks-sql-connector", "databricks-sdk"]
+redshift    = ["redshift_connector"]
+spark       = ["pyspark>=3.5"]
+athena      = ["ibis-framework[athena]"]
+oracle      = ["ibis-framework[oracle]", "oracledb"]
+all         = ["wren[postgres,mysql,bigquery,snowflake,clickhouse,trino,mssql,databricks,redshift,athena,oracle]"]
+dev         = ["pytest>=8", "ruff>=0.4", "orjson>=3", "testcontainers[postgres]>=4"]
+
+[project.scripts]
+wren = "wren.cli:app"
+
+[project.urls]
+Homepage = "https://getwren.ai"
+Repository = "https://github.com/Canner/wren-engine"
+Issues = "https://github.com/Canner/wren-engine/issues"
+
+[tool.hatch.version]
+path = "src/wren/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/wren"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "PLC"]
+ignore = [
+  "E501", # line-too-long, enforced by ruff format
+]
