@@ -68,6 +68,7 @@ Once installed, invoke a skill by name in your conversation:
 | [wren-sql](wren-sql/SKILL.md) | Write and correct SQL queries for Wren Engine — types, date/time, BigQuery dialect, error diagnosis |
 | [wren-mcp-setup](wren-mcp-setup/SKILL.md) | Set up Wren Engine MCP via Docker, register with Claude Code or other MCP clients, and start querying |
 | [wren-connection-info](wren-connection-info/SKILL.md) | Set up data source credentials — produces `connectionFilePath` or inline dict |
+| [wren-http-api](wren-http-api/SKILL.md) | Interact with Wren MCP via plain HTTP JSON-RPC — no MCP SDK required (for OpenClaw, custom clients, scripts) |
 
 See [SKILLS.md](SKILLS.md) for full details on each skill.
 

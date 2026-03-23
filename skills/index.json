@@ -99,6 +99,20 @@
       "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-quickstart"
     },
     {
+      "name": "wren-http-api",
+      "version": "1.0",
+      "description": "Interact with Wren Engine MCP server via plain HTTP JSON-RPC requests — no MCP client SDK required.",
+      "tags": [
+        "wren",
+        "http",
+        "json-rpc",
+        "api",
+        "openclaw",
+        "rest"
+      ],
+      "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-http-api"
+    },
+    {
       "name": "wren-usage",
       "version": "1.1",
       "description": "Daily usage guide for Wren Engine — connect, query, manage MDL, and operate the MCP server via AI agents.",

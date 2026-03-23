@@ -199,6 +199,29 @@ Sets up Wren Engine MCP server via Docker, registers it with an AI agent (Claude
 
 ---
 
+## wren-http-api
+
+**File:** [wren-http-api/SKILL.md](wren-http-api/SKILL.md)
+
+Interact with Wren Engine MCP server via plain HTTP JSON-RPC requests — no MCP client SDK required. Covers session initialization, tool discovery, and calling all 20+ Wren tools using standard HTTP POST with JSON-RPC 2.0 payloads.
+
+### When to use
+
+- The client cannot or prefers not to use the MCP protocol directly (e.g. OpenClaw)
+- Building a custom HTTP integration with Wren Engine
+- Calling Wren tools from shell scripts, CI pipelines, or non-MCP environments
+- Debugging MCP tool calls with curl
+
+### Workflow summary
+
+1. Initialize a JSON-RPC session via `POST /mcp` with `initialize` method
+2. Save the `Mcp-Session-Id` header from the response
+3. Complete the handshake with `notifications/initialized`
+4. Call any Wren tool via `tools/call` method with the session header
+5. Parse SSE `data:` lines from responses
+
+---
+
 ## Installing a skill
 
 ```bash
