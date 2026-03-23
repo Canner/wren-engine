@@ -58,20 +58,24 @@ class DuckDBConnector(ConnectorABC):
         self._IOException = IOException
         self.connection = duckdb.connect()
 
-        if isinstance(connection_info, S3FileConnectionInfo):
-            _init_duckdb_s3(self.connection, connection_info)
-        if isinstance(connection_info, MinioFileConnectionInfo):
-            _init_duckdb_minio(self.connection, connection_info)
-        if isinstance(connection_info, GcsFileConnectionInfo):
-            _init_duckdb_gcs(self.connection, connection_info)
+        try:
+            if isinstance(connection_info, S3FileConnectionInfo):
+                _init_duckdb_s3(self.connection, connection_info)
+            if isinstance(connection_info, MinioFileConnectionInfo):
+                _init_duckdb_minio(self.connection, connection_info)
+            if isinstance(connection_info, GcsFileConnectionInfo):
+                _init_duckdb_gcs(self.connection, connection_info)
 
-        if connection_info.format == "duckdb":
-            self._attach_database(connection_info)
+            if connection_info.format == "duckdb":
+                self._attach_database(connection_info)
+        except Exception:
+            self.connection.close()
+            raise
 
     def query(self, sql: str, limit: int | None = None) -> pa.Table:
-        if limit is None:
-            return self.connection.execute(sql).fetch_arrow_table()
-        return self.connection.execute(sql).fetch_arrow_table().slice(length=limit)
+        if limit is not None:
+            sql = f"SELECT * FROM ({sql}) AS _q LIMIT {int(limit)}"
+        return self.connection.execute(sql).fetch_arrow_table()
 
     def dry_run(self, sql: str) -> None:
         self.connection.execute(sql)

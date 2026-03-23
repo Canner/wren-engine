@@ -124,8 +124,8 @@ class WrenQueryTestSuite:
     manifest: ClassVar[dict]
 
     # Overridable expectations — connectors may differ on counts or dtypes
-    order_count: ClassVar[int] = 15000      # TPCH sf=0.01 → 1,500,000 * 0.01
-    customer_count: ClassVar[int] = 1500    # TPCH sf=0.01 → 150,000 * 0.01
+    order_count: ClassVar[int] = 15000      # TPCH sf=0.01
+    customer_count: ClassVar[int] = 1500    # TPCH sf=0.01
     order_id_dtype: ClassVar[str] = "int32" # Postgres INTEGER → Arrow int32
 
     # ------------------------------------------------------------------

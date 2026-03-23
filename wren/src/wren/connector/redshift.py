@@ -44,13 +44,13 @@ class RedshiftConnector(ConnectorABC):
         self.connection.autocommit = True
 
     def query(self, sql: str, limit: int | None = None) -> pa.Table:
+        if limit is not None:
+            sql = f"SELECT * FROM ({sql}) AS _q LIMIT {int(limit)}"
         with closing(self.connection.cursor()) as cursor:
             cursor.execute(sql)
             cols = [desc[0] for desc in cursor.description]
             rows = cursor.fetchall()
             df = pd.DataFrame(rows, columns=cols)
-            if limit is not None:
-                df = df.head(limit)
             return pa.Table.from_pandas(df)
 
     def dry_run(self, sql: str) -> None:

@@ -172,6 +172,8 @@ def transpile(
     except Exception as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(1)
+    finally:
+        engine.close()
 
 
 @app.command()
@@ -199,12 +201,11 @@ def validate(
 
 def _print_result(table, output: str) -> None:
     if output == "json":
-        # Use pandas for simple JSON output
         try:
             df = table.to_pandas()
             typer.echo(df.to_json(orient="records", lines=True))
         except Exception:
-            typer.echo(table.to_pydict())
+            typer.echo(json.dumps(table.to_pydict()))
     elif output == "csv":
         try:
             df = table.to_pandas()

@@ -14,6 +14,7 @@ from ibis import BaseBackend
 
 from wren.model import (
     AthenaConnectionInfo,
+    BaseConnectionInfo,
     BigQueryDatasetConnectionInfo,
     BigQueryProjectConnectionInfo,
     CannerConnectionInfo,
@@ -76,7 +77,7 @@ class DataSource(StrEnum):
         headers: dict[str, str] | None = None,
     ) -> ConnectionInfo:
         headers = headers or {}
-        if isinstance(data, ConnectionInfo):
+        if isinstance(data, BaseConnectionInfo):
             info = data
         else:
             info = self._build_connection_info(data)
