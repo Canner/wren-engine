@@ -1,7 +1,7 @@
 {
   "name": "wren",
   "description": "AI agent skills for Wren Engine — semantic SQL layer and MCP server for 20+ data sources.",
-  "version": "1.5.0",
+  "version": "1.0.0",
   "author": {
     "name": "Canner",
     "url": "https://wren.ai"
