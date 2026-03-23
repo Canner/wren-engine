@@ -13,13 +13,17 @@ from wren.model import (
 from wren.model.error import ErrorCode, WrenError
 
 
+def _escape_sql(value: str) -> str:
+    return value.replace("'", "''")
+
+
 def _init_duckdb_s3(connection, info: S3FileConnectionInfo):
     connection.execute(f"""
     CREATE SECRET wren_s3 (
         TYPE S3,
-        KEY_ID '{info.access_key.get_secret_value()}',
-        SECRET '{info.secret_key.get_secret_value()}',
-        REGION '{info.region.get_secret_value()}'
+        KEY_ID '{_escape_sql(info.access_key.get_secret_value())}',
+        SECRET '{_escape_sql(info.secret_key.get_secret_value())}',
+        REGION '{_escape_sql(info.region.get_secret_value())}'
     )""")
 
 
@@ -27,8 +31,8 @@ def _init_duckdb_minio(connection, info: MinioFileConnectionInfo):
     connection.execute(f"""
     CREATE SECRET wren_minio (
         TYPE S3,
-        KEY_ID '{info.access_key.get_secret_value()}',
-        SECRET '{info.secret_key.get_secret_value()}',
+        KEY_ID '{_escape_sql(info.access_key.get_secret_value())}',
+        SECRET '{_escape_sql(info.secret_key.get_secret_value())}',
         REGION 'ap-northeast-1'
     )""")
     connection.execute("SET s3_endpoint=?", [info.endpoint.get_secret_value()])
@@ -40,8 +44,8 @@ def _init_duckdb_gcs(connection, info: GcsFileConnectionInfo):
     connection.execute(f"""
     CREATE SECRET wren_gcs (
         TYPE GCS,
-        KEY_ID '{info.key_id.get_secret_value()}',
-        SECRET '{info.secret_key.get_secret_value()}'
+        KEY_ID '{_escape_sql(info.key_id.get_secret_value())}',
+        SECRET '{_escape_sql(info.secret_key.get_secret_value())}'
     )""")
 
 
@@ -79,8 +83,10 @@ class DuckDBConnector(ConnectorABC):
 
         for file in db_files:
             try:
+                escaped_file = file.replace("'", "''")
+                alias = os.path.splitext(os.path.basename(file))[0].replace('"', '""')
                 self.connection.execute(
-                    f"ATTACH DATABASE '{file}' AS \"{os.path.splitext(os.path.basename(file))[0]}\" (READ_ONLY);"
+                    f"ATTACH DATABASE '{escaped_file}' AS \"{alias}\" (READ_ONLY);"
                 )
             except (self._IOException, self._HTTPException) as e:
                 raise WrenError(

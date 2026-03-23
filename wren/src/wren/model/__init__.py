@@ -126,7 +126,7 @@ class MySqlConnectionInfo(BaseConnectionInfo):
 
 class DorisConnectionInfo(BaseConnectionInfo):
     host: SecretStr = Field(examples=["localhost"])
-    port: SecretStr = Field(examples=["9030"])
+    port: SecretPort = Field(examples=["9030"])
     database: SecretStr = Field(examples=["default"])
     user: SecretStr = Field(examples=["root"])
     password: SecretStr | None = Field(default=None)
@@ -256,7 +256,7 @@ class GcsFileConnectionInfo(BaseConnectionInfo):
     bucket: SecretStr = Field(examples=["my-bucket"])
     key_id: SecretStr = Field(examples=["my-key-id"])
     secret_key: SecretStr = Field(examples=["my-secret-key"])
-    credentials: SecretStr = Field(default=None, examples=["eyJ..."])
+    credentials: SecretStr | None = Field(default=None, examples=["eyJ..."])
 
 
 class ConnectionUrl(BaseConnectionInfo):
@@ -281,6 +281,7 @@ ConnectionInfo = (
     | SnowflakeConnectionInfo
     | SparkConnectionInfo
     | DatabricksTokenConnectionInfo
+    | DatabricksServicePrincipalConnectionInfo
     | TrinoConnectionInfo
     | LocalFileConnectionInfo
     | S3FileConnectionInfo

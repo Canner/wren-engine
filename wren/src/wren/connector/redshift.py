@@ -30,7 +30,7 @@ class RedshiftConnector(ConnectorABC):
         elif isinstance(connection_info, RedshiftConnectionInfo):
             self.connection = redshift_connector.connect(
                 host=connection_info.host.get_secret_value(),
-                port=connection_info.port.get_secret_value(),
+                port=int(connection_info.port.get_secret_value()),
                 database=connection_info.database.get_secret_value(),
                 user=connection_info.user.get_secret_value(),
                 password=connection_info.password.get_secret_value(),

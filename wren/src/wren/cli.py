@@ -198,12 +198,7 @@ def validate(
 
 
 def _print_result(table, output: str) -> None:
-
     if output == "json":
-        # Simple JSON lines
-        for batch in table.to_batches():
-            for row in batch.to_pydict():
-                pass
         # Use pandas for simple JSON output
         try:
             df = table.to_pandas()

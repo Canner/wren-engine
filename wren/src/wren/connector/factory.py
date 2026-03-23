@@ -25,6 +25,16 @@ _REGISTRY: dict[DataSource, str] = {
     DataSource.athena: "wren.connector.ibis",
 }
 
+# Map data sources to the correct pip extra when they share a connector module
+_INSTALL_EXTRA: dict[DataSource, str] = {
+    DataSource.doris: "mysql",
+    DataSource.canner: "postgres",
+    DataSource.local_file: "duckdb",
+    DataSource.s3_file: "duckdb",
+    DataSource.minio_file: "duckdb",
+    DataSource.gcs_file: "duckdb",
+}
+
 _NEEDS_DATA_SOURCE = {
     DataSource.mysql,
     DataSource.doris,
@@ -47,10 +57,11 @@ def get_connector(data_source: DataSource, connection_info):
     try:
         module = importlib.import_module(module_path)
     except ImportError as e:
+        extra = _INSTALL_EXTRA.get(data_source, data_source.value)
         raise WrenError(
             ErrorCode.NOT_IMPLEMENTED,
             f"Connector '{data_source.value}' requires additional dependencies: {e}. "
-            f"Install with: pip install wren[{data_source.value}]",
+            f"Install with: pip install wren[{extra}]",
         ) from e
 
     if data_source in _NEEDS_DATA_SOURCE:

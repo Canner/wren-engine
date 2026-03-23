@@ -74,14 +74,14 @@ class MSSqlConnector(IbisConnector):
 
             inner.set("limit", exp.Limit(expression=parsed.args["limit"].expression))
             return inner.sql(dialect="tsql")
-        except Exception as e:
-            return f"Error: {e!s}"
+        except Exception:
+            return sql_query
 
     def dry_run(self, sql: str) -> None:
         try:
             super().dry_run(sql)
         except AttributeError as e:
-            if e.args[0] == "'NoneType' object has no attribute 'lower'":
+            if "NoneType" in str(e) and "lower" in str(e):
                 error_message = self._describe_sql_for_error_message(sql)
                 raise WrenError(
                     error_code=ErrorCode.INVALID_SQL,
@@ -96,13 +96,16 @@ class MSSqlConnector(IbisConnector):
             ) from e
 
     def _describe_sql_for_error_message(self, sql: str) -> str:
-        tsql = sge.convert(sql).sql("mssql")
-        describe_sql = f"SELECT error_message FROM sys.dm_exec_describe_first_result_set({tsql}, NULL, 0)"
-        with closing(self.connection.raw_sql(describe_sql)) as cur:
-            rows = cur.fetchall()
-            if not rows:
-                return "Unknown reason"
-            return rows[0][0]
+        try:
+            tsql = sge.convert(sql).sql("mssql")
+            describe_sql = f"SELECT error_message FROM sys.dm_exec_describe_first_result_set({tsql}, NULL, 0)"
+            with closing(self.connection.raw_sql(describe_sql)) as cur:
+                rows = cur.fetchall()
+                if not rows:
+                    return "Unknown reason"
+                return rows[0][0]
+        except Exception:
+            return "Unknown reason"
 
 
 def create_connector(connection_info) -> MSSqlConnector:

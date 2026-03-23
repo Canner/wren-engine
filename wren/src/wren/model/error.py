@@ -63,6 +63,8 @@ class WrenError(Exception):
         self.metadata = metadata
         self.timestamp = datetime.now().isoformat()
         super().__init__(message)
+        if cause is not None:
+            self.__cause__ = cause
 
     def __str__(self) -> str:
         parts = [f"[{self.error_code.name}] {self.message}"]
