@@ -16,9 +16,23 @@
     "mcp",
     "semantic-layer",
     "data-source",
+    "docker",
+    "amazon-s3",
+    "apache-spark",
+    "apache-doris",
+    "athena",
     "bigquery",
+    "clickhouse",
+    "databricks",
+    "duckdb",
+    "google-cloud-storage",
+    "minio",
+    "mysql",
+    "oracle",
     "postgres",
+    "redshift",
+    "sql-server",
     "snowflake",
-    "docker"
+    "trino"
   ]
 }
