@@ -64,7 +64,7 @@ jobs:
           poetry run maturin build
       - name: Install dependencies
         run: |
-          uv lock --find-links ../wren-core-py/target/wheels/
+          uv lock --find-links ../wren-core-py/target/wheels/ --upgrade-package wren-core-py
           uv sync --extra dev --find-links ../wren-core-py/target/wheels/
       - name: Run unit tests
         run: uv run pytest tests/unit/ -v -m unit
@@ -102,7 +102,7 @@ jobs:
           poetry run maturin build
       - name: Install dependencies
         run: |
-          uv lock --find-links ../wren-core-py/target/wheels/
+          uv lock --find-links ../wren-core-py/target/wheels/ --upgrade-package wren-core-py
           uv sync --extra postgres --extra dev --find-links ../wren-core-py/target/wheels/
       - name: Run postgres tests
         run: uv run pytest tests/connectors/test_postgres.py -v -m postgres
