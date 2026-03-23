@@ -18,7 +18,8 @@
       "Bash(gh run:*)",
       "Bash(gh api:*)",
       "Bash(ls:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(uv sync:*)"
     ]
   }
 }
