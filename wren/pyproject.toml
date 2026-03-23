@@ -26,6 +26,7 @@ dependencies = [
     "typer>=0.12",
     "pydantic>=2",
     "pyarrow>=14",
+    "pyarrow-hotfix>=0.6",
     "loguru>=0.7",
     "opendal>=0.45",
     "pandas>=2",

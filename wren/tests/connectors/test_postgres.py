@@ -41,28 +41,29 @@ def _load_tpch(conn_str: str) -> None:
     duck.close()
 
     with psycopg.connect(conn_str) as pg:
-        pg.execute("""
-            CREATE TABLE orders (
-                o_orderkey   INTEGER PRIMARY KEY,
-                o_custkey    INTEGER NOT NULL,
-                o_orderstatus CHAR(1) NOT NULL,
-                o_totalprice  DOUBLE PRECISION NOT NULL,
-                o_orderdate   DATE NOT NULL
+        with pg.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE orders (
+                    o_orderkey   INTEGER PRIMARY KEY,
+                    o_custkey    INTEGER NOT NULL,
+                    o_orderstatus CHAR(1) NOT NULL,
+                    o_totalprice  DOUBLE PRECISION NOT NULL,
+                    o_orderdate   DATE NOT NULL
+                )
+            """)
+            cur.executemany(
+                "INSERT INTO orders VALUES (%s, %s, %s, %s, %s)", orders_rows
             )
-        """)
-        pg.executemany(
-            "INSERT INTO orders VALUES (%s, %s, %s, %s, %s)", orders_rows
-        )
 
-        pg.execute("""
-            CREATE TABLE customer (
-                c_custkey INTEGER PRIMARY KEY,
-                c_name    VARCHAR(25) NOT NULL
+            cur.execute("""
+                CREATE TABLE customer (
+                    c_custkey INTEGER PRIMARY KEY,
+                    c_name    VARCHAR(25) NOT NULL
+                )
+            """)
+            cur.executemany(
+                "INSERT INTO customer VALUES (%s, %s)", customer_rows
             )
-        """)
-        pg.executemany(
-            "INSERT INTO customer VALUES (%s, %s)", customer_rows
-        )
 
 
 class TestPostgres(WrenQueryTestSuite):

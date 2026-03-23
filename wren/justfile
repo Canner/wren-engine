@@ -21,7 +21,7 @@ install-all:
     just build-core
     uv sync --all-extras --find-links {{ core-wheel-dir }}
 
-install-extra extra:
+install-extra extra *flags:
     #!/usr/bin/env bash
     set -euo pipefail
     if [ "{{ extra }}" = "mysql" ]; then
@@ -30,7 +30,13 @@ install-extra extra:
             export PKG_CONFIG_PATH="$mysql_prefix/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
         fi
     fi
-    uv sync --extra {{ extra }} --find-links {{ core-wheel-dir }}
+    dev_flag=""
+    for flag in {{ flags }}; do
+        if [ "$flag" = "--dev" ]; then
+            dev_flag="--extra dev"
+        fi
+    done
+    uv sync --extra {{ extra }} $dev_flag --find-links {{ core-wheel-dir }}
 
 dev:
     uv run wren
@@ -60,3 +66,5 @@ format:
 
 build:
     uv build
+
+alias fmt := format
