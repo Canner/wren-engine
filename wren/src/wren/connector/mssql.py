@@ -21,6 +21,7 @@ class MSSqlConnector(IbisConnector):
         ibis_table = self.connection.sql(sql)
         if limit is not None:
             ibis_table = ibis_table.limit(limit)
+        ibis_table = self._handle_pyarrow_unsupported_type(ibis_table)
         return self._round_decimal_columns(ibis_table)
 
     def _round_decimal_columns(self, ibis_table: Table, scale: int = 9) -> pa.Table:

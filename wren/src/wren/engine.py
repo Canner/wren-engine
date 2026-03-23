@@ -74,8 +74,9 @@ class WrenEngine:
         self.data_source = data_source
         self.function_path = function_path
 
-        # Build typed ConnectionInfo if a raw dict was given
-        if isinstance(connection_info, dict):
+        # Build typed ConnectionInfo if a raw dict was given.
+        # An empty dict is allowed for transpile-only usage (no DB connection).
+        if isinstance(connection_info, dict) and connection_info:
             self.connection_info = data_source.get_connection_info(connection_info)
         else:
             self.connection_info = connection_info

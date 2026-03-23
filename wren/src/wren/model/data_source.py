@@ -84,7 +84,7 @@ class DataSource(StrEnum):
         match self:
             case DataSource.postgres:
                 kwargs = info.kwargs if info.kwargs else {}
-                if not hasattr(info, "connect_timeout"):
+                if "connect_timeout" not in kwargs:
                     kwargs["connect_timeout"] = 120
                 options = kwargs.get("options", "")
                 if "statement_timeout" not in options:

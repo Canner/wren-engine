@@ -78,7 +78,7 @@ class DuckDBConnector(ConnectorABC):
         return self.connection.execute(sql).fetch_arrow_table()
 
     def dry_run(self, sql: str) -> None:
-        self.connection.execute(sql)
+        self.connection.execute(f"EXPLAIN {sql}")
 
     def _attach_database(self, connection_info) -> None:
         db_files = self._list_duckdb_files(connection_info)
