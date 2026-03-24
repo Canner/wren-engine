@@ -9,7 +9,7 @@ This directory contains reusable AI agent skills for working with Wren Engine. S
 Add the marketplace and install:
 ```
 /plugin marketplace add Canner/wren-engine --path skills
-/plugin install wren@wren
+/plugin install wrenai@wren-engine
 ```
 
 Or test locally during development:
@@ -17,7 +17,7 @@ Or test locally during development:
 claude --plugin-dir ./skills
 ```
 
-Skills are namespaced as `/wren:<skill>` (e.g., `/wren:generate-mdl`, `/wren:wren-sql`).
+Skills are namespaced as `/wren-engine:<skill>` (e.g., `/wren-engine:generate-mdl`, `/wren-engine:wren-sql`).
 
 ### Option 2 — npx skills
 

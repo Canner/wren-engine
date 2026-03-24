@@ -10,7 +10,7 @@
   "plugins": [
     {
       "name": "wren-engine",
-      "source": ".",
+      "source": "./",
       "description": "The open context engine for AI agents. Open-source. 15+ data sources. MCP-native. Built on Rust and Apache DataFusion.",
       "version": "1.0.0",
       "author": {
