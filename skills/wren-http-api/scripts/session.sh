@@ -35,11 +35,17 @@ echo "Handshake complete."
 # Step 3: Health check
 echo ""
 echo "Running health_check ..."
-RESULT=$(curl -s "$BASE_URL" \
+HEALTH_RESPONSE=$(curl -s "$BASE_URL" \
   "${HEADERS[@]}" \
   -H "Mcp-Session-Id: $SESSION_ID" \
-  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"health_check","arguments":{}}}' \
-  | grep '^data: ' | sed 's/^data: //')
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"health_check","arguments":{}}}')
+
+RESULT=$(echo "$HEALTH_RESPONSE" | grep '^data: ' | sed 's/^data: //')
+
+if [ -z "$RESULT" ]; then
+  echo "WARNING: No data received from health_check. Raw response:" >&2
+  echo "$HEALTH_RESPONSE" >&2
+fi
 
 if command -v python3 &>/dev/null; then
   echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['result']['content'][0]['text'])"

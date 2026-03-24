@@ -118,7 +118,7 @@ The user must **start a new Claude Code session** for the Wren MCP tools to be l
 
 Invoke the **wren-generate-mdl** skill to introspect the user's database and build the MDL manifest:
 
-```
+```text
 @wren-generate-mdl
 ```
 

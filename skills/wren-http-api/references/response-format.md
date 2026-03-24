@@ -53,7 +53,7 @@ If the JSON-RPC request itself is malformed, the response contains an `error` ob
 }
 ```
 
-Common error codes:
+**Common error codes:**
 | Code | Meaning |
 |------|---------|
 | `-32700` | Parse error — invalid JSON |

@@ -1,6 +1,6 @@
 # Database Connectors — Required Fields
 
-## PostgreSQL / MySQL / MSSQL / ClickHouse / Oracle / Doris / Redshift
+## PostgreSQL / MySQL / MSSQL / ClickHouse / Oracle / Doris
 
 | Field | Description | Sensitive |
 |-------|-------------|-----------|
@@ -10,7 +10,32 @@
 | `password` | Password | ✓ |
 | `database` | Database name | |
 
-Default ports: PostgreSQL `5432`, MySQL `3306`, MSSQL `1433`, ClickHouse `8123`, Oracle `1521`, Doris `9030`, Redshift `5439`
+Default ports: PostgreSQL `5432`, MySQL `3306`, MSSQL `1433`, ClickHouse `8123`, Oracle `1521`, Doris `9030`
+
+---
+
+## Redshift (password auth)
+
+| Field | Description | Sensitive |
+|-------|-------------|-----------|
+| `host` | Hostname or IP | |
+| `port` | Port number (default `5439`) | |
+| `user` | Username | |
+| `password` | Password | ✓ |
+| `database` | Database name | |
+
+## Redshift (IAM auth)
+
+| Field | Description | Sensitive |
+|-------|-------------|-----------|
+| `cluster_identifier` | Redshift cluster identifier | ✓ |
+| `database` | Database name | ✓ |
+| `user` | Database username | ✓ |
+| `region` | AWS region (e.g. `us-west-2`) | ✓ |
+| `access_key_id` | AWS access key ID | ✓ |
+| `access_key_secret` | AWS secret access key | ✓ |
+
+Set `redshift_type` to `"redshift_iam"` in the connection info to use IAM auth.
 
 ---
 
@@ -65,9 +90,9 @@ Paste the output into the `credentials_json_string` field.
 | Field | Description |
 |-------|-------------|
 | `format` | Must be `"duckdb"` |
-| `url` | Path to the folder containing the `.duckdb` file |
+| `url` | Path to the `.duckdb` file (e.g. `/workspace/mydb.duckdb`) |
 
-> When running via Docker, the `.duckdb` file must be inside the mounted workspace (e.g. `/workspace/mydb.duckdb`).
+> When running via Docker, set `url` to the mounted folder (e.g. `/workspace`), and place the `.duckdb` file there (e.g. `/workspace/mydb.duckdb`).
 
 ---
 
