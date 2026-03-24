@@ -54,6 +54,7 @@ If the JSON-RPC request itself is malformed, the response contains an `error` ob
 ```
 
 **Common error codes:**
+
 | Code | Meaning |
 |------|---------|
 | `-32700` | Parse error — invalid JSON |
@@ -83,7 +84,7 @@ Tools blocked by read-only mode (`deploy`, `deploy_manifest`, `list_remote_table
 {
   "result": {
     "content": [{ "type": "text", "text": "ERROR: 'deploy' is disabled because read-only mode is active. Toggle it off in the Wren Engine Web UI." }],
-    "isError": false
+    "isError": true
   }
 }
 ```
