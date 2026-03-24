@@ -1,0 +1,38 @@
+{
+  "name": "wren",
+  "description": "AI agent skills for Wren Engine — semantic SQL layer and MCP server for 20+ data sources.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Canner",
+    "url": "https://www.getwren.ai/"
+  },
+  "homepage": "https://www.getwren.ai/",
+  "repository": "https://github.com/Canner/wren-engine",
+  "license": "Apache-2.0",
+  "keywords": [
+    "wren",
+    "sql",
+    "mdl",
+    "mcp",
+    "semantic-layer",
+    "data-source",
+    "docker",
+    "amazon-s3",
+    "apache-spark",
+    "apache-doris",
+    "athena",
+    "bigquery",
+    "clickhouse",
+    "databricks",
+    "duckdb",
+    "google-cloud-storage",
+    "minio",
+    "mysql",
+    "oracle",
+    "postgres",
+    "redshift",
+    "sql-server",
+    "snowflake",
+    "trino"
+  ]
+}

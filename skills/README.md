@@ -4,7 +4,22 @@ This directory contains reusable AI agent skills for working with Wren Engine. S
 
 ## Installation
 
-### Option 1 — npx skills (recommended)
+### Option 1 — Claude Code Plugin
+
+Add the marketplace and install:
+```
+/plugin marketplace add Canner/wren-engine --path skills
+/plugin install wren@wren
+```
+
+Or test locally during development:
+```bash
+claude --plugin-dir ./skills
+```
+
+Skills are namespaced as `/wren:<skill>` (e.g., `/wren:generate-mdl`, `/wren:wren-sql`).
+
+### Option 2 — npx skills
 
 Install all skills for Claude Code:
 ```bash
@@ -13,7 +28,7 @@ npx skills add Canner/wren-engine --skill '*' --agent claude-code
 
 `npx skills` also supports Cursor, Windsurf, and 30+ other agent tools — replace `--agent claude-code` with your agent of choice.
 
-### Option 2 — install script (from a local clone)
+### Option 3 — install script (from a local clone)
 
 ```bash
 bash skills/install.sh                        # all skills
@@ -21,7 +36,7 @@ bash skills/install.sh generate-mdl wren-sql  # specific skills
 bash skills/install.sh --force generate-mdl   # overwrite existing
 ```
 
-### Option 3 — manual copy
+### Option 4 — manual copy
 
 ```bash
 cp -r skills/wren-usage ~/.claude/skills/
