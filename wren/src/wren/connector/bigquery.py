@@ -1,4 +1,5 @@
 import base64
+import os
 from json import loads
 
 import pyarrow as pa
@@ -10,27 +11,41 @@ from wren.connector.base import ConnectorABC
 class BigQueryConnector(ConnectorABC):
     def __init__(self, connection_info):
         from google.cloud import bigquery  # noqa: PLC0415
-        from google.oauth2 import service_account  # noqa: PLC0415
 
         self.connection_info = connection_info
-        credits_json = loads(
-            base64.b64decode(connection_info.credentials.get_secret_value()).decode(
-                "utf-8"
+
+        emulator_host = os.environ.get("BIGQUERY_EMULATOR_HOST")
+        if emulator_host:
+            import google.auth.credentials  # noqa: PLC0415
+            from google.api_core.client_options import ClientOptions  # noqa: PLC0415
+
+            credentials = google.auth.credentials.AnonymousCredentials()
+            client = bigquery.Client(
+                credentials=credentials,
+                project=connection_info.get_billing_project_id(),
+                client_options=ClientOptions(api_endpoint=f"http://{emulator_host}"),
             )
-        )
-        credentials = service_account.Credentials.from_service_account_info(
-            credits_json
-        )
-        credentials = credentials.with_scopes(
-            [
-                "https://www.googleapis.com/auth/drive",
-                "https://www.googleapis.com/auth/cloud-platform",
-            ]
-        )
-        client = bigquery.Client(
-            credentials=credentials,
-            project=connection_info.get_billing_project_id(),
-        )
+        else:
+            from google.oauth2 import service_account  # noqa: PLC0415
+
+            credits_json = loads(
+                base64.b64decode(connection_info.credentials.get_secret_value()).decode(
+                    "utf-8"
+                )
+            )
+            credentials = service_account.Credentials.from_service_account_info(
+                credits_json
+            )
+            credentials = credentials.with_scopes(
+                [
+                    "https://www.googleapis.com/auth/drive",
+                    "https://www.googleapis.com/auth/cloud-platform",
+                ]
+            )
+            client = bigquery.Client(
+                credentials=credentials,
+                project=connection_info.get_billing_project_id(),
+            )
         job_config = bigquery.QueryJobConfig()
         job_config.job_timeout_ms = connection_info.job_timeout_ms
         client.default_query_job_config = job_config

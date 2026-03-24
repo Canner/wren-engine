@@ -243,6 +243,8 @@ just install-dev
 | `just test-duckdb` | DuckDB connector tests — generates TPCH data via `dbgen` | No |
 | `just test-postgres` | PostgreSQL connector tests — spins up a container | Yes |
 | `just test-mysql` | MySQL connector tests — spins up a container | Yes |
+| `just test-bigquery` | BigQuery connector tests — spins up the BigQuery emulator | Yes |
+| `just test-redshift` | Redshift connector tests — spins up a PostgreSQL container | Yes |
 | `just test` | All tests | Yes |
 
 Run a specific connector via marker:

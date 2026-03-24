@@ -34,6 +34,7 @@ class RedshiftConnector(ConnectorABC):
                 database=connection_info.database.get_secret_value(),
                 user=connection_info.user.get_secret_value(),
                 password=connection_info.password.get_secret_value(),
+                ssl=connection_info.ssl,
             )
         else:
             raise WrenError(

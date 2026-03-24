@@ -146,3 +146,79 @@ jobs:
           uv sync --extra mysql --extra dev --find-links ../wren-core-py/target/wheels/
       - name: Run mysql tests
         run: uv run pytest tests/connectors/test_mysql.py -v -m mysql
+
+  test-bigquery:
+    name: bigquery tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wren
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ./wren-core-py/target/
+          key: ${{ runner.os }}-cargo-wren-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Build wren-core-py wheel
+        working-directory: wren-core-py
+        run: |
+          pipx install poetry
+          poetry install --no-root
+          poetry run maturin build
+      - name: Install dependencies
+        run: |
+          uv lock --find-links ../wren-core-py/target/wheels/ --upgrade-package wren-core-py
+          uv sync --extra bigquery --extra dev --find-links ../wren-core-py/target/wheels/
+      - name: Run bigquery tests
+        run: uv run pytest tests/connectors/test_bigquery.py -v -m bigquery
+
+  test-redshift:
+    name: redshift tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wren
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ./wren-core-py/target/
+          key: ${{ runner.os }}-cargo-wren-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Build wren-core-py wheel
+        working-directory: wren-core-py
+        run: |
+          pipx install poetry
+          poetry install --no-root
+          poetry run maturin build
+      - name: Install dependencies
+        run: |
+          uv lock --find-links ../wren-core-py/target/wheels/ --upgrade-package wren-core-py
+          uv sync --extra redshift --extra postgres --extra dev --find-links ../wren-core-py/target/wheels/
+      - name: Run redshift tests
+        run: uv run pytest tests/connectors/test_redshift.py -v -m redshift

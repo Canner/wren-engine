@@ -158,6 +158,7 @@ class RedshiftConnectionInfo(BaseConnectionInfo):
     database: SecretStr = Field(examples=["dev"])
     user: SecretStr = Field(examples=["awsuser"])
     password: SecretStr = Field(examples=["password"])
+    ssl: bool = Field(default=True)
 
 
 class RedshiftIAMConnectionInfo(BaseConnectionInfo):
