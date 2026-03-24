@@ -114,20 +114,26 @@
     },
     {
       "name": "wren-usage",
-      "version": "1.1",
-      "description": "Daily usage guide for Wren Engine — connect, query, manage MDL, and operate the MCP server via AI agents.",
+      "version": "1.2",
+      "description": "Wren Engine — semantic SQL engine for AI agents. Query 22+ data sources through a modeling layer. Main entry point for setup, SQL, MDL generation, and MCP server operations.",
       "tags": [
         "wren",
         "usage",
         "sql",
         "mdl",
-        "mcp"
+        "mcp",
+        "database",
+        "semantic-layer",
+        "postgres",
+        "bigquery",
+        "snowflake"
       ],
       "dependencies": [
         "wren-generate-mdl",
         "wren-project",
         "wren-sql",
-        "wren-mcp-setup"
+        "wren-mcp-setup",
+        "wren-http-api"
       ],
       "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-usage"
     }
