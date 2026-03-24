@@ -1,5 +1,5 @@
 {
-  "generate-mdl": "1.4",
+  "wren-generate-mdl": "1.4",
   "wren-connection-info": "1.4",
   "wren-project": "1.5",
   "wren-sql": "1.0",

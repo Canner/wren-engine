@@ -37,7 +37,7 @@ Check whether the required skills are already installed in `~/.claude/skills/`. 
 npx skills add Canner/wren-engine --skill '*' --agent claude-code
 ```
 
-This installs `wren-usage`, `wren-connection-info`, `generate-mdl`, `wren-project`, `wren-sql`, and `wren-mcp-setup` into `~/.claude/skills/`.
+This installs `wren-usage`, `wren-connection-info`, `wren-generate-mdl`, `wren-project`, `wren-sql`, and `wren-mcp-setup` into `~/.claude/skills/`.
 
 After installation, the user must **start a new session** for the new skills to be loaded.
 
@@ -53,7 +53,7 @@ Identify the user's intent and delegate to the appropriate skill:
 |------|-------|
 | Write or debug a SQL query | `@wren-sql` |
 | Connect to a new database / change credentials | `@wren-connection-info` |
-| Generate MDL from an existing database | `@generate-mdl` |
+| Generate MDL from an existing database | `@wren-generate-mdl` |
 | Save MDL to YAML files (version control) | `@wren-project` |
 | Load a saved YAML project / rebuild `target/mdl.json` | `@wren-project` |
 | Add a new model or column to the MDL | `@wren-project` |
@@ -110,7 +110,7 @@ To add a model, column, relationship, or view to an existing project:
 When the database schema has changed and the MDL needs to be refreshed:
 
 1. Invoke `@wren-connection-info` — confirm or update credentials
-2. Invoke `@generate-mdl` — re-introspect the database and rebuild the MDL JSON
+2. Invoke `@wren-generate-mdl` — re-introspect the database and rebuild the MDL JSON
 3. Invoke `@wren-project` — **Save** the new MDL as an updated YAML project
 4. Invoke `@wren-project` — **Build** to compile `target/mdl.json`
 5. Deploy

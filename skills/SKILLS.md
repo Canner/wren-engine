@@ -25,7 +25,7 @@ Skills are instruction files that extend AI agents with Wren-specific workflows.
 |-------|---------|
 | `@wren-sql` | Write and debug SQL queries |
 | `@wren-connection-info` | Set up or change database credentials |
-| `@generate-mdl` | Regenerate MDL from a changed database schema |
+| `@wren-generate-mdl` | Regenerate MDL from a changed database schema |
 | `@wren-project` | Save, load, and build MDL YAML projects |
 | `@wren-mcp-setup` | Reconfigure the MCP server |
 
@@ -52,7 +52,7 @@ End-to-end onboarding guide for Wren Engine. Orchestrates the full setup flow â€
 
 1. Install required skills via `install.sh`
 2. Create a workspace directory on the host machine
-3. Generate MDL from the database (`@generate-mdl`)
+3. Generate MDL from the database (`@wren-generate-mdl`)
 4. Save as a YAML project and compile to `target/` (`@wren-project`)
 5. Start the Docker container and register the MCP server (`@wren-mcp-setup`)
 6. Run `health_check()` to verify â€” then start a new session and query
@@ -61,15 +61,15 @@ End-to-end onboarding guide for Wren Engine. Orchestrates the full setup flow â€
 
 | Skill | Purpose |
 |-------|---------|
-| `@generate-mdl` | Introspect database and build MDL JSON |
+| `@wren-generate-mdl` | Introspect database and build MDL JSON |
 | `@wren-project` | Save MDL as YAML project + compile to `target/` |
 | `@wren-mcp-setup` | Start Docker container and register MCP server |
 
 ---
 
-## generate-mdl
+## wren-generate-mdl
 
-**File:** [generate-mdl/SKILL.md](generate-mdl/SKILL.md)
+**File:** [wren-generate-mdl/SKILL.md](wren-generate-mdl/SKILL.md)
 
 Generates a complete Wren MDL manifest by introspecting a live database through ibis-server â€” no local database drivers required.
 
@@ -236,7 +236,7 @@ Then invoke in your AI client:
 
 ```
 /wren-usage
-/generate-mdl
+/wren-generate-mdl
 /wren-project
 /wren-sql
 /wren-mcp-setup

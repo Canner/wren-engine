@@ -19,7 +19,7 @@
       "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-connection-info"
     },
     {
-      "name": "generate-mdl",
+      "name": "wren-generate-mdl",
       "version": "1.4",
       "description": "Generate a Wren MDL manifest from a live database using MCP server introspection tools.",
       "tags": [
@@ -34,7 +34,7 @@
         "clickhouse",
         "trino"
       ],
-      "repository": "https://github.com/Canner/wren-engine/tree/main/skills/generate-mdl"
+      "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-generate-mdl"
     },
     {
       "name": "wren-project",
@@ -92,7 +92,7 @@
         "docker"
       ],
       "dependencies": [
-        "generate-mdl",
+        "wren-generate-mdl",
         "wren-project",
         "wren-mcp-setup"
       ],
@@ -124,7 +124,7 @@
         "mcp"
       ],
       "dependencies": [
-        "generate-mdl",
+        "wren-generate-mdl",
         "wren-project",
         "wren-sql",
         "wren-mcp-setup"

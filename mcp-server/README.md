@@ -197,7 +197,7 @@ Optional follow-ups:
 
 ## Generating an MDL (No Database Drivers Required)
 
-The **`generate-mdl` skill** (`skills/generate-mdl/SKILL.md`) guides any AI agent through
+The **`wren-generate-mdl` skill** (`skills/wren-generate-mdl/SKILL.md`) guides any AI agent through
 creating a Wren MDL manifest from scratch — using ibis-server's metadata endpoints for
 schema discovery. No local database drivers need to be installed on the MCP server.
 
