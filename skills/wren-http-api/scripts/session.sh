@@ -45,6 +45,7 @@ RESULT=$(echo "$HEALTH_RESPONSE" | grep '^data: ' | sed 's/^data: //')
 if [ -z "$RESULT" ]; then
   echo "WARNING: No data received from health_check. Raw response:" >&2
   echo "$HEALTH_RESPONSE" >&2
+  exit 1
 fi
 
 if command -v python3 &>/dev/null; then
