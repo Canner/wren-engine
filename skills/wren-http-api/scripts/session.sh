@@ -5,16 +5,19 @@
 set -euo pipefail
 
 BASE_URL="${1:-http://localhost:9000/mcp}"
+CURL_OPTS=(--silent --show-error --fail-with-body --connect-timeout 5 --max-time 30)
 HEADERS=(-H "Content-Type: application/json" -H "Accept: application/json, text/event-stream")
 
 echo "Initializing session at $BASE_URL ..."
 
 # Step 1: Initialize and capture session ID
-INIT_RESPONSE=$(curl -s -D - "$BASE_URL" \
+INIT_RESPONSE=$(curl "${CURL_OPTS[@]}" -D - "$BASE_URL" \
   "${HEADERS[@]}" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"wren-http-skill","version":"1.0"}}}')
 
-SESSION_ID=$(echo "$INIT_RESPONSE" | grep -i 'mcp-session-id' | awk '{print $2}' | tr -d '\r')
+SESSION_ID=$(printf '%s\n' "$INIT_RESPONSE" \
+  | awk -F': *' 'tolower($1)=="mcp-session-id"{print $2; exit}' \
+  | tr -d '\r')
 
 if [ -z "$SESSION_ID" ]; then
   echo "ERROR: Failed to obtain session ID. Server response:" >&2
@@ -25,7 +28,7 @@ fi
 echo "Session ID: $SESSION_ID"
 
 # Step 2: Complete handshake
-curl -s "$BASE_URL" \
+curl "${CURL_OPTS[@]}" "$BASE_URL" \
   "${HEADERS[@]}" \
   -H "Mcp-Session-Id: $SESSION_ID" \
   -d '{"jsonrpc":"2.0","method":"notifications/initialized"}' > /dev/null
@@ -35,12 +38,14 @@ echo "Handshake complete."
 # Step 3: Health check
 echo ""
 echo "Running health_check ..."
-HEALTH_RESPONSE=$(curl -s "$BASE_URL" \
+HEALTH_RESPONSE=$(curl "${CURL_OPTS[@]}" "$BASE_URL" \
   "${HEADERS[@]}" \
   -H "Mcp-Session-Id: $SESSION_ID" \
   -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"health_check","arguments":{}}}')
 
-RESULT=$(echo "$HEALTH_RESPONSE" | grep '^data: ' | sed 's/^data: //')
+RESULT=$(printf '%s\n' "$HEALTH_RESPONSE" \
+  | sed -n 's/^data: //p' \
+  | tail -n 1)
 
 if [ -z "$RESULT" ]; then
   echo "WARNING: No data received from health_check. Raw response:" >&2
