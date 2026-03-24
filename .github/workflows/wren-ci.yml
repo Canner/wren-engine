@@ -106,3 +106,43 @@ jobs:
           uv sync --extra postgres --extra dev --find-links ../wren-core-py/target/wheels/
       - name: Run postgres tests
         run: uv run pytest tests/connectors/test_postgres.py -v -m postgres
+
+  test-mysql:
+    name: mysql tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wren
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+      - name: Install system dependencies for mysqlclient
+        run: sudo apt-get install -y default-libmysqlclient-dev pkg-config
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ./wren-core-py/target/
+          key: ${{ runner.os }}-cargo-wren-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Build wren-core-py wheel
+        working-directory: wren-core-py
+        run: |
+          pipx install poetry
+          poetry install --no-root
+          poetry run maturin build
+      - name: Install dependencies
+        run: |
+          uv lock --find-links ../wren-core-py/target/wheels/ --upgrade-package wren-core-py
+          uv sync --extra mysql --extra dev --find-links ../wren-core-py/target/wheels/
+      - name: Run mysql tests
+        run: uv run pytest tests/connectors/test_mysql.py -v -m mysql
