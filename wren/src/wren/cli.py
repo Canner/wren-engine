@@ -8,36 +8,32 @@ from typing import Annotated, Optional
 
 import typer
 
-app = typer.Typer(name="wren", help="Wren Engine CLI", no_args_is_help=True)
+app = typer.Typer(name="wren", help="Wren Engine CLI", no_args_is_help=False)
+
+_DEFAULT_MDL = "mdl.json"
+_DEFAULT_CONN = "conn.json"
 
 
-def _load_connection_info(
-    connection_info: str | None,
-    connection_file_path: str | None,
-) -> dict:
-    if connection_info:
-        try:
-            return json.loads(connection_info)
-        except json.JSONDecodeError as e:
-            typer.echo(f"Error: invalid JSON in --connection-info: {e}", err=True)
-            raise typer.Exit(1)
-    if connection_file_path:
-        path = Path(connection_file_path)
-        if not path.exists():
-            typer.echo(
-                f"Error: connection file not found: {connection_file_path}", err=True
-            )
-            raise typer.Exit(1)
-        try:
-            return json.loads(path.read_text())
-        except json.JSONDecodeError as e:
-            typer.echo(f"Error: invalid JSON in {connection_file_path}: {e}", err=True)
-            raise typer.Exit(1)
-    typer.echo(
-        "Error: either --connection-info or --connection-file must be provided",
-        err=True,
-    )
-    raise typer.Exit(1)
+# ── File discovery helpers ─────────────────────────────────────────────────
+
+
+def _find_default(filename: str) -> str | None:
+    """Return filename if it exists in cwd, else None."""
+    return filename if Path(filename).exists() else None
+
+
+def _require_mdl(mdl: str | None) -> str:
+    """Return mdl arg if given, else auto-discover mdl.json from cwd."""
+    if mdl is not None:
+        return mdl
+    default = _find_default(_DEFAULT_MDL)
+    if default is None:
+        typer.echo(
+            f"Error: --mdl not specified and '{_DEFAULT_MDL}' not found in current directory.",
+            err=True,
+        )
+        raise typer.Exit(1)
+    return default
 
 
 def _load_manifest(mdl: str) -> str:
@@ -47,32 +43,86 @@ def _load_manifest(mdl: str) -> str:
         import base64  # noqa: PLC0415
 
         content = path.read_bytes()
-        # If it's a JSON file, base64-encode it
         if mdl.endswith(".json"):
             return base64.b64encode(content).decode()
-        # Otherwise assume it's already base64
         return content.decode().strip()
-    # Treat as inline base64 string
     return mdl
 
 
-def _make_engine(
-    sql: str,
-    datasource: str,
-    mdl: str,
+def _load_conn(
     connection_info: str | None,
     connection_file: str | None,
+    *,
+    required: bool = True,
+) -> dict:
+    """Load connection dict from inline JSON or file, with cwd auto-discovery.
+
+    If neither --connection-info nor --connection-file is given, looks for
+    conn.json in the current directory.  Raises typer.Exit(1) if required=True
+    and nothing is found.
+    """
+    if connection_info:
+        try:
+            return json.loads(connection_info)
+        except json.JSONDecodeError as e:
+            typer.echo(f"Error: invalid JSON in --connection-info: {e}", err=True)
+            raise typer.Exit(1)
+
+    path_str = connection_file or _find_default(_DEFAULT_CONN)
+    if path_str:
+        path = Path(path_str)
+        if not path.exists():
+            typer.echo(f"Error: connection file not found: {path_str}", err=True)
+            raise typer.Exit(1)
+        try:
+            return json.loads(path.read_text())
+        except json.JSONDecodeError as e:
+            typer.echo(f"Error: invalid JSON in {path_str}: {e}", err=True)
+            raise typer.Exit(1)
+
+    if required:
+        typer.echo(
+            f"Error: --connection-file not specified and '{_DEFAULT_CONN}' not found in current directory.",
+            err=True,
+        )
+        raise typer.Exit(1)
+    return {}
+
+
+def _resolve_datasource(explicit: str | None, conn_dict: dict) -> str:
+    """Return datasource: use explicit --datasource arg first, then pop from conn dict."""
+    if explicit:
+        conn_dict.pop("datasource", None)
+        return explicit
+    ds = conn_dict.pop("datasource", None)
+    if ds:
+        return ds
+    typer.echo(
+        "Error: --datasource not specified and 'datasource' key not found in connection info.",
+        err=True,
+    )
+    raise typer.Exit(1)
+
+
+def _build_engine(
+    datasource: str | None,
+    mdl: str | None,
+    connection_info: str | None,
+    connection_file: str | None,
+    *,
+    conn_required: bool = True,
 ):
     from wren.engine import WrenEngine  # noqa: PLC0415
     from wren.model.data_source import DataSource  # noqa: PLC0415
 
-    manifest_str = _load_manifest(mdl)
-    conn_dict = _load_connection_info(connection_info, connection_file)
+    manifest_str = _load_manifest(_require_mdl(mdl))
+    conn_dict = _load_conn(connection_info, connection_file, required=conn_required)
+    ds_str = _resolve_datasource(datasource, conn_dict)
 
     try:
-        ds = DataSource(datasource.lower())
+        ds = DataSource(ds_str.lower())
     except ValueError:
-        typer.echo(f"Error: unknown datasource '{datasource}'", err=True)
+        typer.echo(f"Error: unknown datasource '{ds_str}'", err=True)
         raise typer.Exit(1)
 
     return WrenEngine(
@@ -80,42 +130,86 @@ def _make_engine(
     )
 
 
-# ── Common options ─────────────────────────────────────────────────────────
+# ── Shared option types ────────────────────────────────────────────────────
 
-SqlArg = Annotated[str, typer.Option("--sql", "-s", help="SQL query to execute")]
 DatasourceOpt = Annotated[
-    str,
-    typer.Option("--datasource", "-d", help="Data source name (e.g. postgres, duckdb)"),
+    Optional[str],
+    typer.Option(
+        "--datasource",
+        "-d",
+        help="Data source (e.g. mysql, postgres). Defaults to 'datasource' field in conn.json.",
+    ),
 ]
 MdlOpt = Annotated[
-    str, typer.Option("--mdl", "-m", help="Path to MDL JSON file or base64 MDL string")
+    Optional[str],
+    typer.Option(
+        "--mdl",
+        "-m",
+        help=f"Path to MDL JSON file or base64 string. Defaults to ./{_DEFAULT_MDL}.",
+    ),
 ]
 ConnInfoOpt = Annotated[
-    Optional[str], typer.Option("--connection-info", help="JSON connection info string")
+    Optional[str],
+    typer.Option("--connection-info", help="Inline JSON connection string"),
 ]
 ConnFileOpt = Annotated[
     Optional[str],
-    typer.Option("--connection-file", help="Path to JSON connection info file"),
+    typer.Option(
+        "--connection-file",
+        help=f"Path to JSON connection file. Defaults to ./{_DEFAULT_CONN}.",
+    ),
 ]
 LimitOpt = Annotated[
     Optional[int], typer.Option("--limit", "-l", help="Max rows to return")
 ]
+OutputOpt = Annotated[
+    str, typer.Option("--output", "-o", help="Output format: json|csv|table")
+]
 
 
-@app.command()
-def query(
-    sql: SqlArg,
-    datasource: DatasourceOpt,
-    mdl: MdlOpt,
+# ── Default command (no subcommand = query) ────────────────────────────────
+
+
+@app.callback(invoke_without_command=True)
+def main(
+    ctx: typer.Context,
+    sql: Annotated[
+        Optional[str],
+        typer.Option(
+            "--sql", "-s", help="SQL query to execute (runs query by default)"
+        ),
+    ] = None,
+    datasource: DatasourceOpt = None,
+    mdl: MdlOpt = None,
     connection_info: ConnInfoOpt = None,
     connection_file: ConnFileOpt = None,
     limit: LimitOpt = None,
-    output: Annotated[
-        str, typer.Option("--output", "-o", help="Output format: json|csv|table")
-    ] = "table",
-):
-    """Execute a SQL query through the Wren semantic layer."""
-    engine = _make_engine(sql, datasource, mdl, connection_info, connection_file)
+    output: OutputOpt = "table",
+) -> None:
+    """Wren Engine CLI.
+
+    Run with --sql to execute a query using mdl.json and conn.json from the
+    current directory.  Use a subcommand (query / dry-run / transpile / validate)
+    for explicit control.
+
+    conn.json format:
+
+    \b
+      {
+        "datasource": "mysql",
+        "host": "localhost",
+        "port": 3306,
+        "database": "mydb",
+        "user": "root",
+        "password": "secret"
+      }
+    """
+    if ctx.invoked_subcommand is not None:
+        return
+    if sql is None:
+        typer.echo(ctx.get_help())
+        return
+    engine = _build_engine(datasource, mdl, connection_info, connection_file)
     try:
         result = engine.query(sql, limit=limit)
     except Exception as e:
@@ -123,20 +217,44 @@ def query(
         raise typer.Exit(1)
     finally:
         engine.close()
+    _print_result(result, output)
 
+
+# ── Subcommands ────────────────────────────────────────────────────────────
+
+
+@app.command()
+def query(
+    sql: Annotated[str, typer.Option("--sql", "-s", help="SQL query to execute")],
+    datasource: DatasourceOpt = None,
+    mdl: MdlOpt = None,
+    connection_info: ConnInfoOpt = None,
+    connection_file: ConnFileOpt = None,
+    limit: LimitOpt = None,
+    output: OutputOpt = "table",
+):
+    """Execute a SQL query through the Wren semantic layer."""
+    engine = _build_engine(datasource, mdl, connection_info, connection_file)
+    try:
+        result = engine.query(sql, limit=limit)
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1)
+    finally:
+        engine.close()
     _print_result(result, output)
 
 
 @app.command(name="dry-run")
 def dry_run(
-    sql: SqlArg,
-    datasource: DatasourceOpt,
-    mdl: MdlOpt,
+    sql: Annotated[str, typer.Option("--sql", "-s", help="SQL query to validate")],
+    datasource: DatasourceOpt = None,
+    mdl: MdlOpt = None,
     connection_info: ConnInfoOpt = None,
     connection_file: ConnFileOpt = None,
 ):
     """Dry-run a SQL query (parse + validate, no results returned)."""
-    engine = _make_engine(sql, datasource, mdl, connection_info, connection_file)
+    engine = _build_engine(datasource, mdl, connection_info, connection_file)
     try:
         engine.dry_run(sql)
         typer.echo("OK")
@@ -149,22 +267,26 @@ def dry_run(
 
 @app.command()
 def transpile(
-    sql: SqlArg,
-    datasource: DatasourceOpt,
-    mdl: MdlOpt,
+    sql: Annotated[str, typer.Option("--sql", "-s", help="SQL query to transpile")],
+    datasource: DatasourceOpt = None,
+    mdl: MdlOpt = None,
+    connection_file: ConnFileOpt = None,
 ):
-    """Transform SQL through MDL and emit the target dialect SQL (no DB required)."""
+    """Transform SQL through MDL and emit target dialect SQL (no DB required)."""
     from wren.engine import WrenEngine  # noqa: PLC0415
     from wren.model.data_source import DataSource  # noqa: PLC0415
 
-    manifest_str = _load_manifest(mdl)
+    manifest_str = _load_manifest(_require_mdl(mdl))
+    # Read datasource from conn.json if present — no real connection needed
+    conn_dict = _load_conn(None, connection_file, required=False)
+    ds_str = _resolve_datasource(datasource, conn_dict)
+
     try:
-        ds = DataSource(datasource.lower())
+        ds = DataSource(ds_str.lower())
     except ValueError:
-        typer.echo(f"Error: unknown datasource '{datasource}'", err=True)
+        typer.echo(f"Error: unknown datasource '{ds_str}'", err=True)
         raise typer.Exit(1)
 
-    # For transpile we don't need real connection_info — pass a dummy dict
     engine = WrenEngine(manifest_str=manifest_str, data_source=ds, connection_info={})
     try:
         result = engine.transpile(sql)
@@ -178,14 +300,14 @@ def transpile(
 
 @app.command()
 def validate(
-    sql: SqlArg,
-    datasource: DatasourceOpt,
-    mdl: MdlOpt,
+    sql: Annotated[str, typer.Option("--sql", "-s", help="SQL query to validate")],
+    datasource: DatasourceOpt = None,
+    mdl: MdlOpt = None,
     connection_info: ConnInfoOpt = None,
     connection_file: ConnFileOpt = None,
 ):
     """Validate SQL can be planned and dry-run against the data source."""
-    engine = _make_engine(sql, datasource, mdl, connection_info, connection_file)
+    engine = _build_engine(datasource, mdl, connection_info, connection_file)
     try:
         engine.dry_run(sql)
         typer.echo("Valid")
@@ -213,7 +335,6 @@ def _print_result(table, output: str) -> None:
         except Exception:
             typer.echo(str(table))
     else:
-        # Default: table format via pandas
         try:
             df = table.to_pandas()
             typer.echo(df.to_string(index=False))
