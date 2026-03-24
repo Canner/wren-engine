@@ -7,8 +7,8 @@
   "skills": [
     {
       "name": "wren-connection-info",
-      "version": "1.4",
-      "description": "Reference guide for Wren Engine connection info — required fields, sensitive values, Docker host hints, and BigQuery credential encoding.",
+      "version": "1.5",
+      "description": "Reference guide for Wren Engine connection info — required fields for all 18 data sources, sensitive field handling, Docker host hints, and credential encoding.",
       "tags": [
         "wren",
         "credentials",
