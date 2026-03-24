@@ -5,7 +5,7 @@ Wren Engine CLI and Python SDK — semantic SQL layer for 20+ data sources.
 ## Installation
 
 ```bash
-pip install wren
+pip install wren-engine
 ```
 
 ## Usage
