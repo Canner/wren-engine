@@ -44,8 +44,11 @@ def _load_manifest(mdl: str) -> str:
 
         content = path.read_bytes()
         if mdl.endswith(".json"):
+            # Raw JSON file — base64-encode it for WrenEngine
             return base64.b64encode(content).decode()
+        # Non-.json file — assume it already contains a base64-encoded MDL string
         return content.decode().strip()
+    # Not a file path — treat as a raw base64 string passed directly
     return mdl
 
 
@@ -90,7 +93,11 @@ def _load_conn(
 
 
 def _resolve_datasource(explicit: str | None, conn_dict: dict) -> str:
-    """Return datasource: use explicit --datasource arg first, then pop from conn dict."""
+    """Return datasource: use explicit --datasource arg first, then pop from conn dict.
+
+    Note: mutates conn_dict by removing the 'datasource' key so it is not
+    forwarded as an unknown field to WrenEngine / the connector.
+    """
     if explicit:
         conn_dict.pop("datasource", None)
         return explicit
@@ -209,14 +216,12 @@ def main(
     if sql is None:
         typer.echo(ctx.get_help())
         return
-    engine = _build_engine(datasource, mdl, connection_info, connection_file)
-    try:
-        result = engine.query(sql, limit=limit)
-    except Exception as e:
-        typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(1)
-    finally:
-        engine.close()
+    with _build_engine(datasource, mdl, connection_info, connection_file) as engine:
+        try:
+            result = engine.query(sql, limit=limit)
+        except Exception as e:
+            typer.echo(f"Error: {e}", err=True)
+            raise typer.Exit(1)
     _print_result(result, output)
 
 
@@ -234,14 +239,12 @@ def query(
     output: OutputOpt = "table",
 ):
     """Execute a SQL query through the Wren semantic layer."""
-    engine = _build_engine(datasource, mdl, connection_info, connection_file)
-    try:
-        result = engine.query(sql, limit=limit)
-    except Exception as e:
-        typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(1)
-    finally:
-        engine.close()
+    with _build_engine(datasource, mdl, connection_info, connection_file) as engine:
+        try:
+            result = engine.query(sql, limit=limit)
+        except Exception as e:
+            typer.echo(f"Error: {e}", err=True)
+            raise typer.Exit(1)
     _print_result(result, output)
 
 
@@ -254,15 +257,13 @@ def dry_run(
     connection_file: ConnFileOpt = None,
 ):
     """Dry-run a SQL query (parse + validate, no results returned)."""
-    engine = _build_engine(datasource, mdl, connection_info, connection_file)
-    try:
-        engine.dry_run(sql)
-        typer.echo("OK")
-    except Exception as e:
-        typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(1)
-    finally:
-        engine.close()
+    with _build_engine(datasource, mdl, connection_info, connection_file) as engine:
+        try:
+            engine.dry_run(sql)
+            typer.echo("OK")
+        except Exception as e:
+            typer.echo(f"Error: {e}", err=True)
+            raise typer.Exit(1)
 
 
 @app.command(name="dry-plan")
@@ -287,15 +288,13 @@ def dry_plan(
         typer.echo(f"Error: unknown datasource '{ds_str}'", err=True)
         raise typer.Exit(1)
 
-    engine = WrenEngine(manifest_str=manifest_str, data_source=ds, connection_info={})
-    try:
-        result = engine.dry_plan(sql)
-        typer.echo(result)
-    except Exception as e:
-        typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(1)
-    finally:
-        engine.close()
+    with WrenEngine(manifest_str=manifest_str, data_source=ds, connection_info={}) as engine:
+        try:
+            result = engine.dry_plan(sql)
+            typer.echo(result)
+        except Exception as e:
+            typer.echo(f"Error: {e}", err=True)
+            raise typer.Exit(1)
 
 
 @app.command()
@@ -307,15 +306,13 @@ def validate(
     connection_file: ConnFileOpt = None,
 ):
     """Validate SQL can be planned and dry-run against the data source."""
-    engine = _build_engine(datasource, mdl, connection_info, connection_file)
-    try:
-        engine.dry_run(sql)
-        typer.echo("Valid")
-    except Exception as e:
-        typer.echo(f"Invalid: {e}", err=True)
-        raise typer.Exit(1)
-    finally:
-        engine.close()
+    with _build_engine(datasource, mdl, connection_info, connection_file) as engine:
+        try:
+            engine.dry_run(sql)
+            typer.echo("Valid")
+        except Exception as e:
+            typer.echo(f"Invalid: {e}", err=True)
+            raise typer.Exit(1)
 
 
 # ── Output formatting ──────────────────────────────────────────────────────

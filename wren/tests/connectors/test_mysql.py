@@ -28,15 +28,13 @@ def _load_tpch(conn_str: str) -> None:
     """Generate TPCH sf=0.01 via DuckDB and bulk-load into MySQL."""
     import pymysql  # noqa: PLC0415
 
-    duck = duckdb.connect()
-    duck.execute("INSTALL tpch; LOAD tpch; CALL dbgen(sf=0.01)")
-
-    orders_rows = duck.execute(
-        "SELECT o_orderkey, o_custkey, o_orderstatus, "
-        "cast(o_totalprice as double), o_orderdate FROM orders"
-    ).fetchall()
-    customer_rows = duck.execute("SELECT c_custkey, c_name FROM customer").fetchall()
-    duck.close()
+    with duckdb.connect() as duck:
+        duck.execute("INSTALL tpch; LOAD tpch; CALL dbgen(sf=0.01)")
+        orders_rows = duck.execute(
+            "SELECT o_orderkey, o_custkey, o_orderstatus, "
+            "cast(o_totalprice as double), o_orderdate FROM orders"
+        ).fetchall()
+        customer_rows = duck.execute("SELECT c_custkey, c_name FROM customer").fetchall()
 
     parsed = urlparse(conn_str)
     conn = pymysql.connect(
