@@ -222,6 +222,23 @@ class TestCTEEdgeCases:
         assert _has_cte(result, "orders")
         assert not _has_cte(result, "customer")
 
+    def test_recursive_cte_preserved(self):
+        """WITH RECURSIVE keyword should be preserved after model CTE injection."""
+        rw = _make_rewriter(_MULTI_MODEL_MANIFEST)
+        result = rw.rewrite(
+            "WITH RECURSIVE hierarchy AS ("
+            '  SELECT o_orderkey, o_custkey FROM "orders" WHERE o_custkey = 1'
+            "  UNION ALL"
+            '  SELECT o.o_orderkey, o.o_custkey FROM "orders" o'
+            "  JOIN hierarchy h ON o.o_custkey = h.o_orderkey"
+            ") SELECT * FROM hierarchy"
+        )
+        assert _has_cte(result, "orders")
+        assert _has_cte(result, "hierarchy")
+        # RECURSIVE keyword must be preserved
+        ast = sqlglot.parse_one(result, dialect="duckdb")
+        assert ast.args["with_"].args.get("recursive")
+
     def test_no_model_references_fallback(self):
         """Query referencing no models falls back to direct transform_sql."""
         rw = _make_rewriter(_SINGLE_MODEL_MANIFEST, fallback=True)
