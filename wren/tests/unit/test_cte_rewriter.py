@@ -208,6 +208,20 @@ class TestCTEEdgeCases:
         # (wren-core may restructure the query but won't add a model CTE)
         assert not _has_cte(result, "orders") or _count_ctes(result) <= 1
 
+    def test_nested_cte_shadows_model(self):
+        """CTE defined in a subquery WITH should also shadow the model name."""
+        rw = _make_rewriter(_MULTI_MODEL_MANIFEST, fallback=True)
+        result = rw.rewrite(
+            "SELECT * FROM orders WHERE o_custkey IN ("
+            "  WITH customer AS (SELECT 1 AS c_custkey) "
+            "  SELECT c_custkey FROM customer"
+            ")"
+        )
+        # "customer" is shadowed by the nested CTE — only "orders" should
+        # get a model CTE, not "customer".
+        assert _has_cte(result, "orders")
+        assert not _has_cte(result, "customer")
+
     def test_no_model_references_fallback(self):
         """Query referencing no models falls back to direct transform_sql."""
         rw = _make_rewriter(_SINGLE_MODEL_MANIFEST, fallback=True)
