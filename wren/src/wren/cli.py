@@ -288,7 +288,9 @@ def dry_plan(
         typer.echo(f"Error: unknown datasource '{ds_str}'", err=True)
         raise typer.Exit(1)
 
-    with WrenEngine(manifest_str=manifest_str, data_source=ds, connection_info={}) as engine:
+    with WrenEngine(
+        manifest_str=manifest_str, data_source=ds, connection_info={}
+    ) as engine:
         try:
             result = engine.dry_plan(sql)
             typer.echo(result)

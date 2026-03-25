@@ -34,7 +34,9 @@ def _load_tpch(conn_str: str) -> None:
             "SELECT o_orderkey, o_custkey, o_orderstatus, "
             "cast(o_totalprice as double), o_orderdate FROM orders"
         ).fetchall()
-        customer_rows = duck.execute("SELECT c_custkey, c_name FROM customer").fetchall()
+        customer_rows = duck.execute(
+            "SELECT c_custkey, c_name FROM customer"
+        ).fetchall()
 
     parsed = urlparse(conn_str)
     conn = pymysql.connect(
