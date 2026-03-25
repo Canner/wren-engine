@@ -53,6 +53,7 @@
       status.style.color = 'var(--pico-primary)';
     };
     reader.onerror = function() {
+      hidden.value = '';
       status.textContent = '✗ Failed to read file';
       status.style.color = 'var(--pico-color-red-500)';
     };
