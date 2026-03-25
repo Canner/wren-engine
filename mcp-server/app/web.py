@@ -218,6 +218,13 @@ async def post_connection(request: Request):
         return HTMLResponse(_msg("✗ Please select a data source.", ok=False))
 
     state = _get_state()
+
+    # Merge with existing connection info so that omitted sensitive fields
+    # (e.g. credentials not re-uploaded) retain their saved values.
+    existing = state.get("connection_info") or {}
+    if existing:
+        merged = {**existing, **conn_info}
+        conn_info = merged
     mdl_ds = (state.get("data_source") or "").upper()
     if state.get("is_deployed") and mdl_ds and mdl_ds != ds:
         return HTMLResponse(

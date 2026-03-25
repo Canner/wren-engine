@@ -6,13 +6,12 @@
   {% elif field.type == 'file_base64' %}
   <label>
     {{ field.label }}
-    <input type="hidden" name="{{ field.name }}" id="fb64-{{ field.name }}"
-      value="{{ connection_info.get(field.name, '') }}">
+    <input type="hidden" name="{{ field.name }}" id="fb64-{{ field.name }}" value="">
     <input type="file" id="fb64-file-{{ field.name }}"
       {% if field.get('accept') %}accept="{{ field.accept }}"{% endif %}
       onchange="handleFileBase64(this, '{{ field.name }}')">
     {% if connection_info.get(field.name) %}
-    <small id="fb64-status-{{ field.name }}" style="color:var(--pico-primary)">✓ Credentials loaded from saved config</small>
+    <small id="fb64-status-{{ field.name }}" style="color:var(--pico-primary)">✓ Credentials already configured (upload new file to replace)</small>
     {% else %}
     <small id="fb64-status-{{ field.name }}"></small>
     {% endif %}
@@ -46,15 +45,18 @@
     if (!file) { hidden.value = ''; status.textContent = ''; return; }
     var reader = new FileReader();
     reader.onload = function() {
-      hidden.value = btoa(reader.result);
-      status.textContent = '✓ ' + file.name + ' loaded (' + Math.ceil(reader.result.length / 1024) + ' KB)';
+      var bytes = new Uint8Array(reader.result);
+      var binary = '';
+      for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      hidden.value = btoa(binary);
+      status.textContent = '✓ ' + file.name + ' loaded (' + Math.ceil(bytes.length / 1024) + ' KB)';
       status.style.color = 'var(--pico-primary)';
     };
     reader.onerror = function() {
       status.textContent = '✗ Failed to read file';
       status.style.color = 'var(--pico-color-red-500)';
     };
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file);
   }
   </script>
 {% elif datasource %}
