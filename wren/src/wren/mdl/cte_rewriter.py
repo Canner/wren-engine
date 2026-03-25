@@ -11,6 +11,7 @@ from __future__ import annotations
 import base64
 import json
 
+import sqlglot
 from sqlglot import exp, parse_one
 from sqlglot.optimizer.normalize_identifiers import normalize_identifiers
 from sqlglot.optimizer.qualify_columns import qualify_columns
@@ -104,7 +105,8 @@ class CTERewriter:
         # whole-query transform, or raise so tests can catch the miss.
         if not used_columns:
             if self.fallback:
-                return self.session_context.transform_sql(sql)
+                wren_sql = self.session_context.transform_sql(sql)
+                return sqlglot.transpile(wren_sql, read="wren", write=self.dialect)[0]
             raise ValueError(f"No model references found in SQL: {sql}")
 
         model_ctes = self._build_model_ctes(used_columns)
