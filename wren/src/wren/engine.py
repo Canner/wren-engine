@@ -24,9 +24,11 @@ from typing import Any
 
 import pyarrow as pa
 
+from sqlglot import exp, parse_one
+
 from wren.connector.factory import get_connector
 from wren.mdl import get_manifest_extractor, get_session_context, to_json_base64
-from wren.mdl.cte_rewriter import CTERewriter
+from wren.mdl.cte_rewriter import CTERewriter, get_sqlglot_dialect
 from wren.model.data_source import DataSource
 from wren.model.error import DIALECT_SQL, ErrorCode, ErrorPhase, WrenError
 
@@ -78,7 +80,19 @@ class WrenEngine:
     # ------------------------------------------------------------------
 
     def dry_plan(self, sql: str, properties: dict | None = None) -> str:
-        """Plan SQL through MDL and return the expanded SQL in the target dialect."""
+        """Plan SQL through MDL and return the expanded SQL in the target dialect.
+
+        Transformation flow::
+
+            User SQL (target dialect, e.g. Postgres)
+              → sqlglot parse (target dialect)
+              → qualify_tables + normalize_identifiers + qualify_columns
+              → identify referenced models and columns
+              → per-model: wren-core transform_sql → Wren dialect SQL
+              → per-model: sqlglot parse (Wren dialect) → inject as CTE
+              → sqlglot generate (target dialect)
+              → output SQL with model CTEs in target dialect
+        """
         return self._plan(sql, properties)
 
     # ------------------------------------------------------------------
@@ -147,9 +161,12 @@ class WrenEngine:
             processed = frozenset(properties.items())
 
         try:
-            # Extract minimal manifest for the query
+            # Extract minimal manifest scoped to tables referenced in the SQL.
+            # Use sqlglot (not DataFusion parser) since input is target dialect.
+            dialect = get_sqlglot_dialect(self.data_source)
+            ast = parse_one(sql, dialect=dialect)
+            tables = [t.name for t in ast.find_all(exp.Table)]
             extractor = get_manifest_extractor(self.manifest_str)
-            tables = extractor.resolve_used_table_names(sql)
             manifest = extractor.extract_by(tables)
             effective_manifest = to_json_base64(manifest)
         except Exception:
