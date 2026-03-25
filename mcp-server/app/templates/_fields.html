@@ -3,6 +3,23 @@
   {% for field in fields %}
   {% if field.type == 'hidden' %}
     <input type="hidden" name="{{ field.name }}" value="{{ field.get('value', '') }}">
+  {% elif field.type == 'file_base64' %}
+  <label>
+    {{ field.label }}
+    <input type="hidden" name="{{ field.name }}" id="fb64-{{ field.name }}"
+      value="{{ connection_info.get(field.name, '') }}">
+    <input type="file" id="fb64-file-{{ field.name }}"
+      {% if field.get('accept') %}accept="{{ field.accept }}"{% endif %}
+      onchange="handleFileBase64(this, '{{ field.name }}')">
+    {% if connection_info.get(field.name) %}
+    <small id="fb64-status-{{ field.name }}" style="color:var(--pico-primary)">✓ Credentials loaded from saved config</small>
+    {% else %}
+    <small id="fb64-status-{{ field.name }}"></small>
+    {% endif %}
+    {% if field.get('hint') %}
+    <small style="color:var(--pico-muted-color)">{{ field.hint }}</small>
+    {% endif %}
+  </label>
   {% else %}
   <label>
     {{ field.label }}
@@ -21,6 +38,25 @@
   </label>
   {% endif %}
   {% endfor %}
+  <script>
+  function handleFileBase64(fileInput, fieldName) {
+    var hidden = document.getElementById('fb64-' + fieldName);
+    var status = document.getElementById('fb64-status-' + fieldName);
+    var file = fileInput.files[0];
+    if (!file) { hidden.value = ''; status.textContent = ''; return; }
+    var reader = new FileReader();
+    reader.onload = function() {
+      hidden.value = btoa(reader.result);
+      status.textContent = '✓ ' + file.name + ' loaded (' + Math.ceil(reader.result.length / 1024) + ' KB)';
+      status.style.color = 'var(--pico-primary)';
+    };
+    reader.onerror = function() {
+      status.textContent = '✗ Failed to read file';
+      status.style.color = 'var(--pico-color-red-500)';
+    };
+    reader.readAsText(file);
+  }
+  </script>
 {% elif datasource %}
   <label>
     Connection JSON

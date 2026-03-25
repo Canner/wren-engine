@@ -42,9 +42,9 @@ DATASOURCE_FIELDS: dict[str, list[dict]] = {
         {"name": "format", "label": "Format", "type": "hidden", "value": "duckdb"},
     ],
     "BIGQUERY": [
-        {"name": "project", "label": "Project ID", "type": "text", "placeholder": "my-gcp-project"},
-        {"name": "dataset", "label": "Dataset", "type": "text", "placeholder": "my_dataset"},
-        {"name": "credentials_base64", "label": "Credentials (Base64)", "type": "password", "placeholder": ""},
+        {"name": "project_id", "label": "Project ID", "type": "text", "placeholder": "my-gcp-project"},
+        {"name": "dataset_id", "label": "Dataset", "type": "text", "placeholder": "my_dataset"},
+        {"name": "credentials", "label": "Service Account JSON", "type": "file_base64", "accept": ".json", "hint": "Upload your GCP service account credentials.json file. It will be base64-encoded automatically."},
     ],
     "SNOWFLAKE": [
         {"name": "user", "label": "User", "type": "text", "placeholder": ""},
@@ -130,6 +130,11 @@ DATASOURCE_FIELDS: dict[str, list[dict]] = {
         {"name": "key_id", "label": "Key ID", "type": "text", "placeholder": ""},
         {"name": "secret_key", "label": "Secret Key", "type": "password", "placeholder": ""},
         {"name": "credentials", "label": "Credentials (Base64)", "type": "password", "placeholder": "eyJ..."},
+    ],
+    "DATABRICKS": [
+        {"name": "serverHostname", "label": "Server Hostname", "type": "text", "placeholder": "dbc-xxxxxxxx-xxxx.cloud.databricks.com"},
+        {"name": "httpPath", "label": "HTTP Path", "type": "text", "placeholder": "/sql/1.0/warehouses/xxxxxxxx"},
+        {"name": "accessToken", "label": "Access Token", "type": "password", "placeholder": ""},
     ],
 }
 
