@@ -181,7 +181,7 @@ All other MDL fields (`name`, `type`, `catalog`, `schema`, `table`, `condition`,
 
 ```
 1. Generate MDL
-   Follow the generate-mdl skill to introspect the database and build the MDL JSON dict.
+   Follow the wren-generate-mdl skill to introspect the database and build the MDL JSON dict.
 
 2. Save project
    Write wren_project.yml + models/*.yml + relationships.yml + views.yml

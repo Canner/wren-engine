@@ -157,7 +157,7 @@ Open the Web UI at `http://localhost:9001`, select the data source type, and fil
 
 **2. Generate MDL**
 
-Run `/generate-mdl` in Claude Code. The skill uses MCP tools (`list_remote_tables`, `list_remote_constraints`) to introspect the database and build the MDL JSON.
+Run `/wren-generate-mdl` in Claude Code. The skill uses MCP tools (`list_remote_tables`, `list_remote_constraints`) to introspect the database and build the MDL JSON.
 
 **3. Save project**
 

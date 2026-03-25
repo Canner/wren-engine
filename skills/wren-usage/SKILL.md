@@ -1,10 +1,10 @@
 ---
 name: wren-usage
-description: Daily usage guide for Wren Engine — connect to a database, write SQL queries, manage MDL projects, and operate the MCP server. Use when a user wants to perform any ongoing Wren task after initial setup. Trigger for: write SQL, query data, update MDL, add a model, change connection, rebuild project, restart MCP server.
+description: "Wren Engine — semantic SQL engine for AI agents. Query 22+ data sources (PostgreSQL, BigQuery, Snowflake, MySQL, ClickHouse, etc.) through a modeling layer (MDL). This skill is the main entry point: it guides setup, delegates to focused sub-skills for SQL authoring, MDL generation, project management, and MCP server operations. Use when: write SQL, query data, generate or update MDL, change database connection, manage YAML projects, set up or operate MCP server, or get started with Wren Engine for the first time."
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.1"
+  version: "1.2"
 ---
 
 # Wren Engine — Usage Guide
@@ -33,11 +33,15 @@ This skill is your day-to-day reference for working with Wren Engine. It delegat
 
 Check whether the required skills are already installed in `~/.claude/skills/`. If any are missing, tell the user to run:
 
-```
+```bash
+# Option A — npx skills (works with Claude Code, Cursor, and 30+ agents)
 npx skills add Canner/wren-engine --skill '*' --agent claude-code
+
+# Option B — Clawhub (if installed via clawhub)
+clawhub install wren-usage
 ```
 
-This installs `wren-usage`, `wren-connection-info`, `generate-mdl`, `wren-project`, `wren-sql`, and `wren-mcp-setup` into `~/.claude/skills/`.
+This installs `wren-usage` and its dependent skills (`wren-connection-info`, `wren-generate-mdl`, `wren-project`, `wren-sql`, `wren-mcp-setup`, `wren-http-api`) into `~/.claude/skills/`.
 
 After installation, the user must **start a new session** for the new skills to be loaded.
 
@@ -53,11 +57,12 @@ Identify the user's intent and delegate to the appropriate skill:
 |------|-------|
 | Write or debug a SQL query | `@wren-sql` |
 | Connect to a new database / change credentials | `@wren-connection-info` |
-| Generate MDL from an existing database | `@generate-mdl` |
+| Generate MDL from an existing database | `@wren-generate-mdl` |
 | Save MDL to YAML files (version control) | `@wren-project` |
 | Load a saved YAML project / rebuild `target/mdl.json` | `@wren-project` |
 | Add a new model or column to the MDL | `@wren-project` |
 | Start, reset, or reconfigure the MCP server | `@wren-mcp-setup` |
+| Call Wren tools via HTTP JSON-RPC (no MCP SDK) | `@wren-http-api` |
 | First-time setup from scratch | `@wren-quickstart` |
 
 ---
@@ -110,7 +115,7 @@ To add a model, column, relationship, or view to an existing project:
 When the database schema has changed and the MDL needs to be refreshed:
 
 1. Invoke `@wren-connection-info` — confirm or update credentials
-2. Invoke `@generate-mdl` — re-introspect the database and rebuild the MDL JSON
+2. Invoke `@wren-generate-mdl` — re-introspect the database and rebuild the MDL JSON
 3. Invoke `@wren-project` — **Save** the new MDL as an updated YAML project
 4. Invoke `@wren-project` — **Build** to compile `target/mdl.json`
 5. Deploy

@@ -350,7 +350,7 @@ Or deploy from an in-memory dict:
 deploy_manifest(mdl=<manifest dict>)
 ```
 
-**To generate an MDL from scratch**, use the `generate-mdl` skill. It will introspect your database schema via ibis-server and build the manifest for you.
+**To generate an MDL from scratch**, use the `wren-generate-mdl` skill. It will introspect your database schema via ibis-server and build the manifest for you.
 
 ---
 
@@ -364,4 +364,4 @@ Try it:
 Use health_check() to verify the connection.
 ```
 
-Once confirmed, you can start querying your data through Wren Engine — use `/generate-mdl` to scaffold an MDL from your database, or `/wren-sql` for help writing queries.
+Once confirmed, you can start querying your data through Wren Engine — use `/wren-generate-mdl` to scaffold an MDL from your database, or `/wren-sql` for help writing queries.

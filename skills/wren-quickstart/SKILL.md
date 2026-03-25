@@ -28,7 +28,7 @@ Then continue with the workflow below regardless of update status.
 
 This skill walks a user through setting up Wren Engine end-to-end — from creating a workspace to running their first query via MCP. Each phase delegates to a focused skill. Follow the steps in order.
 
-> **Prerequisites:** The dependent skills (`generate-mdl`, `wren-project`, `wren-mcp-setup`, `wren-connection-info`) must be installed. If they are missing, use `/wren-usage` first — it handles skill installation and then routes back here for setup.
+> **Prerequisites:** The dependent skills (`wren-generate-mdl`, `wren-project`, `wren-mcp-setup`, `wren-connection-info`) must be installed. If they are missing, use `/wren-usage` first — it handles skill installation and then routes back here for setup.
 
 ---
 
@@ -106,23 +106,23 @@ Enter the data source credentials (host, port, database, user, password, etc.) i
 
 The user must **start a new Claude Code session** for the Wren MCP tools to be loaded. Instruct the user to do this now and come back to continue with Phase 3.
 
-> **Important:** Do not proceed to Phase 3 until the new session is started. The `generate-mdl` skill requires MCP tools (`health_check()`, `list_remote_tables()`, etc.) which are only available after the MCP server is registered and a new session is started.
+> **Important:** Do not proceed to Phase 3 until the new session is started. The `wren-generate-mdl` skill requires MCP tools (`health_check()`, `list_remote_tables()`, etc.) which are only available after the MCP server is registered and a new session is started.
 
 ---
 
 ## Phase 3 — Generate MDL and save project
 
-> **Prerequisite:** The MCP server must be registered and a new session started (Phase 2c). The `generate-mdl` skill uses MCP tools — do not call ibis-server API directly.
+> **Prerequisite:** The MCP server must be registered and a new session started (Phase 2c). The `wren-generate-mdl` skill uses MCP tools — do not call ibis-server API directly.
 
 ### 3a — Generate MDL
 
-Invoke the **generate-mdl** skill to introspect the user's database and build the MDL manifest:
+Invoke the **wren-generate-mdl** skill to introspect the user's database and build the MDL manifest:
 
-```
-@generate-mdl
+```text
+@wren-generate-mdl
 ```
 
-The generate-mdl skill will:
+The wren-generate-mdl skill will:
 1. Run `health_check()` to verify the connection is working
 2. Ask for data source type and optional schema filter
 3. Call `list_remote_tables()` and `list_remote_constraints()` via MCP to fetch schema
@@ -178,7 +178,7 @@ If the health check fails, follow the troubleshooting steps in the **wren-mcp-se
 | Phase | Skill | Purpose |
 |-------|-------|---------|
 | 2 | `@wren-mcp-setup` | Start Docker container and register MCP server |
-| 3a | `@generate-mdl` | Introspect database and build MDL JSON |
+| 3a | `@wren-generate-mdl` | Introspect database and build MDL JSON |
 | 3b | `@wren-project` | Save MDL as YAML project + compile to `target/` |
 
 ---
@@ -189,7 +189,7 @@ If the health check fails, follow the troubleshooting steps in the **wren-mcp-se
 - The MCP server is only loaded at session start. Start a new Claude Code session after registering.
 - Do not attempt to call ibis-server API directly — always use MCP tools.
 
-**generate-mdl fails:**
+**wren-generate-mdl fails:**
 - Ensure the container is running: `docker ps --filter name=wren-mcp`
 - Ensure connection info is configured in the Web UI (`http://localhost:9001`)
 - Ensure a new session was started after `claude mcp add`

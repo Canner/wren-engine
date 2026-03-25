@@ -7,8 +7,8 @@
   "skills": [
     {
       "name": "wren-connection-info",
-      "version": "1.4",
-      "description": "Reference guide for Wren Engine connection info — required fields, sensitive values, Docker host hints, and BigQuery credential encoding.",
+      "version": "1.5",
+      "description": "Reference guide for Wren Engine connection info — required fields for all 18 data sources, sensitive field handling, Docker host hints, and credential encoding.",
       "tags": [
         "wren",
         "credentials",
@@ -19,7 +19,7 @@
       "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-connection-info"
     },
     {
-      "name": "generate-mdl",
+      "name": "wren-generate-mdl",
       "version": "1.4",
       "description": "Generate a Wren MDL manifest from a live database using MCP server introspection tools.",
       "tags": [
@@ -34,7 +34,7 @@
         "clickhouse",
         "trino"
       ],
-      "repository": "https://github.com/Canner/wren-engine/tree/main/skills/generate-mdl"
+      "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-generate-mdl"
     },
     {
       "name": "wren-project",
@@ -92,28 +92,48 @@
         "docker"
       ],
       "dependencies": [
-        "generate-mdl",
+        "wren-generate-mdl",
         "wren-project",
         "wren-mcp-setup"
       ],
       "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-quickstart"
     },
     {
+      "name": "wren-http-api",
+      "version": "1.0",
+      "description": "Interact with Wren Engine MCP server via plain HTTP JSON-RPC requests — no MCP client SDK required.",
+      "tags": [
+        "wren",
+        "http",
+        "json-rpc",
+        "api",
+        "openclaw",
+        "rest"
+      ],
+      "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-http-api"
+    },
+    {
       "name": "wren-usage",
-      "version": "1.1",
-      "description": "Daily usage guide for Wren Engine — connect, query, manage MDL, and operate the MCP server via AI agents.",
+      "version": "1.2",
+      "description": "Wren Engine — semantic SQL engine for AI agents. Query 22+ data sources through a modeling layer. Main entry point for setup, SQL, MDL generation, and MCP server operations.",
       "tags": [
         "wren",
         "usage",
         "sql",
         "mdl",
-        "mcp"
+        "mcp",
+        "database",
+        "semantic-layer",
+        "postgres",
+        "bigquery",
+        "snowflake"
       ],
       "dependencies": [
-        "generate-mdl",
+        "wren-generate-mdl",
         "wren-project",
         "wren-sql",
-        "wren-mcp-setup"
+        "wren-mcp-setup",
+        "wren-http-api"
       ],
       "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-usage"
     }

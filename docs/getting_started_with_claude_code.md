@@ -40,7 +40,7 @@ This installs the following skills into `~/.claude/skills/`:
 |-------|---------|
 | `wren-quickstart` | End-to-end guided setup |
 | `wren-connection-info` | Connection field reference per data source |
-| `generate-mdl` | Generate MDL from a live database |
+| `wren-generate-mdl` | Generate MDL from a live database |
 | `wren-project` | Save and build MDL as YAML files |
 | `wren-mcp-setup` | Start the Docker container and register MCP |
 | `wren-usage` | Day-to-day usage guide |
@@ -187,7 +187,7 @@ claude mcp list
 In the new session, run:
 
 ```
-/generate-mdl
+/wren-generate-mdl
 ```
 
 The skill will:
@@ -198,7 +198,7 @@ The skill will:
 4. Build the MDL JSON (models, columns, relationships)
 5. Validate the manifest with `deploy_manifest()` + `dry_run()`
 
-> **Prerequisite:** The MCP server must be registered and a new session started (Phase 3). The `/generate-mdl` skill uses MCP tools — do not call ibis-server API directly.
+> **Prerequisite:** The MCP server must be registered and a new session started (Phase 3). The `/wren-generate-mdl` skill uses MCP tools — do not call ibis-server API directly.
 
 Then save the MDL as a versioned YAML project:
 
@@ -242,7 +242,7 @@ Once set up, use `/wren-usage` in Claude Code for ongoing tasks:
 | Look up connection field reference | `/wren-connection-info` |
 | Reconfigure connection via Web UI | `http://localhost:9001` |
 | Add a model or column to the MDL | `/wren-project` |
-| Regenerate MDL after schema changes | `/generate-mdl` |
+| Regenerate MDL after schema changes | `/wren-generate-mdl` |
 | Restart or reconfigure the MCP server | `/wren-mcp-setup` |
 
 ### MCP server quick reference
@@ -277,8 +277,8 @@ Confirm `~/wren-workspace/target/mdl.json` exists before starting the container.
 **Database connection refused inside Docker:**
 Change `localhost` / `127.0.0.1` to `host.docker.internal` in your connection credentials.
 
-**`generate-mdl` fails because wren-ibis-server is not running:**
-Start the container first (Phase 2), then run `/generate-mdl`. wren-ibis-server is available at `http://localhost:8000` once the container is up.
+**`wren-generate-mdl` fails because wren-ibis-server is not running:**
+Start the container first (Phase 2), then run `/wren-generate-mdl`. wren-ibis-server is available at `http://localhost:8000` once the container is up.
 
 **Skill not found after installation:**
 Start a new Claude Code session after installing skills — they are loaded at session start.
@@ -300,9 +300,9 @@ curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/inst
 To update a single skill:
 
 ```bash
-npx skills add Canner/wren-engine --skill generate-mdl --agent claude-code
+npx skills add Canner/wren-engine --skill wren-generate-mdl --agent claude-code
 # or:
-curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force generate-mdl
+curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force wren-generate-mdl
 ```
 
 ---

@@ -3,17 +3,17 @@
 #
 # Usage:
 #   ./install.sh                     # install all skills
-#   ./install.sh generate-mdl        # install specific skills
+#   ./install.sh wren-generate-mdl    # install specific skills
 #   ./install.sh --force wren-sql    # overwrite without prompt
 #   curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash
-#   curl -fsSL .../install.sh | bash -s -- generate-mdl
+#   curl -fsSL .../install.sh | bash -s -- wren-generate-mdl
 
 set -euo pipefail
 
 REPO="Canner/wren-engine"
 BRANCH="${WREN_SKILLS_BRANCH:-main}"
 DEST="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}"
-ALL_SKILLS=(generate-mdl wren-project wren-sql wren-mcp-setup wren-quickstart wren-connection-info wren-usage)
+ALL_SKILLS=(wren-generate-mdl wren-project wren-sql wren-mcp-setup wren-quickstart wren-connection-info wren-usage wren-http-api)
 
 # Parse --force flag and skill list from arguments
 FORCE=false
@@ -141,7 +141,7 @@ install_from_archive() {
 
 mkdir -p "$DEST"
 
-if [ -n "$SCRIPT_DIR" ] && [ -d "$SCRIPT_DIR/generate-mdl" ]; then
+if [ -n "$SCRIPT_DIR" ] && [ -d "$SCRIPT_DIR/wren-generate-mdl" ]; then
   # ---- Local mode: copy directly from repo ----
   echo "Installing from local repo: $SCRIPT_DIR"
   echo "Destination: $DEST"

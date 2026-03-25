@@ -28,20 +28,29 @@ npx skills add Canner/wren-engine --skill '*' --agent claude-code
 
 `npx skills` also supports Cursor, Windsurf, and 30+ other agent tools — replace `--agent claude-code` with your agent of choice.
 
-### Option 3 — install script (from a local clone)
+### Option 3 — ClawHub
+
+Two skills are published on [ClawHub](https://clawhub.ai) for agents that support the ClawHub registry:
+
+```bash
+clawhub install wren-usage       # main entry point — installs all dependent skills
+clawhub install wren-http-api    # standalone — HTTP JSON-RPC for non-MCP clients
+```
+
+### Option 4 — install script (from a local clone)
 
 ```bash
 bash skills/install.sh                        # all skills
-bash skills/install.sh generate-mdl wren-sql  # specific skills
-bash skills/install.sh --force generate-mdl   # overwrite existing
+bash skills/install.sh wren-generate-mdl wren-sql  # specific skills
+bash skills/install.sh --force wren-generate-mdl   # overwrite existing
 ```
 
-### Option 4 — manual copy
+### Option 5 — manual copy
 
 ```bash
 cp -r skills/wren-usage ~/.claude/skills/
 # or all at once:
-cp -r skills/wren-usage skills/generate-mdl skills/wren-project skills/wren-sql skills/wren-mcp-setup skills/wren-connection-info ~/.claude/skills/
+cp -r skills/wren-usage skills/wren-generate-mdl skills/wren-project skills/wren-sql skills/wren-mcp-setup skills/wren-connection-info ~/.claude/skills/
 ```
 
 Once installed, invoke a skill by name in your conversation:
@@ -49,25 +58,26 @@ Once installed, invoke a skill by name in your conversation:
 ```text
 /wren-usage
 /wren-quickstart
-/generate-mdl
+/wren-generate-mdl
 /wren-project
 /wren-sql
 /wren-mcp-setup
 ```
 
-> **Tip:** Use `--skill '*'` to install all skills at once, or specify individual skills (e.g., `--skill generate-mdl --skill wren-sql`).
+> **Tip:** Use `--skill '*'` to install all skills at once, or specify individual skills (e.g., `--skill wren-generate-mdl --skill wren-sql`).
 
 ## Available Skills
 
 | Skill | Description |
 |-------|-------------|
-| [wren-usage](wren-usage/SKILL.md) | **Primary skill** — daily usage guide: query data, manage MDL, connect databases, operate MCP server |
+| [wren-usage](wren-usage/SKILL.md) | **Primary skill** — daily usage guide: query data, manage MDL, connect databases, operate MCP server `ClawHub` |
 | [wren-quickstart](wren-quickstart/SKILL.md) | End-to-end first-time setup — install skills, generate MDL, save project, start MCP server, verify setup |
-| [generate-mdl](generate-mdl/SKILL.md) | Generate a Wren MDL manifest from a live database using ibis-server introspection |
+| [wren-generate-mdl](wren-generate-mdl/SKILL.md) | Generate a Wren MDL manifest from a live database using ibis-server introspection |
 | [wren-project](wren-project/SKILL.md) | Save, load, and build MDL manifests as version-controlled YAML project directories |
 | [wren-sql](wren-sql/SKILL.md) | Write and correct SQL queries for Wren Engine — types, date/time, BigQuery dialect, error diagnosis |
 | [wren-mcp-setup](wren-mcp-setup/SKILL.md) | Set up Wren Engine MCP via Docker, register with Claude Code or other MCP clients, and start querying |
 | [wren-connection-info](wren-connection-info/SKILL.md) | Set up data source credentials — produces `connectionFilePath` or inline dict |
+| [wren-http-api](wren-http-api/SKILL.md) | Interact with Wren MCP via plain HTTP JSON-RPC — no MCP SDK required (for OpenClaw, custom clients, scripts) `ClawHub` |
 
 See [SKILLS.md](SKILLS.md) for full details on each skill.
 
@@ -82,7 +92,7 @@ To update manually at any time:
 npx skills add Canner/wren-engine --skill '*' --agent claude-code
 
 # Or reinstall a specific skill
-npx skills add Canner/wren-engine --skill generate-mdl --agent claude-code
+npx skills add Canner/wren-engine --skill wren-generate-mdl --agent claude-code
 ```
 
 ## Releasing a New Skill Version
@@ -99,7 +109,7 @@ When updating a skill, two files must be kept in sync:
 2. Update the matching entry in [`versions.json`](versions.json):
    ```json
    {
-     "generate-mdl": "1.2"
+     "wren-generate-mdl": "1.2"
    }
    ```
 

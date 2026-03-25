@@ -182,7 +182,7 @@ claude mcp list
 In the new session, run the skills in sequence:
 
 ```text
-/generate-mdl
+/wren-generate-mdl
 ```
 
 The skill uses MCP tools (`health_check()`, `list_remote_tables()`, etc.) to introspect the database — these tools are only available after the MCP server is registered and a new session is started.
@@ -262,7 +262,7 @@ The connection info `url` is pointing to the `.duckdb` file instead of its paren
 **`Catalog "xxx" does not exist` error:**
 When ibis-server attaches a DuckDB file, the catalog name is derived from the filename (e.g. `jaffle_shop.duckdb` → catalog `jaffle_shop`). Make sure the `catalog` in your MDL matches the DuckDB filename without the extension.
 
-**`/generate-mdl` fails immediately:**
+**`/wren-generate-mdl` fails immediately:**
 The container must be running first. Run `docker ps --filter name=wren-mcp` to confirm, then retry.
 
 **MCP tools not available:**
