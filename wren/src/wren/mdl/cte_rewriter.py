@@ -152,9 +152,7 @@ class CTERewriter:
         # Ensure every referenced model appears in the result, even if no
         # specific columns are referenced (e.g. SELECT COUNT(*) FROM model).
         # Use dict as ordered set to preserve insertion order and deduplicate.
-        used: dict[str, dict[str, None]] = {
-            m: {} for m in alias_to_model.values()
-        }
+        used: dict[str, dict[str, None]] = {m: {} for m in alias_to_model.values()}
         for col in qualified.find_all(exp.Column):
             table_ref = col.table
             if not table_ref:

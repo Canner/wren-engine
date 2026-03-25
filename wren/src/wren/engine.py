@@ -23,7 +23,6 @@ from __future__ import annotations
 from typing import Any
 
 import pyarrow as pa
-
 from sqlglot import exp, parse_one
 
 from wren.connector.factory import get_connector
