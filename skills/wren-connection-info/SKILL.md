@@ -45,10 +45,10 @@ Read the linked reference file for the user's data source to get required fields
 Most database connectors need: `host`, `port`, `user`, `password`, `database`.
 
 Exceptions:
-- **BigQuery** — uses `project_id`, `dataset_id`, `credentials_json_string` (base64-encoded). See [databases.md](references/databases.md) for encoding instructions.
-- **Snowflake** — uses `account` instead of `host`, plus `sf_schema`.
+- **BigQuery** — uses `project_id`, `dataset_id`, `credentials` (base64-encoded). See [databases.md](references/databases.md) for encoding instructions.
+- **Snowflake** — uses `account` instead of `host`, plus `schema`.
 - **Trino** — needs `catalog` and `schema` instead of `database`.
-- **Databricks** — uses `server_hostname`, `http_path`, `access_token` (or service principal).
+- **Databricks** — uses `serverHostname`, `httpPath`, `accessToken` (or service principal with `clientId`, `clientSecret`).
 - **Spark** — only `host` and `port` (Spark Connect protocol, no auth fields).
 - **File sources** — use `url`, `format`, plus bucket/credentials. See [file-sources.md](references/file-sources.md).
 
@@ -73,11 +73,11 @@ Never log, display, or pass sensitive values through the AI agent unnecessarily.
 | Connector | Sensitive fields |
 |-----------|-----------------|
 | Postgres / MySQL / MSSQL / ClickHouse / Oracle / Doris / Redshift | `password` |
-| BigQuery | `credentials_json_string` |
+| BigQuery | `credentials` |
 | Snowflake | `password` |
 | Athena | `aws_access_key_id`, `aws_secret_access_key` |
-| Databricks (token) | `access_token` |
-| Databricks (service principal) | `client_id`, `client_secret` |
+| Databricks (token) | `accessToken` |
+| Databricks (service principal) | `clientId`, `clientSecret` |
 | S3 / MinIO | `access_key`, `secret_key` |
 | GCS | `key_id`, `secret_key`, `credentials` |
 | Trino / Spark / Local files | (none) |

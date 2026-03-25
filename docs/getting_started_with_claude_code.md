@@ -277,6 +277,9 @@ Confirm `~/wren-workspace/target/mdl.json` exists before starting the container.
 **Database connection refused inside Docker:**
 Change `localhost` / `127.0.0.1` to `host.docker.internal` in your connection credentials.
 
+**MCP tools fail with "Session not found" after container restart:**
+Start a new Claude Code session. Container restarts invalidate MCP sessions — the client must reconnect.
+
 **`wren-generate-mdl` fails because wren-ibis-server is not running:**
 Start the container first (Phase 2), then run `/wren-generate-mdl`. wren-ibis-server is available at `http://localhost:8000` once the container is up.
 

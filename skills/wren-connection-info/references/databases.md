@@ -57,7 +57,7 @@ Set `redshift_type` to `"redshift_iam"` in the connection info to use IAM auth.
 |-------|-------------|-----------|
 | `project_id` | GCP project ID | |
 | `dataset_id` | Dataset name | |
-| `credentials_json_string` | Base64-encoded service account JSON | ✓ |
+| `credentials` | Base64-encoded service account JSON | ✓ |
 
 **BigQuery credentials encoding**: Wren requires the service account JSON as a **base64-encoded string**, not the raw file.
 After downloading `credentials.json` from GCP, run:
@@ -69,7 +69,7 @@ base64 -i credentials.json | tr -d '\n'
 base64 -w 0 credentials.json
 ```
 
-Paste the output into the `credentials_json_string` field.
+Paste the output into the `credentials` field. The Web UI also supports uploading the JSON file directly.
 
 ---
 
@@ -81,7 +81,7 @@ Paste the output into the `credentials_json_string` field.
 | `password` | Password | ✓ |
 | `account` | Account identifier | |
 | `database` | Database name | |
-| `sf_schema` | Schema name | |
+| `schema` | Schema name | |
 
 ---
 
@@ -101,7 +101,7 @@ Paste the output into the `credentials_json_string` field.
 | Field | Description | Sensitive |
 |-------|-------------|-----------|
 | `s3_staging_dir` | S3 staging directory (`s3://bucket/prefix/`) | |
-| `region` | AWS region | |
+| `region_name` | AWS region | |
 | `aws_access_key_id` | AWS access key ID | ✓ |
 | `aws_secret_access_key` | AWS secret access key | ✓ |
 
@@ -111,19 +111,19 @@ Paste the output into the `credentials_json_string` field.
 
 | Field | Description | Sensitive |
 |-------|-------------|-----------|
-| `server_hostname` | Workspace hostname (e.g. `dbc-xxx.cloud.databricks.com`) | |
-| `http_path` | SQL warehouse HTTP path (e.g. `/sql/1.0/warehouses/xxx`) | |
-| `access_token` | Personal access token | ✓ |
+| `serverHostname` | Workspace hostname (e.g. `dbc-xxx.cloud.databricks.com`) | |
+| `httpPath` | SQL warehouse HTTP path (e.g. `/sql/1.0/warehouses/xxx`) | |
+| `accessToken` | Personal access token | ✓ |
 
 ## Databricks (service principal)
 
 | Field | Description | Sensitive |
 |-------|-------------|-----------|
-| `server_hostname` | Workspace hostname | |
-| `http_path` | SQL warehouse HTTP path | |
-| `client_id` | OAuth M2M client ID | ✓ |
-| `client_secret` | OAuth M2M client secret | ✓ |
-| `azure_tenant_id` | Azure AD tenant ID (Azure Databricks only) | |
+| `serverHostname` | Workspace hostname | |
+| `httpPath` | SQL warehouse HTTP path | |
+| `clientId` | OAuth M2M client ID | ✓ |
+| `clientSecret` | OAuth M2M client secret | ✓ |
+| `azureTenantId` | Azure AD tenant ID (Azure Databricks only) | |
 
 ---
 

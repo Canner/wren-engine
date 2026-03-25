@@ -68,7 +68,7 @@
     },
     {
       "name": "wren-mcp-setup",
-      "version": "1.3",
+      "version": "1.4",
       "description": "Set up Wren Engine MCP server via Docker and register it with an AI agent.",
       "tags": [
         "wren",
