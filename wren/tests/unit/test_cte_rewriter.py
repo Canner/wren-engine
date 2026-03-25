@@ -86,11 +86,14 @@ def _b64(manifest: dict) -> str:
 
 
 def _make_rewriter(
-    manifest: dict, data_source: DataSource = DataSource.duckdb
+    manifest: dict,
+    data_source: DataSource = DataSource.duckdb,
+    *,
+    fallback: bool = False,
 ) -> CTERewriter:
     manifest_str = _b64(manifest)
     session = get_session_context(manifest_str, None, None, data_source.name)
-    return CTERewriter(manifest_str, session, data_source)
+    return CTERewriter(manifest_str, session, data_source, fallback=fallback)
 
 
 # ---------------------------------------------------------------------------
@@ -193,7 +196,7 @@ class TestCTEEdgeCases:
 
     def test_user_cte_shadows_model(self):
         """User CTE with same name as model — no model CTE generated for that name."""
-        rw = _make_rewriter(_SINGLE_MODEL_MANIFEST)
+        rw = _make_rewriter(_SINGLE_MODEL_MANIFEST, fallback=True)
         result = rw.rewrite(
             "WITH orders AS (SELECT 1 AS id) SELECT * FROM orders"
         )
@@ -207,7 +210,7 @@ class TestCTEEdgeCases:
 
     def test_no_model_references_fallback(self):
         """Query referencing no models falls back to direct transform_sql."""
-        rw = _make_rewriter(_SINGLE_MODEL_MANIFEST)
+        rw = _make_rewriter(_SINGLE_MODEL_MANIFEST, fallback=True)
         # This should raise because 'unknown_table' is not in the manifest,
         # and the fallback transform_sql will also fail.
         with pytest.raises(Exception):

@@ -119,13 +119,14 @@ class CTERewriter:
 
     def _collect_model_columns(
         self, ast: exp.Expression, user_cte_names: set[str]
-    ) -> dict[str, set[str]]:
-        """Return ``{model_name: {col1, col2, ...}}`` for all referenced models.
+    ) -> dict[str, list[str]]:
+        """Return ``{model_name: [col1, col2, ...]}`` for all referenced models.
 
         Uses sqlglot's ``qualify_columns`` to fully resolve all column
         references (including ``SELECT *`` expansion and
         correlated subquery outer references), then walks the qualified AST
-        to collect model→column mappings.
+        to collect model→column mappings.  Column order follows the manifest
+        definition (via insertion order) so ``SELECT *`` preserves schema order.
         """
         copy = ast.copy()
         copy = qualify_tables(copy, dialect=self.dialect)
@@ -150,28 +151,31 @@ class CTERewriter:
 
         # Ensure every referenced model appears in the result, even if no
         # specific columns are referenced (e.g. SELECT COUNT(*) FROM model).
-        used: dict[str, set[str]] = {m: set() for m in alias_to_model.values()}
+        # Use dict as ordered set to preserve insertion order and deduplicate.
+        used: dict[str, dict[str, None]] = {
+            m: {} for m in alias_to_model.values()
+        }
         for col in qualified.find_all(exp.Column):
             table_ref = col.table
             if not table_ref:
                 continue
             model_name = alias_to_model.get(table_ref)
             if model_name:
-                used[model_name].add(col.name)
+                used[model_name][col.name] = None
 
-        return dict(used)
+        return {m: list(cols) for m, cols in used.items()}
 
     # ------------------------------------------------------------------
     # CTE generation
     # ------------------------------------------------------------------
 
-    def _build_model_ctes(self, used_columns: dict[str, set[str]]) -> list[exp.CTE]:
+    def _build_model_ctes(self, used_columns: dict[str, list[str]]) -> list[exp.CTE]:
         """Generate one CTE per model via wren-core transform_sql."""
         ctes: list[exp.CTE] = []
         for model_name, columns in used_columns.items():
             if columns:
                 orig = self._col_orig_name.get(model_name, {})
-                resolved = [orig.get(c, c) for c in sorted(columns)]
+                resolved = [orig.get(c, c) for c in columns]
                 col_list = ", ".join(f'"{model_name}"."{c}"' for c in resolved)
             else:
                 # No specific columns referenced (e.g. COUNT(*)) — only need rows
@@ -218,10 +222,9 @@ class CTERewriter:
 
     @staticmethod
     def _collect_user_cte_names(ast: exp.Expression) -> set[str]:
-        """Collect all CTE names defined in the user's SQL."""
+        """Collect all CTE names defined in the user's SQL (all scopes)."""
         names: set[str] = set()
-        with_clause = ast.args.get("with_")
-        if with_clause:
+        for with_clause in ast.find_all(exp.With):
             for cte in with_clause.expressions:
                 alias = cte.args.get("alias")
                 if alias:
