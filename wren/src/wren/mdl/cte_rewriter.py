@@ -10,8 +10,6 @@ from __future__ import annotations
 
 import base64
 import json
-from collections import defaultdict
-
 from sqlglot import exp, parse_one
 from sqlglot.optimizer.normalize_identifiers import normalize_identifiers
 from sqlglot.optimizer.qualify_columns import qualify_columns
@@ -147,7 +145,9 @@ class CTERewriter:
                 alias_to_model[alias] = table_name
             alias_to_model[table_name] = table_name
 
-        used: dict[str, set[str]] = defaultdict(set)
+        # Ensure every referenced model appears in the result, even if no
+        # specific columns are referenced (e.g. SELECT COUNT(*) FROM model).
+        used: dict[str, set[str]] = {m: set() for m in alias_to_model.values()}
         for col in qualified.find_all(exp.Column):
             table_ref = col.table
             if not table_ref:
@@ -166,9 +166,13 @@ class CTERewriter:
         """Generate one CTE per model via wren-core transform_sql."""
         ctes: list[exp.CTE] = []
         for model_name, columns in used_columns.items():
-            orig = self._col_orig_name.get(model_name, {})
-            resolved = [orig.get(c, c) for c in sorted(columns)]
-            col_list = ", ".join(f'"{model_name}"."{c}"' for c in resolved)
+            if columns:
+                orig = self._col_orig_name.get(model_name, {})
+                resolved = [orig.get(c, c) for c in sorted(columns)]
+                col_list = ", ".join(f'"{model_name}"."{c}"' for c in resolved)
+            else:
+                # No specific columns referenced (e.g. COUNT(*)) — only need rows
+                col_list = "1"
             model_sql = f'SELECT {col_list} FROM "{model_name}"'
             expanded = self.session_context.transform_sql(model_sql)
 
