@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import base64
 import json
+
 from sqlglot import exp, parse_one
 from sqlglot.optimizer.normalize_identifiers import normalize_identifiers
 from sqlglot.optimizer.qualify_columns import qualify_columns
