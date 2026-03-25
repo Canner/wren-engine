@@ -48,7 +48,7 @@ def duckdb_engine(tmp_path_factory):
     """A WrenEngine pointed at a temporary DuckDB file (not queried by unit tests)."""
     db_dir = tmp_path_factory.mktemp("unit_duckdb")
     conn_info = {"url": str(db_dir), "format": "duckdb"}
-    with WrenEngine(_MANIFEST_STR, DataSource.duckdb, conn_info) as e:
+    with WrenEngine(_MANIFEST_STR, DataSource.duckdb, conn_info, fallback=False) as e:
         yield e
 
 
@@ -62,55 +62,39 @@ def pg_engine():
         "user": "test",
         "password": "test",
     }
-    with WrenEngine(_MANIFEST_STR, DataSource.postgres, conn_info) as e:
+    with WrenEngine(_MANIFEST_STR, DataSource.postgres, conn_info, fallback=False) as e:
         yield e
 
 
 # ------------------------------------------------------------------
-# transpile
+# dry_plan (no DB access)
 # ------------------------------------------------------------------
 
 
-def test_transpile_returns_string(duckdb_engine: WrenEngine) -> None:
-    sql = duckdb_engine.transpile('SELECT o_orderkey FROM "orders" LIMIT 1')
+def test_dry_plan_returns_string(duckdb_engine: WrenEngine) -> None:
+    sql = duckdb_engine.dry_plan('SELECT o_orderkey FROM "orders" LIMIT 1')
     assert isinstance(sql, str)
     assert len(sql) > 0
 
 
-def test_transpile_postgres_dialect(pg_engine: WrenEngine) -> None:
-    """Transpile should produce Postgres-flavoured SQL (no backtick quoting, etc.)."""
-    sql = pg_engine.transpile('SELECT o_orderkey FROM "orders" LIMIT 1')
+def test_dry_plan_postgres_dialect(pg_engine: WrenEngine) -> None:
+    """dry_plan should produce Postgres-flavoured SQL (no backtick quoting, etc.)."""
+    sql = pg_engine.dry_plan('SELECT o_orderkey FROM "orders" LIMIT 1')
     assert isinstance(sql, str)
     # sqlglot Postgres output uses double-quote identifiers, not backticks
     assert "`" not in sql
 
 
-def test_transpile_calculated_field(duckdb_engine: WrenEngine) -> None:
-    sql = duckdb_engine.transpile('SELECT order_cust_key FROM "orders" LIMIT 1')
+def test_dry_plan_calculated_field(duckdb_engine: WrenEngine) -> None:
+    sql = duckdb_engine.dry_plan('SELECT order_cust_key FROM "orders" LIMIT 1')
     assert isinstance(sql, str)
     # The calculated column expression should be expanded in the SQL
     assert "concat" in sql.lower() or "||" in sql.lower()
 
 
-def test_transpile_invalid_sql_raises(duckdb_engine: WrenEngine) -> None:
-    with pytest.raises(WrenError):
-        duckdb_engine.transpile("SELECT * FROM not_a_model_in_manifest")
-
-
-# ------------------------------------------------------------------
-# dry_plan
-# ------------------------------------------------------------------
-
-
-def test_dry_plan_returns_datafusion_sql(duckdb_engine: WrenEngine) -> None:
-    planned = duckdb_engine.dry_plan('SELECT o_orderkey FROM "orders" LIMIT 1')
-    assert isinstance(planned, str)
-    assert len(planned) > 0
-
-
 def test_dry_plan_invalid_sql_raises(duckdb_engine: WrenEngine) -> None:
     with pytest.raises(WrenError):
-        duckdb_engine.dry_plan("SELECT * FROM nonexistent_model")
+        duckdb_engine.dry_plan("SELECT * FROM not_a_model_in_manifest")
 
 
 # ------------------------------------------------------------------
@@ -120,7 +104,7 @@ def test_dry_plan_invalid_sql_raises(duckdb_engine: WrenEngine) -> None:
 
 def test_context_manager_closes_connector() -> None:
     conn_info = {"url": "/tmp", "format": "duckdb"}
-    with WrenEngine(_MANIFEST_STR, DataSource.duckdb, conn_info) as e:
+    with WrenEngine(_MANIFEST_STR, DataSource.duckdb, conn_info, fallback=False) as e:
         assert e._connector is None  # connector is lazily initialized
 
     # After __exit__, internal state is cleaned up

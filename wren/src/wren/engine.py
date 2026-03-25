@@ -11,8 +11,8 @@ Example usage:
         connection_info={"host": "localhost", "port": 5432, ...},
     )
 
-    # Transform only (no DB required)
-    planned_sql = engine.transpile("SELECT * FROM orders")
+    # Plan only (no DB required)
+    planned_sql = engine.dry_plan("SELECT * FROM orders")
 
     # Execute against the data source
     arrow_table = engine.query("SELECT * FROM orders", limit=100)
@@ -23,25 +23,12 @@ from __future__ import annotations
 from typing import Any
 
 import pyarrow as pa
-import sqlglot
 
 from wren.connector.factory import get_connector
 from wren.mdl import get_manifest_extractor, get_session_context, to_json_base64
+from wren.mdl.cte_rewriter import CTERewriter
 from wren.model.data_source import DataSource
-from wren.model.error import DIALECT_SQL, PLANNED_SQL, ErrorCode, ErrorPhase, WrenError
-
-
-def _get_write_dialect(data_source: DataSource) -> str:
-    if data_source == DataSource.canner:
-        return "trino"
-    if data_source in {
-        DataSource.local_file,
-        DataSource.s3_file,
-        DataSource.minio_file,
-        DataSource.gcs_file,
-    }:
-        return "duckdb"
-    return data_source.name
+from wren.model.error import DIALECT_SQL, ErrorCode, ErrorPhase, WrenError
 
 
 class WrenEngine:
@@ -66,6 +53,8 @@ class WrenEngine:
         data_source: DataSource | str,
         connection_info: dict[str, Any] | object,
         function_path: str | None = None,
+        *,
+        fallback: bool = True,
     ):
         if isinstance(data_source, str):
             data_source = DataSource(data_source)
@@ -73,6 +62,7 @@ class WrenEngine:
         self.manifest_str = manifest_str
         self.data_source = data_source
         self.function_path = function_path
+        self._fallback = fallback
 
         # Build typed ConnectionInfo if a raw dict was given.
         # An empty dict is allowed for transpile-only usage (no DB connection).
@@ -87,16 +77,8 @@ class WrenEngine:
     # SQL transformation (no DB access)
     # ------------------------------------------------------------------
 
-    def transpile(self, sql: str, properties: dict | None = None) -> str:
-        """Transform SQL through MDL and transpile to the target dialect.
-
-        Returns the dialect SQL string without executing it.
-        """
-        planned = self._plan(sql, properties)
-        return self._transpile(planned)
-
     def dry_plan(self, sql: str, properties: dict | None = None) -> str:
-        """Return the wren-core planned SQL (DataFusion dialect, before transpile)."""
+        """Plan SQL through MDL and return the expanded SQL in the target dialect."""
         return self._plan(sql, properties)
 
     # ------------------------------------------------------------------
@@ -110,7 +92,7 @@ class WrenEngine:
         properties: dict | None = None,
     ) -> pa.Table:
         """Transpile and execute SQL, return results as an Arrow table."""
-        dialect_sql = self.transpile(sql, properties)
+        dialect_sql = self.dry_plan(sql, properties)
         connector = self._get_connector()
         try:
             return connector.query(dialect_sql, limit)
@@ -126,7 +108,7 @@ class WrenEngine:
 
     def dry_run(self, sql: str, properties: dict | None = None) -> None:
         """Transpile and dry-run SQL without returning results."""
-        dialect_sql = self.transpile(sql, properties)
+        dialect_sql = self.dry_plan(sql, properties)
         connector = self._get_connector()
         try:
             connector.dry_run(dialect_sql)
@@ -180,25 +162,19 @@ class WrenEngine:
                 processed,
                 self.data_source.name,
             )
-            return session.transform_sql(sql)
+            rewriter = CTERewriter(
+                effective_manifest,
+                session,
+                self.data_source,
+                fallback=self._fallback,
+            )
+            return rewriter.rewrite(sql)
         except Exception as e:
             raise WrenError(
                 ErrorCode.INVALID_SQL,
                 str(e),
                 phase=ErrorPhase.SQL_PLANNING,
                 metadata={DIALECT_SQL: sql},
-            ) from e
-
-    def _transpile(self, planned_sql: str) -> str:
-        try:
-            write = _get_write_dialect(self.data_source)
-            return sqlglot.transpile(planned_sql, read="duckdb", write=write)[0]
-        except Exception as e:
-            raise WrenError(
-                ErrorCode.SQLGLOT_ERROR,
-                str(e),
-                phase=ErrorPhase.SQL_TRANSPILE,
-                metadata={PLANNED_SQL: planned_sql},
             ) from e
 
     def _get_connector(self):
