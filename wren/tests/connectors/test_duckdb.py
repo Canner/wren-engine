@@ -44,5 +44,5 @@ class TestDuckDB(WrenQueryTestSuite):
 
         manifest_str = base64.b64encode(orjson.dumps(self.manifest)).decode()
         conn_info = {"url": str(db_dir), "format": "duckdb"}
-        with WrenEngine(manifest_str, DataSource.duckdb, conn_info) as e:
+        with WrenEngine(manifest_str, DataSource.duckdb, conn_info, fallback=False) as e:
             yield e

@@ -86,5 +86,5 @@ class TestPostgres(WrenQueryTestSuite):
                 "password": parsed.password,
             }
             manifest_str = base64.b64encode(orjson.dumps(self.manifest)).decode()
-            with WrenEngine(manifest_str, DataSource.postgres, conn_info) as e:
+            with WrenEngine(manifest_str, DataSource.postgres, conn_info, fallback=False) as e:
                 yield e

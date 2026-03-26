@@ -147,13 +147,13 @@ def dry_run(
         engine.close()
 
 
-@app.command()
-def transpile(
+@app.command(name="dry-plan")
+def dry_plan(
     sql: SqlArg,
     datasource: DatasourceOpt,
     mdl: MdlOpt,
 ):
-    """Transform SQL through MDL and emit the target dialect SQL (no DB required)."""
+    """Plan SQL through MDL and print the expanded SQL (no DB required)."""
     from wren.engine import WrenEngine  # noqa: PLC0415
     from wren.model.data_source import DataSource  # noqa: PLC0415
 
@@ -164,10 +164,9 @@ def transpile(
         typer.echo(f"Error: unknown datasource '{datasource}'", err=True)
         raise typer.Exit(1)
 
-    # For transpile we don't need real connection_info — pass a dummy dict
     engine = WrenEngine(manifest_str=manifest_str, data_source=ds, connection_info={})
     try:
-        result = engine.transpile(sql)
+        result = engine.dry_plan(sql)
         typer.echo(result)
     except Exception as e:
         typer.echo(f"Error: {e}", err=True)

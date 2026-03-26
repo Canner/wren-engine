@@ -34,7 +34,7 @@ the three required parts: pytest mark, manifest, and engine fixture.
                 _load_tpch(ch.get_connection_url())
                 conn_info = { ... }
                 manifest_str = base64.b64encode(orjson.dumps(self.manifest)).decode()
-                with WrenEngine(manifest_str, DataSource.clickhouse, conn_info) as e:
+                with WrenEngine(manifest_str, DataSource.clickhouse, conn_info, fallback=False) as e:
                     yield e
 
 Step 2 — Register the pytest marker
@@ -201,17 +201,11 @@ class WrenQueryTestSuite:
             engine.dry_run('SELECT * FROM "NotFound"')
 
     # ------------------------------------------------------------------
-    # Transpile / dry-plan tests (no DB access)
+    # dry-plan tests (no DB access)
     # ------------------------------------------------------------------
 
-    def test_transpile_returns_sql(self, engine: WrenEngine) -> None:
-        sql = engine.transpile('SELECT o_orderkey FROM "orders" LIMIT 1')
-        assert isinstance(sql, str)
-        assert len(sql) > 0
-
-    def test_dry_plan_returns_datafusion_sql(self, engine: WrenEngine) -> None:
+    def test_dry_plan_returns_sql(self, engine: WrenEngine) -> None:
         planned = engine.dry_plan('SELECT o_orderkey FROM "orders" LIMIT 1')
         assert isinstance(planned, str)
         assert len(planned) > 0
-        # dry_plan returns wren-core / DataFusion SQL, not dialect SQL
         assert "orders" in planned.lower()

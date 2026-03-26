@@ -2282,7 +2282,15 @@ wheels = [
 ]
 
 [[package]]
-name = "wren"
+name = "wren-core-py"
+version = "0.1.0"
+source = { registry = "../wren-core-py/target/wheels" }
+wheels = [
+    { path = "wren_core_py-0.1.0-cp311-abi3-macosx_11_0_arm64.whl" },
+]
+
+[[package]]
+name = "wren-engine"
 source = { editable = "." }
 dependencies = [
     { name = "boto3" },
@@ -2415,14 +2423,6 @@ requires-dist = [
     { name = "wren-core-py", specifier = ">=0.1" },
 ]
 provides-extras = ["all", "athena", "bigquery", "clickhouse", "databricks", "dev", "mssql", "mysql", "oracle", "postgres", "redshift", "snowflake", "spark", "trino"]
-
-[[package]]
-name = "wren-core-py"
-version = "0.1.0"
-source = { registry = "../wren-core-py/target/wheels" }
-wheels = [
-    { path = "wren_core_py-0.1.0-cp311-abi3-macosx_11_0_arm64.whl" },
-]
 
 [[package]]
 name = "zstandard"
