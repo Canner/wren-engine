@@ -83,12 +83,12 @@ with WrenEngine(manifest_str, DataSource.mysql, {"host": "...", ...}) as engine:
 just install-dev
 ```
 
-| Command | What it runs | Docker needed |
-|---------|-------------|---------------|
-| `just test-unit` | Unit tests | No |
-| `just test-duckdb` | DuckDB connector tests | No |
-| `just test-postgres` | PostgreSQL connector tests | Yes |
-| `just test-mysql` | MySQL connector tests | Yes |
-| `just test-bigquery` | BigQuery emulator tests | Yes |
-| `just test-redshift` | Redshift/PostgreSQL tests | Yes |
-| `just test` | All tests | Yes |
+| Command | What it runs | Docker needed | Notes |
+|---------|-------------|---------------|-------|
+| `just test-unit` | Unit tests | No | |
+| `just test-duckdb` | DuckDB connector tests | No | |
+| `just test-postgres` | PostgreSQL connector tests | Yes | |
+| `just test-mysql` | MySQL connector tests | Yes | |
+| `just test-bigquery` | BigQuery emulator tests | Yes | connector available, not yet integration-tested |
+| `just test-redshift` | Redshift/PostgreSQL tests | Yes | connector available, not yet integration-tested |
+| `just test` | All tests | Yes | |
