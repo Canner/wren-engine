@@ -10,30 +10,25 @@ import typer
 
 app = typer.Typer(name="wren", help="Wren Engine CLI", no_args_is_help=False)
 
-_DEFAULT_MDL = "mdl.json"
-_DEFAULT_CONN = "conn.json"
+_WREN_HOME = Path.home() / ".wren"
+_DEFAULT_MDL = _WREN_HOME / "mdl.json"
+_DEFAULT_CONN = _WREN_HOME / "conn.json"
 
 
 # ── File discovery helpers ─────────────────────────────────────────────────
 
 
-def _find_default(filename: str) -> str | None:
-    """Return filename if it exists in cwd, else None."""
-    return filename if Path(filename).exists() else None
-
-
 def _require_mdl(mdl: str | None) -> str:
-    """Return mdl arg if given, else auto-discover mdl.json from cwd."""
+    """Return mdl arg if given, else auto-discover mdl.json from ~/.wren."""
     if mdl is not None:
         return mdl
-    default = _find_default(_DEFAULT_MDL)
-    if default is None:
-        typer.echo(
-            f"Error: --mdl not specified and '{_DEFAULT_MDL}' not found in current directory.",
-            err=True,
-        )
-        raise typer.Exit(1)
-    return default
+    if _DEFAULT_MDL.exists():
+        return str(_DEFAULT_MDL)
+    typer.echo(
+        f"Error: --mdl not specified and '{_DEFAULT_MDL}' not found.",
+        err=True,
+    )
+    raise typer.Exit(1)
 
 
 def _load_manifest(mdl: str) -> str:
@@ -58,11 +53,11 @@ def _load_conn(
     *,
     required: bool = True,
 ) -> dict:
-    """Load connection dict from inline JSON or file, with cwd auto-discovery.
+    """Load connection dict from inline JSON or file, with ~/.wren auto-discovery.
 
     If neither --connection-info nor --connection-file is given, looks for
-    conn.json in the current directory.  Raises typer.Exit(1) if required=True
-    and nothing is found.
+    conn.json in ~/.wren.  Raises typer.Exit(1) if required=True and nothing
+    is found.
     """
     if connection_info:
         try:
@@ -71,7 +66,9 @@ def _load_conn(
             typer.echo(f"Error: invalid JSON in --connection-info: {e}", err=True)
             raise typer.Exit(1)
 
-    path_str = connection_file or _find_default(_DEFAULT_CONN)
+    path_str = connection_file or (
+        str(_DEFAULT_CONN) if _DEFAULT_CONN.exists() else None
+    )
     if path_str:
         path = Path(path_str)
         if not path.exists():
@@ -85,7 +82,7 @@ def _load_conn(
 
     if required:
         typer.echo(
-            f"Error: --connection-file not specified and '{_DEFAULT_CONN}' not found in current directory.",
+            f"Error: --connection-file not specified and '{_DEFAULT_CONN}' not found.",
             err=True,
         )
         raise typer.Exit(1)
@@ -152,7 +149,7 @@ MdlOpt = Annotated[
     typer.Option(
         "--mdl",
         "-m",
-        help=f"Path to MDL JSON file or base64 string. Defaults to ./{_DEFAULT_MDL}.",
+        help=f"Path to MDL JSON file or base64 string. Defaults to {_DEFAULT_MDL}.",
     ),
 ]
 ConnInfoOpt = Annotated[
@@ -163,7 +160,7 @@ ConnFileOpt = Annotated[
     Optional[str],
     typer.Option(
         "--connection-file",
-        help=f"Path to JSON connection file. Defaults to ./{_DEFAULT_CONN}.",
+        help=f"Path to JSON connection file. Defaults to {_DEFAULT_CONN}.",
     ),
 ]
 LimitOpt = Annotated[
@@ -195,8 +192,8 @@ def main(
 ) -> None:
     """Wren Engine CLI.
 
-    Run with --sql to execute a query using mdl.json and conn.json from the
-    current directory.  Use a subcommand (query / dry-run / transpile / validate)
+    Run with --sql to execute a query using mdl.json and conn.json from
+    ~/.wren.  Use a subcommand (query / dry-run / transpile / validate)
     for explicit control.
 
     conn.json format:
