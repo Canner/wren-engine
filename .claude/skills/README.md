@@ -6,7 +6,7 @@ Claude Code skills for the Wren Engine CLI.
 
 | Skill | Trigger | Description |
 |-------|---------|-------------|
-| [`wren-query`](wren-query/SKILL.md) | `/wren-query [sql]` | Run, transpile, or validate a SQL query through the Wren semantic CLI |
+| [`wren-query`](wren-query/SKILL.md) | `/wren-query [sql]` | Run, dry-plan, or validate a SQL query through the Wren semantic CLI |
 
 ## Usage
 
@@ -14,7 +14,7 @@ Skills are invoked via slash commands in Claude Code:
 
 ```
 /wren-query SELECT order_id FROM "orders" LIMIT 5
-/wren-query --transpile SELECT * FROM "orders"
+/wren-query --dry-plan SELECT * FROM "orders"
 /wren-query --validate SELECT * FROM "NonExistent"
 ```
 

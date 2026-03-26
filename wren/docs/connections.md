@@ -1,6 +1,6 @@
 # Connection formats
 
-The `conn.json` file (or `--connection-info` / `--connection-file` flags) requires a `datasource` field plus the connector-specific fields below.
+The `connection_info.json` file (or `--connection-info` / `--connection-file` flags) requires a `datasource` field plus the connector-specific fields below.
 
 ## MySQL
 

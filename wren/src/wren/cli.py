@@ -12,7 +12,7 @@ app = typer.Typer(name="wren", help="Wren Engine CLI", no_args_is_help=False)
 
 _WREN_HOME = Path.home() / ".wren"
 _DEFAULT_MDL = _WREN_HOME / "mdl.json"
-_DEFAULT_CONN = _WREN_HOME / "conn.json"
+_DEFAULT_CONN = _WREN_HOME / "connection_info.json"
 
 
 # ── File discovery helpers ─────────────────────────────────────────────────
@@ -56,7 +56,7 @@ def _load_conn(
     """Load connection dict from inline JSON or file, with ~/.wren auto-discovery.
 
     If neither --connection-info nor --connection-file is given, looks for
-    conn.json in ~/.wren.  Raises typer.Exit(1) if required=True and nothing
+    connection_info.json in ~/.wren.  Raises typer.Exit(1) if required=True and nothing
     is found.
     """
     if connection_info:
@@ -141,7 +141,7 @@ DatasourceOpt = Annotated[
     typer.Option(
         "--datasource",
         "-d",
-        help="Data source (e.g. mysql, postgres). Defaults to 'datasource' field in conn.json.",
+        help="Data source (e.g. mysql, postgres). Defaults to 'datasource' field in connection_info.json.",
     ),
 ]
 MdlOpt = Annotated[
@@ -192,11 +192,11 @@ def main(
 ) -> None:
     """Wren Engine CLI.
 
-    Run with --sql to execute a query using mdl.json and conn.json from
-    ~/.wren.  Use a subcommand (query / dry-run / transpile / validate)
+    Run with --sql to execute a query using mdl.json and connection_info.json from
+    ~/.wren.  Use a subcommand (query / dry-run / dry-plan / validate)
     for explicit control.
 
-    conn.json format:
+    connection_info.json format:
 
     \b
       {
@@ -275,7 +275,7 @@ def dry_plan(
     from wren.model.data_source import DataSource  # noqa: PLC0415
 
     manifest_str = _load_manifest(_require_mdl(mdl))
-    # Read datasource from conn.json if present — no real connection needed
+    # Read datasource from connection_info.json if present — no real connection needed
     conn_dict = _load_conn(None, connection_file, required=False)
     ds_str = _resolve_datasource(datasource, conn_dict)
 

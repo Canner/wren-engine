@@ -37,7 +37,7 @@ pip install wren-engine[all]        # All connectors
 }
 ```
 
-**2. Create `~/.wren/conn.json`** — your connection:
+**2. Create `~/.wren/connection_info.json`** — your connection:
 
 ```json
 {
@@ -56,7 +56,7 @@ pip install wren-engine[all]        # All connectors
 wren --sql 'SELECT order_id FROM "orders" LIMIT 10'
 ```
 
-For the full CLI reference and per-datasource `conn.json` formats, see [`docs/cli.md`](docs/cli.md) and [`docs/connections.md`](docs/connections.md).
+For the full CLI reference and per-datasource `connection_info.json` formats, see [`docs/cli.md`](docs/cli.md) and [`docs/connections.md`](docs/connections.md).
 
 ---
 

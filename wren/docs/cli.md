@@ -20,12 +20,12 @@ Execute SQL and return results.
 wren query --sql 'SELECT order_id, total FROM "orders" ORDER BY total DESC LIMIT 5'
 ```
 
-## `wren transpile`
+## `wren dry-plan`
 
 Translate MDL SQL to the native dialect SQL for your data source. No database connection required.
 
 ```bash
-wren transpile --sql 'SELECT order_id FROM "orders"'
+wren dry-plan --sql 'SELECT order_id FROM "orders"'
 ```
 
 ## `wren dry-run`
@@ -47,12 +47,12 @@ wren validate --sql 'SELECT * FROM "NonExistent"'
 
 ## Overriding defaults
 
-All flags are optional when `~/.wren/mdl.json` and `~/.wren/conn.json` exist:
+All flags are optional when `~/.wren/mdl.json` and `~/.wren/connection_info.json` exist:
 
 ```bash
 wren --sql '...' \
   --mdl /path/to/other-mdl.json \
-  --connection-file /path/to/prod-conn.json \
+  --connection-file /path/to/prod-connection_info.json \
   --datasource postgres
 ```
 
