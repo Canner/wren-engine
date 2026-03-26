@@ -31,6 +31,10 @@ dependencies = [
     "opendal>=0.45",
     "pandas>=2",
     "boto3>=1.26",
+    # Transitive dependency constraints for security patches
+    "requests>=2.33.0",
+    "pyasn1>=0.6.3",
+    "pyopenssl>=26.0.0",
 ]
 
 [project.optional-dependencies]
