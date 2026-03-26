@@ -7,9 +7,8 @@ Translate natural SQL queries through an MDL (Modeling Definition Language) sema
 ## Installation
 
 ```bash
-pip install wren-engine[mysql]      # MySQL / Doris
+pip install wren-engine[mysql]      # MySQL
 pip install wren-engine[postgres]   # PostgreSQL
-pip install wren-engine[bigquery]   # BigQuery
 pip install wren-engine[duckdb]     # DuckDB (local files)
 pip install wren-engine[all]        # All connectors
 ```
@@ -83,12 +82,10 @@ with WrenEngine(manifest_str, DataSource.mysql, {"host": "...", ...}) as engine:
 just install-dev
 ```
 
-| Command | What it runs | Docker needed | Notes |
-|---------|-------------|---------------|-------|
-| `just test-unit` | Unit tests | No | |
-| `just test-duckdb` | DuckDB connector tests | No | |
-| `just test-postgres` | PostgreSQL connector tests | Yes | |
-| `just test-mysql` | MySQL connector tests | Yes | |
-| `just test-bigquery` | BigQuery emulator tests | Yes | connector available, not yet integration-tested |
-| `just test-redshift` | Redshift/PostgreSQL tests | Yes | connector available, not yet integration-tested |
-| `just test` | All tests | Yes | |
+| Command | What it runs | Docker needed |
+|---------|-------------|---------------|
+| `just test-unit` | Unit tests | No |
+| `just test-duckdb` | DuckDB connector tests | No |
+| `just test-postgres` | PostgreSQL connector tests | Yes |
+| `just test-mysql` | MySQL connector tests | Yes |
+| `just test` | All tests | Yes |
