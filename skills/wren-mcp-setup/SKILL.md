@@ -5,7 +5,7 @@ compatibility: Requires Docker Desktop (or Docker Engine).
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.3"
+  version: "1.4"
 ---
 
 # Set Up Wren MCP via Docker
@@ -132,7 +132,7 @@ docker run -d \
   ghcr.io/canner/wren-engine-ibis:latest
 ```
 
-> If `MDL_PATH` is not set (or the file doesn't exist yet), the container starts without a loaded MDL. You can deploy later using the `deploy` MCP tool or the Web UI.
+> If `MDL_PATH` is not set or the file doesn't exist yet, the container starts without a loaded MDL. You can deploy later using the `deploy` MCP tool or the Web UI.
 
 This starts the container using the image `ghcr.io/canner/wren-engine-ibis:latest` with:
 
@@ -316,7 +316,11 @@ claude mcp add --transport http wren http://localhost:19000/mcp
   ```
   A `405 Method Not Allowed` response means the endpoint is reachable but expects a POST — that is normal and indicates the MCP server is up.
 
-### 4. Database connection refused inside the container
+### 4. MCP tools fail with "Session not found" after container restart
+
+Container restarts invalidate all active MCP sessions. The AI client still holds the old session ID, so every MCP call returns `"Session not found"`. **Start a new Claude Code session** (or restart your MCP client) to reconnect.
+
+### 5. Database connection refused inside the container
 
 If `health_check()` passes but queries fail with a connection error, the database host is likely still set to `localhost`. Open the Web UI at `http://localhost:9001`, edit the connection info, and change the host to `host.docker.internal`.
 

@@ -146,13 +146,18 @@ def _save_settings() -> None:
 _load_settings()
 
 if mdl_path:
-    with open(mdl_path) as f:
-        mdl_schema = json.load(f)
-        data_source = mdl_schema["dataSource"].lower()
-        mdl_cache.set_mdl(dict_to_base64_string(mdl_schema))
-        models = mdl_schema.get("models", [])
-        total_columns = sum(len(m.get("columns", [])) for m in models)
-        print(f"Loaded MDL {f.name} ({len(models)} models, {total_columns} columns)")  # noqa: T201
+    try:
+        with open(mdl_path) as f:
+            mdl_schema = json.load(f)
+            data_source = mdl_schema.get("dataSource", "").lower() or None
+            mdl_cache.set_mdl(dict_to_base64_string(mdl_schema))
+            models = mdl_schema.get("models", [])
+            total_columns = sum(len(m.get("columns", [])) for m in models)
+            print(f"Loaded MDL {f.name} ({len(models)} models, {total_columns} columns)")  # noqa: T201
+    except FileNotFoundError:
+        print(f"MDL file not found at {mdl_path} — starting without a loaded MDL")  # noqa: T201
+    except (json.JSONDecodeError, KeyError) as e:
+        print(f"Failed to parse MDL file {mdl_path}: {e} — starting without a loaded MDL")  # noqa: T201
 else:
     print("No MDL_PATH environment variable found")
 
