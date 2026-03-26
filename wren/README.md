@@ -16,7 +16,7 @@ pip install wren-engine[all]        # All connectors
 
 ## Quick start
 
-**1. Add `mdl.json`** — your semantic model:
+**1. Create `~/.wren/mdl.json`** — your semantic model:
 
 ```json
 {
@@ -38,7 +38,7 @@ pip install wren-engine[all]        # All connectors
 }
 ```
 
-**2. Add `conn.json`** — your connection:
+**2. Create `~/.wren/conn.json`** — your connection:
 
 ```json
 {
@@ -51,7 +51,7 @@ pip install wren-engine[all]        # All connectors
 }
 ```
 
-**3. Run queries** — `wren` auto-discovers both files from the current directory:
+**3. Run queries** — `wren` auto-discovers both files from `~/.wren`:
 
 ```bash
 wren --sql 'SELECT order_id FROM "orders" LIMIT 10'

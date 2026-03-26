@@ -47,7 +47,7 @@ wren validate --sql 'SELECT * FROM "NonExistent"'
 
 ## Overriding defaults
 
-All flags are optional when `mdl.json` and `conn.json` exist in the current directory:
+All flags are optional when `~/.wren/mdl.json` and `~/.wren/conn.json` exist:
 
 ```bash
 wren --sql '...' \
