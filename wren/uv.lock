@@ -2565,14 +2565,6 @@ requires-dist = [
 provides-extras = ["all", "athena", "bigquery", "clickhouse", "databricks", "dev", "mssql", "mysql", "oracle", "postgres", "redshift", "snowflake", "spark", "trino"]
 
 [[package]]
-name = "wren-core-py"
-version = "0.1.0"
-source = { registry = "../wren-core-py/target/wheels" }
-wheels = [
-    { path = "wren_core_py-0.1.0-cp311-abi3-macosx_10_12_x86_64.whl" },
-]
-
-[[package]]
 name = "zstandard"
 version = "0.25.0"
 source = { registry = "https://pypi.org/simple" }
