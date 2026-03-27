@@ -33,12 +33,12 @@ def _require_mdl(mdl: str | None) -> str:
 
 def _load_manifest(mdl: str) -> str:
     """Load MDL from a file path or treat as base64 string directly."""
-    path = Path(mdl)
+    path = Path(mdl).expanduser()
     if path.exists():
         import base64  # noqa: PLC0415
 
         content = path.read_bytes()
-        if mdl.endswith(".json"):
+        if path.suffix.lower() == ".json":
             # Raw JSON file — base64-encode it for WrenEngine
             return base64.b64encode(content).decode()
         # Non-.json file — assume it already contains a base64-encoded MDL string
@@ -61,24 +61,34 @@ def _load_conn(
     """
     if connection_info:
         try:
-            return json.loads(connection_info)
+            conn = json.loads(connection_info)
         except json.JSONDecodeError as e:
             typer.echo(f"Error: invalid JSON in --connection-info: {e}", err=True)
             raise typer.Exit(1)
+        if not isinstance(conn, dict):
+            typer.echo(
+                "Error: --connection-info must decode to a JSON object.", err=True
+            )
+            raise typer.Exit(1)
+        return conn
 
     path_str = connection_file or (
         str(_DEFAULT_CONN) if _DEFAULT_CONN.exists() else None
     )
     if path_str:
-        path = Path(path_str)
+        path = Path(path_str).expanduser()
         if not path.exists():
             typer.echo(f"Error: connection file not found: {path_str}", err=True)
             raise typer.Exit(1)
         try:
-            return json.loads(path.read_text())
+            conn = json.loads(path.read_text())
         except json.JSONDecodeError as e:
             typer.echo(f"Error: invalid JSON in {path_str}: {e}", err=True)
             raise typer.Exit(1)
+        if not isinstance(conn, dict):
+            typer.echo(f"Error: {path_str} must contain a JSON object.", err=True)
+            raise typer.Exit(1)
+        return conn
 
     if required:
         typer.echo(
@@ -275,8 +285,12 @@ def dry_plan(
     from wren.model.data_source import DataSource  # noqa: PLC0415
 
     manifest_str = _load_manifest(_require_mdl(mdl))
-    # Read datasource from connection_info.json if present — no real connection needed
-    conn_dict = _load_conn(None, connection_file, required=False)
+    # Read datasource from connection_info.json only when --datasource is not given
+    conn_dict = (
+        _load_conn(None, connection_file, required=False)
+        if connection_file is not None or datasource is None
+        else {}
+    )
     ds_str = _resolve_datasource(datasource, conn_dict)
 
     try:
@@ -318,6 +332,13 @@ def validate(
 
 
 def _print_result(table, output: str) -> None:
+    output = output.lower()
+    if output not in {"json", "csv", "table"}:
+        typer.echo(
+            f"Error: unsupported output format '{output}'. Use json, csv, or table.",
+            err=True,
+        )
+        raise typer.Exit(1)
     if output == "json":
         try:
             df = table.to_pandas()

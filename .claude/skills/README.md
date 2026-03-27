@@ -6,7 +6,7 @@ Claude Code skills for the Wren Engine CLI.
 
 | Skill | Trigger | Description |
 |-------|---------|-------------|
-| [`wren-query`](wren-query/SKILL.md) | `/wren-query [sql]` | Run, dry-plan, or validate a SQL query through the Wren semantic CLI |
+| [`wren-query`](wren-query/SKILL.md) | `/wren-query [sql]` | Run, dry-run, or validate a SQL query through the Wren semantic CLI |
 
 ## Usage
 
