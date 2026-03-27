@@ -29,7 +29,7 @@
 
 > Wren Engine is the open foundation behind [Wren AI](https://github.com/Canner/WrenAI): a semantic, governed, agent-ready context layer for business data.
 
-https://github.com/user-attachments/assets/7eca10a4-24b9-45ed-9826-5b15b283c188
+https://github.com/user-attachments/assets/037f2317-d8e5-41f2-9563-1e0bce4ef50c
 
 ## Why Wren Engine
 
