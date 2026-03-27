@@ -69,9 +69,20 @@ jobs:
       - name: Run unit tests
         run: uv run pytest tests/unit/ -v -m unit
 
-  test-postgres:
-    name: postgres tests
+  test-connector:
+    name: ${{ matrix.datasource }} tests
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - datasource: postgres
+            extra: postgres
+            test_file: tests/connectors/test_postgres.py
+            marker: postgres
+          - datasource: mysql
+            extra: mysql
+            test_file: tests/connectors/test_mysql.py
+            marker: mysql
     defaults:
       run:
         working-directory: wren
@@ -82,6 +93,11 @@ jobs:
           python-version: "3.11"
       - name: Install uv
         uses: astral-sh/setup-uv@v4
+      - name: Install system dependencies for mysqlclient
+        if: matrix.datasource == 'mysql'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-libmysqlclient-dev pkg-config
       - name: Cache Cargo
         uses: actions/cache@v4
         with:
@@ -103,6 +119,6 @@ jobs:
       - name: Install dependencies
         run: |
           uv lock --find-links ../wren-core-py/target/wheels/ --upgrade-package wren-core-py
-          uv sync --extra postgres --extra dev --find-links ../wren-core-py/target/wheels/
-      - name: Run postgres tests
-        run: uv run pytest tests/connectors/test_postgres.py -v -m postgres
+          uv sync --extra ${{ matrix.extra }} --extra dev --find-links ../wren-core-py/target/wheels/
+      - name: Run ${{ matrix.datasource }} tests
+        run: uv run pytest ${{ matrix.test_file }} -v -m ${{ matrix.marker }}
