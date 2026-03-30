@@ -258,3 +258,8 @@ If you are building with agents today, this is a great time to get involved.
 - Read the market thesis from a16z: [Your Data Agents Need Context](https://a16z.com/your-data-agents-need-context/)
 
 Wren Engine is for builders who believe AI needs better context, not just better prompts.
+
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/canner-wren-engine).
+
