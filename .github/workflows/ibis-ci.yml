@@ -5,6 +5,11 @@ permissions:
   
 on:
   pull_request:
+    paths:
+      - 'ibis-server/**'
+      - 'wren-core/**'
+      - 'wren-core-base/**'
+      - 'wren-core-py/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number }}
