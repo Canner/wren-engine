@@ -113,6 +113,21 @@
       "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-http-api"
     },
     {
+      "name": "wren-memory",
+      "version": "1.0",
+      "description": "Schema and query memory for Wren Engine — index MDL schema for semantic search, store and recall NL-to-SQL pairs for few-shot retrieval.",
+      "tags": [
+        "wren",
+        "memory",
+        "lancedb",
+        "embedding",
+        "semantic-search",
+        "few-shot",
+        "text-to-sql"
+      ],
+      "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-memory"
+    },
+    {
       "name": "wren-usage",
       "version": "1.2",
       "description": "Wren Engine — semantic SQL engine for AI agents. Query 22+ data sources through a modeling layer. Main entry point for setup, SQL, MDL generation, and MCP server operations.",
@@ -132,6 +147,7 @@
         "wren-generate-mdl",
         "wren-project",
         "wren-sql",
+        "wren-memory",
         "wren-mcp-setup",
         "wren-http-api"
       ],

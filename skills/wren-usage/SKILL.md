@@ -41,7 +41,7 @@ npx skills add Canner/wren-engine --skill '*' --agent claude-code
 clawhub install wren-usage
 ```
 
-This installs `wren-usage` and its dependent skills (`wren-connection-info`, `wren-generate-mdl`, `wren-project`, `wren-sql`, `wren-mcp-setup`, `wren-http-api`) into `~/.claude/skills/`.
+This installs `wren-usage` and its dependent skills (`wren-connection-info`, `wren-generate-mdl`, `wren-project`, `wren-sql`, `wren-memory`, `wren-mcp-setup`, `wren-http-api`) into `~/.claude/skills/`.
 
 After installation, the user must **start a new session** for the new skills to be loaded.
 
@@ -56,6 +56,8 @@ Identify the user's intent and delegate to the appropriate skill:
 | Task | Skill |
 |------|-------|
 | Write or debug a SQL query | `@wren-sql` |
+| Get schema context / find relevant models before writing SQL | `@wren-memory` |
+| Store a confirmed NL-to-SQL pair / recall past queries | `@wren-memory` |
 | Connect to a new database / change credentials | `@wren-connection-info` |
 | Generate MDL from an existing database | `@wren-generate-mdl` |
 | Save MDL to YAML files (version control) | `@wren-project` |
