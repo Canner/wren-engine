@@ -8,8 +8,8 @@ This reference covers the decision logic for each memory command. The main workf
 
 | Command | When to use |
 |---------|-------------|
-| `wren memory context -q "..."` | Default. Auto-selects full text (small schema) or embedding search (large schema) based on a 30K-char threshold. |
-| `wren memory context -q "..." --type T --model M` | When you need filtering (forces search strategy on large schemas). |
+| `wren memory fetch -q "..."` | Default. Auto-selects full text (small schema) or embedding search (large schema) based on a 30K-char threshold. |
+| `wren memory fetch -q "..." --type T --model M` | When you need filtering (forces search strategy on large schemas). |
 | `wren memory describe` | When you want the full schema text and know it is small. |
 
 The hybrid strategy works like this:
@@ -20,7 +20,7 @@ CJK-heavy schemas switch to search sooner (~1.5 chars per token vs 4 for English
 
 Override with `--threshold`:
 ```bash
-wren memory context -q "revenue" --threshold 50000   # raise for larger context windows
+wren memory fetch -q "revenue" --threshold 50000   # raise for larger context windows
 ```
 
 ---
@@ -30,7 +30,7 @@ wren memory context -q "revenue" --threshold 50000   # raise for larger context 
 **When to index:**
 - After deploying a new or updated MDL
 - When `wren memory status` shows `schema_items: 0 rows`
-- When `wren memory context` returns stale results (references deleted models)
+- When `wren memory fetch` returns stale results (references deleted models)
 
 **When NOT to index:**
 - Before every query — indexing is expensive, do it once per MDL change
@@ -89,7 +89,7 @@ Session start:
 
 User asks a question:
   2. wren memory recall -q "<question>" --limit 3
-  3. wren memory context -q "<question>"
+  3. wren memory fetch -q "<question>"
   4. Write SQL using recalled examples + schema context
   5. wren --sql "..."
 

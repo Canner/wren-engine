@@ -130,7 +130,7 @@ def describe(
 
 
 @memory_app.command()
-def context(
+def fetch(
     query: Annotated[str, typer.Option("--query", "-q", help="Search query")],
     mdl: MdlOpt = None,
     limit: Annotated[int, typer.Option("--limit", "-l")] = 5,

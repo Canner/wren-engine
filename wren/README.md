@@ -63,7 +63,7 @@ For the full CLI reference and per-datasource `connection_info.json` formats, se
 
 ```bash
 wren memory index                              # index MDL schema
-wren memory search -q "customer order price"   # find relevant models/columns
+wren memory fetch -q "customer order price"    # fetch relevant schema context
 wren memory store --nl "top customers" --sql "SELECT ..."  # store NL→SQL pair
 wren memory recall -q "best customers"         # retrieve similar past queries
 ```

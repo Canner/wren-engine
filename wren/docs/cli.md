@@ -82,7 +82,7 @@ When providing schema context to an LLM, there is a trade-off:
 - **Small schemas** — the full plain-text description fits easily in the LLM context window and gives better results because the LLM sees the complete structure (model→column relationships, join paths, primary keys) rather than isolated fragments from a vector search.
 - **Large schemas** — the full text exceeds what is practical to send in a single prompt, so embedding search is needed to retrieve only the relevant fragments.
 
-`wren memory context` automatically picks the right strategy based on the **character length** of the generated plain-text description:
+`wren memory fetch` automatically picks the right strategy based on the **character length** of the generated plain-text description:
 
 | Schema size | Threshold | Strategy |
 |---|---|---|
@@ -111,16 +111,16 @@ wren memory describe                          # uses ~/.wren/mdl.json
 wren memory describe --mdl /path/to/mdl.json
 ```
 
-### `wren memory context`
+### `wren memory fetch`
 
 Get schema context for an LLM. Automatically chooses the best strategy based on schema size: full plain text for small schemas, embedding search for large schemas.
 
 When using the search strategy, optional `--type` and `--model` filters narrow the results.
 
 ```bash
-wren memory context -q "customer order price"
-wren memory context -q "revenue" --type column --model orders
-wren memory context -q "日期" --threshold 50000 --output json
+wren memory fetch -q "customer order price"
+wren memory fetch -q "revenue" --type column --model orders
+wren memory fetch -q "日期" --threshold 50000 --output json
 ```
 
 | Flag | Description |
