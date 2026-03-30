@@ -1,16 +1,16 @@
-# Wren Memory — When to index, search, store, and recall
+# Wren Memory — When to index, context, store, and recall
 
 This reference covers the decision logic for each memory command. The main workflow is in the parent SKILL.md.
 
 ---
 
-## Schema context: `context` > `describe` > `search`
+## Schema context: `context` and `describe`
 
 | Command | When to use |
 |---------|-------------|
 | `wren memory context -q "..."` | Default. Auto-selects full text (small schema) or embedding search (large schema) based on a 30K-char threshold. |
+| `wren memory context -q "..." --type T --model M` | When you need filtering (forces search strategy on large schemas). |
 | `wren memory describe` | When you want the full schema text and know it is small. |
-| `wren memory search -q "..." --type T --model M` | When you need fine-grained filtering by item type or model name. |
 
 The hybrid strategy works like this:
 - Below 30K characters (~8K tokens): returns the entire schema as structured plain text — the LLM sees complete model-to-column relationships, join paths, and primary keys

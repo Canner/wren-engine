@@ -6,7 +6,7 @@ Public API for programmatic use::
 
     mem = WrenMemory()
     mem.index_manifest(manifest_dict)
-    results = mem.search_schema("customer orders")
+    ctx = mem.get_context(manifest_dict, "customer orders")
 """
 
 from __future__ import annotations
@@ -32,18 +32,37 @@ class WrenMemory:
         """Index MDL schema into LanceDB.  Returns record count."""
         return self._store.index_schema(manifest, replace=replace)
 
-    def search_schema(
+    @staticmethod
+    def describe_schema(manifest: dict) -> str:
+        """Return the full schema as structured plain text."""
+        from wren.memory.schema_indexer import describe_schema  # noqa: PLC0415
+
+        return describe_schema(manifest)
+
+    def get_context(
         self,
+        manifest: dict,
         query: str,
         *,
         limit: int = 5,
         item_type: str | None = None,
         model_name: str | None = None,
-    ) -> list[dict]:
-        """Semantic search over indexed schema items."""
-        return self._store.search_schema(
-            query, limit=limit, item_type=item_type, model_name=model_name
-        )
+        threshold: int | None = None,
+    ) -> dict:
+        """Return schema context using the best strategy for the schema size.
+
+        Small schemas (below *threshold* chars) are returned as full plain
+        text.  Large schemas use embedding search with optional filters.
+        See :data:`~wren.memory.schema_indexer.SCHEMA_DESCRIBE_THRESHOLD`.
+        """
+        kwargs: dict = {
+            "limit": limit,
+            "item_type": item_type,
+            "model_name": model_name,
+        }
+        if threshold is not None:
+            kwargs["threshold"] = threshold
+        return self._store.get_context(manifest, query, **kwargs)
 
     def store_query(
         self,
@@ -65,32 +84,6 @@ class WrenMemory:
     ) -> list[dict]:
         """Search past NL→SQL pairs by semantic similarity."""
         return self._store.recall_queries(query, limit=limit, datasource=datasource)
-
-    @staticmethod
-    def describe_schema(manifest: dict) -> str:
-        """Return the full schema as structured plain text."""
-        from wren.memory.schema_indexer import describe_schema  # noqa: PLC0415
-
-        return describe_schema(manifest)
-
-    def get_context(
-        self,
-        manifest: dict,
-        query: str,
-        *,
-        limit: int = 5,
-        threshold: int | None = None,
-    ) -> dict:
-        """Return schema context using the best strategy for the schema size.
-
-        Small schemas (below *threshold* chars) are returned as full plain
-        text.  Large schemas use embedding search to return only relevant
-        fragments.  See :data:`~wren.memory.schema_indexer.SCHEMA_DESCRIBE_THRESHOLD`.
-        """
-        kwargs = {"limit": limit}
-        if threshold is not None:
-            kwargs["threshold"] = threshold
-        return self._store.get_context(manifest, query, **kwargs)
 
     def schema_is_current(self, manifest: dict) -> bool:
         """Check if the indexed schema matches the given manifest."""

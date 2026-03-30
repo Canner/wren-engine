@@ -112,36 +112,6 @@ class MemoryStore:
         )
         return len(items)
 
-    def search_schema(
-        self,
-        query: str,
-        *,
-        limit: int = 5,
-        item_type: str | None = None,
-        model_name: str | None = None,
-    ) -> list[dict]:
-        """Semantic search over indexed schema items."""
-        if _SCHEMA_TABLE not in _table_names(self._db):
-            return []
-
-        table = self._db.open_table(_SCHEMA_TABLE)
-        q = table.search(
-            self._embed_fn.compute_query_embeddings(query)[0],
-        )
-
-        where_parts: list[str] = []
-        if item_type:
-            where_parts.append(f"item_type = '{item_type}'")
-        if model_name:
-            where_parts.append(f"model_name = '{model_name}'")
-        if where_parts:
-            q = q.where(" AND ".join(where_parts))
-
-        results = q.limit(limit).to_list()
-        for r in results:
-            r.pop("vector", None)
-        return results
-
     def schema_is_current(self, manifest: dict) -> bool:
         """Check whether the indexed schema matches *manifest*."""
         if _SCHEMA_TABLE not in _table_names(self._db):
@@ -164,23 +134,57 @@ class MemoryStore:
         query: str,
         *,
         limit: int = 5,
+        item_type: str | None = None,
+        model_name: str | None = None,
         threshold: int = SCHEMA_DESCRIBE_THRESHOLD,
     ) -> dict:
         """Return schema context using the best strategy for the schema size.
 
-        If the plain-text description of *manifest* is shorter than
-        *threshold* characters, return the full text (``strategy="full"``).
-        Otherwise, fall back to embedding search (``strategy="search"``).
+        For small schemas (plain-text description below *threshold* chars),
+        returns the full text (``strategy="full"``).  For large schemas,
+        uses embedding search with optional filters (``strategy="search"``).
 
-        Returns a dict with keys ``strategy``, ``schema``, and (for search)
-        ``results``.
+        Returns a dict with keys ``strategy``, ``schema`` (full) or
+        ``results`` (search).
         """
         text = describe_schema(manifest)
         if len(text) <= threshold:
             return {"strategy": "full", "schema": text}
 
-        results = self.search_schema(query, limit=limit)
+        results = self._search_schema(
+            query, limit=limit, item_type=item_type, model_name=model_name
+        )
         return {"strategy": "search", "results": results}
+
+    def _search_schema(
+        self,
+        query: str,
+        *,
+        limit: int = 5,
+        item_type: str | None = None,
+        model_name: str | None = None,
+    ) -> list[dict]:
+        """Embedding search over indexed schema items (internal)."""
+        if _SCHEMA_TABLE not in _table_names(self._db):
+            return []
+
+        table = self._db.open_table(_SCHEMA_TABLE)
+        q = table.search(
+            self._embed_fn.compute_query_embeddings(query)[0],
+        )
+
+        where_parts: list[str] = []
+        if item_type:
+            where_parts.append(f"item_type = '{item_type}'")
+        if model_name:
+            where_parts.append(f"model_name = '{model_name}'")
+        if where_parts:
+            q = q.where(" AND ".join(where_parts))
+
+        results = q.limit(limit).to_list()
+        for r in results:
+            r.pop("vector", None)
+        return results
 
     # ── Query history ─────────────────────────────────────────────────────
 

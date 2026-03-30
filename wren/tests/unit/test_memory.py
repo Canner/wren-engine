@@ -225,27 +225,43 @@ def memory_store(tmp_path):
 
 @pytest.mark.unit
 class TestMemoryStore:
-    def test_index_and_search(self, memory_store):
+    def test_index_and_context(self, memory_store):
         count = memory_store.index_schema(_MANIFEST)
         assert count == 10
 
-        results = memory_store.search_schema("customer order price", limit=3)
-        assert len(results) > 0
-        assert "text" in results[0]
+        # Small schema → full strategy
+        result = memory_store.get_context(_MANIFEST, "customer order price")
+        assert result["strategy"] == "full"
+        assert "### Model: orders" in result["schema"]
 
-    def test_search_with_type_filter(self, memory_store):
+    def test_context_search_strategy(self, memory_store):
         memory_store.index_schema(_MANIFEST)
-        results = memory_store.search_schema("order", item_type="model", limit=5)
-        assert all(r["item_type"] == "model" for r in results)
+        result = memory_store.get_context(_MANIFEST, "customer orders", threshold=10)
+        assert result["strategy"] == "search"
+        assert "results" in result
+        assert len(result["results"]) > 0
+        assert "text" in result["results"][0]
 
-    def test_search_with_model_filter(self, memory_store):
+    def test_context_search_with_type_filter(self, memory_store):
         memory_store.index_schema(_MANIFEST)
-        results = memory_store.search_schema("price", model_name="orders", limit=10)
-        assert all(r["model_name"] == "orders" for r in results)
+        result = memory_store.get_context(
+            _MANIFEST, "order", item_type="model", threshold=10
+        )
+        assert result["strategy"] == "search"
+        assert all(r["item_type"] == "model" for r in result["results"])
 
-    def test_search_empty_store(self, memory_store):
-        results = memory_store.search_schema("anything")
-        assert results == []
+    def test_context_search_with_model_filter(self, memory_store):
+        memory_store.index_schema(_MANIFEST)
+        result = memory_store.get_context(
+            _MANIFEST, "price", model_name="orders", threshold=10
+        )
+        assert result["strategy"] == "search"
+        assert all(r["model_name"] == "orders" for r in result["results"])
+
+    def test_context_empty_store(self, memory_store):
+        result = memory_store.get_context(_MANIFEST, "anything", threshold=10)
+        assert result["strategy"] == "search"
+        assert result["results"] == []
 
     def test_schema_is_current(self, memory_store):
         memory_store.index_schema(_MANIFEST)
@@ -284,19 +300,6 @@ class TestMemoryStore:
         info = memory_store.status()
         assert info["tables"] == {}
 
-    def test_get_context_full_for_small_schema(self, memory_store):
-        memory_store.index_schema(_MANIFEST)
-        result = memory_store.get_context(_MANIFEST, "customer orders")
-        assert result["strategy"] == "full"
-        assert "### Model: orders" in result["schema"]
-
-    def test_get_context_search_for_large_schema(self, memory_store):
-        memory_store.index_schema(_MANIFEST)
-        result = memory_store.get_context(_MANIFEST, "customer orders", threshold=10)
-        assert result["strategy"] == "search"
-        assert "results" in result
-        assert len(result["results"]) > 0
-
     def test_describe_schema_static(self, memory_store):
         text = memory_store.describe_schema(_MANIFEST)
         assert "### Model: orders" in text
@@ -327,8 +330,9 @@ class TestWrenMemory:
         count = wren_memory.index_manifest(_MANIFEST)
         assert count == 10
 
-        results = wren_memory.search_schema("customer")
-        assert len(results) > 0
+        ctx = wren_memory.get_context(_MANIFEST, "customer")
+        assert ctx["strategy"] == "full"
+        assert "### Model: customer" in ctx["schema"]
 
         wren_memory.store_query(
             nl_query="find expensive orders",

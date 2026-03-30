@@ -26,7 +26,7 @@ For memory-specific decisions, see [references/memory.md](references/memory.md).
 | Situation | Command |
 |-----------|---------|
 | Default | `wren memory context -q "<question>"` |
-| Need specific model's columns | `wren memory search -q "..." --model <name>` |
+| Need specific model's columns | `wren memory context -q "..." --model <name> --threshold 0` |
 | Memory not installed | Read `~/.wren/mdl.json` directly |
 
 ### Step 2 — Recall past queries
@@ -67,9 +67,9 @@ GROUP BY 1 ORDER BY 2 DESC LIMIT 5'
 
 ### "table not found"
 
-1. Verify model name: `wren memory search -q "<name>" --type model`
+1. Verify model name: `wren memory context -q "<name>" --type model --threshold 0`
 2. Check MDL exists: `ls ~/.wren/mdl.json`
-3. Verify column: `wren memory search -q "<column>" --model <name>`
+3. Verify column: `wren memory context -q "<column>" --model <name> --threshold 0`
 
 ### Connection error
 
@@ -120,7 +120,7 @@ Get data back           → wren --sql "..."
 See translated SQL only → wren dry-plan --sql "..."
 Validate against DB     → wren dry-run --sql "..."
 Schema context          → wren memory context -q "..."
-Find model/column       → wren memory search -q "..." [--type T]
+Filter by type/model    → wren memory context -q "..." --type T --model M --threshold 0
 Store confirmed query   → wren memory store --nl "..." --sql "..."
 Few-shot examples       → wren memory recall -q "..."
 Index stats             → wren memory status

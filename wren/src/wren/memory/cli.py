@@ -134,6 +134,18 @@ def context(
     query: Annotated[str, typer.Option("--query", "-q", help="Search query")],
     mdl: MdlOpt = None,
     limit: Annotated[int, typer.Option("--limit", "-l")] = 5,
+    item_type: Annotated[
+        Optional[str],
+        typer.Option(
+            "--type",
+            "-t",
+            help="Filter: model|column|relationship|view (search strategy only)",
+        ),
+    ] = None,
+    model_name: Annotated[
+        Optional[str],
+        typer.Option("--model", help="Filter by model name (search strategy only)"),
+    ] = None,
     threshold: Annotated[
         Optional[int],
         typer.Option(
@@ -143,14 +155,14 @@ def context(
     path: PathOpt = None,
     output: OutputOpt = "table",
 ) -> None:
-    """Get schema context using the best strategy for the schema size.
+    """Get schema context for an LLM.
 
     Small schemas are returned as full plain text.  Large schemas use
-    embedding search to return only relevant fragments.
+    embedding search with optional --type and --model filters.
     """
     manifest = _load_manifest(mdl)
     store = _get_store(path)
-    kwargs: dict = {"limit": limit}
+    kwargs: dict = {"limit": limit, "item_type": item_type, "model_name": model_name}
     if threshold is not None:
         kwargs["threshold"] = threshold
     result = store.get_context(manifest, query, **kwargs)
@@ -160,29 +172,6 @@ def context(
         typer.echo(result["schema"])
     else:
         _print_results(result["results"], output)
-
-
-@memory_app.command()
-def search(
-    query: Annotated[str, typer.Option("--query", "-q", help="Search query")],
-    limit: Annotated[int, typer.Option("--limit", "-l")] = 5,
-    item_type: Annotated[
-        Optional[str],
-        typer.Option("--type", "-t", help="Filter: model|column|relationship|view"),
-    ] = None,
-    model_name: Annotated[
-        Optional[str],
-        typer.Option("--model", help="Filter by model name"),
-    ] = None,
-    path: PathOpt = None,
-    output: OutputOpt = "table",
-) -> None:
-    """Semantic search over indexed schema items."""
-    store = _get_store(path)
-    results = store.search_schema(
-        query, limit=limit, item_type=item_type, model_name=model_name
-    )
-    _print_results(results, output)
 
 
 @memory_app.command()

@@ -113,12 +113,14 @@ wren memory describe --mdl /path/to/mdl.json
 
 ### `wren memory context`
 
-Get schema context using the best strategy for the schema size. Automatically chooses between full plain text and embedding search based on the threshold.
+Get schema context for an LLM. Automatically chooses the best strategy based on schema size: full plain text for small schemas, embedding search for large schemas.
+
+When using the search strategy, optional `--type` and `--model` filters narrow the results.
 
 ```bash
 wren memory context -q "customer order price"
-wren memory context -q "revenue" --threshold 50000
-wren memory context -q "日期" --output json
+wren memory context -q "revenue" --type column --model orders
+wren memory context -q "日期" --threshold 50000 --output json
 ```
 
 | Flag | Description |
@@ -126,25 +128,9 @@ wren memory context -q "日期" --output json
 | `-q, --query` | Search query (required) |
 | `--mdl` | Path to MDL JSON file |
 | `-l, --limit` | Max results for search strategy (default: 5) |
+| `-t, --type` | Filter: `model`, `column`, `relationship`, `view` (search strategy only) |
+| `--model` | Filter by model name (search strategy only) |
 | `--threshold` | Character threshold for full vs search (default: 30,000) |
-| `-o, --output` | Output format: `table` (default), `json` |
-
-### `wren memory search`
-
-Semantic search over the indexed schema. Returns the most relevant models, columns, etc. for a natural language query.
-
-```bash
-wren memory search -q "customer order price"
-wren memory search -q "revenue" --type column --limit 3
-wren memory search -q "日期欄位" --model orders --output json
-```
-
-| Flag | Description |
-|------|-------------|
-| `-q, --query` | Search query (required) |
-| `-l, --limit` | Max results (default: 5) |
-| `-t, --type` | Filter by item type: `model`, `column`, `relationship`, `view` |
-| `--model` | Filter by model name |
 | `-o, --output` | Output format: `table` (default), `json` |
 
 ### `wren memory store`
