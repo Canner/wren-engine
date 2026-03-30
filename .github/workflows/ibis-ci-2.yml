@@ -10,6 +10,7 @@ on:
       - 'wren-core/**'
       - 'wren-core-base/**'
       - 'wren-core-py/**'
+      - 'wren-core-legacy/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number }}

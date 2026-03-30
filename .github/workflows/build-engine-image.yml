@@ -1,8 +1,7 @@
 name: Build engine image
 permissions:
-  contents: write
+  contents: read
   packages: write
-  pull-requests: write
 
 on:
   push:
@@ -32,7 +31,6 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
             echo "type=sha" > tags.txt
-            mcp_version="sha-$(git rev-parse --short HEAD)"
           fi
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             if [ -n "$DOCKER_IMAGE_TAG_NAME" ]; then
@@ -49,13 +47,10 @@ jobs:
               tag_name=$(echo "$REF_NAME" | sed 's/[^a-zA-Z0-9]/-/g')-$(git rev-parse --short HEAD)
             fi
             echo "type=raw,value=$tag_name" > tags.txt
-            mcp_version="$tag_name"
           fi
           echo "tags=$(cat tags.txt)" >> $GITHUB_OUTPUT
-          printf 'mcp_version=%s\n' "$mcp_version" >> $GITHUB_OUTPUT
     outputs:
       tags: ${{ steps.prepare_tag.outputs.tags }}
-      mcp_version: ${{ steps.prepare_tag.outputs.mcp_version }}
   build-image:
     needs: prepare-tag
     runs-on: ubuntu-latest

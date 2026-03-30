@@ -61,24 +61,26 @@ jobs:
           fi
           echo "tags=$(cat tags.txt)" >> $GITHUB_OUTPUT
           printf 'mcp_version=%s\n' "$mcp_version" >> $GITHUB_OUTPUT
+      - name: Prepare arch matrix
+        id: prepare_arch
+        run: |
+          archs='[{"runner":"ubuntu-latest","platform":"linux/amd64"}'
+          if [ "${{ github.event_name }}" = "push" ] || \
+             { [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.include_arm64 }}" = "true" ]; }; then
+            archs="${archs}"',{"runner":"linux_arm64_runner","platform":"linux/arm64"}'
+          fi
+          archs="${archs}]"
+          echo "arch=$archs" >> $GITHUB_OUTPUT
     outputs:
       tags: ${{ steps.prepare_tag.outputs.tags }}
       mcp_version: ${{ steps.prepare_tag.outputs.mcp_version }}
+      arch: ${{ steps.prepare_arch.outputs.arch }}
   build-ibis-image:
     needs: prepare-tag
     strategy:
       fail-fast: false
       matrix:
-        arch:
-          - runner: ubuntu-latest
-            platform: linux/amd64
-        include:
-          - arch:
-              runner: linux_arm64_runner
-              platform: linux/arm64
-            enabled: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.include_arm64) }}
-        exclude:
-          - enabled: false
+        arch: ${{ fromJson(needs.prepare-tag.outputs.arch) }}
     runs-on: ${{ matrix.arch.runner }}
     steps:
       - name: Prepare platform
