@@ -4,12 +4,17 @@ permissions:
   pull-requests: write
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'wren-core/**'
   pull_request:
     paths:
       - 'wren-core/**'
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.number }}
+  group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
   cancel-in-progress: true
 
 defaults:
@@ -68,6 +73,7 @@ jobs:
   # Run tests
   linux-test-arm64:
     name: cargo test (arm64)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [ linux-build-lib ]
     runs-on: ubuntu-24.04-arm
     container:
