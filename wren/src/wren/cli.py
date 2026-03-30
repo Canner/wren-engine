@@ -359,5 +359,13 @@ def _print_result(table, output: str) -> None:
             typer.echo(str(table))
 
 
+try:
+    from wren.memory.cli import memory_app  # noqa: PLC0415
+
+    app.add_typer(memory_app)
+except ImportError:
+    pass  # wren[memory] not installed
+
+
 if __name__ == "__main__":
     app()
