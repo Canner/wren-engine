@@ -108,7 +108,7 @@ async def test_query(client, manifest_str, connection_info):
         "1996-01-02",
         "1_370",
         "2024-01-01 23:59:59.000000",
-        "2024-01-01 23:59:59.000000 +00:00",
+        "2024-01-01 23:59:59.000000 UTC",
         None,
     ]
     assert result["dtypes"] == {
@@ -118,8 +118,8 @@ async def test_query(client, manifest_str, connection_info):
         "totalprice": "decimal128(38, 9)",
         "orderdate": "date32[day]",
         "order_cust_key": "string",
-        "timestamp": "timestamp[ns]",
-        "timestamptz": "timestamp[ns, tz=UTC]",
+        "timestamp": "timestamp[us]",
+        "timestamptz": "timestamp[us, tz=UTC]",
         "test_null_time": "timestamp[us]",
     }
 
