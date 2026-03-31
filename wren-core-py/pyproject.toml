@@ -1,13 +1,34 @@
 [project]
 name = "wren-core-py"
-classifiers = ["Programming Language :: Python :: 3.11"]
 version = "0.1.0"
+description = "Python bindings for Wren Engine semantic layer (wren-core)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Wren AI", email = "contact@getwren.ai" }]
+keywords = ["sql", "semantic-layer", "data-modeling", "analytics", "wren", "wrenai", "datafusion"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Rust",
+  "Topic :: Database",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Homepage = "https://www.getwren.ai/"
+Repository = "https://github.com/Canner/wren-engine"
+Issues = "https://github.com/Canner/wren-engine/issues"
 
 [tool.poetry]
 name = "wren-core-py"
 version = "0.1.0"
-description = ""
-authors = ["Canner <dev@cannerdata.com>"]
+description = "Python bindings for Wren Engine semantic layer (wren-core)"
+authors = ["Wren AI <contact@getwren.ai>"]
 
 [tool.poetry.dependencies]
 python = ">=3.11"
