@@ -63,12 +63,6 @@ def _describe_model(model: dict, lines: list[str]) -> None:
         header += f" — {desc}"
     lines.append(header)
 
-    ref = model.get("tableReference")
-    if ref:
-        if isinstance(ref, dict):
-            ref = ".".join(filter(None, [ref.get("schema"), ref.get("table")]))
-        lines.append(f"  Table: {ref}")
-
     pk = model.get("primaryKey")
     if pk:
         lines.append(f"  Primary key: {pk}")
