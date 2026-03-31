@@ -218,9 +218,10 @@ def memory_store(tmp_path):
     """Create a MemoryStore backed by a temp directory."""
     try:
         from wren.memory.store import MemoryStore  # noqa: PLC0415
+
+        return MemoryStore(path=tmp_path)
     except ImportError:
         pytest.skip("wren[memory] extras not installed")
-    return MemoryStore(path=tmp_path)
 
 
 @pytest.mark.unit
@@ -319,9 +320,10 @@ class TestMemoryStore:
 def wren_memory(tmp_path):
     try:
         from wren.memory import WrenMemory  # noqa: PLC0415
+
+        return WrenMemory(path=tmp_path)
     except ImportError:
         pytest.skip("wren[memory] extras not installed")
-    return WrenMemory(path=tmp_path)
 
 
 @pytest.mark.unit
