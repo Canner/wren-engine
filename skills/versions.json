@@ -6,6 +6,5 @@
   "wren-mcp-setup": "1.4",
   "wren-quickstart": "1.3",
   "wren-http-api": "1.0",
-  "wren-usage": "1.2",
-  "wren-memory": "1.0"
+  "wren-usage": "1.2"
 }
