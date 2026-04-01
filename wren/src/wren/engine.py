@@ -175,8 +175,7 @@ class WrenEngine:
             if self._config.strict_mode or self._config.denied_functions:
                 manifest_json = json.loads(base64.b64decode(self.manifest_str))
                 model_names = {m["name"] for m in manifest_json.get("models", [])}
-                user_cte_names = CTERewriter._collect_user_cte_names(ast)
-                validate_sql_policy(ast, model_names, user_cte_names, self._config)
+                validate_sql_policy(ast, model_names, self._config)
 
             tables = [t.name for t in ast.find_all(exp.Table)]
             extractor = get_manifest_extractor(self.manifest_str)

@@ -7,7 +7,6 @@ transpile path without connecting to any data source.
 from __future__ import annotations
 
 import base64
-import math
 
 import orjson
 import pytest

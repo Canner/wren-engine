@@ -15,7 +15,6 @@ from wren.model.error import ErrorCode, ErrorPhase, WrenError
 def validate_sql_policy(
     ast: exp.Expression,
     model_names: set[str],
-    user_cte_names: set[str],
     config: WrenConfig,
 ) -> None:
     """Raise ``WrenError`` if the SQL violates strict-mode policies.
@@ -26,34 +25,78 @@ def validate_sql_policy(
         Parsed sqlglot AST of the user query.
     model_names:
         Set of model names defined in the MDL manifest.
-    user_cte_names:
-        Set of CTE names defined in the user's SQL (excluded from table checks).
     config:
         Wren configuration with strict_mode and denied_functions settings.
     """
     if config.strict_mode:
-        _check_tables(ast, model_names, user_cte_names)
+        _check_tables(ast, model_names)
     if config.denied_functions:
         _check_functions(ast, config.denied_functions)
+
+
+def _visible_cte_names(node: exp.Expression) -> set[str]:
+    """Return CTE names visible at *node*'s scope by walking up the AST."""
+    names: set[str] = set()
+    cursor = node.parent
+    while cursor is not None:
+        # A WITH clause is visible to its parent SELECT and siblings.
+        with_clause = cursor.args.get("with_") if hasattr(cursor, "args") else None
+        if isinstance(with_clause, exp.With):
+            for cte in with_clause.expressions:
+                alias = cte.args.get("alias")
+                if alias:
+                    cte_name = (
+                        alias.this.name
+                        if isinstance(alias.this, exp.Identifier)
+                        else str(alias.this)
+                    )
+                    names.add(cte_name.lower())
+        cursor = cursor.parent
+    return names
 
 
 def _check_tables(
     ast: exp.Expression,
     model_names: set[str],
-    user_cte_names: set[str],
 ) -> None:
     model_names_lower = {n.lower() for n in model_names}
-    user_cte_names_lower = {n.lower() for n in user_cte_names}
+
     for table in ast.find_all(exp.Table):
         name = table.name
         if not name:
+            # Table nodes with no name are table-valued functions
+            # (e.g. read_csv(), generate_series()). Block them in strict mode.
+            sql_text = table.sql()
+            if sql_text:
+                raise WrenError(
+                    ErrorCode.MODEL_NOT_FOUND,
+                    f"Table-valued function '{sql_text}' is not allowed. "
+                    "In strict mode, all table references must correspond to MDL models.",
+                    phase=ErrorPhase.SQL_POLICY_CHECK,
+                )
             continue
-        if name.lower() in user_cte_names_lower:
+        name_lower = name.lower()
+        if name_lower in model_names_lower:
             continue
-        if name.lower() not in model_names_lower:
+        if name_lower in _visible_cte_names(table):
+            continue
+        raise WrenError(
+            ErrorCode.MODEL_NOT_FOUND,
+            f"Table '{name}' is not defined in the MDL manifest. "
+            "In strict mode, all table references must correspond to MDL models.",
+            phase=ErrorPhase.SQL_POLICY_CHECK,
+        )
+
+    # Func subclasses used as FROM sources (e.g. UNNEST) produce no exp.Table
+    # node at all. Scan for Func nodes inside From clauses.
+    for from_clause in ast.find_all(exp.From):
+        source = from_clause.this
+        if isinstance(source, exp.Alias):
+            source = source.this
+        if isinstance(source, exp.Func):
             raise WrenError(
                 ErrorCode.MODEL_NOT_FOUND,
-                f"Table '{name}' is not defined in the MDL manifest. "
+                f"Table-valued function '{source.sql()}' is not allowed. "
                 "In strict mode, all table references must correspond to MDL models.",
                 phase=ErrorPhase.SQL_POLICY_CHECK,
             )

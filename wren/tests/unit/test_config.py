@@ -34,9 +34,7 @@ def test_load_config_with_denied_functions(tmp_path):
     (tmp_path / "config.json").write_text(json.dumps(data))
     config = load_config(tmp_path)
     assert config.strict_mode is True
-    assert config.denied_functions == frozenset(
-        ["pg_read_file", "dblink", "lo_import"]
-    )
+    assert config.denied_functions == frozenset(["pg_read_file", "dblink", "lo_import"])
 
 
 def test_load_config_function_names_lowercased(tmp_path):
@@ -84,3 +82,23 @@ def test_load_config_empty_object(tmp_path):
     (tmp_path / "config.json").write_text(json.dumps({}))
     config = load_config(tmp_path)
     assert config == WrenConfig()
+
+
+def test_load_config_strict_mode_string_rejected(tmp_path):
+    """'strict_mode': 'false' must not silently coerce to True."""
+    (tmp_path / "config.json").write_text(json.dumps({"strict_mode": "false"}))
+    with pytest.raises(WrenError):
+        load_config(tmp_path)
+
+
+def test_load_config_strict_mode_int_rejected(tmp_path):
+    (tmp_path / "config.json").write_text(json.dumps({"strict_mode": 1}))
+    with pytest.raises(WrenError):
+        load_config(tmp_path)
+
+
+def test_load_config_denied_functions_mixed_types_rejected(tmp_path):
+    data = {"denied_functions": ["safe", 1, {"obj": True}]}
+    (tmp_path / "config.json").write_text(json.dumps(data))
+    with pytest.raises(WrenError):
+        load_config(tmp_path)

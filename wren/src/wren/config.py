@@ -51,7 +51,12 @@ def load_config(wren_home: Path) -> WrenConfig:
             f"{config_path} must contain a JSON object.",
         )
 
-    strict_mode = bool(raw.get("strict_mode", False))
+    strict_mode_raw = raw.get("strict_mode", False)
+    if not isinstance(strict_mode_raw, bool):
+        raise WrenError(
+            ErrorCode.GENERIC_USER_ERROR,
+            f"{config_path}: 'strict_mode' must be a JSON boolean.",
+        )
 
     denied_raw = raw.get("denied_functions", [])
     if not isinstance(denied_raw, list):
@@ -59,6 +64,11 @@ def load_config(wren_home: Path) -> WrenConfig:
             ErrorCode.GENERIC_USER_ERROR,
             f"{config_path}: 'denied_functions' must be a JSON array.",
         )
-    denied_functions = frozenset(str(f).lower() for f in denied_raw)
+    if any(not isinstance(f, str) for f in denied_raw):
+        raise WrenError(
+            ErrorCode.GENERIC_USER_ERROR,
+            f"{config_path}: 'denied_functions' must contain only strings.",
+        )
+    denied_functions = frozenset(f.lower() for f in denied_raw)
 
-    return WrenConfig(strict_mode=strict_mode, denied_functions=denied_functions)
+    return WrenConfig(strict_mode=strict_mode_raw, denied_functions=denied_functions)

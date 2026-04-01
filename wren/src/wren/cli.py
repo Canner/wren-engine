@@ -130,6 +130,7 @@ def _build_engine(
     from wren.config import load_config  # noqa: PLC0415
     from wren.engine import WrenEngine  # noqa: PLC0415
     from wren.model.data_source import DataSource  # noqa: PLC0415
+    from wren.model.error import WrenError  # noqa: PLC0415
 
     manifest_str = _load_manifest(_require_mdl(mdl))
     conn_dict = _load_conn(connection_info, connection_file, required=conn_required)
@@ -141,13 +142,17 @@ def _build_engine(
         typer.echo(f"Error: unknown datasource '{ds_str}'", err=True)
         raise typer.Exit(1)
 
-    config = load_config(_WREN_HOME)
-    return WrenEngine(
-        manifest_str=manifest_str,
-        data_source=ds,
-        connection_info=conn_dict,
-        config=config,
-    )
+    try:
+        config = load_config(_WREN_HOME)
+        return WrenEngine(
+            manifest_str=manifest_str,
+            data_source=ds,
+            connection_info=conn_dict,
+            config=config,
+        )
+    except WrenError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1) from e
 
 
 # ── Shared option types ────────────────────────────────────────────────────
@@ -290,6 +295,7 @@ def dry_plan(
     from wren.config import load_config  # noqa: PLC0415
     from wren.engine import WrenEngine  # noqa: PLC0415
     from wren.model.data_source import DataSource  # noqa: PLC0415
+    from wren.model.error import WrenError  # noqa: PLC0415
 
     manifest_str = _load_manifest(_require_mdl(mdl))
     # Read datasource from connection_info.json only when --datasource is not given
@@ -306,7 +312,12 @@ def dry_plan(
         typer.echo(f"Error: unknown datasource '{ds_str}'", err=True)
         raise typer.Exit(1)
 
-    config = load_config(_WREN_HOME)
+    try:
+        config = load_config(_WREN_HOME)
+    except WrenError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1) from e
+
     with WrenEngine(
         manifest_str=manifest_str, data_source=ds, connection_info={}, config=config
     ) as engine:
