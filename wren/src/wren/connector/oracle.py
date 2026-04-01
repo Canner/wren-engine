@@ -15,8 +15,12 @@ def _ora_number_type(precision, scale) -> pa.DataType:
         p = min(int(precision), 38) if precision else 38
         s = int(scale)
         return pa.decimal128(p, s)
-    if precision is not None and precision > 0 and precision <= 9:
-        return pa.int32()
+    if precision is not None and precision > 0:
+        if precision <= 9:
+            return pa.int32()
+        if precision <= 18:
+            return pa.int64()
+        return pa.decimal128(min(int(precision), 38), 0)
     return pa.int64()
 
 
@@ -27,15 +31,15 @@ def _get_ora_type_map() -> dict:
         oracledb.DB_TYPE_VARCHAR: pa.string(),
         oracledb.DB_TYPE_NVARCHAR: pa.string(),
         oracledb.DB_TYPE_LONG: pa.large_string(),
-        oracledb.DB_TYPE_DATE: pa.date32(),
+        oracledb.DB_TYPE_DATE: pa.timestamp("us"),
         oracledb.DB_TYPE_TIMESTAMP: pa.timestamp("us"),
         oracledb.DB_TYPE_TIMESTAMP_TZ: pa.timestamp("us", tz="UTC"),
         oracledb.DB_TYPE_TIMESTAMP_LTZ: pa.timestamp("us", tz="UTC"),
         oracledb.DB_TYPE_CLOB: pa.large_string(),
         oracledb.DB_TYPE_NCLOB: pa.large_string(),
-        oracledb.DB_TYPE_BLOB: pa.binary(),
-        oracledb.DB_TYPE_RAW: pa.binary(),
-        oracledb.DB_TYPE_LONG_RAW: pa.binary(),
+        oracledb.DB_TYPE_BLOB: pa.large_binary(),
+        oracledb.DB_TYPE_RAW: pa.large_binary(),
+        oracledb.DB_TYPE_LONG_RAW: pa.large_binary(),
         oracledb.DB_TYPE_BINARY_FLOAT: pa.float32(),
         oracledb.DB_TYPE_BINARY_DOUBLE: pa.float64(),
         oracledb.DB_TYPE_ROWID: pa.string(),

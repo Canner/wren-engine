@@ -24,7 +24,7 @@ async def test_metadata_list_tables(client, connection_info):
     assert result["columns"][8] == {
         "name": "O_COMMENT",
         "nestedColumns": None,
-        "type": "VARCHAR",
+        "type": "TEXT",
         "notNull": False,
         "description": "This is a comment",
         "properties": None,

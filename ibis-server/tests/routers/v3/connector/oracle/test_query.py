@@ -114,7 +114,7 @@ async def test_query(client, manifest_str, connection_info):
     assert result["dtypes"] == {
         "orderkey": "int64",
         "custkey": "int64",
-        "orderstatus": "string",
+        "orderstatus": "large_string",
         "totalprice": "decimal128(38, 2)",
         "orderdate": "date32[day]",
         "order_cust_key": "string",

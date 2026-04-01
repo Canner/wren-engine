@@ -155,7 +155,7 @@ def _build_oracle_arrow_table(cursor) -> pa.Table:
 
 
 def _make_oracle_connection(connection_info) -> oracledb.Connection:
-    if hasattr(connection_info, "connection_url"):
+    if hasattr(connection_info, "connection_url") and connection_info.connection_url:
         url = connection_info.connection_url.get_secret_value()
         parsed = urlparse(url)
         return oracledb.connect(
