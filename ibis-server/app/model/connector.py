@@ -91,7 +91,7 @@ def _get_ora_type_map() -> dict:
         oracledb.DB_TYPE_VARCHAR: pa.string(),
         oracledb.DB_TYPE_NVARCHAR: pa.string(),
         oracledb.DB_TYPE_LONG: pa.large_string(),
-        oracledb.DB_TYPE_DATE: pa.timestamp("us"),
+        oracledb.DB_TYPE_DATE: pa.date32(),
         oracledb.DB_TYPE_TIMESTAMP: pa.timestamp("us"),
         oracledb.DB_TYPE_TIMESTAMP_TZ: pa.timestamp("us", tz="UTC"),
         oracledb.DB_TYPE_TIMESTAMP_LTZ: pa.timestamp("us", tz="UTC"),
@@ -117,6 +117,10 @@ def _build_ora_column(values: list, arrow_type: pa.DataType) -> pa.Array:
             coerced.append(v.read())
         elif isinstance(v, memoryview):
             coerced.append(bytes(v))
+        elif pa.types.is_decimal(arrow_type) and isinstance(v, float):
+            # oracledb returns float for NUMBER(p,s) without an explicit CAST;
+            # PyArrow decimal128 requires int or Decimal, not float.
+            coerced.append(PyDecimal(str(v)))
         elif arrow_type in (pa.float64(), pa.float32()) and isinstance(v, int | float):
             coerced.append(float(v))
         else:

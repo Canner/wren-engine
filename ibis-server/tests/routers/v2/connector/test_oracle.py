@@ -124,23 +124,23 @@ def oracle(request) -> OracleDbContainer:
     orders_schema = {
         "o_orderkey": sqlalchemy.Integer(),
         "o_custkey": sqlalchemy.Integer(),
-        "o_orderstatus": sqlalchemy.Text(),
+        "o_orderstatus": sqlalchemy.VARCHAR(255),
         "o_totalprice": sqlalchemy.DECIMAL(precision=38, scale=2),
         "o_orderdate": sqlalchemy.Date(),
-        "o_orderpriority": sqlalchemy.Text(),
-        "o_clerk": sqlalchemy.Text(),
+        "o_orderpriority": sqlalchemy.VARCHAR(255),
+        "o_clerk": sqlalchemy.VARCHAR(255),
         "o_shippriority": sqlalchemy.Integer(),
-        "o_comment": sqlalchemy.Text(),
+        "o_comment": sqlalchemy.VARCHAR(255),
     }
     customer_schema = {
         "c_custkey": sqlalchemy.Integer(),
-        "c_name": sqlalchemy.Text(),
-        "c_address": sqlalchemy.Text(),
+        "c_name": sqlalchemy.VARCHAR(255),
+        "c_address": sqlalchemy.VARCHAR(255),
         "c_nationkey": sqlalchemy.Integer(),
-        "c_phone": sqlalchemy.Text(),
+        "c_phone": sqlalchemy.VARCHAR(255),
         "c_acctbal": sqlalchemy.DECIMAL(precision=38, scale=2),
-        "c_mktsegment": sqlalchemy.Text(),
-        "c_comment": sqlalchemy.Text(),
+        "c_mktsegment": sqlalchemy.VARCHAR(255),
+        "c_comment": sqlalchemy.VARCHAR(255),
     }
     with engine.begin() as conn:
         # assign dtype to avoid to create CLOB column for text columns
@@ -193,7 +193,7 @@ async def test_query(client, manifest_str, oracle: OracleDbContainer):
         "1996-01-02",
         "1_370",
         "2024-01-01 23:59:59.000000",
-        "2024-01-01 23:59:59.000000 UTC",
+        "2024-01-01 23:59:59.000000 +00:00",
         None,
         "616263",
     ]
@@ -201,7 +201,7 @@ async def test_query(client, manifest_str, oracle: OracleDbContainer):
         "orderkey": "int64",
         "custkey": "int64",
         "orderstatus": "string",
-        "totalprice": "decimal128(38, 9)",
+        "totalprice": "decimal128(38, 2)",
         "orderdate": "date32[day]",
         "order_cust_key": "string",
         "timestamp": "timestamp[us]",
@@ -339,7 +339,7 @@ async def test_metadata_list_tables(client, oracle: OracleDbContainer):
     assert result["columns"][8] == {
         "name": "O_COMMENT",
         "nestedColumns": None,
-        "type": "TEXT",
+        "type": "VARCHAR",
         "notNull": False,
         "description": "This is a comment",
         "properties": None,
