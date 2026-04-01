@@ -22,4 +22,5 @@ __pycache__/
 venv/
 **/.env*
 **/*.so
-wren-core-py/dict/
+wren-core-py/dist/
+.claude/worktrees/
