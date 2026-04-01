@@ -27,9 +27,10 @@ jobs:
           # Linux x86_64
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-          # Linux aarch64 (native ARM64 runner to avoid ring cross-compilation issues)
+          # Linux aarch64 (ARM runner + manylinux_2_28 for ring 0.17+ compatibility)
           - os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
+            manylinux: 2_28
           # macOS x86_64
           - os: macos-15-intel
             target: x86_64-apple-darwin
@@ -49,7 +50,7 @@ jobs:
         with:
           target: ${{ matrix.target }}
           args: --release --out dist
-          manylinux: auto
+          manylinux: ${{ matrix.manylinux || 'auto' }}
           working-directory: wren-core-py
       - name: Upload wheel
         uses: actions/upload-artifact@v4
