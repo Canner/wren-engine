@@ -18,6 +18,7 @@ Requires Python >= 3.11.
 from wren_core import SessionContext, to_manifest
 
 # Load an MDL manifest from a base64-encoded JSON string
+base64_mdl_json = "<your-base64-encoded-mdl-json>"
 manifest = to_manifest(base64_mdl_json)
 
 # Create a session context for query planning
