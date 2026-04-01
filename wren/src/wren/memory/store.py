@@ -141,13 +141,20 @@ class MemoryStore:
         return len(items)
 
     def schema_is_current(self, manifest: dict) -> bool:
-        """Check whether the indexed schema matches *manifest*."""
+        """Check whether the indexed schema matches *manifest*.
+
+        Returns ``True`` only when every row in the schema table carries
+        the current manifest hash (i.e. no stale rows from a previous
+        manifest remain).
+        """
         if _SCHEMA_TABLE not in _table_names(self._db):
             return False
         table = self._db.open_table(_SCHEMA_TABLE)
+        if table.count_rows() == 0:
+            return False
         current_hash = manifest_hash(manifest)
         df = table.to_pandas()
-        return bool((df["mdl_hash"] == current_hash).any())
+        return bool((df["mdl_hash"] == current_hash).all())
 
     # ── Plain-text / hybrid ────────────────────────────────────────────────
 
@@ -179,8 +186,13 @@ class MemoryStore:
         if len(text) <= threshold:
             return {"strategy": "full", "schema": text}
 
+        mdl_hash_val = manifest_hash(manifest)
         results = self._search_schema(
-            query, limit=limit, item_type=item_type, model_name=model_name
+            query,
+            limit=limit,
+            item_type=item_type,
+            model_name=model_name,
+            mdl_hash=mdl_hash_val,
         )
         return {"strategy": "search", "results": results}
 
@@ -191,6 +203,7 @@ class MemoryStore:
         limit: int = 5,
         item_type: str | None = None,
         model_name: str | None = None,
+        mdl_hash: str | None = None,
     ) -> list[dict]:
         """Embedding search over indexed schema items (internal)."""
         if _SCHEMA_TABLE not in _table_names(self._db):
@@ -202,6 +215,8 @@ class MemoryStore:
         )
 
         where_parts: list[str] = []
+        if mdl_hash:
+            where_parts.append(f"mdl_hash = '{_esc(mdl_hash)}'")
         if item_type:
             where_parts.append(f"item_type = '{_esc(item_type)}'")
         if model_name:
@@ -283,6 +298,7 @@ class MemoryStore:
         return info
 
     def reset(self) -> None:
-        """Drop all tables."""
-        for name in list(_table_names(self._db)):
-            self._db.drop_table(name)
+        """Drop Wren memory tables."""
+        for name in (_SCHEMA_TABLE, _QUERY_TABLE):
+            if name in _table_names(self._db):
+                self._db.drop_table(name)

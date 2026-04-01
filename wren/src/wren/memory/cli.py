@@ -63,14 +63,21 @@ def _get_store(path: str | None):
     """Lazy-import and construct a MemoryStore."""
     try:
         from wren.memory.store import MemoryStore  # noqa: PLC0415
-    except ImportError:
+
+        return MemoryStore(path=path)
+    except ModuleNotFoundError as e:
+        if (e.name or "").split(".")[0] not in {
+            "lancedb",
+            "sentence_transformers",
+            "pyarrow",
+        }:
+            raise
         typer.echo(
             "Error: wren[memory] extras not installed. "
             "Run: pip install 'wren-engine[memory]'",
             err=True,
         )
         raise typer.Exit(1)
-    return MemoryStore(path=path)
 
 
 def _print_results(results: list[dict], output: str) -> None:
@@ -176,6 +183,18 @@ def fetch(
         kwargs["threshold"] = threshold
     result = store.get_context(manifest, query, **kwargs)
     strategy = result["strategy"]
+    if output.lower() == "json":
+        payload = dict(result)
+        if "results" in payload:
+            payload["results"] = [
+                {
+                    k: (v.isoformat() if hasattr(v, "isoformat") else v)
+                    for k, v in row.items()
+                }
+                for row in payload["results"]
+            ]
+        typer.echo(json.dumps(payload, indent=2, ensure_ascii=False))
+        return
     typer.echo(f"Strategy: {strategy}")
     if strategy == "full":
         typer.echo(result["schema"])
