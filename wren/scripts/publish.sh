@@ -63,7 +63,11 @@ if [[ "$MODE" != "build" ]]; then
 fi
 
 # --- Read version from __init__.py ---
-VERSION=$(grep '__version__' src/wren/__init__.py | sed 's/.*"\(.*\)".*/\1/')
+VERSION=$(sed -nE 's/^__version__\s*=\s*"([^"]+)".*/\1/p' src/wren/__init__.py | head -n1)
+if [[ -z "$VERSION" ]]; then
+    echo "Error: failed to parse __version__ from src/wren/__init__.py" >&2
+    exit 1
+fi
 echo "==> Building wren-engine v${VERSION}"
 
 # --- Clean previous dist ---
