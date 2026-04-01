@@ -150,7 +150,7 @@ def _build_engine(
             connection_info=conn_dict,
             config=config,
         )
-    except WrenError as e:
+    except (WrenError, OSError) as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(1) from e
 
@@ -314,7 +314,7 @@ def dry_plan(
 
     try:
         config = load_config(_WREN_HOME)
-    except WrenError as e:
+    except (WrenError, OSError) as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(1) from e
 
