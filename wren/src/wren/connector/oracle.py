@@ -3,6 +3,7 @@
 from decimal import Decimal as PyDecimal
 from urllib.parse import urlparse
 
+import oracledb
 import pyarrow as pa
 
 from wren.connector.base import ConnectorABC
@@ -20,8 +21,6 @@ def _ora_number_type(precision, scale) -> pa.DataType:
 
 
 def _get_ora_type_map() -> dict:
-    import oracledb
-
     return {
         oracledb.DB_TYPE_CHAR: pa.string(),
         oracledb.DB_TYPE_NCHAR: pa.string(),
@@ -63,8 +62,6 @@ def _build_ora_column(values: list, arrow_type: pa.DataType) -> pa.Array:
 
 
 def _build_oracle_arrow_table(cursor) -> pa.Table:
-    import oracledb
-
     if cursor.description is None:
         return pa.table({})
     type_map = _get_ora_type_map()
@@ -91,8 +88,6 @@ def _build_oracle_arrow_table(cursor) -> pa.Table:
 
 
 def _make_oracle_connection(connection_info):
-    import oracledb
-
     if hasattr(connection_info, "connection_url") and connection_info.connection_url:
         url = connection_info.connection_url.get_secret_value()
         parsed = urlparse(url)
@@ -131,8 +126,6 @@ class OracleConnector(ConnectorABC):
         self.connection = _make_oracle_connection(connection_info)
 
     def query(self, sql: str, limit: int | None = None) -> pa.Table:
-        import oracledb
-
         if limit is not None:
             sql = f"SELECT * FROM ({sql}) t WHERE ROWNUM <= {limit}"
         try:
@@ -148,8 +141,6 @@ class OracleConnector(ConnectorABC):
             ) from e
 
     def dry_run(self, sql: str) -> None:
-        import oracledb
-
         if hasattr(self.connection, "cursor"):
             try:
                 with self.connection.cursor() as cursor:
