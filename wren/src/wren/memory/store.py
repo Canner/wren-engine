@@ -21,6 +21,11 @@ _SCHEMA_TABLE = "schema_items"
 _QUERY_TABLE = "query_history"
 
 
+def _esc(value: str) -> str:
+    """Escape single quotes for LanceDB where-clause literals."""
+    return value.replace("'", "''")
+
+
 def _schema_items_arrow_schema(dim: int = _DEFAULT_DIM) -> pa.Schema:
     return pa.schema(
         [
@@ -175,9 +180,9 @@ class MemoryStore:
 
         where_parts: list[str] = []
         if item_type:
-            where_parts.append(f"item_type = '{item_type}'")
+            where_parts.append(f"item_type = '{_esc(item_type)}'")
         if model_name:
-            where_parts.append(f"model_name = '{model_name}'")
+            where_parts.append(f"model_name = '{_esc(model_name)}'")
         if where_parts:
             q = q.where(" AND ".join(where_parts))
 
@@ -237,7 +242,7 @@ class MemoryStore:
         )
 
         if datasource:
-            q = q.where(f"datasource = '{datasource}'")
+            q = q.where(f"datasource = '{_esc(datasource)}'")
 
         results = q.limit(limit).to_list()
         for r in results:

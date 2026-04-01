@@ -4,7 +4,7 @@ This reference covers the decision logic for each memory command. The main workf
 
 ---
 
-## Schema context: `context` and `describe`
+## Schema context: `fetch` and `describe`
 
 | Command | When to use |
 |---------|-------------|
@@ -34,7 +34,7 @@ wren memory fetch -q "revenue" --threshold 50000   # raise for larger context wi
 
 **When NOT to index:**
 - Before every query — indexing is expensive, do it once per MDL change
-- When only using `describe` or `context` with full strategy — those read the MDL directly
+- When only using `describe` or `fetch` with full strategy — those read the MDL directly
 
 ```bash
 wren memory index --mdl ~/.wren/mdl.json

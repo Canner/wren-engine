@@ -360,6 +360,9 @@ def _print_result(table, output: str) -> None:
 
 
 try:
+    import lancedb  # noqa: PLC0415, F401
+    import sentence_transformers  # noqa: PLC0415, F401
+
     from wren.memory.cli import memory_app  # noqa: PLC0415
 
     app.add_typer(memory_app)

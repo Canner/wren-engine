@@ -3378,20 +3378,12 @@ wheels = [
 ]
 
 [[package]]
-name = "wren"
-version = "0.3.5"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/00/ae/db2efb1907c66fcab6021fb707eb44cddb92ee31a172ad18f0ebb36f8809/wren-0.3.5.tar.gz", hash = "sha256:e0cff32ca3dabd1e7a38a2cce9f04a37cf20b7aaf13edd0e6de02204847d70be", size = 3014 }
-
-[[package]]
 name = "wren-core-py"
 version = "0.1.0"
-source = { registry = "../wren-core-py/target/wheels" }
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7e/89/64d5a0a5b4e6e4d9f36d0e8856e358b78f8df537d754457a143c596ade68/wren_core_py-0.1.0.tar.gz", hash = "sha256:e1f85e4a76cd753850ab9750121c85788eff85ef9497481ac8c660bf92363e80", size = 173500 }
 wheels = [
-    { path = "wren_core_py-0.1.0-cp311-abi3-macosx_11_0_arm64.whl" },
+    { url = "https://files.pythonhosted.org/packages/c8/37/02dae70f121c22cfb60dd0a0e16afd349d193e4bdca0e836e0b1952bb3c1/wren_core_py-0.1.0-cp311-abi3-macosx_11_0_arm64.whl", hash = "sha256:51624141000c008cead7b330883d39fd36d2a1ffc10e18aedcf1a938df2ced6f", size = 31035179 },
 ]
 
 [[package]]
@@ -3417,7 +3409,18 @@ dependencies = [
 
 [package.optional-dependencies]
 all = [
-    { name = "wren" },
+    { name = "databricks-sdk" },
+    { name = "databricks-sql-connector" },
+    { name = "google-auth" },
+    { name = "ibis-framework", extra = ["athena", "bigquery", "clickhouse", "mssql", "mysql", "oracle", "postgres", "snowflake", "trino"] },
+    { name = "lancedb" },
+    { name = "mysqlclient" },
+    { name = "oracledb" },
+    { name = "psycopg" },
+    { name = "pyspark" },
+    { name = "redshift-connector" },
+    { name = "sentence-transformers" },
+    { name = "trino" },
 ]
 athena = [
     { name = "ibis-framework", extra = ["athena"] },
@@ -3475,44 +3478,63 @@ trino = [
 [package.metadata]
 requires-dist = [
     { name = "boto3", specifier = ">=1.26" },
+    { name = "databricks-sdk", marker = "extra == 'all'" },
     { name = "databricks-sdk", marker = "extra == 'databricks'" },
+    { name = "databricks-sql-connector", marker = "extra == 'all'" },
     { name = "databricks-sql-connector", marker = "extra == 'databricks'" },
     { name = "duckdb", specifier = ">=1.0" },
+    { name = "google-auth", marker = "extra == 'all'" },
     { name = "google-auth", marker = "extra == 'bigquery'" },
     { name = "ibis-framework", specifier = ">=10" },
+    { name = "ibis-framework", extras = ["athena"], marker = "extra == 'all'" },
     { name = "ibis-framework", extras = ["athena"], marker = "extra == 'athena'" },
+    { name = "ibis-framework", extras = ["bigquery"], marker = "extra == 'all'" },
     { name = "ibis-framework", extras = ["bigquery"], marker = "extra == 'bigquery'" },
+    { name = "ibis-framework", extras = ["clickhouse"], marker = "extra == 'all'" },
     { name = "ibis-framework", extras = ["clickhouse"], marker = "extra == 'clickhouse'" },
+    { name = "ibis-framework", extras = ["mssql"], marker = "extra == 'all'" },
     { name = "ibis-framework", extras = ["mssql"], marker = "extra == 'mssql'" },
+    { name = "ibis-framework", extras = ["mysql"], marker = "extra == 'all'" },
     { name = "ibis-framework", extras = ["mysql"], marker = "extra == 'mysql'" },
+    { name = "ibis-framework", extras = ["oracle"], marker = "extra == 'all'" },
     { name = "ibis-framework", extras = ["oracle"], marker = "extra == 'oracle'" },
+    { name = "ibis-framework", extras = ["postgres"], marker = "extra == 'all'" },
     { name = "ibis-framework", extras = ["postgres"], marker = "extra == 'postgres'" },
+    { name = "ibis-framework", extras = ["snowflake"], marker = "extra == 'all'" },
     { name = "ibis-framework", extras = ["snowflake"], marker = "extra == 'snowflake'" },
+    { name = "ibis-framework", extras = ["trino"], marker = "extra == 'all'" },
     { name = "ibis-framework", extras = ["trino"], marker = "extra == 'trino'" },
+    { name = "lancedb", marker = "extra == 'all'", specifier = ">=0.6" },
     { name = "lancedb", marker = "extra == 'memory'", specifier = ">=0.6" },
     { name = "loguru", specifier = ">=0.7" },
+    { name = "mysqlclient", marker = "extra == 'all'", specifier = ">=2.2" },
     { name = "mysqlclient", marker = "extra == 'mysql'", specifier = ">=2.2" },
     { name = "opendal", specifier = ">=0.45" },
+    { name = "oracledb", marker = "extra == 'all'" },
     { name = "oracledb", marker = "extra == 'oracle'" },
     { name = "orjson", marker = "extra == 'dev'", specifier = ">=3" },
     { name = "pandas", specifier = ">=2" },
+    { name = "psycopg", marker = "extra == 'all'", specifier = ">=3" },
     { name = "psycopg", marker = "extra == 'postgres'", specifier = ">=3" },
     { name = "pyarrow", specifier = ">=14" },
     { name = "pyarrow-hotfix", specifier = ">=0.6" },
     { name = "pyasn1", specifier = ">=0.6.3" },
     { name = "pydantic", specifier = ">=2" },
     { name = "pyopenssl", specifier = ">=26.0.0" },
+    { name = "pyspark", marker = "extra == 'all'", specifier = ">=3.5" },
     { name = "pyspark", marker = "extra == 'spark'", specifier = ">=3.5" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
+    { name = "redshift-connector", marker = "extra == 'all'" },
     { name = "redshift-connector", marker = "extra == 'redshift'" },
     { name = "requests", specifier = ">=2.33.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4" },
+    { name = "sentence-transformers", marker = "extra == 'all'", specifier = ">=2.2" },
     { name = "sentence-transformers", marker = "extra == 'memory'", specifier = ">=2.2" },
     { name = "sqlglot", specifier = ">=27" },
     { name = "testcontainers", extras = ["mysql", "postgres"], marker = "extra == 'dev'", specifier = ">=4" },
+    { name = "trino", marker = "extra == 'all'", specifier = ">=0.321" },
     { name = "trino", marker = "extra == 'trino'", specifier = ">=0.321" },
     { name = "typer", specifier = ">=0.12" },
-    { name = "wren", extras = ["athena", "bigquery", "clickhouse", "databricks", "memory", "mssql", "mysql", "oracle", "postgres", "redshift", "snowflake", "trino"], marker = "extra == 'all'" },
     { name = "wren-core-py", specifier = ">=0.1" },
 ]
 provides-extras = ["all", "athena", "bigquery", "clickhouse", "databricks", "dev", "memory", "mssql", "mysql", "oracle", "postgres", "redshift", "snowflake", "spark", "trino"]

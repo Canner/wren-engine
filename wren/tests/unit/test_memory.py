@@ -68,6 +68,7 @@ _MANIFEST = {
 # ── manifest_hash tests ───────────────────────────────────────────────────
 
 
+@pytest.mark.unit
 class TestManifestHash:
     def test_deterministic(self):
         h1 = manifest_hash(_MANIFEST)
@@ -83,6 +84,7 @@ class TestManifestHash:
 # ── extract_schema_items tests ────────────────────────────────────────────
 
 
+@pytest.mark.unit
 class TestExtractSchemaItems:
     def test_total_count(self):
         items = extract_schema_items(_MANIFEST)
@@ -163,6 +165,7 @@ class TestExtractSchemaItems:
 # ── describe_schema tests ─────────────────────────────────────────────────
 
 
+@pytest.mark.unit
 class TestDescribeSchema:
     def test_contains_model_names(self):
         text = describe_schema(_MANIFEST)
@@ -198,6 +201,12 @@ class TestDescribeSchema:
     def test_contains_primary_key(self):
         text = describe_schema(_MANIFEST)
         assert "Primary key: o_orderkey" in text
+
+    def test_excludes_table_reference(self):
+        text = describe_schema(_MANIFEST)
+        assert "tableReference" not in text
+        assert "test.public.orders" not in text
+        assert "test.public.customer" not in text
 
     def test_empty_manifest(self):
         text = describe_schema({})

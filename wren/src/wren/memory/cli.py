@@ -81,12 +81,15 @@ def _print_results(results: list[dict], output: str) -> None:
 
     output = output.lower()
     if output == "json":
+        serializable = []
         for r in results:
+            row = dict(r)
             # Convert datetime objects to ISO strings for JSON serialization
-            for k, v in r.items():
+            for k, v in row.items():
                 if hasattr(v, "isoformat"):
-                    r[k] = v.isoformat()
-        typer.echo(json.dumps(results, indent=2, ensure_ascii=False))
+                    row[k] = v.isoformat()
+            serializable.append(row)
+        typer.echo(json.dumps(serializable, indent=2, ensure_ascii=False))
     else:
         try:
             import pandas as pd  # noqa: PLC0415

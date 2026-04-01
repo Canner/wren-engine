@@ -10,8 +10,8 @@ Translate natural SQL queries through an MDL (Modeling Definition Language) sema
 pip install wren-engine[mysql]      # MySQL
 pip install wren-engine[postgres]   # PostgreSQL
 pip install wren-engine[duckdb]     # DuckDB (local files)
-pip install wren-engine[memory]     # Schema & query memory (LanceDB)
-pip install wren-engine[all]        # All connectors + memory
+pip install 'wren-engine[memory]'   # Schema & query memory (LanceDB)
+pip install 'wren-engine[all]'      # All connectors + memory
 ```
 
 ## Quick start
