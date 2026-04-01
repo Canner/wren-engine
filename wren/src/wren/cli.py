@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Annotated, Optional
 
@@ -10,7 +11,7 @@ import typer
 
 app = typer.Typer(name="wren", help="Wren Engine CLI", no_args_is_help=False)
 
-_WREN_HOME = Path.home() / ".wren"
+_WREN_HOME = Path(os.environ.get("WREN_HOME", Path.home() / ".wren"))
 _DEFAULT_MDL = _WREN_HOME / "mdl.json"
 _DEFAULT_CONN = _WREN_HOME / "connection_info.json"
 
@@ -126,6 +127,7 @@ def _build_engine(
     *,
     conn_required: bool = True,
 ):
+    from wren.config import load_config  # noqa: PLC0415
     from wren.engine import WrenEngine  # noqa: PLC0415
     from wren.model.data_source import DataSource  # noqa: PLC0415
 
@@ -139,8 +141,12 @@ def _build_engine(
         typer.echo(f"Error: unknown datasource '{ds_str}'", err=True)
         raise typer.Exit(1)
 
+    config = load_config(_WREN_HOME)
     return WrenEngine(
-        manifest_str=manifest_str, data_source=ds, connection_info=conn_dict
+        manifest_str=manifest_str,
+        data_source=ds,
+        connection_info=conn_dict,
+        config=config,
     )
 
 
@@ -281,6 +287,7 @@ def dry_plan(
     connection_file: ConnFileOpt = None,
 ):
     """Plan SQL through MDL and print the expanded SQL (no DB required)."""
+    from wren.config import load_config  # noqa: PLC0415
     from wren.engine import WrenEngine  # noqa: PLC0415
     from wren.model.data_source import DataSource  # noqa: PLC0415
 
@@ -299,8 +306,9 @@ def dry_plan(
         typer.echo(f"Error: unknown datasource '{ds_str}'", err=True)
         raise typer.Exit(1)
 
+    config = load_config(_WREN_HOME)
     with WrenEngine(
-        manifest_str=manifest_str, data_source=ds, connection_info={}
+        manifest_str=manifest_str, data_source=ds, connection_info={}, config=config
     ) as engine:
         try:
             result = engine.dry_plan(sql)
