@@ -11,7 +11,7 @@ import typer
 
 app = typer.Typer(name="wren", help="Wren Engine CLI", no_args_is_help=False)
 
-_WREN_HOME = Path(os.environ.get("WREN_HOME", Path.home() / ".wren"))
+_WREN_HOME = Path(os.environ.get("WREN_HOME", Path.home() / ".wren")).expanduser()
 _DEFAULT_MDL = _WREN_HOME / "mdl.json"
 _DEFAULT_CONN = _WREN_HOME / "connection_info.json"
 

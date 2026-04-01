@@ -184,7 +184,7 @@ class WrenEngine:
         except WrenError:
             raise
         except Exception as e:
-            if self._config.strict_mode:
+            if self._config.strict_mode or self._config.denied_functions:
                 raise WrenError(
                     ErrorCode.INVALID_SQL,
                     str(e),
