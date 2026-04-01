@@ -114,12 +114,12 @@ async def test_query(client, manifest_str, connection_info):
     assert result["dtypes"] == {
         "orderkey": "int64",
         "custkey": "int64",
-        "orderstatus": "string",
-        "totalprice": "decimal128(38, 9)",
+        "orderstatus": "large_string",
+        "totalprice": "decimal128(38, 2)",
         "orderdate": "date32[day]",
         "order_cust_key": "string",
-        "timestamp": "timestamp[ns]",
-        "timestamptz": "timestamp[ns, tz=UTC]",
+        "timestamp": "timestamp[us]",
+        "timestamptz": "timestamp[us, tz=UTC]",
         "test_null_time": "timestamp[us]",
     }
 
@@ -218,7 +218,7 @@ async def test_query_number_scale(client, connection_info):
     assert result["dtypes"] == {
         "id": "int64",
         "id_p": "int64",
-        "id_p_s": "decimal128(38, 9)",
+        "id_p_s": "decimal128(10, 2)",
     }
 
 

@@ -1,7 +1,7 @@
 from typing import Annotated
 
 import duckdb
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import ORJSONResponse
 from loguru import logger
 from opentelemetry import trace
@@ -32,6 +32,7 @@ from app.model import (
 from app.model.connector import Connector
 from app.model.data_source import DataSource
 from app.model.error import DatabaseTimeoutError
+from app.model.metadata.metadata import Metadata
 from app.model.metadata.dto import (
     Catalog,
     Constraint,
@@ -51,6 +52,7 @@ from app.util import (
     execute_get_constraints_with_timeout,
     execute_get_schema_list_with_timeout,
     execute_get_table_list_with_timeout,
+    execute_get_version_with_timeout,
     execute_query_with_timeout,
     execute_validate_with_timeout,
     pushdown_limit,
@@ -634,3 +636,29 @@ async def get_constraints(
         )
         metadata = MetadataFactory.get_metadata(data_source, connection_info)
         return await execute_get_constraints_with_timeout(metadata)
+
+
+@router.post(
+    "/{data_source}/metadata/version",
+    description="get the version of the specified data source",
+)
+async def get_db_version(
+    data_source: DataSource,
+    dto: MetadataDTO,
+    headers: Annotated[Headers, Depends(get_wren_headers)],
+) -> str:
+    span_name = f"v3_metadata_version_{data_source}"
+    with tracer.start_as_current_span(
+        name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
+    ) as span:
+        set_attribute(headers, span)
+        connection_info = data_source.get_connection_info(
+            resolve_connection_info(dto), dict(headers)
+        )
+        metadata = MetadataFactory.get_metadata(data_source, connection_info)
+        if type(metadata).get_version is Metadata.get_version:
+            raise HTTPException(
+                status_code=501,
+                detail=f"{data_source} does not support version retrieval",
+            )
+        return await execute_get_version_with_timeout(metadata)

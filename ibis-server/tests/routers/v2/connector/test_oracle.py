@@ -200,12 +200,12 @@ async def test_query(client, manifest_str, oracle: OracleDbContainer):
     assert result["dtypes"] == {
         "orderkey": "int64",
         "custkey": "int64",
-        "orderstatus": "string",
-        "totalprice": "decimal128(38, 9)",
+        "orderstatus": "large_string",
+        "totalprice": "decimal128(38, 2)",
         "orderdate": "date32[day]",
         "order_cust_key": "string",
-        "timestamp": "timestamp[ns]",
-        "timestamptz": "timestamp[ns, tz=UTC]",
+        "timestamp": "timestamp[us]",
+        "timestamptz": "timestamp[us, tz=UTC]",
         "test_null_time": "timestamp[us]",
         "blob_column": "binary",
     }
@@ -310,9 +310,9 @@ async def test_query_with_dry_run_and_invalid_sql(
         },
     )
     assert response.status_code == 422
-    assert (
-        "ORA-00942" in response.text
-    )  # Oracle ORA-00942 Error: Table or view does not exist
+    body = response.json()
+    assert body["errorCode"] == "INVALID_SQL"
+    assert "ORA-00942" in body["message"]
 
 
 async def test_metadata_list_tables(client, oracle: OracleDbContainer):

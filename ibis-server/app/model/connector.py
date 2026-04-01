@@ -8,6 +8,7 @@ from decimal import Decimal as PyDecimal
 from functools import cache
 from json import loads
 from typing import Any
+from urllib.parse import urlparse
 
 try:
     import clickhouse_connect
@@ -23,6 +24,7 @@ import ibis
 import ibis.expr.datatypes as dt
 import ibis.expr.schema as sch
 import opendal
+import oracledb
 import pandas as pd
 import psycopg
 import pyarrow as pa
@@ -72,6 +74,120 @@ importlib.import_module("app.custom_ibis.backends.sql.datatypes")
 tracer = trace.get_tracer(__name__)
 
 
+def _ora_number_type(precision, scale) -> pa.DataType:
+    if scale is not None and scale > 0:
+        p = min(int(precision), 38) if precision else 38
+        s = int(scale)
+        return pa.decimal128(p, s)
+    if precision is not None and precision > 0 and precision <= 9:
+        return pa.int32()
+    return pa.int64()
+
+
+def _get_ora_type_map() -> dict:
+    return {
+        oracledb.DB_TYPE_CHAR: pa.string(),
+        oracledb.DB_TYPE_NCHAR: pa.string(),
+        oracledb.DB_TYPE_VARCHAR: pa.string(),
+        oracledb.DB_TYPE_NVARCHAR: pa.string(),
+        oracledb.DB_TYPE_LONG: pa.large_string(),
+        oracledb.DB_TYPE_DATE: pa.date32(),
+        oracledb.DB_TYPE_TIMESTAMP: pa.timestamp("us"),
+        oracledb.DB_TYPE_TIMESTAMP_TZ: pa.timestamp("us", tz="UTC"),
+        oracledb.DB_TYPE_TIMESTAMP_LTZ: pa.timestamp("us", tz="UTC"),
+        oracledb.DB_TYPE_CLOB: pa.large_string(),
+        oracledb.DB_TYPE_NCLOB: pa.large_string(),
+        oracledb.DB_TYPE_BLOB: pa.binary(),
+        oracledb.DB_TYPE_RAW: pa.binary(),
+        oracledb.DB_TYPE_LONG_RAW: pa.binary(),
+        oracledb.DB_TYPE_BINARY_FLOAT: pa.float32(),
+        oracledb.DB_TYPE_BINARY_DOUBLE: pa.float64(),
+        oracledb.DB_TYPE_ROWID: pa.string(),
+        oracledb.DB_TYPE_UROWID: pa.string(),
+    }
+
+
+def _build_ora_column(values: list, arrow_type: pa.DataType) -> pa.Array:
+    coerced = []
+    for v in values:
+        if v is None:
+            coerced.append(None)
+        elif hasattr(v, "read"):
+            # LOB objects (CLOB, NCLOB, BLOB) — read content on demand
+            coerced.append(v.read())
+        elif isinstance(v, memoryview):
+            coerced.append(bytes(v))
+        elif pa.types.is_decimal(arrow_type) and isinstance(v, float):
+            # oracledb returns float for NUMBER(p,s) without an explicit CAST;
+            # PyArrow decimal128 requires int or Decimal, not float.
+            coerced.append(PyDecimal(str(v)))
+        elif arrow_type in (pa.float64(), pa.float32()) and isinstance(v, int | float):
+            coerced.append(float(v))
+        else:
+            coerced.append(v)
+    return pa.array(coerced, type=arrow_type)
+
+
+def _build_oracle_arrow_table(cursor) -> pa.Table:
+    if cursor.description is None:
+        return pa.table({})
+    type_map = _get_ora_type_map()
+    rows = cursor.fetchall()
+    n_cols = len(cursor.description)
+    col_values: list[list] = [[] for _ in range(n_cols)]
+    for row in rows:
+        for i, val in enumerate(row):
+            col_values[i].append(val)
+    arrays = []
+    names = []
+    for i, desc in enumerate(cursor.description):
+        col_name = desc[0]
+        db_type = desc[1]
+        precision = desc[4]
+        scale = desc[5]
+        if db_type == oracledb.DB_TYPE_NUMBER:
+            arrow_type = _ora_number_type(precision, scale)
+        else:
+            arrow_type = type_map.get(db_type, pa.string())
+        names.append(col_name)
+        arrays.append(_build_ora_column(col_values[i], arrow_type))
+    return pa.Table.from_arrays(arrays, names=names)
+
+
+def _make_oracle_connection(connection_info) -> oracledb.Connection:
+    if hasattr(connection_info, "connection_url") and connection_info.connection_url:
+        url = connection_info.connection_url.get_secret_value()
+        parsed = urlparse(url)
+        return oracledb.connect(
+            user=parsed.username,
+            password=parsed.password,
+            host=parsed.hostname,
+            port=parsed.port or 1521,
+            service_name=parsed.path.lstrip("/"),
+        )
+    if hasattr(connection_info, "dsn") and connection_info.dsn:
+        return oracledb.connect(
+            user=connection_info.user.get_secret_value(),
+            password=(
+                connection_info.password.get_secret_value()
+                if connection_info.password
+                else None
+            ),
+            dsn=connection_info.dsn.get_secret_value(),
+        )
+    return oracledb.connect(
+        user=connection_info.user.get_secret_value(),
+        password=(
+            connection_info.password.get_secret_value()
+            if connection_info.password
+            else None
+        ),
+        host=connection_info.host.get_secret_value(),
+        port=int(connection_info.port.get_secret_value()),
+        service_name=connection_info.database.get_secret_value(),
+    )
+
+
 @cache
 def _get_pg_type_names(connection: BaseBackend) -> dict[int, str]:
     with closing(connection.raw_sql("SELECT oid, typname FROM pg_type")) as cur:
@@ -107,6 +223,8 @@ class Connector:
             self._connector = MySqlConnector(connection_info)
         elif data_source == DataSource.doris:
             self._connector = DorisConnector(connection_info)
+        elif data_source == DataSource.oracle:
+            self._connector = OracleConnector(connection_info)
         else:
             self._connector = IbisConnector(data_source, connection_info)
 
@@ -137,6 +255,13 @@ class Connector:
                     metadata={DIALECT_SQL: sql},
                 ) from e
             raise e
+        except oracledb.DatabaseError as e:
+            raise WrenError(
+                ErrorCode.INVALID_SQL,
+                str(e),
+                phase=ErrorPhase.SQL_EXECUTION,
+                metadata={DIALECT_SQL: sql},
+            ) from e
         except Exception as e:
             raise WrenError(
                 ErrorCode.GENERIC_USER_ERROR,
@@ -172,6 +297,13 @@ class Connector:
                     metadata={DIALECT_SQL: sql},
                 ) from e
             raise
+        except oracledb.DatabaseError as e:
+            raise WrenError(
+                ErrorCode.INVALID_SQL,
+                str(e),
+                phase=ErrorPhase.SQL_DRY_RUN,
+                metadata={DIALECT_SQL: sql},
+            ) from e
         except Exception as e:
             raise WrenError(
                 ErrorCode.GENERIC_USER_ERROR,
@@ -395,6 +527,36 @@ class DorisConnector(IbisConnector):
         col = result_table[col_name]
         casted_col = col.cast("string")
         return result_table.mutate(**{col_name: casted_col})
+
+
+class OracleConnector(ConnectorABC):
+    def __init__(self, connection_info):
+        self._closed = False
+        self.connection = _make_oracle_connection(connection_info)
+
+    @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
+    def query(self, sql: str, limit: int | None = None) -> pa.Table:
+        if limit is not None:
+            sql = f"SELECT * FROM ({sql}) t WHERE ROWNUM <= {limit}"
+        with closing(self.connection.cursor()) as cursor:
+            cursor.execute(sql)
+            return _build_oracle_arrow_table(cursor)
+
+    @tracer.start_as_current_span("connector_dry_run", kind=trace.SpanKind.CLIENT)
+    def dry_run(self, sql: str) -> None:
+        with closing(self.connection.cursor()) as cursor:
+            cursor.execute(f"SELECT * FROM ({sql}) t WHERE ROWNUM <= 0")
+
+    def close(self) -> None:
+        if self._closed or not hasattr(self, "connection") or self.connection is None:
+            return
+        try:
+            self.connection.close()
+        except Exception as e:
+            logger.warning(f"Error closing Oracle connection: {e}")
+        finally:
+            self._closed = True
+            self.connection = None
 
 
 class MSSqlConnector(IbisConnector):

@@ -1,8 +1,9 @@
-import ibis
+from contextlib import closing
+
 from loguru import logger
 
 from app.model import OracleConnectionInfo
-from app.model.data_source import DataSource
+from app.model.connector import _make_oracle_connection
 from app.model.metadata.dto import (
     Column,
     Constraint,
@@ -48,7 +49,22 @@ ORACLE_TYPE_MAPPING = {
 class OracleMetadata(Metadata):
     def __init__(self, connection_info: OracleConnectionInfo):
         super().__init__(connection_info)
-        self.connection = DataSource.oracle.get_connection(connection_info)
+        self.connection = _make_oracle_connection(connection_info)
+
+    def _execute(self, sql: str) -> list[dict]:
+        with closing(self.connection.cursor()) as cursor:
+            cursor.execute(sql)
+            col_names = [desc[0] for desc in cursor.description]
+            rows = cursor.fetchall()
+            result = []
+            for row in rows:
+                row_dict = {}
+                for name, val in zip(col_names, row):
+                    if hasattr(val, "read"):
+                        val = val.read()
+                    row_dict[name] = val
+                result.append(row_dict)
+            return result
 
     def get_table_list(self) -> list[Table]:
         user = self.connection_info.user.get_secret_value()
@@ -81,33 +97,12 @@ class OracleMetadata(Metadata):
             WHERE
                 t.owner = '{user}'
             ORDER BY
-                t.table_name, c.column_id;
+                t.table_name, c.column_id
         """
-        #  Provide the pre-build schema explicitly with uppercase column names
-        #  To avoid potential ibis get schema error:
-        #  Solve oracledb DatabaseError: ORA-00942: table or view not found
-        schema = ibis.schema(
-            {
-                "TABLE_CATALOG": "string",
-                "TABLE_SCHEMA": "string",
-                "TABLE_NAME": "string",
-                "COLUMN_NAME": "string",
-                "DATA_TYPE": "string",
-                "IS_NULLABLE": "string",
-                "ORDINAL_POSITION": "int64",
-                "TABLE_COMMENT": "string",
-                "COLUMN_COMMENT": "string",
-            }
-        )
-        response = (
-            self.connection.sql(sql, schema=schema)
-            .to_pandas()
-            .to_dict(orient="records")
-        )
+        response = self._execute(sql)
 
         unique_tables = {}
         for row in response:
-            # Use uppercase keys that match the provided schema.
             schema_table = self._format_compact_table_name(
                 row["TABLE_SCHEMA"], row["TABLE_NAME"]
             )
@@ -137,51 +132,36 @@ class OracleMetadata(Metadata):
         return list(unique_tables.values())
 
     def get_constraints(self) -> list[Constraint]:
-        schema = ibis.schema(
-            {
-                "TABLE_SCHEMA": "string",
-                "TABLE_NAME": "string",
-                "COLUMN_NAME": "string",
-                "REFERENCED_TABLE_SCHEMA": "string",
-                "REFERENCED_TABLE_NAME": "string",
-                "REFERENCED_COLUMN_NAME": "string",
-            }
-        )
-
         sql = """
-            SELECT 
+            SELECT
                 a.owner AS TABLE_SCHEMA,
                 a.table_name AS TABLE_NAME,
                 a.column_name AS COLUMN_NAME,
                 a_pk.owner AS REFERENCED_TABLE_SCHEMA,
                 a_pk.table_name AS REFERENCED_TABLE_NAME,
                 a_pk.column_name AS REFERENCED_COLUMN_NAME
-            FROM 
+            FROM
                 dba_cons_columns a
-            JOIN 
-                dba_constraints c 
+            JOIN
+                dba_constraints c
                 ON a.owner = c.owner
                 AND a.constraint_name = c.constraint_name
-            JOIN 
-                dba_constraints c_pk 
+            JOIN
+                dba_constraints c_pk
                 ON c.r_owner = c_pk.owner
                 AND c.r_constraint_name = c_pk.constraint_name
-            JOIN 
+            JOIN
                 dba_cons_columns a_pk
                 ON c_pk.owner = a_pk.owner
                 AND c_pk.constraint_name = a_pk.constraint_name
-            WHERE 
+            WHERE
                 c.constraint_type = 'R'
-            ORDER BY 
+            ORDER BY
                 a.owner,
                 a.table_name,
                 a.column_name
         """
-        res = (
-            self.connection.sql(sql, schema=schema)
-            .to_pandas()
-            .to_dict(orient="records")
-        )
+        res = self._execute(sql)
 
         constraints = []
         for row in res:
@@ -207,12 +187,7 @@ class OracleMetadata(Metadata):
         return constraints
 
     def get_version(self) -> str:
-        schema = ibis.schema({"VERSION": "string"})
-        return (
-            self.connection.sql("SELECT version FROM v$instance", schema=schema)
-            .to_pandas()
-            .iloc[0, 0]
-        )
+        return self._execute("SELECT version FROM v$instance")[0]["VERSION"]
 
     def _format_compact_table_name(self, schema: str, table: str):
         return f"{schema}.{table}"
@@ -223,23 +198,11 @@ class OracleMetadata(Metadata):
         return f"{table_name}_{column_name}_{referenced_table_name}_{referenced_column_name}"
 
     def _transform_column_type(self, data_type: str) -> RustWrenEngineColumnType:
-        """Transform Oracle data type to RustWrenEngineColumnType.
-
-        Args:
-            data_type: The Oracle data type string
-
-        Returns:
-            The corresponding RustWrenEngineColumnType
-        """
-        # Convert to uppercase for Oracle type comparison
+        """Transform Oracle data type to RustWrenEngineColumnType."""
         normalized_type = data_type.upper()
-
-        # Use the module-level mapping table
         mapped_type = ORACLE_TYPE_MAPPING.get(
             normalized_type, RustWrenEngineColumnType.UNKNOWN
         )
-
         if mapped_type == RustWrenEngineColumnType.UNKNOWN:
             logger.warning(f"Unknown Oracle data type: {data_type}")
-
         return mapped_type

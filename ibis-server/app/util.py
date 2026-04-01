@@ -297,7 +297,7 @@ def _formater(field: pa.Field) -> str:
             return (
                 f"to_char({column_name}, '%Y-%m-%d %H:%M:%S%.6f %Z') as {column_name}"
             )
-    elif pa.types.is_binary(field.type):
+    elif pa.types.is_binary(field.type) or pa.types.is_large_binary(field.type):
         return f"encode({column_name}, 'hex') as {column_name}"
     elif pa.types.is_interval(field.type):
         return f"cast({column_name} as varchar) as {column_name}"
