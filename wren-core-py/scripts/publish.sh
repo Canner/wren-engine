@@ -92,13 +92,14 @@ ls -lh "$DIST_DIR"
 # --- Validate ---
 echo ""
 echo "==> Validating with twine check"
-twine check "$DIST_DIR"/* 2>/dev/null || {
-    if [[ "$MODE" == "build" ]]; then
-        echo "Warning: twine not available for validation (build-only mode)"
-    else
-        exit 1
-    fi
-}
+if command -v twine &>/dev/null; then
+    twine check "$DIST_DIR"/*
+elif [[ "$MODE" == "build" ]]; then
+    echo "Warning: twine not installed; skipping validation in build-only mode"
+else
+    echo "Error: 'twine' is not installed. Run: pip install twine" >&2
+    exit 1
+fi
 
 if [[ "$MODE" == "build" ]]; then
     echo ""
