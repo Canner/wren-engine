@@ -359,6 +359,14 @@ def _print_result(table, output: str) -> None:
             typer.echo(str(table))
 
 
+@app.command()
+def version():
+    """Print the wren-engine version."""
+    from wren import __version__  # noqa: PLC0415
+
+    typer.echo(f"wren-engine {__version__}")
+
+
 try:
     import lancedb  # noqa: PLC0415, F401
     import sentence_transformers  # noqa: PLC0415, F401

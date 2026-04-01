@@ -9,7 +9,8 @@ description = "Wren Engine CLI and Python SDK — semantic SQL layer for 20+ dat
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
-keywords = ["wrenai", "wren", "sql", "semantic", "mdl", "datafusion"]
+authors = [{ name = "Wren AI", email = "contact@getwren.ai" }]
+keywords = ["wrenai", "wren", "sql", "semantic", "semantic-layer", "mdl", "datafusion", "data-modeling", "analytics", "database", "cli", "sdk", "python"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
