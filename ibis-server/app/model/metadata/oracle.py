@@ -1,9 +1,9 @@
 from contextlib import closing
 
-import oracledb
 from loguru import logger
 
 from app.model import OracleConnectionInfo
+from app.model.connector import _make_oracle_connection
 from app.model.metadata.dto import (
     Column,
     Constraint,
@@ -49,28 +49,7 @@ ORACLE_TYPE_MAPPING = {
 class OracleMetadata(Metadata):
     def __init__(self, connection_info: OracleConnectionInfo):
         super().__init__(connection_info)
-        if hasattr(connection_info, "dsn") and connection_info.dsn:
-            self.connection = oracledb.connect(
-                user=connection_info.user.get_secret_value(),
-                password=(
-                    connection_info.password.get_secret_value()
-                    if connection_info.password
-                    else None
-                ),
-                dsn=connection_info.dsn.get_secret_value(),
-            )
-        else:
-            self.connection = oracledb.connect(
-                user=connection_info.user.get_secret_value(),
-                password=(
-                    connection_info.password.get_secret_value()
-                    if connection_info.password
-                    else None
-                ),
-                host=connection_info.host.get_secret_value(),
-                port=int(connection_info.port.get_secret_value()),
-                service_name=connection_info.database.get_secret_value(),
-            )
+        self.connection = _make_oracle_connection(connection_info)
 
     def _execute(self, sql: str) -> list[dict]:
         with closing(self.connection.cursor()) as cursor:

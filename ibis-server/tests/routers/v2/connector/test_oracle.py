@@ -310,9 +310,9 @@ async def test_query_with_dry_run_and_invalid_sql(
         },
     )
     assert response.status_code == 422
-    assert (
-        "ORA-00942" in response.text
-    )  # Oracle ORA-00942 Error: Table or view does not exist
+    body = response.json()
+    assert body["errorCode"] == "INVALID_SQL"
+    assert "ORA-00942" in body["message"]
 
 
 async def test_metadata_list_tables(client, oracle: OracleDbContainer):

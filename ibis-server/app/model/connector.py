@@ -249,6 +249,13 @@ class Connector:
                     metadata={DIALECT_SQL: sql},
                 ) from e
             raise e
+        except oracledb.DatabaseError as e:
+            raise WrenError(
+                ErrorCode.INVALID_SQL,
+                str(e),
+                phase=ErrorPhase.SQL_EXECUTION,
+                metadata={DIALECT_SQL: sql},
+            ) from e
         except Exception as e:
             raise WrenError(
                 ErrorCode.GENERIC_USER_ERROR,
@@ -284,6 +291,13 @@ class Connector:
                     metadata={DIALECT_SQL: sql},
                 ) from e
             raise
+        except oracledb.DatabaseError as e:
+            raise WrenError(
+                ErrorCode.INVALID_SQL,
+                str(e),
+                phase=ErrorPhase.SQL_DRY_RUN,
+                metadata={DIALECT_SQL: sql},
+            ) from e
         except Exception as e:
             raise WrenError(
                 ErrorCode.GENERIC_USER_ERROR,

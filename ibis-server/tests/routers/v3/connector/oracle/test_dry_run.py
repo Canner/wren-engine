@@ -61,4 +61,6 @@ async def test_dry_run_with_invalid_sql(client, manifest_str, connection_info):
         },
     )
     assert response.status_code == 422
-    assert "ORA-00942" in response.text
+    body = response.json()
+    assert body["errorCode"] == "INVALID_SQL"
+    assert "ORA-00942" in body["message"]
