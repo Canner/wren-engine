@@ -76,7 +76,9 @@ tracer = trace.get_tracer(__name__)
 
 def _ora_number_type(precision, scale) -> pa.DataType:
     if scale is not None and scale > 0:
-        return pa.float64()
+        p = min(int(precision), 38) if precision else 38
+        s = int(scale)
+        return pa.decimal128(p, s)
     if precision is not None and precision > 0 and precision <= 9:
         return pa.int32()
     return pa.int64()
@@ -95,9 +97,9 @@ def _get_ora_type_map() -> dict:
         oracledb.DB_TYPE_TIMESTAMP_LTZ: pa.timestamp("us", tz="UTC"),
         oracledb.DB_TYPE_CLOB: pa.large_string(),
         oracledb.DB_TYPE_NCLOB: pa.large_string(),
-        oracledb.DB_TYPE_BLOB: pa.large_binary(),
-        oracledb.DB_TYPE_RAW: pa.large_binary(),
-        oracledb.DB_TYPE_LONG_RAW: pa.large_binary(),
+        oracledb.DB_TYPE_BLOB: pa.binary(),
+        oracledb.DB_TYPE_RAW: pa.binary(),
+        oracledb.DB_TYPE_LONG_RAW: pa.binary(),
         oracledb.DB_TYPE_BINARY_FLOAT: pa.float32(),
         oracledb.DB_TYPE_BINARY_DOUBLE: pa.float64(),
         oracledb.DB_TYPE_ROWID: pa.string(),
@@ -531,7 +533,7 @@ class OracleConnector(ConnectorABC):
     @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
     def query(self, sql: str, limit: int | None = None) -> pa.Table:
         if limit is not None:
-            sql = f"SELECT * FROM ({sql}) _sub WHERE ROWNUM <= {limit}"
+            sql = f"SELECT * FROM ({sql}) t WHERE ROWNUM <= {limit}"
         with closing(self.connection.cursor()) as cursor:
             cursor.execute(sql)
             return _build_oracle_arrow_table(cursor)
@@ -539,7 +541,7 @@ class OracleConnector(ConnectorABC):
     @tracer.start_as_current_span("connector_dry_run", kind=trace.SpanKind.CLIENT)
     def dry_run(self, sql: str) -> None:
         with closing(self.connection.cursor()) as cursor:
-            cursor.execute(f"SELECT * FROM ({sql}) _sub WHERE ROWNUM <= 0")
+            cursor.execute(f"SELECT * FROM ({sql}) t WHERE ROWNUM <= 0")
 
     def close(self) -> None:
         if self._closed or not hasattr(self, "connection") or self.connection is None:

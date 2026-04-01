@@ -21,7 +21,17 @@ manifest = {
                 {"name": "orderkey", "expression": '"O_ORDERKEY"', "type": "number"},
             ],
             "primaryKey": "orderkey",
-        }
+        },
+        {
+            "name": "NonExistentModel",
+            "tableReference": {
+                "schema": "SYSTEM",
+                "table": "NONEXISTENT_TABLE",
+            },
+            "columns": [
+                {"name": "id", "type": "integer"},
+            ],
+        },
     ],
 }
 
@@ -54,7 +64,7 @@ async def test_dry_run_with_invalid_sql(client, manifest_str, connection_info):
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "NonExistentTable"',
+            "sql": 'SELECT * FROM "NonExistentModel"',
         },
         headers={
             X_WREN_FALLBACK_DISABLE: "true",

@@ -207,7 +207,7 @@ async def test_query(client, manifest_str, oracle: OracleDbContainer):
         "timestamp": "timestamp[us]",
         "timestamptz": "timestamp[us, tz=UTC]",
         "test_null_time": "timestamp[us]",
-        "blob_column": "large_binary",
+        "blob_column": "binary",
     }
 
 
