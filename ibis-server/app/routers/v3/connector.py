@@ -1,7 +1,7 @@
 from typing import Annotated
 
 import duckdb
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import ORJSONResponse
 from loguru import logger
 from opentelemetry import trace
@@ -32,6 +32,7 @@ from app.model import (
 from app.model.connector import Connector
 from app.model.data_source import DataSource
 from app.model.error import DatabaseTimeoutError
+from app.model.metadata.metadata import Metadata
 from app.model.metadata.dto import (
     Catalog,
     Constraint,
@@ -655,4 +656,9 @@ async def get_db_version(
             resolve_connection_info(dto), dict(headers)
         )
         metadata = MetadataFactory.get_metadata(data_source, connection_info)
+        if type(metadata).get_version is Metadata.get_version:
+            raise HTTPException(
+                status_code=501,
+                detail=f"{data_source} does not support version retrieval",
+            )
         return await execute_get_version_with_timeout(metadata)

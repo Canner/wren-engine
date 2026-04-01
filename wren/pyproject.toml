@@ -49,7 +49,7 @@ databricks = ["databricks-sql-connector", "databricks-sdk"]
 redshift = ["redshift_connector"]
 spark = ["pyspark>=3.5"]
 athena = ["ibis-framework[athena]"]
-oracle = ["ibis-framework[oracle]", "oracledb"]
+oracle = ["oracledb>=2"]
 memory = ["lancedb>=0.6", "sentence-transformers>=2.2"]
 all = [
   "wren-engine[postgres,mysql,bigquery,snowflake,clickhouse,trino,mssql,databricks,redshift,athena,oracle,spark,memory]",

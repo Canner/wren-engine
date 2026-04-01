@@ -151,7 +151,7 @@ def _build_oracle_arrow_table(cursor) -> pa.Table:
             arrow_type = type_map.get(db_type, pa.string())
         names.append(col_name)
         arrays.append(_build_ora_column(col_values[i], arrow_type))
-    return pa.table(dict(zip(names, arrays)))
+    return pa.Table.from_arrays(arrays, names=names)
 
 
 def _make_oracle_connection(connection_info) -> oracledb.Connection:
