@@ -10,7 +10,8 @@ Translate natural SQL queries through an MDL (Modeling Definition Language) sema
 pip install wren-engine[mysql]      # MySQL
 pip install wren-engine[postgres]   # PostgreSQL
 pip install wren-engine[duckdb]     # DuckDB (local files)
-pip install wren-engine[all]        # All connectors
+pip install 'wren-engine[memory]'   # Schema & query memory (LanceDB)
+pip install 'wren-engine[all]'      # All connectors + memory
 ```
 
 ## Quick start
@@ -57,6 +58,15 @@ wren --sql 'SELECT order_id FROM "orders" LIMIT 10'
 ```
 
 For the full CLI reference and per-datasource `connection_info.json` formats, see [`docs/cli.md`](docs/cli.md) and [`docs/connections.md`](docs/connections.md).
+
+**4. Index schema for semantic search** (optional, requires `wren-engine[memory]`):
+
+```bash
+wren memory index                              # index MDL schema
+wren memory fetch -q "customer order price"    # fetch relevant schema context
+wren memory store --nl "top customers" --sql "SELECT ..."  # store NL→SQL pair
+wren memory recall -q "best customers"         # retrieve similar past queries
+```
 
 ---
 

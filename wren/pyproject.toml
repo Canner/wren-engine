@@ -50,8 +50,9 @@ redshift = ["redshift_connector"]
 spark = ["pyspark>=3.5"]
 athena = ["ibis-framework[athena]"]
 oracle = ["ibis-framework[oracle]", "oracledb"]
+memory = ["lancedb>=0.6", "sentence-transformers>=2.2"]
 all = [
-  "wren[postgres,mysql,bigquery,snowflake,clickhouse,trino,mssql,databricks,redshift,athena,oracle]",
+  "wren-engine[postgres,mysql,bigquery,snowflake,clickhouse,trino,mssql,databricks,redshift,athena,oracle,spark,memory]",
 ]
 dev = [
   "pytest>=8",

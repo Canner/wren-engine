@@ -59,6 +59,13 @@ test-mysql:
 test-connector marker:
     uv run pytest tests/connectors/ -v -m {{ marker }}
 
+install-memory:
+    just build-core
+    uv sync --extra memory --extra dev --find-links {{ core-wheel-dir }}
+
+test-memory:
+    uv run pytest tests/unit/test_memory.py -v
+
 lint:
     uv run ruff format --check src/
     uv run ruff check src/
