@@ -88,6 +88,15 @@ class MemoryStore:
         self._path = resolved
         self._db = lancedb.connect(str(resolved))
         self._embed_fn = get_embedding_function(model_name or _DEFAULT_MODEL)
+        # Derive actual vector dimension from the model so custom models work.
+        probe = self._embed_fn.compute_source_embeddings(["probe"])
+        self._dim = len(probe[0])
+
+    def _schema_table_schema(self) -> pa.Schema:
+        return _schema_items_arrow_schema(dim=self._dim)
+
+    def _query_table_schema(self) -> pa.Schema:
+        return _query_history_arrow_schema(dim=self._dim)
 
     # ── Schema indexing ───────────────────────────────────────────────────
 
@@ -97,7 +106,11 @@ class MemoryStore:
         Returns the number of records indexed.
         """
         items = extract_schema_items(manifest)
+        table_exists = _SCHEMA_TABLE in _table_names(self._db)
+
         if not items:
+            if replace and table_exists:
+                self._db.drop_table(_SCHEMA_TABLE)
             return 0
 
         texts = [item["text"] for item in items]
@@ -106,15 +119,25 @@ class MemoryStore:
         for item, vec in zip(items, vectors):
             item["vector"] = vec
 
-        if replace and _SCHEMA_TABLE in _table_names(self._db):
-            self._db.drop_table(_SCHEMA_TABLE)
+        if replace:
+            if table_exists:
+                self._db.drop_table(_SCHEMA_TABLE)
+            self._db.create_table(
+                _SCHEMA_TABLE,
+                items,
+                schema=self._schema_table_schema(),
+            )
+        else:
+            if table_exists:
+                tbl = self._db.open_table(_SCHEMA_TABLE)
+                tbl.add(items)
+            else:
+                self._db.create_table(
+                    _SCHEMA_TABLE,
+                    items,
+                    schema=self._schema_table_schema(),
+                )
 
-        self._db.create_table(
-            _SCHEMA_TABLE,
-            items,
-            schema=_schema_items_arrow_schema(),
-            mode="overwrite",
-        )
         return len(items)
 
     def schema_is_current(self, manifest: dict) -> bool:
@@ -222,7 +245,7 @@ class MemoryStore:
             self._db.create_table(
                 _QUERY_TABLE,
                 [record],
-                schema=_query_history_arrow_schema(),
+                schema=self._query_table_schema(),
             )
 
     def recall_queries(

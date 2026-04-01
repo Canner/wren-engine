@@ -80,6 +80,12 @@ def _print_results(results: list[dict], output: str) -> None:
         return
 
     output = output.lower()
+    if output not in {"json", "table"}:
+        typer.echo(
+            f"Error: unsupported output format '{output}'. Use json or table.",
+            err=True,
+        )
+        raise typer.Exit(1)
     if output == "json":
         serializable = []
         for r in results:
