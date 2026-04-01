@@ -1,6 +1,32 @@
-# Wren Core Python binding
+# Wren Core Python Binding
 
-This is a python binding for [wren-core](../wren-core). It uses [PyO3](https://github.com/PyO3/pyo3) to build the required wheel for [ibis-server](../ibis-server/).
+Python bindings for [wren-core](../wren-core), the Rust semantic engine behind [Wren Engine](https://github.com/Canner/wren-engine). Built with [PyO3](https://github.com/PyO3/pyo3) and [Maturin](https://github.com/PyO3/maturin).
+
+Wren Engine translates SQL queries through a semantic layer (MDL - Modeling Definition Language) and executes them against 22+ data sources (PostgreSQL, BigQuery, Snowflake, etc.).
+
+## Installation
+
+```bash
+pip install wren-core-py
+```
+
+Requires Python >= 3.11.
+
+## Quick Start
+
+```python
+from wren_core import SessionContext, to_manifest
+
+# Load an MDL manifest from a base64-encoded JSON string
+base64_mdl_json = "<your-base64-encoded-mdl-json>"
+manifest = to_manifest(base64_mdl_json)
+
+# Create a session context for query planning
+ctx = SessionContext(manifest, remote_functions=[])
+
+# Transform a SQL query through the semantic layer
+planned_sql = ctx.transform_sql("SELECT * FROM my_model")
+```
 
 ## Developer Guide
 
@@ -11,14 +37,31 @@ This is a python binding for [wren-core](../wren-core). It uses [PyO3](https://g
 - Install [poetry](https://github.com/python-poetry/poetry)
 - Install [casey/just](https://github.com/casey/just)
 
-### Test and build
-After install `casey/just`, you can use the following command to build or test:
-- Execute `just install` to create Python venv and install dependencies.
-- **Important**: Before testing Python, you need to build the Rust package by running `just develop`.
-- Use `just test-rs` to test Rust only, and `just test-py` to test Python only.
-- Use `just test` to test Rust and Python.
-- Execute `just build` to build the Python package. You can find the wheel in the `target/wheels/` directory.
+### Test and Build
+
+After installing `casey/just`, you can use the following commands:
+
+- `just install` — Create Python venv and install dependencies.
+- `just develop` — Build the Rust package for local development (**required before running Python tests**).
+- `just test-rs` — Run Rust tests only.
+- `just test-py` — Run Python tests only.
+- `just test` — Run both Rust and Python tests.
+- `just build` — Build the Python wheel. Output goes to `target/wheels/`.
 
 ### Coding Style
 
-Format via `just format`
+Format via `just format`.
+
+### Publishing
+
+See `scripts/publish.sh` for local publishing to PyPI/TestPyPI:
+
+```bash
+./scripts/publish.sh --build    # Build wheel only
+./scripts/publish.sh --test     # Build + publish to TestPyPI
+./scripts/publish.sh            # Build + publish to PyPI
+```
+
+## License
+
+Apache-2.0
