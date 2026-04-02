@@ -19,13 +19,37 @@ _DEFAULT_CONN = _WREN_HOME / "connection_info.json"
 
 
 def _require_mdl(mdl: str | None) -> str:
-    """Return mdl arg if given, else auto-discover mdl.json from ~/.wren."""
+    """Return mdl arg if given, else auto-discover.
+
+    Search order:
+    1. Explicit --mdl flag
+    2. ~/.wren/mdl.json (legacy)
+    3. target/mdl.json in nearest Wren project (walk up from cwd)
+    4. ~/.wren/project/target/mdl.json (global default project)
+    """
     if mdl is not None:
         return mdl
     if _DEFAULT_MDL.exists():
         return str(_DEFAULT_MDL)
+
+    # Walk up from cwd looking for wren_project.yml → target/mdl.json
+    current = Path.cwd()
+    for parent in [current, *current.parents]:
+        target = parent / "target" / "mdl.json"
+        if (parent / "wren_project.yml").exists() and target.exists():
+            return str(target)
+        if parent == Path.home() or parent == parent.parent:
+            break
+
+    # Global default project
+    global_target = _WREN_HOME / "project" / "target" / "mdl.json"
+    if global_target.exists():
+        return str(global_target)
+
     typer.echo(
-        f"Error: --mdl not specified and '{_DEFAULT_MDL}' not found.",
+        "Error: --mdl not specified and no mdl.json found.\n"
+        "  Searched: ~/.wren/mdl.json, <project>/target/mdl.json\n"
+        "  Hint: run `wren context build` first.",
         err=True,
     )
     raise typer.Exit(1)
@@ -425,6 +449,9 @@ def docs_connection_info(
 
 app.add_typer(docs_app)
 
+from wren.context_cli import context_app  # noqa: E402, PLC0415
+
+app.add_typer(context_app)
 
 try:
     import lancedb  # noqa: PLC0415, F401

@@ -125,9 +125,28 @@ def _print_results(results: list[dict], output: str) -> None:
 def index(
     mdl: MdlOpt = None,
     path: PathOpt = None,
+    include_instructions: Annotated[
+        bool,
+        typer.Option(
+            "--instructions/--no-instructions",
+            help="Also index user instructions from project directory.",
+        ),
+    ] = True,
 ) -> None:
     """Index MDL schema into LanceDB for semantic search."""
     manifest = _load_manifest(mdl)
+
+    if include_instructions and "_instructions" not in manifest:
+        try:
+            from wren.context import discover_project_path, load_instructions  # noqa: PLC0415
+
+            project_path = discover_project_path()
+            instructions = load_instructions(project_path)
+            if instructions:
+                manifest["_instructions"] = instructions
+        except Exception:
+            pass  # instructions are optional; never fail index because of them
+
     store = _get_store(path)
     count = store.index_schema(manifest)
     typer.echo(f"Indexed {count} schema items.")
