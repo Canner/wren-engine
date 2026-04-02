@@ -71,7 +71,13 @@ _SUPPORTED_SCHEMA_VERSIONS = {1, 2}
 def get_schema_version(project_path: Path) -> int:
     """Return the schema_version from wren_project.yml (default 1)."""
     config = load_project_config(project_path)
-    return int(config.get("schema_version", 1))
+    raw = config.get("schema_version", 1)
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        raise SystemExit(
+            f"Error: invalid schema_version {raw!r} in {_PROJECT_FILE}. Expected an integer."
+        )
 
 
 def require_schema_version(project_path: Path) -> int:
@@ -320,7 +326,18 @@ def validate_project(project_path: Path) -> list[ValidationError]:
                         "error", _PROJECT_FILE, f"missing required field '{required}'"
                     )
                 )
-        sv = int(config.get("schema_version", 1))
+        raw_sv = config.get("schema_version", 1)
+        try:
+            sv = int(raw_sv)
+        except (TypeError, ValueError):
+            errors.append(
+                ValidationError(
+                    "error",
+                    _PROJECT_FILE,
+                    f"schema_version must be an integer, got {raw_sv!r}",
+                )
+            )
+            sv = 1
         if sv not in _SUPPORTED_SCHEMA_VERSIONS:
             errors.append(
                 ValidationError(
@@ -384,6 +401,13 @@ def validate_project(project_path: Path) -> list[ValidationError]:
                 )
 
         columns = model.get("columns", [])
+        if not isinstance(columns, list):
+            errors.append(
+                ValidationError(
+                    "error", f"{src_path} > {name}", "columns must be a list"
+                )
+            )
+            columns = []
         if not columns:
             errors.append(
                 ValidationError(
@@ -393,6 +417,15 @@ def validate_project(project_path: Path) -> list[ValidationError]:
 
         col_names = set()
         for j, col in enumerate(columns):
+            if not isinstance(col, dict):
+                errors.append(
+                    ValidationError(
+                        "error",
+                        f"{src_path} > {name} > columns[{j}]",
+                        "column entry must be an object",
+                    )
+                )
+                continue
             col_name = col.get("name")
             if not col_name:
                 errors.append(
@@ -461,6 +494,15 @@ def validate_project(project_path: Path) -> list[ValidationError]:
     # Check relationships
     all_entity_names = model_names | view_names
     for i, rel in enumerate(relationships):
+        if not isinstance(rel, dict):
+            errors.append(
+                ValidationError(
+                    "error",
+                    f"relationships[{i}]",
+                    "relationship entry must be an object",
+                )
+            )
+            continue
         rel_name = rel.get("name", f"relationships[{i}]")
         ref_models = rel.get("models", [])
         for m in ref_models:
