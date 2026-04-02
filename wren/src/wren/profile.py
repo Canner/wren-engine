@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -13,21 +14,57 @@ _PROFILES_FILE = _WREN_HOME / "profiles.yml"
 
 
 def _load_raw() -> dict:
-    """Load profiles.yml, returning empty structure if missing."""
+    """Load profiles.yml, returning empty structure if missing.
+
+    Raises ValueError on malformed content so callers get a deterministic error
+    instead of an AttributeError deep inside library code.
+    """
     if not _PROFILES_FILE.exists():
         return {"active": None, "profiles": {}}
-    return yaml.safe_load(_PROFILES_FILE.read_text()) or {
-        "active": None,
-        "profiles": {},
-    }
+    try:
+        data = yaml.safe_load(_PROFILES_FILE.read_text())
+    except yaml.YAMLError as exc:
+        raise ValueError(
+            f"profiles.yml is not valid YAML: {exc}\n"
+            f"Fix or remove {_PROFILES_FILE} and try again."
+        ) from exc
+    if data is None:
+        return {"active": None, "profiles": {}}
+    if not isinstance(data, dict):
+        raise ValueError(
+            f"profiles.yml must contain a YAML mapping; got {type(data).__name__}.\n"
+            f"Fix or remove {_PROFILES_FILE} and try again."
+        )
+    profiles = data.get("profiles", {})
+    if not isinstance(profiles, dict):
+        raise ValueError(
+            f"profiles.yml: 'profiles' must be a mapping; got {type(profiles).__name__}.\n"
+            f"Fix or remove {_PROFILES_FILE} and try again."
+        )
+    active = data.get("active")
+    if active is not None and not isinstance(active, str):
+        raise ValueError(
+            f"profiles.yml: 'active' must be a string or null; got {type(active).__name__}.\n"
+            f"Fix or remove {_PROFILES_FILE} and try again."
+        )
+    return data
 
 
 def _save_raw(data: dict) -> None:
-    """Write profiles.yml atomically."""
+    """Write profiles.yml atomically with 0600 permissions."""
     _WREN_HOME.mkdir(parents=True, exist_ok=True)
-    _PROFILES_FILE.write_text(
-        yaml.dump(data, default_flow_style=False, sort_keys=False)
-    )
+    payload = yaml.dump(data, default_flow_style=False, sort_keys=False)
+    # Write to a temp file in the same directory then atomically replace
+    fd, tmp_path = tempfile.mkstemp(dir=_WREN_HOME, suffix=".yml.tmp")
+    try:
+        os.chmod(tmp_path, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(payload)
+        os.replace(tmp_path, _PROFILES_FILE)
+    except Exception:
+        os.unlink(tmp_path)
+        raise
+    os.chmod(_PROFILES_FILE, 0o600)
 
 
 def list_profiles() -> dict[str, dict]:

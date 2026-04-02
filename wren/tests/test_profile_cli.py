@@ -65,9 +65,7 @@ def test_add_from_json_file(tmp_path):
     conn_file.write_text(
         json.dumps({"datasource": "postgres", "host": "db.local", "port": 5432})
     )
-    result = runner.invoke(
-        profile_app, ["add", "pg", "--from-file", str(conn_file)]
-    )
+    result = runner.invoke(profile_app, ["add", "pg", "--from-file", str(conn_file)])
     assert result.exit_code == 0
     assert "added" in result.output
     profiles = profile_mod.list_profiles()
@@ -77,12 +75,30 @@ def test_add_from_json_file(tmp_path):
 def test_add_from_yaml_file(tmp_path):
     conn_file = tmp_path / "conn.yml"
     conn_file.write_text("datasource: mysql\nhost: mysql.local\nport: 3306\n")
-    result = runner.invoke(
-        profile_app, ["add", "my", "--from-file", str(conn_file)]
-    )
+    result = runner.invoke(profile_app, ["add", "my", "--from-file", str(conn_file)])
     assert result.exit_code == 0
     profiles = profile_mod.list_profiles()
     assert profiles["my"]["datasource"] == "mysql"
+
+
+def test_add_from_file_normalizes_properties_envelope(tmp_path):
+    """MCP/web envelope {datasource, properties: {...}} should be flattened."""
+    conn_file = tmp_path / "conn.json"
+    conn_file.write_text(
+        json.dumps(
+            {
+                "datasource": "duckdb",
+                "properties": {"url": "/tmp/warehouse", "format": "duckdb"},
+            }
+        )
+    )
+    result = runner.invoke(profile_app, ["add", "duck", "--from-file", str(conn_file)])
+    assert result.exit_code == 0
+    profiles = profile_mod.list_profiles()
+    # After normalization, 'url' should be a top-level key, not nested under 'properties'
+    assert "properties" not in profiles["duck"]
+    assert profiles["duck"]["url"] == "/tmp/warehouse"
+    assert profiles["duck"]["datasource"] == "duckdb"
 
 
 def test_add_from_file_not_found():
@@ -91,6 +107,14 @@ def test_add_from_file_not_found():
     )
     assert result.exit_code != 0
     assert "not found" in result.output
+
+
+def test_add_from_file_missing_datasource(tmp_path):
+    conn_file = tmp_path / "conn.json"
+    conn_file.write_text(json.dumps({"host": "localhost", "port": 5432}))
+    result = runner.invoke(profile_app, ["add", "pg", "--from-file", str(conn_file)])
+    assert result.exit_code != 0
+    assert "datasource" in result.output
 
 
 def test_add_with_activate_flag():

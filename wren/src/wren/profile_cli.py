@@ -65,12 +65,29 @@ def add(
             typer.echo(f"Error: file not found: {from_file}", err=True)
             raise typer.Exit(1)
         text = path.read_text()
-        if path.suffix in (".yml", ".yaml"):
-            profile_data = yaml.safe_load(text)
-        else:
-            profile_data = json.loads(text)
-        if not isinstance(profile_data, dict):
+        try:
+            if path.suffix in (".yml", ".yaml"):
+                raw = yaml.safe_load(text)
+            else:
+                raw = json.loads(text)
+        except Exception as exc:
+            typer.echo(f"Error: could not parse {from_file}: {exc}", err=True)
+            raise typer.Exit(1)
+        if not isinstance(raw, dict):
             typer.echo("Error: file must contain a JSON/YAML object.", err=True)
+            raise typer.Exit(1)
+        # Flatten the MCP/web envelope {"datasource": ..., "properties": {...}}
+        # into a flat profile dict so _build_engine receives consistent connection_info.
+        if "properties" in raw and isinstance(raw["properties"], dict):
+            props = raw["properties"]
+            props["datasource"] = raw.get("datasource", props.get("datasource"))
+            profile_data = props
+        else:
+            profile_data = raw
+        if not profile_data.get("datasource"):
+            typer.echo(
+                "Error: imported file must contain a 'datasource' key.", err=True
+            )
             raise typer.Exit(1)
     elif interactive:
         profile_data = _interactive_add(datasource)

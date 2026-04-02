@@ -315,7 +315,7 @@ def dry_plan(
         typer.Option(
             "--datasource",
             "-d",
-            help="Data source dialect (e.g. duckdb, postgres). Falls back to connection_info.json.",
+            help="Data source dialect (e.g. duckdb, postgres). Falls back to active profile or connection_info.json.",
         ),
     ] = None,
     mdl: MdlOpt = None,
@@ -326,6 +326,33 @@ def dry_plan(
     from wren.model.data_source import DataSource  # noqa: PLC0415
 
     manifest_str = _load_manifest(_require_mdl(mdl))
+
+    # Try active profile when no explicit flags given
+    if datasource is None and connection_file is None:
+        from wren.profile import get_active_profile  # noqa: PLC0415
+
+        _prof_name, prof_dict = get_active_profile()
+        if prof_dict:
+            prof_ds = prof_dict.pop("datasource", None)
+            if prof_ds is None:
+                typer.echo("Error: no datasource in active profile.", err=True)
+                raise typer.Exit(1)
+            try:
+                ds = DataSource(prof_ds.lower())
+            except ValueError:
+                typer.echo(f"Error: unknown datasource '{prof_ds}'", err=True)
+                raise typer.Exit(1)
+            with WrenEngine(
+                manifest_str=manifest_str, data_source=ds, connection_info={}
+            ) as engine:
+                try:
+                    result = engine.dry_plan(sql)
+                    typer.echo(result)
+                except Exception as e:
+                    typer.echo(f"Error: {e}", err=True)
+                    raise typer.Exit(1)
+            return
+
     conn_dict = (
         _load_conn(None, connection_file, required=False) if datasource is None else {}
     )

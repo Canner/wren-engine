@@ -133,9 +133,7 @@ def test_resolve_explicit_conn_info_wins():
 
 
 def test_resolve_profile_fallback():
-    profile_mod.add_profile(
-        "duck", {"datasource": "duckdb", "path": "./warehouse.db"}
-    )
+    profile_mod.add_profile("duck", {"datasource": "duckdb", "path": "./warehouse.db"})
     ds, conn = profile_mod.resolve_connection(None, None, None)
     assert ds == "duckdb"
     assert conn == {"path": "./warehouse.db"}
@@ -164,6 +162,30 @@ def test_profiles_yml_round_trip(isolated_profiles: Path):
     assert raw["profiles"]["duck"]["path"] == ":memory:"
 
 
+def test_profiles_yml_file_permissions(isolated_profiles: Path):
+    profile_mod.add_profile("pg", {"datasource": "postgres", "password": "s3cr3t"})
+    mode = isolated_profiles.stat().st_mode & 0o777
+    assert mode == 0o600, f"Expected 0600 but got {oct(mode)}"
+
+
+def test_load_raw_invalid_yaml(isolated_profiles: Path):
+    isolated_profiles.write_text(": invalid: yaml: {{{")
+    with pytest.raises(ValueError, match="not valid YAML"):
+        profile_mod._load_raw()
+
+
+def test_load_raw_non_mapping(isolated_profiles: Path):
+    isolated_profiles.write_text("- item1\n- item2\n")
+    with pytest.raises(ValueError, match="must contain a YAML mapping"):
+        profile_mod._load_raw()
+
+
+def test_load_raw_profiles_not_mapping(isolated_profiles: Path):
+    isolated_profiles.write_text("active: null\nprofiles: not_a_dict\n")
+    with pytest.raises(ValueError, match="'profiles' must be a mapping"):
+        profile_mod._load_raw()
+
+
 # ── from-file import helpers (used by CLI) ────────────────────────────────────
 
 
@@ -182,9 +204,7 @@ def test_from_file_json(tmp_path):
 
 def test_from_file_yaml(tmp_path):
     conn_file = tmp_path / "conn.yml"
-    conn_file.write_text(
-        "datasource: mysql\nhost: mysql.local\nport: 3306\n"
-    )
+    conn_file.write_text("datasource: mysql\nhost: mysql.local\nport: 3306\n")
     data = yaml.safe_load(conn_file.read_text())
     profile_mod.add_profile("from-yaml", data)
     profiles = profile_mod.list_profiles()
