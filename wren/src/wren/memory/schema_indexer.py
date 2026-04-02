@@ -11,8 +11,14 @@ from datetime import datetime, timezone
 
 
 def manifest_hash(manifest: dict) -> str:
-    """Deterministic SHA-256 hash (16 hex chars) of a manifest dict."""
-    raw = json.dumps(manifest, sort_keys=True, separators=(",", ":"))
+    """Deterministic SHA-256 hash (16 hex chars) of a manifest dict.
+
+    Internal keys (prefixed with ``_``) are excluded from the hash so that
+    auxiliary data like ``_instructions`` does not invalidate the schema cache
+    when only instructions change.
+    """
+    schema_only = {k: v for k, v in manifest.items() if not k.startswith("_")}
+    raw = json.dumps(schema_only, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 

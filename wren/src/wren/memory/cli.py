@@ -151,14 +151,18 @@ def index(
             instructions = load_instructions(project_path)
             if instructions:
                 manifest["_instructions"] = instructions
-        except (FileNotFoundError, ImportError, ModuleNotFoundError):
+        except (
+            FileNotFoundError,
+            PermissionError,
+            IsADirectoryError,
+            UnicodeDecodeError,
+            ImportError,
+            ModuleNotFoundError,
+        ):
             pass  # instructions are optional; never fail index because of them
 
     store = _get_store(path)
-    # Strip internal keys (e.g. _instructions) before indexing so instruction
-    # changes don't invalidate the schema hash and trigger unnecessary re-indexing.
-    index_manifest = {k: v for k, v in manifest.items() if not k.startswith("_")}
-    result = store.index_schema(index_manifest, seed_queries=not no_seed)
+    result = store.index_schema(manifest, seed_queries=not no_seed)
     typer.echo(
         f"Indexed {result['schema_items']} schema items"
         + (f", {result['seed_queries']} seed queries" if result["seed_queries"] else "")
