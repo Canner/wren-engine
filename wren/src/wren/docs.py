@@ -62,6 +62,22 @@ DATASOURCE_MODELS: dict[str, list[type[BaseConnectionInfo]]] = {
 }
 
 
+def _resolve_sources(
+    datasource: str | None,
+) -> dict[str, list[type[BaseConnectionInfo]]]:
+    """Resolve datasource filter to a subset of DATASOURCE_MODELS.
+
+    Raises ValueError for unknown data source names.
+    """
+    if datasource is None:
+        return DATASOURCE_MODELS
+    key = datasource.lower()
+    if key not in DATASOURCE_MODELS:
+        available = ", ".join(sorted(DATASOURCE_MODELS))
+        raise ValueError(f"Unknown data source: {datasource}\nAvailable: {available}")
+    return {key: DATASOURCE_MODELS[key]}
+
+
 def _union_args(annotation) -> tuple | None:
     """Return the type args if annotation is a Union/UnionType, else None."""
     import types  # noqa: PLC0415
@@ -91,6 +107,8 @@ def _friendly_type(annotation) -> str:
         return "boolean"
     if annotation is int:
         return "integer"
+    if annotation is float:
+        return "number"
     if annotation is str:
         return "string"
     # dict[str, str] etc.
@@ -171,7 +189,7 @@ def _format_model_markdown(model: type[BaseConnectionInfo]) -> str:
 
 
 def _build_example(model: type[BaseConnectionInfo]) -> dict[str, Any]:
-    """Build an example JSON dict from field metadata."""
+    """Build an example JSON dict from field metadata (required + example-having fields)."""
     example: dict[str, Any] = {}
     for name, field_info in model.model_fields.items():
         key = (
@@ -186,24 +204,33 @@ def _build_example(model: type[BaseConnectionInfo]) -> dict[str, Any]:
     return example
 
 
-def generate_markdown(datasource: str | None = None) -> str:
-    """Generate Markdown documentation for connection info models.
+def _build_full_properties(model: type[BaseConnectionInfo]) -> dict[str, Any]:
+    """Build a properties dict with all fields (including optional ones)."""
+    props: dict[str, Any] = {}
+    for name, field_info in model.model_fields.items():
+        key = (
+            field_info.alias if field_info.alias and field_info.alias != name else name
+        )
+        if field_info.examples:
+            props[key] = field_info.examples[0]
+        elif not field_info.is_required():
+            default = field_info.default
+            if isinstance(default, SecretStr):
+                props[key] = default.get_secret_value()
+            else:
+                props[key] = default
+        else:
+            props[key] = f"<{name}>"
+    return props
 
-    Args:
-        datasource: If given, only generate docs for that data source.
-                    If None, generate for all data sources.
-    """
+
+def generate_markdown(datasource: str | None = None) -> str:
+    """Generate Markdown documentation for connection info models."""
+    sources = _resolve_sources(datasource)
+
     lines: list[str] = []
     lines.append("# Wren Engine Connection Info Reference")
     lines.append("")
-
-    if datasource:
-        key = datasource.lower()
-        if key not in DATASOURCE_MODELS:
-            return f"Unknown data source: {datasource}\nAvailable: {', '.join(sorted(DATASOURCE_MODELS))}"
-        sources = {key: DATASOURCE_MODELS[key]}
-    else:
-        sources = DATASOURCE_MODELS
 
     for ds_name, models in sources.items():
         lines.append(f"## {ds_name}")
@@ -212,34 +239,6 @@ def generate_markdown(datasource: str | None = None) -> str:
             lines.append(_format_model_markdown(model))
 
     return "\n".join(lines)
-
-
-def _generate_raw_json_schema(datasource: str | None = None) -> str:
-    """Generate raw JSON Schema for connection info models."""
-    if datasource:
-        key = datasource.lower()
-        if key not in DATASOURCE_MODELS:
-            return json.dumps(
-                {
-                    "error": f"Unknown data source: {datasource}",
-                    "available": sorted(DATASOURCE_MODELS.keys()),
-                },
-                indent=2,
-            )
-        sources = {key: DATASOURCE_MODELS[key]}
-    else:
-        sources = DATASOURCE_MODELS
-
-    schemas: dict[str, Any] = {}
-    for ds_name, models in sources.items():
-        if len(models) == 1:
-            schemas[ds_name] = models[0].model_json_schema()
-        else:
-            schemas[ds_name] = {
-                "variants": {m.__name__: m.model_json_schema() for m in models}
-            }
-
-    return json.dumps(schemas, indent=2)
 
 
 def generate_json_schema(
@@ -253,29 +252,44 @@ def generate_json_schema(
         envelope: If True, wrap output in ``{"datasource": ..., "properties": ...}``
                   envelope format (one object per data source).
     """
-    if not envelope:
-        return _generate_raw_json_schema(datasource)
+    sources = _resolve_sources(datasource)
 
-    if datasource:
-        key = datasource.lower()
-        if key not in DATASOURCE_MODELS:
-            return json.dumps(
-                {
-                    "error": f"Unknown data source: {datasource}",
-                    "available": sorted(DATASOURCE_MODELS.keys()),
-                },
-                indent=2,
-            )
-        sources = {key: DATASOURCE_MODELS[key]}
-    else:
-        sources = DATASOURCE_MODELS
+    if not envelope:
+        return _format_raw_json_schema(sources, single=datasource is not None)
 
     results: list[dict[str, Any]] = []
     for ds_name, models in sources.items():
         for model in models:
-            example = _build_example(model)
-            results.append({"datasource": ds_name, "properties": example})
+            props = _build_full_properties(model)
+            results.append({"datasource": ds_name, "properties": props})
 
     if len(results) == 1:
         return json.dumps(results[0], indent=2)
     return json.dumps(results, indent=2)
+
+
+def _format_raw_json_schema(
+    sources: dict[str, list[type[BaseConnectionInfo]]], *, single: bool
+) -> str:
+    """Format sources as JSON Schema output.
+
+    When *single* is True and the source has exactly one model, return
+    the schema directly without the datasource-name wrapper.
+    """
+    schemas: dict[str, Any] = {}
+    for ds_name, models in sources.items():
+        if single and len(models) == 1:
+            return json.dumps(models[0].model_json_schema(), indent=2)
+        if len(models) == 1:
+            schemas[ds_name] = models[0].model_json_schema()
+        else:
+            if single:
+                return json.dumps(
+                    {"variants": {m.__name__: m.model_json_schema() for m in models}},
+                    indent=2,
+                )
+            schemas[ds_name] = {
+                "variants": {m.__name__: m.model_json_schema() for m in models}
+            }
+
+    return json.dumps(schemas, indent=2)

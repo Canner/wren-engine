@@ -394,12 +394,18 @@ def docs_connection_info(
     from wren.docs import generate_json_schema, generate_markdown  # noqa: PLC0415
 
     fmt = format.lower()
-    if fmt == "md":
-        typer.echo(generate_markdown(datasource))
-    elif fmt == "json":
-        typer.echo(generate_json_schema(datasource, envelope=envelope))
-    else:
-        typer.echo(f"Error: unsupported format '{format}'. Use md or json.", err=True)
+    try:
+        if fmt == "md":
+            typer.echo(generate_markdown(datasource))
+        elif fmt == "json":
+            typer.echo(generate_json_schema(datasource, envelope=envelope))
+        else:
+            typer.echo(
+                f"Error: unsupported format '{format}'. Use md or json.", err=True
+            )
+            raise typer.Exit(1)
+    except ValueError as e:
+        typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(1)
 
 
