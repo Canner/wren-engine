@@ -136,13 +136,36 @@ def _build_engine(
     connection_file: str | None,
     *,
     conn_required: bool = True,
+    datasource: str | None = None,
 ):
     from wren.engine import WrenEngine  # noqa: PLC0415
     from wren.model.data_source import DataSource  # noqa: PLC0415
 
     manifest_str = _load_manifest(_require_mdl(mdl))
+
+    # Try active profile when no explicit connection flags given
+    if not connection_info and not connection_file:
+        from wren.profile import get_active_profile  # noqa: PLC0415
+
+        prof_name, prof_dict = get_active_profile()
+        if prof_dict:
+            prof_ds = prof_dict.pop("datasource", None)
+            ds_str = datasource or prof_ds
+            if ds_str is None:
+                typer.echo("Error: no datasource in profile or --datasource.", err=True)
+                raise typer.Exit(1)
+            try:
+                ds = DataSource(ds_str.lower())
+            except ValueError:
+                typer.echo(f"Error: unknown datasource '{ds_str}'", err=True)
+                raise typer.Exit(1)
+            return WrenEngine(
+                manifest_str=manifest_str, data_source=ds, connection_info=prof_dict
+            )
+
+    # Existing path: explicit flags / legacy connection_info.json
     conn_dict = _load_conn(connection_info, connection_file, required=conn_required)
-    ds_str = _resolve_datasource(conn_dict)
+    ds_str = _resolve_datasource(conn_dict, explicit=datasource)
 
     try:
         ds = DataSource(ds_str.lower())
@@ -390,6 +413,10 @@ try:
     app.add_typer(memory_app)
 except ImportError:
     pass  # wren[memory] not installed
+
+from wren.profile_cli import profile_app  # noqa: PLC0415, E402
+
+app.add_typer(profile_app)
 
 
 if __name__ == "__main__":
