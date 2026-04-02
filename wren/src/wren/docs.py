@@ -214,13 +214,8 @@ def generate_markdown(datasource: str | None = None) -> str:
     return "\n".join(lines)
 
 
-def generate_json_schema(datasource: str | None = None) -> str:
-    """Generate JSON Schema for connection info models.
-
-    Args:
-        datasource: If given, only generate schema for that data source.
-                    If None, generate for all data sources.
-    """
+def _generate_raw_json_schema(datasource: str | None = None) -> str:
+    """Generate raw JSON Schema for connection info models."""
     if datasource:
         key = datasource.lower()
         if key not in DATASOURCE_MODELS:
@@ -245,3 +240,42 @@ def generate_json_schema(datasource: str | None = None) -> str:
             }
 
     return json.dumps(schemas, indent=2)
+
+
+def generate_json_schema(
+    datasource: str | None = None, *, envelope: bool = False
+) -> str:
+    """Generate JSON Schema for connection info models.
+
+    Args:
+        datasource: If given, only generate schema for that data source.
+                    If None, generate for all data sources.
+        envelope: If True, wrap output in ``{"datasource": ..., "properties": ...}``
+                  envelope format (one object per data source).
+    """
+    if not envelope:
+        return _generate_raw_json_schema(datasource)
+
+    if datasource:
+        key = datasource.lower()
+        if key not in DATASOURCE_MODELS:
+            return json.dumps(
+                {
+                    "error": f"Unknown data source: {datasource}",
+                    "available": sorted(DATASOURCE_MODELS.keys()),
+                },
+                indent=2,
+            )
+        sources = {key: DATASOURCE_MODELS[key]}
+    else:
+        sources = DATASOURCE_MODELS
+
+    results: list[dict[str, Any]] = []
+    for ds_name, models in sources.items():
+        for model in models:
+            example = _build_example(model)
+            results.append({"datasource": ds_name, "properties": example})
+
+    if len(results) == 1:
+        return json.dumps(results[0], indent=2)
+    return json.dumps(results, indent=2)

@@ -382,6 +382,13 @@ def docs_connection_info(
         str,
         typer.Option("--format", "-f", help="Output format: md or json"),
     ] = "md",
+    envelope: Annotated[
+        bool,
+        typer.Option(
+            "--envelope",
+            help='Wrap JSON output in {"datasource": ..., "properties": ...} format.',
+        ),
+    ] = False,
 ):
     """Show connection info fields for each data source."""
     from wren.docs import generate_json_schema, generate_markdown  # noqa: PLC0415
@@ -390,7 +397,7 @@ def docs_connection_info(
     if fmt == "md":
         typer.echo(generate_markdown(datasource))
     elif fmt == "json":
-        typer.echo(generate_json_schema(datasource))
+        typer.echo(generate_json_schema(datasource, envelope=envelope))
     else:
         typer.echo(f"Error: unsupported format '{format}'. Use md or json.", err=True)
         raise typer.Exit(1)
