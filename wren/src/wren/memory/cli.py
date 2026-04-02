@@ -138,7 +138,10 @@ def index(
 
     if include_instructions and "_instructions" not in manifest:
         try:
-            from wren.context import discover_project_path, load_instructions  # noqa: PLC0415
+            from wren.context import (  # noqa: I001, PLC0415
+                discover_project_path,
+                load_instructions,
+            )
 
             project_path = discover_project_path()
             instructions = load_instructions(project_path)
