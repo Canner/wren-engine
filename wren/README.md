@@ -1,18 +1,34 @@
 # wren-engine
 
+[![PyPI version](https://img.shields.io/pypi/v/wren-engine.svg)](https://pypi.org/project/wren-engine/)
+[![Python](https://img.shields.io/pypi/pyversions/wren-engine.svg)](https://pypi.org/project/wren-engine/)
+[![License](https://img.shields.io/pypi/l/wren-engine.svg)](https://github.com/Canner/wren-engine/blob/main/LICENSE)
+
 Wren Engine CLI and Python SDK — semantic SQL layer for 20+ data sources.
 
-Translate natural SQL queries through an MDL (Modeling Definition Language) semantic layer and execute them against your database.
+Translate natural SQL queries through an [MDL (Modeling Definition Language)](https://docs.getwren.ai/) semantic layer and execute them against your database. Powered by [Apache DataFusion](https://datafusion.apache.org/) and [Ibis](https://ibis-project.org/).
 
 ## Installation
 
 ```bash
-pip install wren-engine[mysql]      # MySQL
-pip install wren-engine[postgres]   # PostgreSQL
-pip install wren-engine[duckdb]     # DuckDB (local files)
-pip install 'wren-engine[memory]'   # Schema & query memory (LanceDB)
-pip install 'wren-engine[all]'      # All connectors + memory
+pip install wren-engine              # Core (DuckDB included)
+pip install wren-engine[postgres]    # PostgreSQL
+pip install wren-engine[mysql]       # MySQL
+pip install wren-engine[bigquery]    # BigQuery
+pip install wren-engine[snowflake]   # Snowflake
+pip install wren-engine[clickhouse]  # ClickHouse
+pip install wren-engine[trino]       # Trino
+pip install wren-engine[mssql]       # SQL Server
+pip install wren-engine[databricks]  # Databricks
+pip install wren-engine[redshift]    # Redshift
+pip install wren-engine[spark]       # Spark
+pip install wren-engine[athena]      # Athena
+pip install wren-engine[oracle]      # Oracle
+pip install 'wren-engine[memory]'    # Schema & query memory (LanceDB)
+pip install 'wren-engine[all]'       # All connectors + memory
 ```
+
+Requires Python 3.11+.
 
 ## Quick start
 
@@ -86,10 +102,12 @@ with WrenEngine(manifest_str, DataSource.mysql, {"host": "...", ...}) as engine:
 
 ---
 
-## Running tests
+## Development
 
 ```bash
-just install-dev
+just install-dev    # Install with dev dependencies
+just lint           # Ruff format check + lint
+just format         # Auto-fix
 ```
 
 | Command | What it runs | Docker needed |
@@ -99,3 +117,15 @@ just install-dev
 | `just test-postgres` | PostgreSQL connector tests | Yes |
 | `just test-mysql` | MySQL connector tests | Yes |
 | `just test` | All tests | Yes |
+
+## Publishing
+
+```bash
+./scripts/publish.sh            # Build + publish to PyPI
+./scripts/publish.sh --test     # Build + publish to TestPyPI
+./scripts/publish.sh --build    # Build only
+```
+
+## License
+
+Apache-2.0

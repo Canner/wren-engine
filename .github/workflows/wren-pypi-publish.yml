@@ -1,0 +1,64 @@
+name: Publish wren-engine to PyPI
+
+permissions:
+  contents: read
+  id-token: write # Required for trusted publishing (OIDC)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Publish target"
+        required: true
+        default: "testpypi"
+        type: choice
+        options:
+          - testpypi
+          - pypi
+
+jobs:
+  build:
+    name: Build distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build tool
+        run: pip install build
+
+      - name: Build sdist and wheel
+        run: python -m build
+        working-directory: wren
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: wren/dist/
+
+  publish:
+    name: Publish to ${{ github.event.inputs.target || 'testpypi' }}
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event.inputs.target || 'testpypi' }}
+      url: ${{ github.event.inputs.target == 'pypi' && 'https://pypi.org/project/wren-engine/' || 'https://test.pypi.org/project/wren-engine/' }}
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: List artifacts
+        run: ls -lhR dist/
+
+      - name: Publish to ${{ github.event.inputs.target }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: ${{ github.event.inputs.target == 'testpypi' && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}
+          packages-dir: dist/
