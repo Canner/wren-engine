@@ -125,12 +125,20 @@ def _print_results(results: list[dict], output: str) -> None:
 def index(
     mdl: MdlOpt = None,
     path: PathOpt = None,
+    no_seed: Annotated[
+        bool,
+        typer.Option("--no-seed", help="Skip generating seed NL-SQL examples."),
+    ] = False,
 ) -> None:
-    """Index MDL schema into LanceDB for semantic search."""
+    """Index MDL schema into LanceDB (and optionally seed example queries)."""
     manifest = _load_manifest(mdl)
     store = _get_store(path)
-    count = store.index_schema(manifest)
-    typer.echo(f"Indexed {count} schema items.")
+    result = store.index_schema(manifest, seed_queries=not no_seed)
+    typer.echo(
+        f"Indexed {result['schema_items']} schema items"
+        + (f", {result['seed_queries']} seed queries" if result["seed_queries"] else "")
+        + "."
+    )
 
 
 @memory_app.command()

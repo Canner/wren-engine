@@ -28,9 +28,20 @@ class WrenMemory:
 
         self._store = MemoryStore(path=path)
 
-    def index_manifest(self, manifest: dict, *, replace: bool = True) -> int:
-        """Index MDL schema into LanceDB.  Returns record count."""
-        return self._store.index_schema(manifest, replace=replace)
+    def index_manifest(
+        self,
+        manifest: dict,
+        *,
+        replace: bool = True,
+        seed_queries: bool = True,
+    ) -> dict:
+        """Index MDL schema into LanceDB.
+
+        Returns {"schema_items": int, "seed_queries": int}.
+        """
+        return self._store.index_schema(
+            manifest, replace=replace, seed_queries=seed_queries
+        )
 
     @staticmethod
     def describe_schema(manifest: dict) -> str:
