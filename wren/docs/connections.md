@@ -2,6 +2,42 @@
 
 The `connection_info.json` file (or `--connection-info` / `--connection-file` flags) requires a `datasource` field plus the connector-specific fields below.
 
+## Accepted formats
+
+**Flat format** — all fields at the top level:
+
+```json
+{
+  "datasource": "postgres",
+  "host": "localhost",
+  "port": 5432,
+  "database": "mydb",
+  "user": "postgres",
+  "password": "secret"
+}
+```
+
+**Envelope format** — connector fields nested under `properties` (used by MCP server and Wren web):
+
+```json
+{
+  "datasource": "postgres",
+  "properties": {
+    "host": "localhost",
+    "port": 5432,
+    "database": "mydb",
+    "user": "postgres",
+    "password": "secret"
+  }
+}
+```
+
+Both formats are accepted. The CLI auto-flattens the envelope format.
+
+---
+
+## Per-connector fields
+
 ## MySQL
 
 ```json

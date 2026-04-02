@@ -26,6 +26,7 @@ Translate MDL SQL to the native dialect SQL for your data source. No database co
 
 ```bash
 wren dry-plan --sql 'SELECT order_id FROM "orders"'
+wren dry-plan --sql 'SELECT order_id FROM "orders"' -d postgres  # explicit datasource, no connection file needed
 ```
 
 ## `wren dry-run`
@@ -47,13 +48,14 @@ wren validate --sql 'SELECT * FROM "NonExistent"'
 
 ## Overriding defaults
 
-All flags are optional when `~/.wren/mdl.json` and `~/.wren/connection_info.json` exist:
+All flags are optional when `~/.wren/mdl.json` and `~/.wren/connection_info.json` exist.
+
+The data source is always read from the `datasource` field in `connection_info.json` (or the inline `--connection-info` value). Only `dry-plan` accepts `--datasource` / `-d` as an override for transpile-only use without a connection file.
 
 ```bash
 wren --sql '...' \
   --mdl /path/to/other-mdl.json \
-  --connection-file /path/to/prod-connection_info.json \
-  --datasource postgres
+  --connection-file /path/to/prod-connection_info.json
 ```
 
 Or pass connection info inline:
@@ -61,6 +63,16 @@ Or pass connection info inline:
 ```bash
 wren --sql 'SELECT COUNT(*) FROM "orders"' \
   --connection-info '{"datasource":"mysql","host":"localhost","port":3306,"database":"mydb","user":"root","password":"secret"}'
+```
+
+Both flat and MCP/web envelope formats are accepted:
+
+```bash
+# Flat format
+{"datasource": "postgres", "host": "localhost", "port": 5432, ...}
+
+# Envelope format (auto-unwrapped)
+{"datasource": "duckdb", "properties": {"url": "/data", "format": "duckdb"}}
 ```
 
 ---
