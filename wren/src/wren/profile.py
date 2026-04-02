@@ -126,7 +126,9 @@ def resolve_connection(
 ) -> tuple[str | None, dict]:
     """Resolve datasource + connection_info from explicit flags or active profile.
 
-    Priority: explicit flags > active profile > legacy ~/.wren/connection_info.json.
+    Priority: explicit flags > active profile.
+    Legacy ~/.wren/connection_info.json fallback is handled separately by
+    cli._load_conn() and is not performed here.
     Returns (datasource_str_or_None, connection_dict).
     """
     if explicit_datasource or explicit_conn_info or explicit_conn_file:
@@ -154,7 +156,22 @@ def debug_profile(name: str | None = None) -> dict[str, Any]:
     if profile is None:
         return {"error": f"profile '{name}' not found"}
 
-    _SENSITIVE = {"password", "credentials", "secret", "token", "private_key"}
+    _SENSITIVE = {
+        "password",
+        "credentials",
+        "secret",
+        "token",
+        "private_key",
+        "access_key",
+        "key_id",
+        "client_id",
+        "bucket",
+        "endpoint",
+        "staging_dir",
+        "hostname",
+        "http_path",
+        "role_arn",
+    }
     masked = {}
     for k, v in profile.items():
         if k.lower() in _SENSITIVE or any(s in k.lower() for s in _SENSITIVE):

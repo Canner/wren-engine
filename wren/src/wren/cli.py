@@ -159,9 +159,15 @@ def _build_engine(
             except ValueError:
                 typer.echo(f"Error: unknown datasource '{ds_str}'", err=True)
                 raise typer.Exit(1)
-            return WrenEngine(
-                manifest_str=manifest_str, data_source=ds, connection_info=prof_dict
-            )
+            from pydantic import ValidationError  # noqa: PLC0415
+
+            try:
+                return WrenEngine(
+                    manifest_str=manifest_str, data_source=ds, connection_info=prof_dict
+                )
+            except ValidationError as e:
+                typer.echo(f"Error: invalid profile connection info: {e}", err=True)
+                raise typer.Exit(1)
 
     # Existing path: explicit flags / legacy connection_info.json
     conn_dict = _load_conn(connection_info, connection_file, required=conn_required)
