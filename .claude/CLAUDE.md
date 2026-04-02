@@ -8,15 +8,16 @@ Wren Engine (OSS) is an open source semantic engine for MCP clients and AI agent
 
 ## Repository Structure
 
-Four main modules:
+Five main modules:
 
 - **wren-core/** — Rust semantic engine (Cargo workspace: `core/`, `sqllogictest/`, `benchmarks/`, `wren-example/`). Handles MDL analysis, query planning, logical plan optimization, and SQL generation via DataFusion.
 - **wren-core-base/** — Shared Rust crate with manifest types (`Model`, `Column`, `Metric`, `Relationship`, `View`). Has optional `python-binding` feature for PyO3 compatibility.
-- **wren-core-py/** — PyO3 bindings exposing wren-core to Python. Built with Maturin.
+- **wren-core-py/** — PyO3 bindings exposing wren-core to Python. Built with Maturin. Published to PyPI.
 - **ibis-server/** — FastAPI web server (Python 3.11). Provides REST API for query execution, validation, and metadata. Uses Ibis framework for data source connectivity.
+- **wren/** — Standalone Python SDK and CLI (`wren-engine` on PyPI). Wraps `wren-core-py` + Ibis connectors into a single installable package with `wren` CLI tool. Includes optional LanceDB-backed memory layer for semantic schema/query retrieval.
 - **mcp-server/** — MCP server exposing Wren Engine to AI agents (Claude, Cline, Cursor).
 
-Supporting modules: `wren-core-legacy/` (Java engine, fallback for v2 queries), `mock-web-server/`, `benchmark/`, `example/`.
+Supporting modules: `wren-core-legacy/` (Java engine, fallback for v2 queries), `cli-skills/` (agent skill definitions), `mock-web-server/`, `benchmark/`, `example/`.
 
 ## Build & Development Commands
 
@@ -55,6 +56,23 @@ just format                         # ruff auto-fix + taplo
 ```
 
 Available test markers: `postgres`, `mysql`, `mssql`, `bigquery`, `snowflake`, `clickhouse`, `trino`, `oracle`, `athena`, `duckdb`, `athena_spark`, `databricks`, `spark`, `doris`, `local_file`, `s3_file`, `gcs_file`, `minio_file`, `functions`, `profile`, `cache`, `unit`, `enterprise`, `beta`.
+
+### wren (SDK & CLI)
+```bash
+cd wren
+just install                        # Build wren-core-py wheel + uv sync
+just install-all                    # With all optional extras (including memory)
+just install-extra <extra>          # e.g. just install-extra postgres
+just install-memory                 # Install memory extra (lancedb + sentence-transformers)
+just dev                            # Run `wren` CLI
+just test                           # pytest tests/
+just test-memory                    # Memory-specific tests
+just lint                           # ruff format --check + ruff check
+just format                         # ruff auto-fix
+just build                          # uv build (produces wheel)
+```
+
+Uses `uv` (not Poetry). `pyproject.toml` uses `hatchling` as build backend. Optional extras: `postgres`, `mysql`, `bigquery`, `snowflake`, `clickhouse`, `trino`, `mssql`, `databricks`, `redshift`, `spark`, `athena`, `oracle`, `memory`, `all`, `dev`.
 
 ### mcp-server
 Uses `uv` for dependency management. See `mcp-server/README.md`.
