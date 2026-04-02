@@ -100,7 +100,7 @@ def test_query_tip_suppressed_with_quiet_flag():
 
 
 def test_query_tip_suppressed_for_exploratory_query():
-    sql = "SELECT * FROM orders LIMIT 10"
+    sql = "SELECT * FROM orders"
     with _mock_engine():
         result = runner.invoke(
             app, ["query", "--sql", sql] + _MDL_ARGS + _CONN_FILE_ARGS

@@ -10,11 +10,10 @@ pytestmark = pytest.mark.unit
 @pytest.mark.parametrize(
     "sql, expected",
     [
-        # Exploratory: bare SELECT + LIMIT, no WHERE/GROUP/HAVING/agg
+        # Exploratory: bare SELECT, no WHERE/GROUP/HAVING/agg (LIMIT optional)
         ("SELECT * FROM orders LIMIT 5", True),
         ("SELECT DISTINCT status FROM orders LIMIT 10", True),
-        # No LIMIT — full scan is intentional, not exploratory
-        ("SELECT * FROM orders", False),
+        ("SELECT * FROM orders", True),  # no LIMIT is still exploratory
         # Aggregate present
         ("SELECT status, COUNT(*) FROM orders GROUP BY 1", False),
         # WHERE present
@@ -34,8 +33,8 @@ pytestmark = pytest.mark.unit
         ("SELECT COUNT(*) FROM orders", False),
         # SUM
         ("SELECT SUM(total) FROM orders", False),
-        # Inner LIMIT only — outer SELECT has no LIMIT, so not exploratory
-        ("SELECT * FROM (SELECT * FROM orders LIMIT 5) t", False),
+        # Inner LIMIT only — outer SELECT has no conditions, still exploratory
+        ("SELECT * FROM (SELECT * FROM orders LIMIT 5) t", True),
     ],
 )
 def test_is_exploratory(sql, expected):
