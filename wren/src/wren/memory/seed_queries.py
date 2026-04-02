@@ -58,7 +58,12 @@ def _model_seeds(model: dict) -> list[dict]:
         is_calc = col.get("isCalculated", False)
         is_pk = col["name"] == model.get("primaryKey")
 
-        if col_type in _NUMERIC_TYPES and not is_calc and numeric_col is None:
+        if (
+            col_type in _NUMERIC_TYPES
+            and not is_calc
+            and not is_pk
+            and numeric_col is None
+        ):
             numeric_col = col["name"]
         elif (
             col_type not in _NUMERIC_TYPES
@@ -91,7 +96,7 @@ def _model_seeds(model: dict) -> list[dict]:
 
 def _relationship_seed(rel: dict) -> dict | None:
     models = rel.get("models", [])
-    condition = rel.get("condition", "")
+    condition = rel.get("condition", "").strip()
 
     if len(models) < 2 or not condition:
         return None

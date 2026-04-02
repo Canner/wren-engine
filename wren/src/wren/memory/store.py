@@ -162,14 +162,14 @@ class MemoryStore:
             generate_seed_queries,
         )
 
-        pairs = generate_seed_queries(manifest)
-        if not pairs:
-            return 0
-
         # Remove old seeds (tagged 'source:seed') but keep user entries
         if _QUERY_TABLE in _table_names(self._db):
             table = self._db.open_table(_QUERY_TABLE)
             table.delete(f"tags = '{SEED_TAG}'")
+
+        pairs = generate_seed_queries(manifest)
+        if not pairs:
+            return 0
 
         # Insert new seeds via the existing store_query() method
         for pair in pairs:

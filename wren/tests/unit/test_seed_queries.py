@@ -57,6 +57,25 @@ class TestGenerateSeedQueries:
         assert len(pairs) == 1
         assert pairs[0]["nl"] == "List all products"
 
+    def test_numeric_pk_not_used_for_aggregation(self):
+        # PK is numeric — should not be picked as aggregate target
+        manifest = {
+            "models": [
+                _model(
+                    "orders",
+                    "order_id",
+                    [
+                        _col("order_id", "int"),
+                        _col("status", "varchar"),
+                    ],
+                )
+            ]
+        }
+        pairs = generate_seed_queries(manifest)
+        # Only listing — no aggregation since numeric col is a PK
+        assert len(pairs) == 1
+        assert pairs[0]["nl"] == "List all orders"
+
     def test_single_model_one_numeric_no_group(self):
         # Only columns: pk (varchar) + amount (double) — no eligible group col
         manifest = {
@@ -236,6 +255,19 @@ class TestGenerateSeedQueries:
             ],
             "relationships": [
                 {"name": "a_b", "models": ["a", "b"], "condition": ""}
+            ],
+        }
+        pairs = generate_seed_queries(manifest)
+        assert not any("with" in p["nl"] for p in pairs)
+
+    def test_relationship_whitespace_condition_skipped(self):
+        manifest = {
+            "models": [
+                _model("a", "aid", [_col("aid", "varchar")]),
+                _model("b", "bid", [_col("bid", "varchar")]),
+            ],
+            "relationships": [
+                {"name": "a_b", "models": ["a", "b"], "condition": "   "}
             ],
         }
         pairs = generate_seed_queries(manifest)
