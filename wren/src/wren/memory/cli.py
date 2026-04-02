@@ -147,11 +147,14 @@ def index(
             instructions = load_instructions(project_path)
             if instructions:
                 manifest["_instructions"] = instructions
-        except Exception:
+        except (FileNotFoundError, ImportError, ModuleNotFoundError):
             pass  # instructions are optional; never fail index because of them
 
     store = _get_store(path)
-    count = store.index_schema(manifest)
+    # Strip internal keys (e.g. _instructions) before indexing so instruction
+    # changes don't invalidate the schema hash and trigger unnecessary re-indexing.
+    index_manifest = {k: v for k, v in manifest.items() if not k.startswith("_")}
+    count = store.index_schema(index_manifest)
     typer.echo(f"Indexed {count} schema items.")
 
 
