@@ -31,7 +31,7 @@ def _mock_engine(result=None):
     mock_engine = MagicMock()
     mock_engine.__enter__ = MagicMock(return_value=mock_engine)
     mock_engine.__exit__ = MagicMock(return_value=False)
-    mock_engine.query.return_value = result or _MOCK_TABLE
+    mock_engine.query.return_value = _MOCK_TABLE if result is None else result
 
     with patch("wren.cli._build_engine", return_value=mock_engine):
         yield mock_engine
@@ -122,8 +122,9 @@ def test_tip_escapes_single_quotes_in_sql():
     with _mock_engine():
         result = runner.invoke(app, ["--sql", sql] + _MDL_ARGS + _CONN_FILE_ARGS)
     assert result.exit_code == 0
-    # Unescaped single quote inside the --sql '...' wrapper would break shell
     assert "wren memory store" in result.stderr
-    # The escaped form should appear, not a raw unescaped quote that breaks shell
-    assert "'\\''open'\\''}" not in result.stderr  # not double-escaped
-    assert "open" in result.stderr
+    # Correctly escaped form for POSIX shell single-quote wrapping
+    expected = "--sql 'SELECT * FROM orders WHERE status = '\\''open'\\'''"
+    assert expected in result.stderr
+    # Unescaped form would break shell — must not appear
+    assert "--sql 'SELECT * FROM orders WHERE status = 'open''" not in result.stderr

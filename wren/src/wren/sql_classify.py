@@ -8,6 +8,8 @@ def is_exploratory(sql: str) -> bool:
     """Return True if *sql* looks like an exploratory peek query.
 
     Exploratory = bare SELECT + no WHERE/GROUP BY/HAVING/aggregate + has LIMIT.
+    Top-level clauses are inspected via stmt.args to avoid descending into
+    subqueries (e.g. an inner LIMIT does not make the outer query exploratory).
     """
     try:
         parsed = sqlglot.parse(sql)
@@ -19,15 +21,19 @@ def is_exploratory(sql: str) -> bool:
 
     stmt = parsed[0]
 
-    # A CTE-backed SELECT has a With node as parent or sibling — detect via With
-    if stmt.find(exp.With) is not None:
-        return False  # CTE → not exploratory
+    # A CTE-backed SELECT stores the With clause under the "with_" key
+    if stmt.args.get("with_") is not None:
+        return False
 
-    has_where = stmt.find(exp.Where) is not None
-    has_group = stmt.find(exp.Group) is not None
-    has_having = stmt.find(exp.Having) is not None
-    has_limit = stmt.find(exp.Limit) is not None
-    has_agg = any(isinstance(node, exp.AggFunc) for node in stmt.walk())
+    # Check only the top-level clause args — does not descend into subqueries
+    has_where = stmt.args.get("where") is not None
+    has_group = stmt.args.get("group") is not None
+    has_having = stmt.args.get("having") is not None
+    has_limit = stmt.args.get("limit") is not None
+
+    # find() descends into children but that's fine for aggregates: any
+    # aggregate anywhere in the tree indicates non-trivial processing
+    has_agg = stmt.find(exp.AggFunc) is not None
 
     if has_where or has_group or has_having or has_agg:
         return False  # analytical query → not exploratory

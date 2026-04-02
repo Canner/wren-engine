@@ -203,6 +203,15 @@ def _print_store_tip(sql: str) -> None:
     )
 
 
+def _maybe_print_store_tip(sql: str, quiet: bool) -> None:
+    if quiet:
+        return
+    from wren.sql_classify import is_exploratory  # noqa: PLC0415
+
+    if not is_exploratory(sql):
+        _print_store_tip(sql)
+
+
 # ── Default command (no subcommand = query) ────────────────────────────────
 
 
@@ -263,11 +272,7 @@ def main(
             typer.echo(f"Error: {e}", err=True)
             raise typer.Exit(1)
     _print_result(result, output)
-    if not quiet:
-        from wren.sql_classify import is_exploratory  # noqa: PLC0415
-
-        if not is_exploratory(sql):
-            _print_store_tip(sql)
+    _maybe_print_store_tip(sql, quiet)
 
 
 # ── Subcommands ────────────────────────────────────────────────────────────
@@ -291,11 +296,7 @@ def query(
             typer.echo(f"Error: {e}", err=True)
             raise typer.Exit(1)
     _print_result(result, output)
-    if not quiet:
-        from wren.sql_classify import is_exploratory  # noqa: PLC0415
-
-        if not is_exploratory(sql):
-            _print_store_tip(sql)
+    _maybe_print_store_tip(sql, quiet)
 
 
 @app.command(name="dry-run")

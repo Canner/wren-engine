@@ -34,6 +34,8 @@ pytestmark = pytest.mark.unit
         ("SELECT COUNT(*) FROM orders", False),
         # SUM
         ("SELECT SUM(total) FROM orders", False),
+        # Inner LIMIT only — outer SELECT has no LIMIT, so not exploratory
+        ("SELECT * FROM (SELECT * FROM orders LIMIT 5) t", False),
     ],
 )
 def test_is_exploratory(sql, expected):
