@@ -125,6 +125,13 @@ def _print_results(results: list[dict], output: str) -> None:
 def index(
     mdl: MdlOpt = None,
     path: PathOpt = None,
+    include_instructions: Annotated[
+        bool,
+        typer.Option(
+            "--instructions/--no-instructions",
+            help="Also index user instructions from project directory.",
+        ),
+    ] = True,
     no_seed: Annotated[
         bool,
         typer.Option("--no-seed", help="Skip generating seed NL-SQL examples."),
@@ -132,6 +139,21 @@ def index(
 ) -> None:
     """Index MDL schema into LanceDB (and optionally seed example queries)."""
     manifest = _load_manifest(mdl)
+
+    if include_instructions and "_instructions" not in manifest:
+        try:
+            from wren.context import (  # noqa: PLC0415
+                discover_project_path,
+                load_instructions,
+            )
+
+            project_path = discover_project_path()
+            instructions = load_instructions(project_path)
+            if instructions:
+                manifest["_instructions"] = instructions
+        except Exception:
+            pass  # instructions are optional; never fail index because of them
+
     store = _get_store(path)
     result = store.index_schema(manifest, seed_queries=not no_seed)
     typer.echo(

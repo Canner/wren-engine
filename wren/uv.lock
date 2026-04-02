@@ -3372,9 +3372,10 @@ wheels = [
 [[package]]
 name = "wren-core-py"
 version = "0.1.0"
-source = { registry = "../wren-core-py/target/wheels" }
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7e/89/64d5a0a5b4e6e4d9f36d0e8856e358b78f8df537d754457a143c596ade68/wren_core_py-0.1.0.tar.gz", hash = "sha256:e1f85e4a76cd753850ab9750121c85788eff85ef9497481ac8c660bf92363e80", size = 173500 }
 wheels = [
-    { path = "wren_core_py-0.1.0-cp311-abi3-macosx_11_0_arm64.whl" },
+    { url = "https://files.pythonhosted.org/packages/c8/37/02dae70f121c22cfb60dd0a0e16afd349d193e4bdca0e836e0b1952bb3c1/wren_core_py-0.1.0-cp311-abi3-macosx_11_0_arm64.whl", hash = "sha256:51624141000c008cead7b330883d39fd36d2a1ffc10e18aedcf1a938df2ced6f", size = 31035179 },
 ]
 
 [[package]]
