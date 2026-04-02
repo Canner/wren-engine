@@ -53,7 +53,7 @@ def init(
     project_yml = (
         "schema_version: 2\n"
         "name: my_project\n"
-        "version: \"1.0\"\n"
+        'version: "1.0"\n'
         "catalog: wren\n"
         "schema: public\n"
         "data_source: postgres\n"
@@ -67,7 +67,7 @@ def init(
         "# Example model — replace with your actual table\n"
         "name: example\n"
         "table_reference:\n"
-        "  catalog: \"\"\n"
+        '  catalog: ""\n'
         "  schema: public\n"
         "  table: example\n"
         "columns:\n"
@@ -107,12 +107,11 @@ def init(
     (example_view_dir / "metadata.yml").write_text(
         "# Example view — replace with your actual view\n"
         "name: example_view\n"
-        "description: \"An example view\"\n"
+        'description: "An example view"\n'
         "properties: {}\n"
     )
     (example_view_dir / "sql.yml").write_text(
-        "statement: >\n"
-        "  SELECT * FROM example LIMIT 100\n"
+        "statement: >\n  SELECT * FROM example LIMIT 100\n"
     )
 
     # Instructions placeholder
@@ -127,7 +126,7 @@ def init(
     typer.echo("  views/example_view/         — example view (metadata.yml + sql.yml)")
     typer.echo("  relationships.yml           — define joins between models")
     typer.echo("  instructions.md             — LLM instructions")
-    typer.echo(f"\nNext: edit your models, then run `wren context build`.")
+    typer.echo("\nNext: edit your models, then run `wren context build`.")
 
 
 @context_app.command()
@@ -188,11 +187,15 @@ def build(
     path: ProjectPathOpt = None,
     output: Annotated[
         Optional[str],
-        typer.Option("--output", "-o", help="Output path. Defaults to <project>/target/mdl.json."),
+        typer.Option(
+            "--output", "-o", help="Output path. Defaults to <project>/target/mdl.json."
+        ),
     ] = None,
     validate_first: Annotated[
         bool,
-        typer.Option("--validate/--no-validate", help="Run validation before building."),
+        typer.Option(
+            "--validate/--no-validate", help="Run validation before building."
+        ),
     ] = True,
 ) -> None:
     """Build YAML project into target/mdl.json for the engine.
@@ -280,7 +283,9 @@ def show(
         rels = manifest.get("relationships", [])
         instructions = manifest.get("_instructions")
 
-        typer.echo(f"Project: {config.get('name', '?')} (v{config.get('version', '?')})")
+        typer.echo(
+            f"Project: {config.get('name', '?')} (v{config.get('version', '?')})"
+        )
         typer.echo(f"Data source: {config.get('data_source', '?')}")
         typer.echo(f"Path: {project_path}\n")
 

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +17,7 @@ _TARGET_FILE = "mdl.json"
 
 
 # ── Case conversion ───────────────────────────────────────────────────────
+
 
 def _snake_to_camel(name: str) -> str:
     """Convert snake_case to camelCase."""
@@ -35,6 +35,7 @@ def _convert_keys(obj: Any) -> Any:
 
 
 # ── Project discovery ─────────────────────────────────────────────────────
+
 
 def discover_project_path(explicit: str | None = None) -> Path:
     """Return the project directory path.
@@ -85,6 +86,7 @@ def require_schema_version(project_path: Path) -> int:
 
 
 # ── Loaders (all return snake_case dicts) ─────────────────────────────────
+
 
 def load_models(project_path: Path) -> list[dict]:
     """Load models — dispatches on schema_version.
@@ -218,6 +220,7 @@ def load_instructions(project_path: Path) -> str | None:
 
 # ── Build ─────────────────────────────────────────────────────────────────
 
+
 def build_manifest(project_path: Path) -> dict:
     """Build a complete MDL manifest dict from the project directory.
 
@@ -272,11 +275,13 @@ def save_target(manifest_json: dict, project_path: Path) -> Path:
 
 # ── Validation ────────────────────────────────────────────────────────────
 
+
 class ValidationError:
     """A single validation issue."""
+
     def __init__(self, level: str, path: str, message: str):
-        self.level = level   # "error" | "warning"
-        self.path = path     # e.g. "models/orders.yml > column 'foo'"
+        self.level = level  # "error" | "warning"
+        self.path = path  # e.g. "models/orders.yml > column 'foo'"
         self.message = message
 
     def __str__(self):
@@ -302,23 +307,28 @@ def validate_project(project_path: Path) -> list[ValidationError]:
     # Check project config
     config = load_project_config(project_path)
     if not config:
-        errors.append(ValidationError(
-            "error", _PROJECT_FILE,
-            f"'{_PROJECT_FILE}' not found or empty"
-        ))
+        errors.append(
+            ValidationError(
+                "error", _PROJECT_FILE, f"'{_PROJECT_FILE}' not found or empty"
+            )
+        )
     else:
         for required in ("name", "data_source"):
             if not config.get(required):
-                errors.append(ValidationError(
-                    "error", _PROJECT_FILE,
-                    f"missing required field '{required}'"
-                ))
+                errors.append(
+                    ValidationError(
+                        "error", _PROJECT_FILE, f"missing required field '{required}'"
+                    )
+                )
         sv = int(config.get("schema_version", 1))
         if sv not in _SUPPORTED_SCHEMA_VERSIONS:
-            errors.append(ValidationError(
-                "error", _PROJECT_FILE,
-                f"unsupported schema_version {sv} — please upgrade wren CLI"
-            ))
+            errors.append(
+                ValidationError(
+                    "error",
+                    _PROJECT_FILE,
+                    f"unsupported schema_version {sv} — please upgrade wren CLI",
+                )
+            )
 
     # Load data (snake_case)
     models = load_models(project_path)
@@ -338,82 +348,115 @@ def validate_project(project_path: Path) -> list[ValidationError]:
             continue
 
         if name in model_names:
-            errors.append(ValidationError("error", src_path, f"duplicate model name '{name}'"))
+            errors.append(
+                ValidationError("error", src_path, f"duplicate model name '{name}'")
+            )
         model_names.add(name)
 
         # table_reference vs ref_sql: exactly one required
         has_tref = bool(model.get("table_reference"))
         has_ref_sql = bool(model.get("ref_sql"))
         if has_tref and has_ref_sql:
-            errors.append(ValidationError(
-                "error", f"{src_path} > {name}",
-                "model has both 'table_reference' and 'ref_sql' — choose one"
-            ))
+            errors.append(
+                ValidationError(
+                    "error",
+                    f"{src_path} > {name}",
+                    "model has both 'table_reference' and 'ref_sql' — choose one",
+                )
+            )
         elif not has_tref and not has_ref_sql:
-            errors.append(ValidationError(
-                "error", f"{src_path} > {name}",
-                "model must define either 'table_reference' or 'ref_sql'"
-            ))
+            errors.append(
+                ValidationError(
+                    "error",
+                    f"{src_path} > {name}",
+                    "model must define either 'table_reference' or 'ref_sql'",
+                )
+            )
         elif has_tref:
             tref = model.get("table_reference", {})
             if not tref.get("table"):
-                errors.append(ValidationError(
-                    "warning", f"{src_path} > {name}",
-                    "table_reference.table is empty"
-                ))
+                errors.append(
+                    ValidationError(
+                        "warning",
+                        f"{src_path} > {name}",
+                        "table_reference.table is empty",
+                    )
+                )
 
         columns = model.get("columns", [])
         if not columns:
-            errors.append(ValidationError(
-                "warning", f"{src_path} > {name}",
-                "model has no columns"
-            ))
+            errors.append(
+                ValidationError(
+                    "warning", f"{src_path} > {name}", "model has no columns"
+                )
+            )
 
         col_names = set()
         for j, col in enumerate(columns):
             col_name = col.get("name")
             if not col_name:
-                errors.append(ValidationError(
-                    "error", f"{src_path} > {name} > columns[{j}]",
-                    "column missing 'name'"
-                ))
+                errors.append(
+                    ValidationError(
+                        "error",
+                        f"{src_path} > {name} > columns[{j}]",
+                        "column missing 'name'",
+                    )
+                )
                 continue
             if col_name in col_names:
-                errors.append(ValidationError(
-                    "error", f"{src_path} > {name}",
-                    f"duplicate column '{col_name}'"
-                ))
+                errors.append(
+                    ValidationError(
+                        "error",
+                        f"{src_path} > {name}",
+                        f"duplicate column '{col_name}'",
+                    )
+                )
             col_names.add(col_name)
 
             if not col.get("type"):
-                errors.append(ValidationError(
-                    "warning", f"{src_path} > {name} > {col_name}",
-                    "column missing 'type'"
-                ))
+                errors.append(
+                    ValidationError(
+                        "warning",
+                        f"{src_path} > {name} > {col_name}",
+                        "column missing 'type'",
+                    )
+                )
 
         pk = model.get("primary_key")
         if pk and pk not in col_names:
-            errors.append(ValidationError(
-                "error", f"{src_path} > {name}",
-                f"primary_key '{pk}' not found in columns"
-            ))
+            errors.append(
+                ValidationError(
+                    "error",
+                    f"{src_path} > {name}",
+                    f"primary_key '{pk}' not found in columns",
+                )
+            )
 
     # Check views
     for i, view in enumerate(views):
         src_dir = view.get("_source_dir", f"views[{i}]")
         name = view.get("name")
         if not name:
-            errors.append(ValidationError("error", f"views/{src_dir}/metadata.yml", "view missing 'name'"))
+            errors.append(
+                ValidationError(
+                    "error", f"views/{src_dir}/metadata.yml", "view missing 'name'"
+                )
+            )
             continue
         if name in view_names or name in model_names:
-            errors.append(ValidationError("error", f"views/{src_dir}", f"duplicate name '{name}'"))
+            errors.append(
+                ValidationError("error", f"views/{src_dir}", f"duplicate name '{name}'")
+            )
         view_names.add(name)
 
         if not view.get("statement"):
-            errors.append(ValidationError(
-                "error", f"views/{src_dir}",
-                "view missing 'statement' (define in metadata.yml or sql.yml)"
-            ))
+            errors.append(
+                ValidationError(
+                    "error",
+                    f"views/{src_dir}",
+                    "view missing 'statement' (define in metadata.yml or sql.yml)",
+                )
+            )
 
     # Check relationships
     all_entity_names = model_names | view_names
@@ -422,19 +465,24 @@ def validate_project(project_path: Path) -> list[ValidationError]:
         ref_models = rel.get("models", [])
         for m in ref_models:
             if m not in all_entity_names:
-                errors.append(ValidationError(
-                    "error", f"relationships > {rel_name}",
-                    f"references unknown model '{m}'"
-                ))
+                errors.append(
+                    ValidationError(
+                        "error",
+                        f"relationships > {rel_name}",
+                        f"references unknown model '{m}'",
+                    )
+                )
         if not rel.get("condition"):
-            errors.append(ValidationError(
-                "warning", f"relationships > {rel_name}",
-                "missing join condition"
-            ))
+            errors.append(
+                ValidationError(
+                    "warning", f"relationships > {rel_name}", "missing join condition"
+                )
+            )
         if not rel.get("join_type"):
-            errors.append(ValidationError(
-                "warning", f"relationships > {rel_name}",
-                "missing join_type"
-            ))
+            errors.append(
+                ValidationError(
+                    "warning", f"relationships > {rel_name}", "missing join_type"
+                )
+            )
 
     return errors
