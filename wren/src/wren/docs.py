@@ -150,6 +150,11 @@ def _field_default(field_info) -> str:
     return str(default)
 
 
+def _escape_md_cell(value: str) -> str:
+    """Escape pipe and newline characters for safe Markdown table cells."""
+    return value.replace("\\", "\\\\").replace("|", "\\|").replace("\n", "<br>")
+
+
 def _format_model_markdown(model: type[BaseConnectionInfo]) -> str:
     """Format a single ConnectionInfo model as a Markdown section."""
     lines: list[str] = []
@@ -171,7 +176,7 @@ def _format_model_markdown(model: type[BaseConnectionInfo]) -> str:
         examples = field_info.examples or []
         example_str = ", ".join(f"`{e}`" for e in examples)
         lines.append(
-            f"| `{name}` | {type_label} | {required} | {default} | {sensitive} | {alias} | {example_str} |"
+            f"| `{_escape_md_cell(name)}` | {_escape_md_cell(type_label)} | {required} | {_escape_md_cell(default)} | {sensitive} | {_escape_md_cell(alias)} | {_escape_md_cell(example_str)} |"
         )
 
     lines.append("")
