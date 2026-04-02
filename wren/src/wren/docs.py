@@ -203,7 +203,14 @@ def _build_example(model: type[BaseConnectionInfo]) -> dict[str, Any]:
         if field_info.examples:
             example[key] = field_info.examples[0]
         elif not field_info.is_required():
-            continue  # skip optional fields without examples
+            default = field_info.default
+            if default is None:
+                continue
+            example[key] = (
+                default.get_secret_value()
+                if isinstance(default, SecretStr)
+                else default
+            )
         else:
             example[key] = f"<{name}>"
     return example
