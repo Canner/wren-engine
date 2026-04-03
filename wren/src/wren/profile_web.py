@@ -108,7 +108,12 @@ def create_app(
                 if k not in _INTERNAL and v.strip():
                     profile[k] = v.strip()
 
-        add_profile(name, profile, activate=activate)
+        try:
+            add_profile(name, profile, activate=activate)
+        except (ValueError, OSError) as exc:
+            return HTMLResponse(
+                f'<small style="color:var(--pico-color-red-500)">✗ Failed to save profile: {exc}</small>'
+            )
         result.update({"name": name, "datasource": ds})
 
         # Schedule graceful shutdown after response is delivered
