@@ -122,15 +122,37 @@ def _interactive_add(default_ds: str | None) -> dict:
     )
     profile: dict = {"datasource": ds}
 
-    _COMMON_FIELDS = {
-        "postgres": ["host", "port", "database", "user", "password"],
-        "mysql": ["host", "port", "database", "user", "password"],
-        "bigquery": ["project_id", "dataset_id", "credentials"],
-        "duckdb": ["path"],
+    # Field specs: list of (name, default) pairs.
+    # duckdb/local_file use url (directory path) + format ("duckdb" or "csv"/"parquet").
+    _COMMON_FIELDS: dict[str, list[tuple[str, str]]] = {
+        "postgres": [
+            ("host", ""),
+            ("port", "5432"),
+            ("database", ""),
+            ("user", ""),
+            ("password", ""),
+        ],
+        "mysql": [
+            ("host", ""),
+            ("port", "3306"),
+            ("database", ""),
+            ("user", ""),
+            ("password", ""),
+        ],
+        "bigquery": [("project_id", ""), ("dataset_id", ""), ("credentials", "")],
+        "duckdb": [("url", ""), ("format", "duckdb")],
+        "local_file": [("url", ""), ("format", "csv")],
     }
-    fields = _COMMON_FIELDS.get(ds, ["host", "port", "database", "user", "password"])
-    for field in fields:
-        value = typer.prompt(f"  {field}", default="", show_default=False)
+    default_fields: list[tuple[str, str]] = [
+        ("host", ""),
+        ("port", ""),
+        ("database", ""),
+        ("user", ""),
+        ("password", ""),
+    ]
+    fields = _COMMON_FIELDS.get(ds, default_fields)
+    for field, default in fields:
+        value = typer.prompt(f"  {field}", default=default, show_default=bool(default))
         if value:
             profile[field] = value
     return profile
