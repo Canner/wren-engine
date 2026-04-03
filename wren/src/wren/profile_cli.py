@@ -53,13 +53,48 @@ def add(
     interactive: Annotated[
         bool, typer.Option("--interactive", "-i", help="Interactive prompts")
     ] = False,
+    ui: Annotated[
+        bool,
+        typer.Option("--ui", help="Open browser-based form to fill connection fields"),
+    ] = False,
+    ui_port: Annotated[
+        int, typer.Option("--port", help="Port for the UI server (0 = auto-select)")
+    ] = 0,
+    no_open: Annotated[
+        bool, typer.Option("--no-open", help="Don't auto-open browser (just print URL)")
+    ] = False,
 ) -> None:
     """Add a new connection profile.
 
-    Three modes: --from-file (import), --interactive (guided prompts), or
-    inline --datasource + additional --key=value pairs (future).
+    Four modes: --ui (browser form), --from-file (import), --interactive
+    (guided prompts), or inline --datasource (minimal profile).
     """
     from wren.profile import add_profile  # noqa: PLC0415
+
+    if ui:
+        try:
+            from wren.profile_web import start as web_start  # noqa: PLC0415
+        except ImportError:
+            typer.echo(
+                "Error: --ui requires extra dependencies.\n"
+                "Install with: pip install 'wren-engine[ui]'",
+                err=True,
+            )
+            raise typer.Exit(1)
+        typer.echo("Opening browser... (press Ctrl+C to cancel)")
+        result = web_start(
+            name, activate=activate, port=ui_port, open_browser=not no_open
+        )
+        if result:
+            typer.echo(
+                f"Profile '{result['name']}' saved (datasource: {result['datasource']})"
+            )
+            if activate:
+                typer.echo(f"  Run `wren profile switch {result['name']}` to activate.")
+        else:
+            typer.echo("Cancelled.", err=True)
+            raise typer.Exit(1)
+        return
 
     if from_file:
         from pathlib import Path  # noqa: PLC0415
