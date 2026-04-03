@@ -20,15 +20,23 @@ _DEFAULT_CONN = _WREN_HOME / "connection_info.json"
 
 
 def _require_mdl(mdl: str | None) -> str:
-    """Return mdl arg if given, else auto-discover mdl.json from ~/.wren."""
+    """Return mdl path — explicit flag or auto-discovered from project root."""
     if mdl is not None:
         return mdl
-    if _DEFAULT_MDL.exists():
-        return str(_DEFAULT_MDL)
-    typer.echo(
-        f"Error: --mdl not specified and '{_DEFAULT_MDL}' not found.",
-        err=True,
-    )
+    try:
+        from wren.context import discover_project_path  # noqa: PLC0415
+
+        project_path = discover_project_path()
+        target = project_path / "target" / "mdl.json"
+        if target.exists():
+            return str(target)
+        typer.echo(
+            f"Error: project found at {project_path} but target/mdl.json missing.\n"
+            "  Hint: run `wren context build` first.",
+            err=True,
+        )
+    except SystemExit as e:
+        typer.echo(str(e), err=True)
     raise typer.Exit(1)
 
 
@@ -173,7 +181,7 @@ MdlOpt = Annotated[
     typer.Option(
         "--mdl",
         "-m",
-        help=f"Path to MDL JSON file or base64 string. Defaults to {_DEFAULT_MDL}.",
+        help="Path to MDL JSON file or base64 string. Defaults to <project>/target/mdl.json.",
     ),
 ]
 ConnInfoOpt = Annotated[
@@ -431,6 +439,54 @@ def version():
 
     typer.echo(f"wren-engine {__version__}")
 
+
+# ── Docs subcommand ───────────────────────────────────────────────────────
+
+docs_app = typer.Typer(name="docs", help="Generate documentation for Wren Engine")
+
+
+@docs_app.command(name="connection-info")
+def docs_connection_info(
+    datasource: Annotated[
+        Optional[str],
+        typer.Argument(help="Data source name (e.g. postgres, mysql). Omit for all."),
+    ] = None,
+    format: Annotated[
+        str,
+        typer.Option("--format", "-f", help="Output format: md or json"),
+    ] = "md",
+    envelope: Annotated[
+        bool,
+        typer.Option(
+            "--envelope",
+            help='Wrap JSON output in {"datasource": ..., "properties": ...} format.',
+        ),
+    ] = False,
+):
+    """Show connection info fields for each data source."""
+    from wren.docs import generate_json_schema, generate_markdown  # noqa: PLC0415
+
+    fmt = format.lower()
+    try:
+        if fmt == "md":
+            typer.echo(generate_markdown(datasource))
+        elif fmt == "json":
+            typer.echo(generate_json_schema(datasource, envelope=envelope))
+        else:
+            typer.echo(
+                f"Error: unsupported format '{format}'. Use md or json.", err=True
+            )
+            raise typer.Exit(1)
+    except ValueError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+app.add_typer(docs_app)
+
+from wren.context_cli import context_app  # noqa: E402, PLC0415
+
+app.add_typer(context_app)
 
 try:
     import lancedb  # noqa: PLC0415, F401
