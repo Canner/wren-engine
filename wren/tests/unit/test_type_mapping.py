@@ -87,9 +87,14 @@ def _run_wren(*args: str, stdin: str | None = None) -> subprocess.CompletedProce
     )
 
 
+def _assert_success(result: subprocess.CompletedProcess) -> None:
+    """Assert command succeeded, printing stderr on failure for easier diagnosis."""
+    assert result.returncode == 0, f"Command failed with stderr: {result.stderr}"
+
+
 def test_cli_parse_type_single() -> None:
     result = _run_wren("utils", "parse-type", "--type", "int8", "--dialect", "postgres")
-    assert result.returncode == 0
+    _assert_success(result)
     assert result.stdout.strip() == "BIGINT"
 
 
@@ -102,7 +107,7 @@ def test_cli_parse_type_with_precision() -> None:
         "--dialect",
         "postgres",
     )
-    assert result.returncode == 0
+    _assert_success(result)
     assert result.stdout.strip() == "VARCHAR(255)"
 
 
@@ -110,14 +115,14 @@ def test_cli_parse_type_fallback() -> None:
     result = _run_wren(
         "utils", "parse-type", "--type", "my_custom_type", "--dialect", "postgres"
     )
-    assert result.returncode == 0
+    _assert_success(result)
     assert result.stdout.strip() == "my_custom_type"
 
 
 def test_cli_parse_types_stdin() -> None:
     payload = json.dumps([{"column": "id", "raw_type": "int8"}])
     result = _run_wren("utils", "parse-types", "--dialect", "postgres", stdin=payload)
-    assert result.returncode == 0
+    _assert_success(result)
     data = json.loads(result.stdout)
     assert data[0]["type"] == "BIGINT"
     assert data[0]["column"] == "id"
@@ -132,7 +137,7 @@ def test_cli_parse_types_batch() -> None:
     result = _run_wren(
         "utils", "parse-types", "--dialect", "postgres", stdin=json.dumps(columns)
     )
-    assert result.returncode == 0
+    _assert_success(result)
     data = json.loads(result.stdout)
     assert len(data) == 2
     assert data[0]["type"] == "BIGINT"

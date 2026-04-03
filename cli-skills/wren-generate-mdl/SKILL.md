@@ -98,7 +98,7 @@ regular tables. For bootstrapping from zero, Option A or B is preferred.
 
 ## Phase 3 — Normalize types
 
-**Goal:** Convert raw database types to wren-core compatible types.
+**Goal:** Convert raw database types to wren-core-compatible types.
 
 ### Python import (recommended for batch processing)
 
@@ -145,7 +145,7 @@ wren context init --path /path/to/project
 ```
 
 This creates:
-```
+```text
 project/
 ├── wren_project.yml
 ├── models/
