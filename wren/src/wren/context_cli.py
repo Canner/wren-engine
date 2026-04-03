@@ -19,7 +19,7 @@ ProjectPathOpt = Annotated[
     typer.Option(
         "--path",
         "-p",
-        help="Project directory. Auto-detected from wren_project.yml or defaults to ~/.wren/project/.",
+        help="Project directory. Auto-detected via WREN_PROJECT_HOME, cwd walk, or ~/.wren/config.yml.",
     ),
 ]
 
@@ -33,9 +33,7 @@ def init(
     Creates the directory structure with wren_project.yml,
     an example model, and placeholder files.
     """
-    from wren.context import discover_project_path  # noqa: PLC0415
-
-    project_path = discover_project_path(path) if path else Path.cwd()
+    project_path = Path(path).expanduser() if path else Path.cwd()
 
     project_file = project_path / "wren_project.yml"
     if project_file.exists():
@@ -150,13 +148,10 @@ def validate(
         validate_project,
     )
 
-    project_path = discover_project_path(path)
-    if not (project_path / "wren_project.yml").exists():
-        typer.echo(
-            f"Error: no wren_project.yml found in {project_path}. "
-            "Run `wren context init` first.",
-            err=True,
-        )
+    try:
+        project_path = discover_project_path(path)
+    except SystemExit as e:
+        typer.echo(str(e), err=True)
         raise typer.Exit(1)
 
     errors = validate_project(project_path)
@@ -211,12 +206,10 @@ def build(
         validate_project,
     )
 
-    project_path = discover_project_path(path)
-    if not (project_path / "wren_project.yml").exists():
-        typer.echo(
-            f"Error: no wren_project.yml found in {project_path}.",
-            err=True,
-        )
+    try:
+        project_path = discover_project_path(path)
+    except SystemExit as e:
+        typer.echo(str(e), err=True)
         raise typer.Exit(1)
 
     if validate_first:
@@ -257,12 +250,14 @@ def show(
         build_json,
         build_manifest,
         discover_project_path,
+        load_instructions,
         load_project_config,
     )
 
-    project_path = discover_project_path(path)
-    if not (project_path / "wren_project.yml").exists():
-        typer.echo(f"Error: no wren_project.yml found in {project_path}.", err=True)
+    try:
+        project_path = discover_project_path(path)
+    except SystemExit as e:
+        typer.echo(str(e), err=True)
         raise typer.Exit(1)
 
     if output == "json":
@@ -272,7 +267,6 @@ def show(
     elif output == "yaml":
         # YAML output uses snake_case (native)
         manifest = build_manifest(project_path)
-        manifest.pop("_instructions", None)
         typer.echo(_yaml.dump(manifest, default_flow_style=False, sort_keys=False))
     else:
         # Summary view
@@ -281,7 +275,7 @@ def show(
         models = manifest.get("models", [])
         views = manifest.get("views", [])
         rels = manifest.get("relationships", [])
-        instructions = manifest.get("_instructions")
+        instr_content = load_instructions(project_path)
 
         typer.echo(
             f"Project: {config.get('name', '?')} (v{config.get('version', '?')})"
@@ -309,9 +303,27 @@ def show(
                 jt = r.get("join_type", "?")
                 typer.echo(f"  {r.get('name', '?')}  ({models_str}, {jt})")
 
-        if instructions:
-            lines = instructions.strip().split("\n")
+        if instr_content:
+            lines = instr_content.strip().split("\n")
             typer.echo(f"\nInstructions: {len(lines)} lines")
 
         if not models and not views:
             typer.echo("Empty project. Run `wren context init` to get started.")
+
+
+@context_app.command()
+def instructions(
+    path: ProjectPathOpt = None,
+) -> None:
+    """Print user instructions for LLM consumption."""
+    from wren.context import discover_project_path, load_instructions  # noqa: PLC0415
+
+    try:
+        project_path = discover_project_path(path)
+    except SystemExit as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(1)
+
+    content = load_instructions(project_path)
+    if content:
+        typer.echo(content)

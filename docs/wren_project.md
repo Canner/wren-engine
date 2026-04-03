@@ -1,33 +1,94 @@
 # Wren Project
 
-This guide explains the Wren MDL project structure, file formats, and typical workflow for managing your data models as a collection of YAML files. The Wren Project format makes it easy to version control your models, track changes, and separate connection information from model definitions.
+A Wren project is a directory of YAML files that defines a semantic layer over a database. It is the unit of authoring, version control, and deployment — replacing the manual workflow of managing a single `mdl.json` file by hand.
 
-A Wren MDL project is a directory of YAML files that makes MDL manifests human-readable and version-control friendly — similar to how dbt organizes models. Instead of managing a single large JSON file, each model lives in its own YAML file, and the project is compiled to a deployable `mdl.json` when needed.
+Instead of one opaque JSON blob, each model lives in its own directory, relationships and views are human-readable YAML, and the compiled JSON is generated on demand. Project files are diffable, reviewable, and safe to commit. The compiled output is not.
 
-YAML files use **snake_case** field names for readability. The compiled `target/mdl.json` uses **camelCase**, which is the wire format expected by ibis-server.
+YAML files use **snake_case** field names. The compiled `target/mdl.json` uses **camelCase** — the wire format expected by the Wren engine.
+
+---
 
 ## Project Structure
 
 ```text
 my_project/
-├── wren_project.yml       # Project metadata (catalog, schema, data_source)
+├── wren_project.yml            # Project metadata
 ├── models/
-│   ├── orders.yml         # One file per model
-│   ├── customers.yml
-│   └── ...
-├── relationships.yml      # All relationships
-└── views.yml              # All views
-```
-
-After building, the compiled file is written to:
-
-```text
-my_project/
+│   ├── orders/
+│   │   ├── metadata.yml        # Model definition
+│   │   └── ref_sql.sql         # Optional: SQL expression for derived models
+│   └── customers/
+│       └── metadata.yml
+├── views/
+│   └── monthly_revenue/
+│       ├── metadata.yml        # View name, description
+│       └── sql.yml             # View SQL statement
+├── relationships.yml           # All joins between models
+├── instructions.md             # LLM query guidelines (optional)
+├── .wren/                      # Runtime state — gitignore this
+│   └── memory/                 # LanceDB semantic index
 └── target/
-    └── mdl.json           # Deployable MDL JSON (camelCase)
+    └── mdl.json                # Compiled output — gitignore this
 ```
 
-> **Connection info** is managed via the MCP server Web UI (`http://localhost:9001`) — it is not stored in the project directory.
+Add to `.gitignore`:
+```
+target/
+.wren/
+```
+
+---
+
+## Why Projects Exist
+
+The alternative is placing `mdl.json` in `~/.wren/` and keeping it current by hand. That workflow breaks down as soon as you have more than one project, because:
+
+- Which project's schema is in global memory?
+- When did the schema last change?
+- Who changed it and why?
+
+A project makes schema definitions version-controllable like code. `wren context build` regenerates `target/mdl.json` deterministically from source. `wren memory index` keeps the semantic index in sync with the project it belongs to.
+
+---
+
+## Project vs Global Scope
+
+| Artifact | Lives in | Why |
+|----------|----------|-----|
+| Models, views, relationships | Project directory | Schema is project-specific |
+| `target/mdl.json` | `<project>/target/` | Compiled from project source |
+| `instructions.md` | Project directory | References model/column names from that project |
+| Memory (LanceDB) | `<project>/.wren/memory/` | Indexes that project's schema |
+| Connection profiles | `~/.wren/profiles.yml` | Credentials are environment-specific, not schema-specific |
+| Global config | `~/.wren/config.yml` | Preferences like `default_project` path |
+
+The key distinction: schema artifacts are project-specific and belong in the project. Connection credentials are environment-specific (same project connects to dev DB, prod DB via different profiles) and belong in `~/.wren/`.
+
+---
+
+## Project Discovery
+
+When you run a `wren` command, the CLI resolves the project root in this order:
+
+1. `--path` / `--project` flag (explicit)
+2. `WREN_PROJECT_HOME` environment variable
+3. Walk up from the current working directory looking for `wren_project.yml`
+4. `default_project` in `~/.wren/config.yml`
+5. None found → error: "Run `wren context init` or set `WREN_PROJECT_HOME`."
+
+Once the project root is found, all paths are deterministic: `target/mdl.json`, `instructions.md`, `.wren/memory/`.
+
+To work outside the project directory without `cd`:
+
+```bash
+# Option A: environment variable
+export WREN_PROJECT_HOME=~/projects/sales
+wren --sql "SELECT ..."
+
+# Option B: global config
+# ~/.wren/config.yml
+default_project: ~/projects/sales
+```
 
 ---
 
@@ -35,26 +96,18 @@ my_project/
 
 ### `wren_project.yml`
 
-The root metadata file describing the project:
-
 ```yaml
+schema_version: 2
 name: my_project
 version: "1.0"
 catalog: wren
 schema: public
-data_source: POSTGRES
+data_source: postgres
 ```
 
-| Field | Description |
-|-------|-------------|
-| `name` | Project name |
-| `catalog` | MDL catalog (matches the `catalog` in your MDL manifest) |
-| `schema` | MDL schema |
-| `data_source` | Data source type (e.g. `POSTGRES`, `BIGQUERY`, `SNOWFLAKE`) |
+Required fields: `name`, `data_source`. The `schema_version` field controls the directory layout (default: 1 for legacy flat files, 2 for folder-per-entity).
 
-### `models/<model_name>.yml`
-
-One file per model. Example for an `orders` model:
+### `models/<name>/metadata.yml`
 
 ```yaml
 name: orders
@@ -63,34 +116,41 @@ table_reference:
   schema: public
   table: orders
 columns:
-  - name: order_id
+  - name: id
     type: INTEGER
-    is_calculated: false
     not_null: true
-    is_primary_key: true
-    properties: {}
-  - name: customer_id
-    type: INTEGER
-    is_calculated: false
-    not_null: false
-    properties: {}
   - name: total
     type: DECIMAL
-    is_calculated: false
-    not_null: false
-    properties: {}
-primary_key: order_id
+primary_key: id
 cached: false
 properties: {}
 ```
 
-### `relationships.yml`
+For derived models, put the SQL in `ref_sql.sql` alongside `metadata.yml` (takes precedence over `ref_sql` inline in YAML).
 
-All relationships between models in a single file:
+### `views/<name>/metadata.yml` + `sql.yml`
+
+```yaml
+# metadata.yml
+name: monthly_revenue
+description: "Revenue rolled up by month"
+properties: {}
+```
+
+```yaml
+# sql.yml
+statement: >
+  SELECT date_trunc('month', order_date) AS month,
+         SUM(total) AS revenue
+  FROM orders
+  GROUP BY 1
+```
+
+### `relationships.yml`
 
 ```yaml
 relationships:
-  - name: orders_customer
+  - name: orders_customers
     models:
       - orders
       - customers
@@ -98,98 +158,42 @@ relationships:
     condition: orders.customer_id = customers.customer_id
 ```
 
-### `views.yml`
+### `instructions.md`
 
-All views in a single file:
+Free-form Markdown. Consumed by LLM agents — not by the Wren engine. Common uses:
 
-```yaml
-views:
-  - name: recent_orders
-    statement: SELECT * FROM wren.public.orders WHERE order_date > '2024-01-01'
-    properties: {}
-```
+- Global constraints: "Always filter `status = 'active'`", "Use net_revenue not gross_revenue"
+- Domain hints: "The `segment` column only contains: enterprise, smb, self-serve"
+- Terminology: "Revenue means `net_revenue` in the finance context"
 
----
-
-## Field Mapping
-
-When converting between YAML (snake_case) and JSON (camelCase):
-
-| YAML field | JSON field |
-|------------|------------|
-| `data_source` | `dataSource` |
-| `table_reference` | `tableReference` |
-| `is_calculated` | `isCalculated` |
-| `not_null` | `notNull` |
-| `is_primary_key` | `isPrimaryKey` |
-| `primary_key` | `primaryKey` |
-| `join_type` | `joinType` |
-
-All other fields (`name`, `type`, `catalog`, `schema`, `table`, `condition`, `models`, `columns`, `cached`, `properties`) are identical in both formats.
+Instructions stay out of `target/mdl.json`. They are an agent-layer concern.
 
 ---
 
-## Building the Project
+## Lifecycle
 
-Building compiles the YAML project into `target/mdl.json`:
-
-```bash
-# target/mdl.json — assembled MDL manifest (camelCase)
+```
+wren context init          → scaffold project in current directory
+(edit models/, instructions.md)
+wren context validate      → check structure before building
+wren context build         → compile to target/mdl.json
+wren memory index          → build semantic index in .wren/memory/
+wren --sql "SELECT ..."    → start querying
 ```
 
-After building, deploy the MDL via the MCP server:
-
-```text
-deploy(mdl_file_path="/workspace/target/mdl.json")
-```
-
-Or place it in the workspace before starting the container so it is auto-loaded via `MDL_PATH`.
-
-Connection info is configured separately via the Web UI (`http://localhost:9001`) — it is not part of the build output.
+After MDL changes, re-run `build` and `memory index`.
 
 ---
 
-## Typical Workflow
+## Instructions and Agents
 
-**1. Configure connection info**
+Instructions have two complementary retrieval paths:
 
-Open the Web UI at `http://localhost:9001`, select the data source type, and fill in connection credentials. Use `/wren-connection-info` in Claude Code for per-connector field reference.
-
-**2. Generate MDL**
-
-Run `/wren-generate-mdl` in Claude Code. The skill uses MCP tools (`list_remote_tables`, `list_remote_constraints`) to introspect the database and build the MDL JSON.
-
-**3. Save project**
-
-Write `wren_project.yml`, `models/*.yml`, `relationships.yml`, and `views.yml` by converting the MDL JSON (camelCase) to snake_case YAML.
-
-**4. Add `target/` to `.gitignore`**
-
-```text
-target/
+```
+wren context instructions     → all instructions, once per session
+wren memory fetch -q "..."    → relevant instruction chunks + schema, per query
 ```
 
-**5. Commit to version control**
+The explicit path (`wren context instructions`) catches global constraints that are too distant from any specific query embedding to surface via semantic search. The implicit path (`wren memory fetch`) catches domain hints near the relevant models.
 
-Commit the model YAML files — `target/` is excluded.
-
-**6. Build**
-
-Read the YAML files, rename snake_case → camelCase, and write `target/mdl.json`.
-
-**7. Deploy**
-
-```text
-deploy(mdl_file_path="/workspace/target/mdl.json")
-```
-
----
-
-## Version Control Benefits
-
-Storing MDL as a YAML project (rather than a single JSON blob) gives you:
-
-- **Readable diffs** — model changes show up as clear line-level diffs in pull requests
-- **One file per model** — merge conflicts are isolated to the affected model file
-- **Separation of secrets** — connection info lives in the Web UI, not in the project; `target/` is gitignored
-- **Reproducible builds** — `target/mdl.json` is always regenerated from source, never committed
+Agents should run `wren context instructions` once at the start of a session and treat the output as rules that override defaults.

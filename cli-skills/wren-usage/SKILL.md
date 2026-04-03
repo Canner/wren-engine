@@ -30,7 +30,13 @@ For SQL syntax, CTE-based modeling, and error diagnosis, see [references/wren-sq
 |-----------|---------|
 | Default | `wren memory fetch -q "<question>"` |
 | Need specific model's columns | `wren memory fetch -q "..." --model <name> --threshold 0` |
-| Memory not installed | Read `~/.wren/mdl.json` directly |
+| Memory not installed | Read `target/mdl.json` in the project directory directly |
+
+If this is the first query in the conversation, also run:
+
+    wren context instructions
+
+If it returns content, treat it as **rules that override defaults** — apply them to all subsequent queries in this session.
 
 ### Step 2 — Recall past queries
 

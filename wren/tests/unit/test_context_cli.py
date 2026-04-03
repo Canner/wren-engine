@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
 from typer.testing import CliRunner
 
 from wren.cli import app
@@ -19,14 +18,14 @@ runner = CliRunner()
 def _make_valid_project(tmp_path: Path) -> Path:
     """Write a minimal valid v2 project in tmp_path."""
     (tmp_path / "wren_project.yml").write_text(
-        "schema_version: 2\nname: test_proj\nversion: \"1.0\"\n"
+        'schema_version: 2\nname: test_proj\nversion: "1.0"\n'
         "catalog: wren\nschema: public\ndata_source: postgres\n"
     )
     model_dir = tmp_path / "models" / "orders"
     model_dir.mkdir(parents=True)
     (model_dir / "metadata.yml").write_text(
         "name: orders\n"
-        "table_reference:\n  catalog: \"\"\n  schema: public\n  table: orders\n"
+        'table_reference:\n  catalog: ""\n  schema: public\n  table: orders\n'
         "columns:\n"
         "  - name: id\n    type: INTEGER\n    is_calculated: false\n    not_null: true\n    properties: {}\n"
         "  - name: total\n    type: DECIMAL\n    is_calculated: false\n    not_null: false\n    properties: {}\n"
@@ -34,8 +33,12 @@ def _make_valid_project(tmp_path: Path) -> Path:
     )
     view_dir = tmp_path / "views" / "summary"
     view_dir.mkdir(parents=True)
-    (view_dir / "metadata.yml").write_text("name: summary\ndescription: test view\nproperties: {}\n")
-    (view_dir / "sql.yml").write_text("statement: SELECT id, total FROM wren.public.orders\n")
+    (view_dir / "metadata.yml").write_text(
+        "name: summary\ndescription: test view\nproperties: {}\n"
+    )
+    (view_dir / "sql.yml").write_text(
+        "statement: SELECT id, total FROM wren.public.orders\n"
+    )
     (tmp_path / "relationships.yml").write_text("relationships: []\n")
     return tmp_path
 
@@ -90,7 +93,9 @@ def test_validate_strict_warns(tmp_path):
     assert result.exit_code == 0
 
     # With --strict: exit 1
-    result = runner.invoke(app, ["context", "validate", "--path", str(tmp_path), "--strict"])
+    result = runner.invoke(
+        app, ["context", "validate", "--path", str(tmp_path), "--strict"]
+    )
     assert result.exit_code == 1
 
 
@@ -171,3 +176,30 @@ def test_show_yaml(tmp_path):
 
     data = yaml.safe_load(result.output)
     assert "models" in data
+
+
+# ── wren context instructions ─────────────────────────────────────────────
+
+
+def test_instructions_prints_content(tmp_path):
+    _make_valid_project(tmp_path)
+    (tmp_path / "instructions.md").write_text("## Rule 1\nAlways use UTC.\n")
+    result = runner.invoke(app, ["context", "instructions", "--path", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    assert "Rule 1" in result.output
+    assert "UTC" in result.output
+
+
+def test_instructions_empty_when_missing(tmp_path):
+    _make_valid_project(tmp_path)
+    result = runner.invoke(app, ["context", "instructions", "--path", str(tmp_path)])
+    assert result.exit_code == 0
+    assert result.output.strip() == ""
+
+
+def test_instructions_discovers_project(tmp_path):
+    _make_valid_project(tmp_path)
+    (tmp_path / "instructions.md").write_text("custom rule here")
+    result = runner.invoke(app, ["context", "instructions", "--path", str(tmp_path)])
+    assert result.exit_code == 0
+    assert "custom rule here" in result.output
