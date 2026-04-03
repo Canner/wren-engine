@@ -25,7 +25,8 @@ pip install wren-engine[spark]       # Spark
 pip install wren-engine[athena]      # Athena
 pip install wren-engine[oracle]      # Oracle
 pip install 'wren-engine[memory]'    # Schema & query memory (LanceDB)
-pip install 'wren-engine[all]'       # All connectors + memory
+pip install 'wren-engine[ui]'        # Browser-based profile form (starlette + uvicorn)
+pip install 'wren-engine[all]'       # All connectors + memory + ui
 ```
 
 Requires Python 3.11+.
@@ -54,7 +55,20 @@ Requires Python 3.11+.
 }
 ```
 
-**2. Create `~/.wren/connection_info.json`** — your connection:
+**2. Configure a connection profile** — pick one of three ways:
+
+```bash
+# Browser form (recommended, requires wren-engine[ui])
+wren profile add my-db --ui
+
+# Interactive terminal prompts
+wren profile add my-db --interactive
+
+# Import from an existing connection file
+wren profile add my-db --from-file connection_info.json
+```
+
+Or create `~/.wren/connection_info.json` manually:
 
 ```json
 {
@@ -73,7 +87,7 @@ Requires Python 3.11+.
 wren --sql 'SELECT order_id FROM "orders" LIMIT 10'
 ```
 
-For the full CLI reference and per-datasource `connection_info.json` formats, see [`docs/cli.md`](docs/cli.md) and [`docs/connections.md`](docs/connections.md).
+For the full CLI reference and per-datasource connection field reference, see [`docs/cli.md`](docs/cli.md) and [`docs/connections.md`](docs/connections.md).
 
 **4. Index schema for semantic search** (optional, requires `wren-engine[memory]`):
 
@@ -82,6 +96,38 @@ wren memory index                              # index MDL schema
 wren memory fetch -q "customer order price"    # fetch relevant schema context
 wren memory store --nl "top customers" --sql "SELECT ..."  # store NL→SQL pair
 wren memory recall -q "best customers"         # retrieve similar past queries
+```
+
+---
+
+## Connection profiles
+
+Profiles let you store named connection configurations in `~/.wren/profiles.yml` and switch between them easily — useful when working across multiple databases or environments.
+
+```bash
+# Add a profile (browser form, interactive prompts, or file import)
+wren profile add prod --ui                        # opens http://localhost:<port>
+wren profile add staging --interactive            # terminal prompts
+wren profile add local --from-file conn.json      # import existing file
+
+# List and switch profiles
+wren profile list                                 # * marks the active profile
+wren profile switch prod
+
+# Inspect a profile (sensitive fields masked)
+wren profile debug prod
+
+# Remove a profile
+wren profile rm old-profile --force
+```
+
+The `--ui` flag opens a browser-based form that auto-derives fields from each datasource's schema — including file upload for BigQuery credentials, variant selection for Databricks/Redshift, and sensible defaults for all 20+ supported sources. Requires `pip install 'wren-engine[ui]'`.
+
+Once a profile is active, `wren` uses it automatically:
+
+```bash
+wren profile switch prod
+wren --sql 'SELECT COUNT(*) FROM "orders"'        # connects using prod profile
 ```
 
 ---
@@ -112,11 +158,18 @@ just format         # Auto-fix
 
 | Command | What it runs | Docker needed |
 |---------|-------------|---------------|
-| `just test-unit` | Unit tests | No |
+| `just test-unit` | Unit tests (engine, CTE rewriter, field registry, profiles) | No |
 | `just test-duckdb` | DuckDB connector tests | No |
 | `just test-postgres` | PostgreSQL connector tests | Yes |
 | `just test-mysql` | MySQL connector tests | Yes |
 | `just test` | All tests | Yes |
+
+Profile web tests (`test_profile_web.py`) require `wren-engine[ui]`:
+
+```bash
+uv sync --extra dev --extra ui --find-links ../wren-core-py/target/wheels/
+uv run pytest tests/test_profile_web.py -v
+```
 
 ## Publishing
 
