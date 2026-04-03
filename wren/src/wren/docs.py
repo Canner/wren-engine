@@ -7,59 +7,8 @@ from typing import Any, Union
 
 from pydantic import SecretStr
 
-from wren.model import (
-    AthenaConnectionInfo,
-    BaseConnectionInfo,
-    BigQueryDatasetConnectionInfo,
-    BigQueryProjectConnectionInfo,
-    CannerConnectionInfo,
-    ClickHouseConnectionInfo,
-    ConnectionUrl,
-    DatabricksServicePrincipalConnectionInfo,
-    DatabricksTokenConnectionInfo,
-    DorisConnectionInfo,
-    GcsFileConnectionInfo,
-    LocalFileConnectionInfo,
-    MinioFileConnectionInfo,
-    MSSqlConnectionInfo,
-    MySqlConnectionInfo,
-    OracleConnectionInfo,
-    PostgresConnectionInfo,
-    RedshiftConnectionInfo,
-    RedshiftIAMConnectionInfo,
-    S3FileConnectionInfo,
-    SnowflakeConnectionInfo,
-    SparkConnectionInfo,
-    TrinoConnectionInfo,
-)
-
-# Mapping from DataSource name → list of ConnectionInfo classes.
-# Sources with discriminated unions list all variants.
-DATASOURCE_MODELS: dict[str, list[type[BaseConnectionInfo]]] = {
-    "athena": [AthenaConnectionInfo],
-    "bigquery": [BigQueryDatasetConnectionInfo, BigQueryProjectConnectionInfo],
-    "canner": [CannerConnectionInfo],
-    "clickhouse": [ClickHouseConnectionInfo],
-    "databricks": [
-        DatabricksTokenConnectionInfo,
-        DatabricksServicePrincipalConnectionInfo,
-    ],
-    "doris": [DorisConnectionInfo],
-    "duckdb": [LocalFileConnectionInfo],
-    "gcs_file": [GcsFileConnectionInfo],
-    "local_file": [LocalFileConnectionInfo],
-    "minio_file": [MinioFileConnectionInfo],
-    "mssql": [MSSqlConnectionInfo],
-    "mysql": [MySqlConnectionInfo],
-    "oracle": [OracleConnectionInfo],
-    "postgres": [PostgresConnectionInfo],
-    "redshift": [RedshiftConnectionInfo, RedshiftIAMConnectionInfo],
-    "s3_file": [S3FileConnectionInfo],
-    "snowflake": [SnowflakeConnectionInfo],
-    "spark": [SparkConnectionInfo],
-    "trino": [TrinoConnectionInfo],
-    "connection_url": [ConnectionUrl],
-}
+from wren.model import BaseConnectionInfo
+from wren.model.field_registry import DATASOURCE_MODELS  # noqa: F401
 
 
 def _resolve_sources(
