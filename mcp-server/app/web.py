@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import sys
 import threading
 from pathlib import Path
 from typing import Callable
@@ -21,12 +22,46 @@ except ImportError:
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
+
+def _import_field_registry():
+    """Import wren.model.field_registry, bypassing app/wren.py shadow.
+
+    When app/wren.py runs as a script, Python adds app/ to sys.path,
+    causing ``import wren`` to find app/wren.py (a file module) instead
+    of the installed wren package (a directory with __path__).
+    We temporarily remove the app/ path entry and any shadow module
+    so the real package is found.
+    """
+    app_dir = os.path.realpath(str(Path(__file__).parent))
+
+    # Remove app/ entries from sys.path
+    saved_paths = [(i, p) for i, p in enumerate(sys.path) if os.path.realpath(p) == app_dir]
+    for _, p in reversed(saved_paths):
+        sys.path.remove(p)
+
+    # Remove shadow wren module (file, not package) if present
+    saved_mod = None
+    wren_mod = sys.modules.get("wren")
+    if wren_mod is not None and not hasattr(wren_mod, "__path__"):
+        saved_mod = sys.modules.pop("wren")
+
+    try:
+        from wren.model import field_registry
+
+        return field_registry
+    finally:
+        # Restore sys.path entries at original positions
+        for i, p in saved_paths:
+            sys.path.insert(i, p)
+        if saved_mod is not None:
+            sys.modules.setdefault("wren", saved_mod)
+
+
 def _fields_to_web_format(datasource: str) -> list[dict]:
     """Convert FieldDef list to the dict format expected by _fields.html template."""
-    from wren.model.field_registry import get_fields  # noqa: PLC0415
-
+    registry = _import_field_registry()
     result = []
-    for f in get_fields(datasource.lower()):
+    for f in registry.get_fields(datasource.lower()):
         entry: dict = {
             "name": f.name,
             "label": f.label,
@@ -45,9 +80,8 @@ def _fields_to_web_format(datasource: str) -> list[dict]:
 
 def _build_datasource_fields() -> dict[str, list[dict]]:
     """Build DATASOURCE_FIELDS from the shared field registry."""
-    from wren.model.field_registry import get_datasource_options  # noqa: PLC0415
-
-    return {ds.upper(): _fields_to_web_format(ds) for ds in get_datasource_options()}
+    registry = _import_field_registry()
+    return {ds.upper(): _fields_to_web_format(ds) for ds in registry.get_datasource_options()}
 
 
 try:
