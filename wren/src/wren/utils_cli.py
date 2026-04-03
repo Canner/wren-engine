@@ -45,10 +45,18 @@ def parse_types_cmd(
     """
     from wren.type_mapping import parse_types  # noqa: PLC0415
 
-    if input_file:
-        data = json.loads(Path(input_file).read_text())
-    else:
-        data = json.load(sys.stdin)
+    try:
+        if input_file:
+            path = Path(input_file)
+            if not path.exists():
+                typer.echo(f"Error: file not found: {input_file}", err=True)
+                raise typer.Exit(1)
+            data = json.loads(path.read_text())
+        else:
+            data = json.load(sys.stdin)
+    except json.JSONDecodeError as e:
+        typer.echo(f"Error: invalid JSON input: {e}", err=True)
+        raise typer.Exit(1)
 
     results = parse_types(data, dialect, type_field=type_field)
     typer.echo(json.dumps(results, indent=2))
