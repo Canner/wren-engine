@@ -4,7 +4,7 @@ Usage:
     from wren.profile_web import create_app, start
 
     # For testing:
-    app, result = create_app("my-profile")
+    app, result, server_ref = create_app("my-profile")
 
     # For CLI:
     result = start("my-profile", activate=True)
@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import json
 import socket
+from html import escape
 from pathlib import Path
 from typing import Any
 
@@ -96,23 +97,27 @@ def create_app(
             profile[f"{ds}_type"] = variant_key
 
         _INTERNAL = {"datasource", "_profile_name", "_variant", "_json"}
-        if "_json" in form and form["_json"].strip():
+        raw_json = form.get("_json")
+        if isinstance(raw_json, str) and raw_json.strip():
             try:
-                profile.update(json.loads(form["_json"]))
+                parsed = json.loads(raw_json)
+                if not isinstance(parsed, dict):
+                    raise json.JSONDecodeError("expected object", raw_json, 0)
+                profile.update(parsed)
             except json.JSONDecodeError:
                 return HTMLResponse(
                     '<small style="color:var(--pico-color-red-500)">✗ Invalid JSON.</small>'
                 )
         else:
             for k, v in form.items():
-                if k not in _INTERNAL and v.strip():
+                if k not in _INTERNAL and isinstance(v, str) and v.strip():
                     profile[k] = v.strip()
 
         try:
             add_profile(name, profile, activate=activate)
         except (ValueError, OSError) as exc:
             return HTMLResponse(
-                f'<small style="color:var(--pico-color-red-500)">✗ Failed to save profile: {exc}</small>'
+                f'<small style="color:var(--pico-color-red-500)">✗ Failed to save profile: {escape(str(exc))}</small>'
             )
         result.update({"name": name, "datasource": ds})
 
@@ -124,7 +129,7 @@ def create_app(
 
         return HTMLResponse(
             f'<small style="color:var(--pico-color-green-500)">'
-            f"✓ Profile <strong>{name}</strong> saved. You can close this tab.</small>"
+            f"✓ Profile <strong>{escape(name)}</strong> saved. You can close this tab.</small>"
         )
 
     app = Starlette(
