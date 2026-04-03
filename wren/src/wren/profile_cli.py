@@ -19,8 +19,12 @@ def list_cmd() -> None:
     """List all profiles, highlighting the active one."""
     from wren.profile import get_active_name, list_profiles  # noqa: PLC0415
 
-    profiles = list_profiles()
-    active = get_active_name()
+    try:
+        profiles = list_profiles()
+        active = get_active_name()
+    except ValueError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(1)
     if not profiles:
         typer.echo("No profiles configured. Run `wren profile add` to create one.")
         return
@@ -64,8 +68,8 @@ def add(
         if not path.exists():
             typer.echo(f"Error: file not found: {from_file}", err=True)
             raise typer.Exit(1)
-        text = path.read_text()
         try:
+            text = path.read_text()
             if path.suffix in (".yml", ".yaml"):
                 raw = yaml.safe_load(text)
             else:
@@ -153,9 +157,16 @@ def _interactive_add(default_ds: str | None) -> dict:
         ("user", ""),
         ("password", ""),
     ]
+    _SENSITIVE_FIELDS = {"password", "credentials", "secret", "token", "private_key"}
     fields = _COMMON_FIELDS.get(ds, default_fields)
     for field, default in fields:
-        value = typer.prompt(f"  {field}", default=default, show_default=bool(default))
+        hide = field.lower() in _SENSITIVE_FIELDS
+        value = typer.prompt(
+            f"  {field}",
+            default=default,
+            show_default=bool(default) and not hide,
+            hide_input=hide,
+        )
         if value:
             profile[field] = value
     profile.update(_AUTO_FIELDS.get(ds, {}))
@@ -176,7 +187,12 @@ def rm(
         confirm = typer.confirm(f"Remove profile '{name}'?")
         if not confirm:
             raise typer.Abort()
-    if remove_profile(name):
+    try:
+        found = remove_profile(name)
+    except ValueError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(1)
+    if found:
         typer.echo(f"Profile '{name}' removed.")
     else:
         typer.echo(f"Error: profile '{name}' not found.", err=True)
@@ -190,7 +206,12 @@ def switch(
     """Switch the active profile."""
     from wren.profile import switch_profile  # noqa: PLC0415
 
-    if switch_profile(name):
+    try:
+        found = switch_profile(name)
+    except ValueError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(1)
+    if found:
         typer.echo(f"Active profile: {name}")
     else:
         typer.echo(f"Error: profile '{name}' not found.", err=True)
@@ -206,7 +227,11 @@ def debug(
     """Show resolved profile config (sensitive fields masked)."""
     from wren.profile import debug_profile  # noqa: PLC0415
 
-    info = debug_profile(name)
+    try:
+        info = debug_profile(name)
+    except ValueError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(1)
     if "error" in info:
         typer.echo(f"Error: {info['error']}", err=True)
         raise typer.Exit(1)
