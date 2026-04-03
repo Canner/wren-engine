@@ -37,15 +37,33 @@ def _convert_keys(obj: Any) -> Any:
 # ── Project discovery ─────────────────────────────────────────────────────
 
 
+def load_global_config() -> dict:
+    """Load ~/.wren/config.yml (global preferences)."""
+    config_file = _WREN_HOME / "config.yml"
+    if not config_file.exists():
+        return {}
+    return yaml.safe_load(config_file.read_text()) or {}
+
+
 def discover_project_path(explicit: str | None = None) -> Path:
     """Return the project directory path.
 
-    Priority: explicit arg > walk up from cwd to find wren_project.yml > ~/.wren/project/.
+    Priority:
+    1. explicit arg (--project / --path flag)
+    2. WREN_PROJECT_HOME env var
+    3. Walk up from cwd looking for wren_project.yml
+    4. default_project in ~/.wren/config.yml
+    5. Raise SystemExit with actionable message
     """
     if explicit:
         return Path(explicit).expanduser()
 
-    # Walk up from cwd looking for wren_project.yml
+    # 2. WREN_PROJECT_HOME env var
+    env = os.environ.get("WREN_PROJECT_HOME")
+    if env:
+        return Path(env).expanduser()
+
+    # 3. Walk up from cwd looking for wren_project.yml
     current = Path.cwd()
     for parent in [current, *current.parents]:
         if (parent / _PROJECT_FILE).exists():
@@ -54,7 +72,15 @@ def discover_project_path(explicit: str | None = None) -> Path:
         if parent == Path.home() or parent == parent.parent:
             break
 
-    return _DEFAULT_PROJECT
+    # 4. ~/.wren/config.yml default_project
+    cfg = load_global_config()
+    if cfg.get("default_project"):
+        return Path(cfg["default_project"]).expanduser()
+
+    raise SystemExit(
+        "Error: no wren project found.\n"
+        "  Run `wren context init` to create one, or set WREN_PROJECT_HOME."
+    )
 
 
 def load_project_config(project_path: Path) -> dict:
@@ -231,13 +257,13 @@ def build_manifest(project_path: Path) -> dict:
     """Build a complete MDL manifest dict from the project directory.
 
     Returns the manifest in snake_case (YAML-native form).
-    Use _convert_keys() to get the camelCase JSON form.
+    Use build_json() to get the camelCase JSON form for the engine.
+    Instructions are not included — use load_instructions() separately.
     """
     project_config = load_project_config(project_path)
     models = load_models(project_path)
     views = load_views(project_path)
     relationships = load_relationships(project_path)
-    instructions = load_instructions(project_path)
 
     # Strip internal metadata
     for m in models:
@@ -245,7 +271,7 @@ def build_manifest(project_path: Path) -> dict:
     for v in views:
         v.pop("_source_dir", None)
 
-    manifest: dict[str, Any] = {
+    return {
         "catalog": project_config.get("catalog", "wren"),
         "schema": project_config.get("schema", "public"),
         "models": models,
@@ -253,21 +279,10 @@ def build_manifest(project_path: Path) -> dict:
         "views": views,
     }
 
-    if instructions:
-        manifest["_instructions"] = instructions
-
-    return manifest
-
 
 def build_json(project_path: Path) -> dict:
     """Build the final camelCase JSON manifest for the engine."""
-    manifest = build_manifest(project_path)
-    # _instructions is a special key — keep as-is (not a YAML schema field)
-    instructions = manifest.pop("_instructions", None)
-    result = _convert_keys(manifest)
-    if instructions:
-        result["_instructions"] = instructions
-    return result
+    return _convert_keys(build_manifest(project_path))
 
 
 def save_target(manifest_json: dict, project_path: Path) -> Path:

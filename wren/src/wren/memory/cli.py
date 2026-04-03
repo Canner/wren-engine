@@ -14,8 +14,6 @@ memory_app = typer.Typer(
 )
 
 _WREN_HOME = Path.home() / ".wren"
-_DEFAULT_MDL = _WREN_HOME / "mdl.json"
-_DEFAULT_MEMORY = _WREN_HOME / "memory"
 
 # ── Shared option types ───────────────────────────────────────────────────
 
@@ -24,7 +22,7 @@ PathOpt = Annotated[
     typer.Option(
         "--path",
         "-p",
-        help=f"LanceDB storage directory. Defaults to {_DEFAULT_MEMORY}.",
+        help="LanceDB storage directory. Defaults to <project>/.wren/memory/.",
     ),
 ]
 MdlOpt = Annotated[
@@ -32,7 +30,7 @@ MdlOpt = Annotated[
     typer.Option(
         "--mdl",
         "-m",
-        help=f"Path to MDL JSON file. Defaults to {_DEFAULT_MDL}.",
+        help="Path to MDL JSON file. Defaults to <project>/target/mdl.json.",
     ),
 ]
 OutputOpt = Annotated[
@@ -43,9 +41,30 @@ OutputOpt = Annotated[
 # ── Helpers ───────────────────────────────────────────────────────────────
 
 
+def _default_memory_path() -> Path:
+    """Return the project-local memory path, or ~/.wren/memory/ as fallback."""
+    try:
+        from wren.context import discover_project_path  # noqa: PLC0415
+
+        return discover_project_path() / ".wren" / "memory"
+    except (SystemExit, Exception):
+        return _WREN_HOME / "memory"
+
+
 def _load_manifest(mdl: str | None) -> dict:
     """Load and return the MDL manifest as a dict."""
-    mdl_path = Path(mdl).expanduser() if mdl else _DEFAULT_MDL
+    if mdl:
+        mdl_path = Path(mdl).expanduser()
+    else:
+        try:
+            from wren.context import discover_project_path  # noqa: PLC0415
+
+            mdl_path = discover_project_path() / "target" / "mdl.json"
+        except SystemExit:
+            typer.echo(
+                "Error: no wren project found and --mdl not specified.", err=True
+            )
+            raise typer.Exit(1)
     if not mdl_path.exists():
         typer.echo(
             f"Error: MDL file not found: {mdl_path}",
@@ -61,10 +80,11 @@ def _load_manifest(mdl: str | None) -> dict:
 
 def _get_store(path: str | None):
     """Lazy-import and construct a MemoryStore."""
+    resolved = path or str(_default_memory_path())
     try:
         from wren.memory.store import MemoryStore  # noqa: PLC0415
 
-        return MemoryStore(path=path)
+        return MemoryStore(path=resolved)
     except ModuleNotFoundError as e:
         if (e.name or "").split(".")[0] not in {
             "lancedb",
@@ -140,7 +160,7 @@ def index(
     """Index MDL schema into LanceDB (and optionally seed example queries)."""
     manifest = _load_manifest(mdl)
 
-    if include_instructions and "_instructions" not in manifest:
+    if include_instructions:
         try:
             from wren.context import (  # noqa: I001, PLC0415
                 discover_project_path,
@@ -148,10 +168,11 @@ def index(
             )
 
             project_path = discover_project_path()
-            instructions = load_instructions(project_path)
-            if instructions:
-                manifest["_instructions"] = instructions
+            instr = load_instructions(project_path)
+            if instr:
+                manifest["_instructions"] = instr
         except (
+            SystemExit,
             FileNotFoundError,
             PermissionError,
             IsADirectoryError,

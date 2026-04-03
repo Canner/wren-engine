@@ -20,39 +20,23 @@ _DEFAULT_CONN = _WREN_HOME / "connection_info.json"
 
 
 def _require_mdl(mdl: str | None) -> str:
-    """Return mdl arg if given, else auto-discover.
-
-    Search order:
-    1. Explicit --mdl flag
-    2. ~/.wren/mdl.json (legacy)
-    3. target/mdl.json in nearest Wren project (walk up from cwd)
-    4. ~/.wren/project/target/mdl.json (global default project)
-    """
+    """Return mdl path — explicit flag or auto-discovered from project root."""
     if mdl is not None:
         return mdl
-    if _DEFAULT_MDL.exists():
-        return str(_DEFAULT_MDL)
+    try:
+        from wren.context import discover_project_path  # noqa: PLC0415
 
-    # Walk up from cwd looking for wren_project.yml → target/mdl.json
-    current = Path.cwd()
-    for parent in [current, *current.parents]:
-        target = parent / "target" / "mdl.json"
-        if (parent / "wren_project.yml").exists() and target.exists():
+        project_path = discover_project_path()
+        target = project_path / "target" / "mdl.json"
+        if target.exists():
             return str(target)
-        if parent == Path.home() or parent == parent.parent:
-            break
-
-    # Global default project
-    global_target = _WREN_HOME / "project" / "target" / "mdl.json"
-    if global_target.exists():
-        return str(global_target)
-
-    typer.echo(
-        "Error: --mdl not specified and no mdl.json found.\n"
-        "  Searched: ~/.wren/mdl.json, <project>/target/mdl.json\n"
-        "  Hint: run `wren context build` first.",
-        err=True,
-    )
+        typer.echo(
+            f"Error: project found at {project_path} but target/mdl.json missing.\n"
+            "  Hint: run `wren context build` first.",
+            err=True,
+        )
+    except SystemExit as e:
+        typer.echo(str(e), err=True)
     raise typer.Exit(1)
 
 

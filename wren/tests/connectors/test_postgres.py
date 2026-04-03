@@ -15,11 +15,10 @@ import psycopg
 import pytest
 from testcontainers.postgres import PostgresContainer
 
-from wren import WrenEngine
-from wren.model.data_source import DataSource
-
 from tests.suite.manifests import make_tpch_manifest
 from tests.suite.query import WrenQueryTestSuite
+from wren import WrenEngine
+from wren.model.data_source import DataSource
 
 pytestmark = pytest.mark.postgres
 
@@ -35,9 +34,7 @@ def _load_tpch(conn_str: str) -> None:
         "SELECT o_orderkey, o_custkey, o_orderstatus, "
         "cast(o_totalprice as double), o_orderdate FROM orders"
     ).fetchall()
-    customer_rows = duck.execute(
-        "SELECT c_custkey, c_name FROM customer"
-    ).fetchall()
+    customer_rows = duck.execute("SELECT c_custkey, c_name FROM customer").fetchall()
     duck.close()
 
     with psycopg.connect(conn_str) as pg:
@@ -61,9 +58,7 @@ def _load_tpch(conn_str: str) -> None:
                     c_name    VARCHAR(25) NOT NULL
                 )
             """)
-            cur.executemany(
-                "INSERT INTO customer VALUES (%s, %s)", customer_rows
-            )
+            cur.executemany("INSERT INTO customer VALUES (%s, %s)", customer_rows)
 
 
 class TestPostgres(WrenQueryTestSuite):
@@ -86,5 +81,7 @@ class TestPostgres(WrenQueryTestSuite):
                 "password": parsed.password,
             }
             manifest_str = base64.b64encode(orjson.dumps(self.manifest)).decode()
-            with WrenEngine(manifest_str, DataSource.postgres, conn_info, fallback=False) as e:
+            with WrenEngine(
+                manifest_str, DataSource.postgres, conn_info, fallback=False
+            ) as e:
                 yield e
