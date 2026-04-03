@@ -122,8 +122,8 @@ def _interactive_add(default_ds: str | None) -> dict:
     )
     profile: dict = {"datasource": ds}
 
-    # Field specs: list of (name, default) pairs.
-    # duckdb/local_file use url (directory path) + format ("duckdb" or "csv"/"parquet").
+    # Fields to prompt for each datasource: list of (name, default) pairs.
+    # format is injected automatically for duckdb/local_file — not prompted.
     _COMMON_FIELDS: dict[str, list[tuple[str, str]]] = {
         "postgres": [
             ("host", ""),
@@ -140,8 +140,12 @@ def _interactive_add(default_ds: str | None) -> dict:
             ("password", ""),
         ],
         "bigquery": [("project_id", ""), ("dataset_id", ""), ("credentials", "")],
-        "duckdb": [("url", ""), ("format", "duckdb")],
-        "local_file": [("url", ""), ("format", "csv")],
+        "duckdb": [("url", "")],
+        "local_file": [("url", "")],
+    }
+    _AUTO_FIELDS: dict[str, dict[str, str]] = {
+        "duckdb": {"format": "duckdb"},
+        "local_file": {"format": "csv"},
     }
     default_fields: list[tuple[str, str]] = [
         ("host", ""),
@@ -155,6 +159,7 @@ def _interactive_add(default_ds: str | None) -> dict:
         value = typer.prompt(f"  {field}", default=default, show_default=bool(default))
         if value:
             profile[field] = value
+    profile.update(_AUTO_FIELDS.get(ds, {}))
     return profile
 
 
