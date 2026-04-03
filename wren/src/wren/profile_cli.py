@@ -110,13 +110,15 @@ def add(
 
 def _interactive_add(default_ds: str | None) -> dict:
     """Guided interactive profile creation."""
+    import click  # noqa: PLC0415
+
     from wren.model.data_source import DataSource  # noqa: PLC0415
 
     ds_choices = [e.value for e in DataSource]
     ds = typer.prompt(
         "Data source",
         default=default_ds,
-        type=typer.Choice(ds_choices, case_sensitive=False),
+        type=click.Choice(ds_choices, case_sensitive=False),
     )
     profile: dict = {"datasource": ds}
 
