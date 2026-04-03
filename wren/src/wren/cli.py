@@ -381,6 +381,10 @@ def version():
     typer.echo(f"wren-engine {__version__}")
 
 
+from wren.utils_cli import utils_app  # noqa: E402, PLC0415
+
+app.add_typer(utils_app)
+
 try:
     import lancedb  # noqa: PLC0415, F401
     import sentence_transformers  # noqa: PLC0415, F401
