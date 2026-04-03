@@ -20,16 +20,20 @@ Example usage:
 
 from __future__ import annotations
 
+import base64
+import json
 from typing import Any
 
 import pyarrow as pa
 from sqlglot import exp, parse_one
 
+from wren.config import WrenConfig
 from wren.connector.factory import get_connector
 from wren.mdl import get_manifest_extractor, get_session_context, to_json_base64
 from wren.mdl.cte_rewriter import CTERewriter, get_sqlglot_dialect
 from wren.model.data_source import DataSource
 from wren.model.error import DIALECT_SQL, ErrorCode, ErrorPhase, WrenError
+from wren.policy import validate_sql_policy
 
 
 class WrenEngine:
@@ -56,6 +60,7 @@ class WrenEngine:
         function_path: str | None = None,
         *,
         fallback: bool = True,
+        config: WrenConfig | None = None,
     ):
         if isinstance(data_source, str):
             data_source = DataSource(data_source)
@@ -64,6 +69,7 @@ class WrenEngine:
         self.data_source = data_source
         self.function_path = function_path
         self._fallback = fallback
+        self._config = config or WrenConfig()
 
         # Build typed ConnectionInfo if a raw dict was given.
         # An empty dict is allowed for transpile-only usage (no DB connection).
@@ -164,11 +170,27 @@ class WrenEngine:
             # Use sqlglot (not DataFusion parser) since input is target dialect.
             dialect = get_sqlglot_dialect(self.data_source)
             ast = parse_one(sql, dialect=dialect)
+
+            # Policy validation: check tables and functions before execution.
+            if self._config.strict_mode or self._config.denied_functions:
+                manifest_json = json.loads(base64.b64decode(self.manifest_str))
+                model_names = {m["name"] for m in manifest_json.get("models", [])}
+                validate_sql_policy(ast, model_names, self._config)
+
             tables = [t.name for t in ast.find_all(exp.Table)]
             extractor = get_manifest_extractor(self.manifest_str)
             manifest = extractor.extract_by(tables)
             effective_manifest = to_json_base64(manifest)
-        except Exception:
+        except WrenError:
+            raise
+        except Exception as e:
+            if self._config.strict_mode or self._config.denied_functions:
+                raise WrenError(
+                    ErrorCode.INVALID_SQL,
+                    str(e),
+                    phase=ErrorPhase.SQL_PLANNING,
+                    metadata={DIALECT_SQL: sql},
+                ) from e
             effective_manifest = self.manifest_str
 
         try:

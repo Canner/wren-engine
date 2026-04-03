@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Annotated, Optional
 
@@ -10,7 +11,7 @@ import typer
 
 app = typer.Typer(name="wren", help="Wren Engine CLI", no_args_is_help=False)
 
-_WREN_HOME = Path.home() / ".wren"
+_WREN_HOME = Path(os.environ.get("WREN_HOME", Path.home() / ".wren")).expanduser()
 _DEFAULT_MDL = _WREN_HOME / "mdl.json"
 _DEFAULT_CONN = _WREN_HOME / "connection_info.json"
 
@@ -137,8 +138,10 @@ def _build_engine(
     *,
     conn_required: bool = True,
 ):
+    from wren.config import load_config  # noqa: PLC0415
     from wren.engine import WrenEngine  # noqa: PLC0415
     from wren.model.data_source import DataSource  # noqa: PLC0415
+    from wren.model.error import WrenError  # noqa: PLC0415
 
     manifest_str = _load_manifest(_require_mdl(mdl))
     conn_dict = _load_conn(connection_info, connection_file, required=conn_required)
@@ -150,9 +153,17 @@ def _build_engine(
         typer.echo(f"Error: unknown datasource '{ds_str}'", err=True)
         raise typer.Exit(1)
 
-    return WrenEngine(
-        manifest_str=manifest_str, data_source=ds, connection_info=conn_dict
-    )
+    try:
+        config = load_config(_WREN_HOME)
+        return WrenEngine(
+            manifest_str=manifest_str,
+            data_source=ds,
+            connection_info=conn_dict,
+            config=config,
+        )
+    except (WrenError, OSError) as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1) from e
 
 
 # ── Shared option types ────────────────────────────────────────────────────
@@ -299,8 +310,10 @@ def dry_plan(
     connection_file: ConnFileOpt = None,
 ):
     """Plan SQL through MDL and print the expanded SQL (no DB required)."""
+    from wren.config import load_config  # noqa: PLC0415
     from wren.engine import WrenEngine  # noqa: PLC0415
     from wren.model.data_source import DataSource  # noqa: PLC0415
+    from wren.model.error import WrenError  # noqa: PLC0415
 
     manifest_str = _load_manifest(_require_mdl(mdl))
     conn_dict = (
@@ -314,8 +327,14 @@ def dry_plan(
         typer.echo(f"Error: unknown datasource '{ds_str}'", err=True)
         raise typer.Exit(1)
 
+    try:
+        config = load_config(_WREN_HOME)
+    except (WrenError, OSError) as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1) from e
+
     with WrenEngine(
-        manifest_str=manifest_str, data_source=ds, connection_info={}
+        manifest_str=manifest_str, data_source=ds, connection_info={}, config=config
     ) as engine:
         try:
             result = engine.dry_plan(sql)
