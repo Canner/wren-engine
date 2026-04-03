@@ -249,7 +249,9 @@ Generic rule: split on `_`, capitalize each word after the first, join. All othe
 
 ```text
 target/
+.wren/
 ```
 
-Source YAML and `instructions.md` are committed. Build output and runtime state are not.
-Commit `.wren/memory/` if you want to share indexes and query history across environments, but be mindful of potential conflicts if multiple people are updating the same project.
+Source YAML and `instructions.md` are committed. Build output (`target/`) is always gitignored — it is derived from source YAML and can be regenerated with `wren context build`.
+
+`.wren/memory/` contains both schema indexes (derived, rebuildable) and query history (NL-SQL pairs confirmed by users, not rebuildable). If your team wants to share confirmed query history as few-shot examples across members, you can commit `.wren/memory/` — but be aware that LanceDB files are binary and may produce merge conflicts when multiple people index or store concurrently.
