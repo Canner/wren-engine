@@ -200,6 +200,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/huggingface
-          key: hf-paraphrase-multilingual-MiniLM-L12-v2
+          key: hf-paraphrase-MiniLM-L3-v2
       - name: Run memory tests
+        env:
+          WREN_EMBEDDING_MODEL: paraphrase-MiniLM-L3-v2
         run: uv run pytest tests/unit/test_memory.py -v
