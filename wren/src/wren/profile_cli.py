@@ -141,11 +141,10 @@ def _interactive_add(default_ds: str | None) -> dict:
         ],
         "bigquery": [("project_id", ""), ("dataset_id", ""), ("credentials", "")],
         "duckdb": [("url", "")],
-        "local_file": [("url", "")],
+        "local_file": [("url", ""), ("format", "csv")],
     }
     _AUTO_FIELDS: dict[str, dict[str, str]] = {
         "duckdb": {"format": "duckdb"},
-        "local_file": {"format": "csv"},
     }
     default_fields: list[tuple[str, str]] = [
         ("host", ""),
