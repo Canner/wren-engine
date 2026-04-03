@@ -13,8 +13,8 @@ class SparkConnector(ConnectorABC):
     def _create_session(self):
         from pyspark.sql import SparkSession  # noqa: PLC0415
 
-        host = self.connection_info.host.get_secret_value()
-        port = self.connection_info.port.get_secret_value()
+        host = self.connection_info.host
+        port = self.connection_info.port
         return (
             SparkSession.builder.remote(f"sc://{host}:{port}")
             .appName("wren")
