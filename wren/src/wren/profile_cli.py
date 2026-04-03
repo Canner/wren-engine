@@ -90,7 +90,7 @@ def add(
                 f"Profile '{result['name']}' saved (datasource: {result['datasource']})"
             )
             if activate:
-                typer.echo(f"  Run `wren profile switch {result['name']}` to activate.")
+                typer.echo(f"  Profile '{result['name']}' is now active.")
         else:
             typer.echo("Cancelled.", err=True)
             raise typer.Exit(1)
@@ -193,8 +193,12 @@ def _interactive_add(default_ds: str | None) -> dict:
                 import base64  # noqa: PLC0415
                 from pathlib import Path  # noqa: PLC0415
 
-                content = Path(path_str).expanduser().read_bytes()
-                profile[f.name] = base64.b64encode(content).decode()
+                file_path = Path(path_str).expanduser()
+                try:
+                    content = file_path.read_bytes()
+                    profile[f.name] = base64.b64encode(content).decode()
+                except (FileNotFoundError, PermissionError) as e:
+                    typer.echo(f"  Warning: could not read file: {e}", err=True)
         # Sensitive fields: hide input
         elif f.sensitive or f.input_type == "password":
             value = typer.prompt(

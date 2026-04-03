@@ -34,12 +34,14 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 def create_app(
     profile_name: str,
     activate: bool = False,
-) -> tuple[Starlette, dict[str, Any]]:
+) -> tuple[Starlette, dict[str, Any], list]:
     """Create the profile web app.
 
     Returns:
-        (app, result) where result dict is populated with {"name", "datasource"}
-        after a successful POST /save.
+        (app, result, server_ref) where result dict is populated with
+        {"name", "datasource"} after a successful POST /save, and
+        server_ref is a mutable list the start() function appends the
+        uvicorn.Server instance into so the save handler can trigger shutdown.
     """
     result: dict[str, Any] = {}
     # Mutable reference so the save handler can reach the server instance

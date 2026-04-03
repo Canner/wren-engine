@@ -74,7 +74,7 @@ class AthenaConnectionInfo(BaseConnectionInfo):
     web_identity_token: SecretStr | None = Field(default=None)
     role_arn: SecretStr | None = Field(default=None)
     role_session_name: str | None = Field(default=None)
-    region_name: str = Field(examples=["us-west-2"], default=None)
+    region_name: str | None = Field(examples=["us-west-2"], default=None)
     schema_name: str | None = Field(alias="schema_name", default="default")
 
 
