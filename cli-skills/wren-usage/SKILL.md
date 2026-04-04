@@ -40,25 +40,83 @@ wren memory recall -q "<question>" --limit 3
 
 Use results as few-shot examples. Skip if empty.
 
-### Step 3 — Write and execute SQL
+### Step 2.5 — Assess complexity (before writing SQL)
 
+If the question involves **any** of the following, consider decomposing:
+- Multiple metrics or aggregations (e.g., "churn rate AND expansion revenue")
+- Multi-step calculations (e.g., "month-over-month growth rate")
+- Comparisons across segments (e.g., "by plan tier, by region")
+- Time-series analysis requiring baseline + change (e.g., "retention curve")
+
+**Decomposition strategy:**
+1. Identify the sub-questions (e.g., "total subscribers at start" + "subscribers who cancelled" → churn rate)
+2. For each sub-question:
+   - `wren memory recall -q "<sub-question>"` — check if a similar pattern exists
+   - Write and execute a simple SQL
+   - Note the result
+3. Combine sub-results to answer the original question
+
+**When NOT to decompose:**
+- Single-table aggregation with GROUP BY — just write the SQL
+- Simple JOINs that the MDL relationships already define
+- Questions where `memory recall` returns a near-exact match
+
+This is a judgment call, not a rigid rule. If you're confident in a single
+query, go ahead. Decompose when the SQL would be hard to debug if it fails.
+
+### Step 3 — Write, verify, and execute SQL
+
+**For simple queries** (single table, straightforward aggregation):
+Execute directly:
 ```bash
 wren --sql 'SELECT c_name, SUM(o_totalprice) FROM orders
 JOIN customer ON orders.o_custkey = customer.c_custkey
 GROUP BY 1 ORDER BY 2 DESC LIMIT 5'
 ```
 
+**For complex queries** (JOINs, subqueries, multi-step):
+Verify first with dry-plan:
+```bash
+wren dry-plan --sql 'SELECT ...'
+```
+
+Check the expanded SQL output:
+- Are the correct models and columns referenced?
+- Do the JOINs match expected relationships?
+- Are CTEs expanded correctly?
+
+If the expanded SQL looks wrong, fix before executing.
+If it looks correct, proceed:
+```bash
+wren --sql 'SELECT ...'
+```
+
 **SQL rules:**
 - Target MDL model names, not database tables
 - Write dialect-neutral SQL — the engine translates
 
-### Step 4 — Handle the result
+### Step 4 — Store and continue
+
+After successful execution, **store the query by default**:
+
+```bash
+wren memory store --nl "<user's original question>" --sql "<the SQL>"
+```
+
+**Skip storing only when:**
+- The query failed or returned an error
+- The user said the result is wrong
+- The query is exploratory (`SELECT * ... LIMIT N` without analytical clauses)
+- The user explicitly asked not to store
+
+The CLI auto-detects exploratory queries — if you see no store hint
+after execution, the query was classified as exploratory.
 
 | Outcome | Action |
 |---------|--------|
-| User confirms correct | `wren memory store --nl "..." --sql "..."` |
+| User confirms correct | Store |
 | User continues with follow-up | Store, then handle follow-up |
-| User says nothing | Do NOT store |
+| User says nothing (but question had clear NL description) | Store |
 | User says wrong | Do NOT store — fix the SQL |
 | Query error | See Error recovery below |
 
@@ -80,12 +138,52 @@ GROUP BY 1 ORDER BY 2 DESC LIMIT 5'
 4. Valid datasource values: `postgres`, `mysql`, `bigquery`, `snowflake`, `clickhouse`, `trino`, `mssql`, `databricks`, `redshift`, `spark`, `athena`, `oracle`, `duckdb`
 5. Both flat format (`{"datasource": ..., "host": ...}`) and MCP envelope format (`{"datasource": ..., "properties": {...}}`) are accepted
 
-### SQL syntax / planning error
+### SQL syntax / planning error (enhanced)
 
-1. Isolate the layer:
-   - `wren dry-plan --sql "..."` — if this fails, it is an MDL-level issue
-   - If dry-plan succeeds but execution fails, the DB rejects the translated SQL
-2. Compare dry-plan output with the DB error message — see [references/wren-sql.md](references/wren-sql.md) for the CTE rewrite pipeline and common error patterns
+#### Layer 1: Identify the failure point
+
+```bash
+wren dry-plan --sql "<failed SQL>"
+```
+
+| dry-plan result | Failure layer | Next step |
+|-----------------|---------------|-----------|
+| dry-plan fails | MDL / semantic | → Layer 2A |
+| dry-plan succeeds, execution fails | DB / dialect | → Layer 2B |
+
+#### Layer 2A: MDL-level diagnosis (dry-plan failed)
+
+The dry-plan error message tells you exactly what's wrong:
+
+| Error pattern | Diagnosis | Fix |
+|---------------|-----------|-----|
+| `column 'X' not found in model 'Y'` | Wrong column name | `wren memory fetch -q "X" --model Y --threshold 0` to find correct name |
+| `model 'X' not found` | Wrong model name | `wren memory fetch -q "X" --type model --threshold 0` |
+| `ambiguous column 'X'` | Column exists in multiple models | Qualify with model name: `ModelName.column` |
+| Planning error with JOIN | Relationship not defined in MDL | Check available relationships in context |
+
+**Key principle**: Fix ONE issue at a time. Re-run dry-plan after each fix
+to see if new errors surface.
+
+#### Layer 2B: DB-level diagnosis (dry-plan OK, execution failed)
+
+The DB error + dry-plan output together pinpoint the issue:
+
+1. Read the dry-plan expanded SQL — this is what actually runs on the DB
+2. Compare with the DB error message:
+
+| Error pattern | Diagnosis | Fix |
+|---------------|-----------|-----|
+| Type mismatch | Column type differs from assumed | Check column type in context, add explicit CAST |
+| Function not supported | Dialect-specific function | Use dialect-neutral alternative |
+| Permission denied | Table/schema access | Check connection credentials |
+| Timeout | Query too expensive | Simplify: reduce JOINs, add filters, LIMIT |
+
+**For small models**: If the error message is unclear, try simplifying
+the query to the smallest failing fragment. Execute subqueries independently
+to isolate which part fails.
+
+For the CTE rewrite pipeline and additional error patterns, see [references/wren-sql.md](references/wren-sql.md).
 
 ---
 
@@ -135,6 +233,7 @@ Re-index after MDL change → wren memory index
 ## Things to avoid
 
 - Do not guess model or column names — check context first
-- Do not store queries the user has not confirmed — success != correctness
+- Do not store failed queries or queries the user said are wrong
+- Do not skip storing successful queries with a clear NL question — default is to store
 - Do not re-index before every query — once per MDL change
 - Do not pass passwords via `--connection-info` if shell history is shared — use `--connection-file`

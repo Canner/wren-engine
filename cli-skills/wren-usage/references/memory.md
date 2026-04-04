@@ -44,15 +44,17 @@ wren memory index --mdl ~/.wren/mdl.json
 
 ## Storing queries: `wren memory store`
 
-**Store when ALL of these are true:**
-1. The SQL query executed successfully
-2. The user confirmed the result is correct, OR continued working with it (follow-up question, exported data, etc.)
-3. There is a clear natural language question that the SQL answers
+**Store by default** when a query executes successfully and there is a clear natural language question. The default is to store, not to wait for explicit confirmation.
+
+**Store (default):**
+- Query executed successfully, user confirmed the result is correct
+- Query executed successfully, user continued with a follow-up (implicit confirmation)
+- Query executed successfully, user said nothing but the question had a clear NL description
 
 **Do NOT store when:**
 - The query failed or returned an error
 - The user said the result is wrong or asked to fix it
-- The query is exploratory / throwaway (`SELECT * FROM orders LIMIT 5`)
+- The query is exploratory / throwaway (`SELECT * FROM orders LIMIT 5`) — the CLI auto-detects these
 - There is no natural language question — just raw SQL
 - The user explicitly asked not to store it
 
@@ -95,9 +97,10 @@ User asks a question:
 
 After execution:
   6. Show results to user
-  7. User confirms → wren memory store --nl "..." --sql "..."
+  7. Store by default → wren memory store --nl "..." --sql "..."
      User says wrong → fix SQL, do NOT store
-     User silent → do NOT store
+     Query failed → do NOT store
+     Exploratory query → do NOT store (CLI auto-detects)
 ```
 
 ---
