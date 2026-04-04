@@ -481,6 +481,9 @@ def docs_connection_info(
 
 app.add_typer(docs_app)
 
+from wren.context_cli import context_app  # noqa: PLC0415
+
+app.add_typer(context_app)
 
 try:
     import lancedb  # noqa: PLC0415, F401
