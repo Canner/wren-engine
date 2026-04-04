@@ -45,6 +45,9 @@ def _require_mdl(mdl: str | None) -> str:
 def _load_manifest(mdl: str) -> str:
     """Load MDL from a file path or treat as base64 string directly."""
     path = Path(mdl).expanduser()
+    if path.suffix.lower() == ".json" and not path.exists():
+        typer.echo(f"Error: MDL file not found: {path}", err=True)
+        raise typer.Exit(1)
     if path.exists():
         import base64  # noqa: PLC0415
 
@@ -542,7 +545,6 @@ def docs_connection_info(
 
 app.add_typer(docs_app)
 
-from wren.context_cli import context_app  # noqa: E402, PLC0415
 from wren.utils_cli import utils_app  # noqa: E402, PLC0415
 
 app.add_typer(context_app)

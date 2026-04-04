@@ -587,7 +587,7 @@ def _check_descriptions(manifest: dict, *, strict: bool = False) -> list[str]:
 
 def validate_manifest(
     manifest_str: str,
-    data_source: "DataSource | str",
+    data_source: str,
     *,
     level: str = "warning",
 ) -> dict:
