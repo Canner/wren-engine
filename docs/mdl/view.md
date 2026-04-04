@@ -4,22 +4,46 @@ A **View** is a named SQL query stored in the MDL. It behaves like a virtual tab
 
 ## Structure
 
+Each view lives in its own directory under `views/` as `views/<name>/metadata.yml`.
+
+The `statement` SQL can be inline in `metadata.yml` or in a separate `sql.yml` file. The `sql.yml` file takes precedence if both exist.
+
+**Inline statement:**
+
 ```yaml
-# views.yml
-views:
-  - name: high_value_orders
-    statement: >
-      SELECT order_id, customer_id, amount
-      FROM orders
-      WHERE amount > 100
+# views/top_customers/metadata.yml
+name: top_customers
+statement: >
+  SELECT customer_id, SUM(total) AS lifetime_value
+  FROM wren.public.orders GROUP BY 1 ORDER BY 2 DESC LIMIT 100
+description: "Top customers by lifetime value"
+properties: {}
+```
+
+**Separate SQL file:**
+
+```yaml
+# views/monthly_revenue/metadata.yml
+name: monthly_revenue
+description: "Monthly revenue aggregation"
+properties: {}
+```
+
+```yaml
+# views/monthly_revenue/sql.yml
+statement: >
+  SELECT DATE_TRUNC('month', order_date) AS month,
+         SUM(total) AS total_revenue
+  FROM wren.public.orders
+  GROUP BY 1
 ```
 
 ### JSON format (MDL manifest)
 
 ```json
 {
-  "name": "high_value_orders",
-  "statement": "SELECT order_id, customer_id, amount FROM orders WHERE amount > 100"
+  "name": "top_customers",
+  "statement": "SELECT customer_id, SUM(total) AS lifetime_value FROM wren.public.orders GROUP BY 1 ORDER BY 2 DESC LIMIT 100"
 }
 ```
 
@@ -29,12 +53,14 @@ views:
 |-------|----------|-------------|
 | `name` | Yes | Unique identifier used in SQL queries |
 | `statement` | Yes | A complete SQL SELECT statement; may reference other models or views |
+| `description` | No | Human-readable description of the view's purpose |
+| `properties` | No | Arbitrary key-value metadata |
 
 ## Model vs View
 
 | | Model | View |
 |-|-------|------|
-| Data source | Physical table, `ref_sql`, or `base_object` | SQL `statement` |
+| Data source | `table_reference` or `ref_sql` | SQL `statement` |
 | Column declarations | Explicit (with types) | Inferred from `statement` |
 | Relationship columns | Supported | Not supported |
 | Calculated columns | Supported | Not supported |
@@ -50,11 +76,14 @@ The jaffle_shop workspace ships with an empty `views.yml` (`views: []`), but vie
 ### Simple filter view
 
 ```yaml
-- name: completed_orders
-  statement: >
-    SELECT order_id, customer_id, order_date, amount
-    FROM orders
-    WHERE status = 'completed'
+# views/completed_orders/metadata.yml
+name: completed_orders
+statement: >
+  SELECT order_id, customer_id, order_date, amount
+  FROM orders
+  WHERE status = 'completed'
+description: "Orders with completed status"
+properties: {}
 ```
 
 ```sql
@@ -64,17 +93,20 @@ SELECT * FROM completed_orders WHERE amount > 50;
 ### Cross-model aggregation view
 
 ```yaml
-- name: customer_order_summary
-  statement: >
-    SELECT
-      c.customer_id,
-      c.first_name,
-      c.last_name,
-      COUNT(o.order_id)  AS total_orders,
-      SUM(o.amount)      AS lifetime_value
-    FROM customers c
-    JOIN orders o ON c.customer_id = o.customer_id
-    GROUP BY c.customer_id, c.first_name, c.last_name
+# views/customer_order_summary/metadata.yml
+name: customer_order_summary
+statement: >
+  SELECT
+    c.customer_id,
+    c.first_name,
+    c.last_name,
+    COUNT(o.order_id)  AS total_orders,
+    SUM(o.amount)      AS lifetime_value
+  FROM customers c
+  JOIN orders o ON c.customer_id = o.customer_id
+  GROUP BY c.customer_id, c.first_name, c.last_name
+description: "Per-customer order counts and lifetime value"
+properties: {}
 ```
 
 The `statement` references `customers` and `orders` by their model names. The engine resolves them through the normal model pipeline after expanding the view.
@@ -82,11 +114,14 @@ The `statement` references `customers` and `orders` by their model names. The en
 ### View referencing another view
 
 ```yaml
-- name: vip_customers
-  statement: >
-    SELECT customer_id, first_name, last_name, lifetime_value
-    FROM customer_order_summary
-    WHERE lifetime_value > 500
+# views/vip_customers/metadata.yml
+name: vip_customers
+statement: >
+  SELECT customer_id, first_name, last_name, lifetime_value
+  FROM customer_order_summary
+  WHERE lifetime_value > 500
+description: "Customers with lifetime value over 500"
+properties: {}
 ```
 
 Views can reference other views. The engine expands all view references recursively before resolving model references.
