@@ -222,6 +222,34 @@ LimitOpt = Annotated[
 OutputOpt = Annotated[
     str, typer.Option("--output", "-o", help="Output format: json|csv|table")
 ]
+QuietOpt = Annotated[
+    bool,
+    typer.Option(
+        "--quiet",
+        "-q",
+        help="Suppress informational tips (e.g. store hints after query).",
+    ),
+]
+
+
+def _print_store_tip(sql: str) -> None:
+    """Print a memory store hint to stderr."""
+    escaped = sql.replace("'", "'\\''")
+    typer.echo(
+        f"\n# To save this query:\n"
+        f"# wren memory store --nl '<natural language question>' "
+        f"--sql '{escaped}'",
+        err=True,
+    )
+
+
+def _maybe_print_store_tip(sql: str, quiet: bool) -> None:
+    if quiet:
+        return
+    from wren.sql_classify import is_exploratory  # noqa: PLC0415
+
+    if not is_exploratory(sql):
+        _print_store_tip(sql)
 
 
 # ── Default command (no subcommand = query) ────────────────────────────────
@@ -241,6 +269,7 @@ def main(
     connection_file: ConnFileOpt = None,
     limit: LimitOpt = None,
     output: OutputOpt = "table",
+    quiet: QuietOpt = False,
 ) -> None:
     """Wren Engine CLI.
 
@@ -283,6 +312,7 @@ def main(
             typer.echo(f"Error: {e}", err=True)
             raise typer.Exit(1)
     _print_result(result, output)
+    _maybe_print_store_tip(sql, quiet)
 
 
 # ── Subcommands ────────────────────────────────────────────────────────────
@@ -296,6 +326,7 @@ def query(
     connection_file: ConnFileOpt = None,
     limit: LimitOpt = None,
     output: OutputOpt = "table",
+    quiet: QuietOpt = False,
 ):
     """Execute a SQL query through the Wren semantic layer."""
     with _build_engine(mdl, connection_info, connection_file) as engine:
@@ -305,6 +336,7 @@ def query(
             typer.echo(f"Error: {e}", err=True)
             raise typer.Exit(1)
     _print_result(result, output)
+    _maybe_print_store_tip(sql, quiet)
 
 
 @app.command(name="dry-run")
