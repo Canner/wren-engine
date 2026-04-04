@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import socket
 from html import escape
 from pathlib import Path
@@ -27,6 +28,8 @@ from starlette.routing import Route
 from starlette.templating import Jinja2Templates
 
 from wren.model.field_registry import get_datasource_options, get_fields, get_variants
+
+logger = logging.getLogger(__name__)
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
@@ -83,9 +86,22 @@ def create_app(
         from wren.profile import add_profile  # noqa: PLC0415
 
         form = await request.form()
-        ds = form.get("datasource", "").strip().lower()
-        name = form.get("_profile_name", profile_name)
-        variant_key = form.get("_variant")
+        raw_ds = form.get("datasource")
+        ds = raw_ds.strip().lower() if isinstance(raw_ds, str) else ""
+
+        raw_name = form.get("_profile_name")
+        name = (
+            raw_name.strip()
+            if isinstance(raw_name, str) and raw_name.strip()
+            else profile_name
+        )
+
+        raw_variant = form.get("_variant")
+        variant_key = (
+            raw_variant.strip()
+            if isinstance(raw_variant, str) and raw_variant.strip()
+            else None
+        )
 
         if not ds:
             return HTMLResponse(
@@ -115,9 +131,21 @@ def create_app(
 
         try:
             add_profile(name, profile, activate=activate)
-        except (ValueError, OSError) as exc:
+        except ValueError as exc:
             return HTMLResponse(
-                f'<small style="color:var(--pico-color-red-500)">✗ Failed to save profile: {escape(str(exc))}</small>'
+                f'<small style="color:var(--pico-color-red-500)">✗ Failed to save profile: {escape(str(exc))}</small>',
+                status_code=400,
+            )
+        except OSError as exc:
+            return HTMLResponse(
+                f'<small style="color:var(--pico-color-red-500)">✗ Failed to save profile: {escape(str(exc))}</small>',
+                status_code=500,
+            )
+        except Exception:
+            logger.exception("Unexpected error while saving profile '%s'", name)
+            return HTMLResponse(
+                '<small style="color:var(--pico-color-red-500)">✗ Failed to save profile due to an unexpected error.</small>',
+                status_code=500,
             )
         result.update({"name": name, "datasource": ds})
 
