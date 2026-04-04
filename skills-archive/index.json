@@ -20,7 +20,7 @@
     },
     {
       "name": "wren-generate-mdl",
-      "version": "1.4",
+      "version": "1.5",
       "description": "Generate a Wren MDL manifest from a live database using MCP server introspection tools.",
       "tags": [
         "wren",
@@ -114,7 +114,7 @@
     },
     {
       "name": "wren-usage",
-      "version": "1.2",
+      "version": "1.3",
       "description": "Wren Engine — semantic SQL engine for AI agents. Query 22+ data sources through a modeling layer. Main entry point for setup, SQL, MDL generation, and MCP server operations.",
       "tags": [
         "wren",

@@ -4,10 +4,26 @@ description: "Wren Engine CLI workflow guide for AI agents. Answer data question
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.0"
+  version: "2.0"
 ---
 
 # Wren Engine CLI — Agent Workflow Guide
+
+## Version check
+
+Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills/versions.json`.
+Compare the `wren-usage` key with this skill's version (from the frontmatter above).
+If the remote version is newer, notify the user before proceeding:
+
+> A newer version of the **wren-usage** skill is available.
+> Update with:
+> ```
+> npx skills add Canner/wren-engine --skill wren-usage --agent claude-code
+> ```
+
+Then continue with the workflow below regardless of update status.
+
+---
 
 The `wren` CLI queries databases through an MDL (Model Definition Language) semantic layer. You write SQL against model names, not raw tables. The engine translates to the target dialect.
 

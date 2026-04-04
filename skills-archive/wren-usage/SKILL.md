@@ -4,14 +4,14 @@ description: "Wren Engine — semantic SQL engine for AI agents. Query 22+ data 
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.2"
+  version: "1.3"
 ---
 
 # Wren Engine — Usage Guide
 
 ## Version check
 
-Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills-archive/versions.json`.
+Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills/versions.json`.
 Compare the `wren-usage` key with this skill's version (from the frontmatter above).
 If the remote version is newer, notify the user before proceeding:
 
