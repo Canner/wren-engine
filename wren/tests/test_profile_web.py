@@ -185,9 +185,9 @@ def test_save_populates_result_dict(isolated_profiles):
 
 
 def test_save_missing_datasource(client):
-    """POST /save without datasource returns an error message."""
+    """POST /save without datasource returns 400 with an error message."""
     resp = client.post("/save", data={"_profile_name": "test-profile"})
-    assert resp.status_code == 200
+    assert resp.status_code == 400
     assert "✗" in resp.text
     assert "data source" in resp.text.lower()
 
@@ -215,7 +215,7 @@ def test_save_with_json_fallback(isolated_profiles):
 
 
 def test_save_invalid_json_returns_error(client):
-    """POST /save with invalid _json returns an error message."""
+    """POST /save with invalid _json returns 400 with an error message."""
     resp = client.post(
         "/save",
         data={
@@ -224,7 +224,7 @@ def test_save_invalid_json_returns_error(client):
             "_json": "{not valid json}",
         },
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 400
     assert "✗" in resp.text
 
 
