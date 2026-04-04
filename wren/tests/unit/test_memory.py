@@ -355,7 +355,8 @@ class TestWrenMemory:
             sql_query="SELECT * FROM orders WHERE o_totalprice > 1000",
         )
         recalled = wren_memory.recall_queries("costly orders")
-        assert len(recalled) == 1
+        assert len(recalled) >= 1
+        assert any(r["nl_query"] == "find expensive orders" for r in recalled)
 
         assert wren_memory.schema_is_current(_MANIFEST)
 

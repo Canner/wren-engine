@@ -134,17 +134,25 @@ def validate(
         bool,
         typer.Option("--strict", help="Treat warnings as errors."),
     ] = False,
+    level: Annotated[
+        str,
+        typer.Option(
+            "--level",
+            help="Semantic check depth: error (dry-plan only), warning (+ descriptions), strict (+ columns).",
+        ),
+    ] = "warning",
 ) -> None:
-    """Validate MDL project structure (no database required).
+    """Validate MDL project: YAML structure + view SQL dry-plan + description checks."""
+    import base64 as _b64  # noqa: PLC0415
 
-    Checks wren_project.yml, model/view definitions, column types,
-    relationship integrity, and naming uniqueness.
-    """
     from wren.context import (  # noqa: PLC0415
+        build_json,
         discover_project_path,
         load_models,
+        load_project_config,
         load_relationships,
         load_views,
+        validate_manifest,
         validate_project,
     )
 
@@ -154,27 +162,58 @@ def validate(
         typer.echo(str(e), err=True)
         raise typer.Exit(1)
 
-    errors = validate_project(project_path)
+    # ── Structural validation ────────────────────────────────────────────
+    struct_errors = validate_project(project_path)
+    struct_warnings = [e for e in struct_errors if e.level == "warning"]
+    struct_hard = [e for e in struct_errors if e.level == "error"]
 
-    if not errors:
+    if struct_errors:
+        for e in struct_errors:
+            typer.echo(str(e), err=True)
+
+    # ── Semantic validation (dry-plan + description checks) ──────────────
+    sem_errors: list[str] = []
+    sem_warnings: list[str] = []
+    try:
+        config = load_project_config(project_path)
+        ds_str = config.get("data_source", "")
+        manifest_json = build_json(project_path)
+        manifest_str = _b64.b64encode(
+            json.dumps(manifest_json, ensure_ascii=False).encode()
+        ).decode()
+        sem_result = validate_manifest(manifest_str, ds_str, level=level)
+        sem_errors = sem_result["errors"]
+        sem_warnings = sem_result["warnings"]
+    except Exception as e:
+        sem_errors = [f"Semantic validation failed: {e}"]
+
+    if sem_errors:
+        typer.echo("\nSemantic errors:")
+        for msg in sem_errors:
+            typer.echo(f"  \u2717 {msg}", err=True)
+
+    if sem_warnings:
+        typer.echo("\nWarnings:")
+        for msg in sem_warnings:
+            typer.echo(f"  \u26a0 {msg}")
+
+    # ── Exit logic ────────────────────────────────────────────────────────
+    has_hard_error = bool(struct_hard or sem_errors)
+    has_warning = bool(struct_warnings or sem_warnings)
+
+    if has_hard_error or (strict and has_warning):
+        raise typer.Exit(1)
+
+    if not struct_errors and not sem_errors and not sem_warnings:
         models = load_models(project_path)
         views = load_views(project_path)
         rels = load_relationships(project_path)
         typer.echo(
             f"Valid — {len(models)} models, {len(views)} views, {len(rels)} relationships."
         )
-        return
-
-    warnings = [e for e in errors if e.level == "warning"]
-    hard_errors = [e for e in errors if e.level == "error"]
-
-    for e in errors:
-        typer.echo(str(e), err=True)
-
-    if hard_errors or (strict and warnings):
-        raise typer.Exit(1)
-
-    typer.echo(f"\n{len(warnings)} warning(s), 0 errors.")
+    elif has_warning:
+        n_warn = len(struct_warnings) + len(sem_warnings)
+        typer.echo(f"\n{n_warn} warning(s), 0 errors.")
 
 
 @context_app.command()

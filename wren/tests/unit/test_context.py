@@ -538,3 +538,135 @@ def test_discover_via_config(tmp_path, monkeypatch):
     importlib.reload(ctx)
     result = ctx.discover_project_path()
     assert result == project_dir
+
+
+# ── Semantic validation tests (view dry-plan + description checks) ─────────
+
+import base64
+import json as _json
+
+import orjson
+import pytest
+
+from wren.context import validate_manifest
+from wren.model.data_source import DataSource
+
+
+def _b64(manifest: dict) -> str:
+    return base64.b64encode(orjson.dumps(manifest)).decode()
+
+
+_SEM_MODEL_WITH_DESC = {
+    "name": "orders",
+    "tableReference": {"schema": "main", "table": "orders"},
+    "columns": [
+        {"name": "o_orderkey", "type": "integer"},
+        {"name": "o_custkey", "type": "integer"},
+    ],
+    "primaryKey": "o_orderkey",
+    "properties": {"description": "Orders model"},
+}
+
+_SEM_MODEL_WITHOUT_DESC = {
+    "name": "accounts",
+    "tableReference": {"schema": "main", "table": "accounts"},
+    "columns": [
+        {"name": "acct_id", "type": "integer"},
+        {"name": "plan_cd", "type": "varchar"},
+    ],
+    "primaryKey": "acct_id",
+}
+
+_VALID_VIEW = {
+    "name": "valid_view",
+    "statement": 'SELECT o_orderkey FROM "orders"',
+    "properties": {"description": "A valid view"},
+}
+
+_VIEW_WITHOUT_DESC = {
+    "name": "daily_usage",
+    "statement": 'SELECT o_orderkey FROM "orders"',
+}
+
+_BROKEN_VIEW = {
+    "name": "stale_report",
+    "statement": 'SELECT * FROM "deleted_model"',
+}
+
+_EMPTY_STMT_VIEW = {
+    "name": "empty_view",
+    "statement": "",
+}
+
+_SEM_BASE_MANIFEST = {
+    "catalog": "wren",
+    "schema": "public",
+    "models": [_SEM_MODEL_WITH_DESC],
+}
+
+
+@pytest.mark.unit
+def test_validate_manifest_view_pass():
+    manifest = {**_SEM_BASE_MANIFEST, "views": [_VALID_VIEW]}
+    result = validate_manifest(_b64(manifest), DataSource.duckdb)
+    assert result["errors"] == []
+
+
+@pytest.mark.unit
+def test_validate_manifest_view_dry_plan_error():
+    manifest = {**_SEM_BASE_MANIFEST, "views": [_BROKEN_VIEW]}
+    result = validate_manifest(_b64(manifest), DataSource.duckdb)
+    assert len(result["errors"]) == 1
+    assert "stale_report" in result["errors"][0]
+
+
+@pytest.mark.unit
+def test_validate_manifest_empty_statement():
+    manifest = {**_SEM_BASE_MANIFEST, "views": [_EMPTY_STMT_VIEW]}
+    result = validate_manifest(_b64(manifest), DataSource.duckdb)
+    assert any("empty statement" in e for e in result["errors"])
+
+
+@pytest.mark.unit
+def test_validate_manifest_model_no_description():
+    manifest = {"catalog": "wren", "schema": "public", "models": [_SEM_MODEL_WITHOUT_DESC]}
+    result = validate_manifest(_b64(manifest), DataSource.duckdb)
+    assert result["errors"] == []
+    assert any("accounts" in w for w in result["warnings"])
+
+
+@pytest.mark.unit
+def test_validate_manifest_view_no_description():
+    manifest = {**_SEM_BASE_MANIFEST, "views": [_VIEW_WITHOUT_DESC]}
+    result = validate_manifest(_b64(manifest), DataSource.duckdb)
+    assert result["errors"] == []
+    assert any("daily_usage" in w for w in result["warnings"])
+
+
+@pytest.mark.unit
+def test_validate_manifest_level_error_suppresses_warnings():
+    manifest = {"catalog": "wren", "schema": "public", "models": [_SEM_MODEL_WITHOUT_DESC]}
+    result = validate_manifest(_b64(manifest), DataSource.duckdb, level="error")
+    assert result["warnings"] == []
+
+
+@pytest.mark.unit
+def test_validate_manifest_strict_column_warnings():
+    manifest = {"catalog": "wren", "schema": "public", "models": [_SEM_MODEL_WITHOUT_DESC]}
+    result = validate_manifest(_b64(manifest), DataSource.duckdb, level="strict")
+    text = " ".join(result["warnings"])
+    assert "plan_cd" in text
+    assert "acct_id" in text
+
+
+@pytest.mark.unit
+def test_validate_manifest_invalid_level():
+    result = validate_manifest(_b64(_SEM_BASE_MANIFEST), DataSource.duckdb, level="nope")
+    assert any("nope" in e for e in result["errors"])
+
+
+@pytest.mark.unit
+def test_validate_manifest_invalid_datasource():
+    manifest = {**_SEM_BASE_MANIFEST, "views": [_VALID_VIEW]}
+    result = validate_manifest(_b64(manifest), "not-a-datasource")
+    assert len(result["errors"]) == 1
