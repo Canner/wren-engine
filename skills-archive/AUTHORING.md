@@ -29,7 +29,8 @@ Every `SKILL.md` must open with YAML frontmatter:
 name: skill-name
 description: "What this skill does and when to trigger it. Include specific
   trigger keywords. This field is loaded at startup for every conversation."
-license: Apache-2.0
+compatibility: "Optional. Only include if the skill has specific environment
+  requirements (e.g. requires Docker, must run from ibis-server/)."
 metadata:
   author: wren-engine
   version: "1.0"
@@ -76,15 +77,20 @@ Link to reference files from `SKILL.md` using paths relative to the skill root:
 Follow [references/diagnose.md](references/diagnose.md) for per-stage investigation steps.
 ```
 
+When linking from `SKILLS.md` (one level up), prefix with the skill directory name:
+```markdown
+| [references/diagnose.md](my-skill/references/diagnose.md) | Diagnosis steps |
+```
+
 ---
 
 ## Naming Conventions
 
 | Item | Convention | Example |
 |------|-----------|---------|
-| Skill directory | `kebab-case` | `wren-generate-mdl/` |
-| `name` field | same as directory | `wren-generate-mdl` |
-| Reference files | descriptive `kebab-case` | `memory.md`, `wren-sql.md` |
+| Skill directory | `kebab-case` | `wren-debugging/` |
+| `name` field | same as directory | `wren-debugging` |
+| Reference files | descriptive `kebab-case` | `plan-template.md`, `connection-info.md` |
 
 ---
 
@@ -98,7 +104,7 @@ After creating a new skill:
 4. Add an entry to [index.json](index.json) with `name`, `version`, `description`, `tags`, `dependencies` (if any), and `repository`.
 5. Add the skill to the `ALL_SKILLS` array in [install.sh](install.sh).
 
-Both `versions.json` and `index.json` must stay in sync with the `version` field in the skill's `SKILL.md` frontmatter. Run `bash skills/check-versions.sh` to verify parity before merging.
+Both `versions.json` and `index.json` must stay in sync with the `version` field in the skill's `SKILL.md` frontmatter. Run `bash skills/check-versions.sh` to verify parity before merging — the script validates both files.
 
 ---
 
