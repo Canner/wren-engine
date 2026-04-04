@@ -9,6 +9,8 @@ from typing import Annotated, Optional
 
 import typer
 
+from wren.context_cli import context_app
+
 app = typer.Typer(name="wren", help="Wren Engine CLI", no_args_is_help=False)
 
 _WREN_HOME = Path(os.environ.get("WREN_HOME", Path.home() / ".wren")).expanduser()
@@ -545,9 +547,6 @@ from wren.utils_cli import utils_app  # noqa: E402, PLC0415
 
 app.add_typer(context_app)
 app.add_typer(utils_app)
-
-from wren.context_cli import context_app  # noqa: E402, PLC0415
-
 app.add_typer(context_app)
 
 try:
