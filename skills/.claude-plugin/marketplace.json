@@ -1,43 +1,21 @@
 {
-  "name": "wren",
+  "name": "wrenai",
   "owner": {
-    "name": "Canner",
-    "email": "dev@cannerdata.com"
+    "name": "Wren AI",
+    "email": "contact@getwren.ai"
   },
   "metadata": {
-    "description": "Wren Engine skills — semantic SQL, MDL management, MCP server setup for 20+ data sources"
+    "description": "GenBI (Generative BI) queries any database in natural language, generates accurate SQL, charts, and AI-powered business intelligence in seconds."
   },
   "plugins": [
     {
-      "name": "wren",
-      "source": ".",
-      "description": "AI agent skills for Wren Engine — semantic SQL layer and MCP server for 20+ data sources.",
+      "name": "wren-engine",
+      "source": "./",
+      "description": "The open context engine for AI agents. Open-source. 15+ data sources. MCP-native. Built on Rust and Apache DataFusion.",
       "version": "1.0.0",
-      "keywords": [
-        "wren",
-        "sql",
-        "mdl",
-        "mcp",
-        "semantic-layer",
-        "docker",
-        "amazon-s3",
-        "apache-spark",
-        "apache-doris",
-        "athena",
-        "bigquery",
-        "clickhouse",
-        "databricks",
-        "duckdb",
-        "google-cloud-storage",
-        "minio",
-        "mysql",
-        "oracle",
-        "postgres",
-        "redshift",
-        "sql-server",
-        "snowflake",
-        "trino"
-      ]
+      "author": {
+        "name": "Wren AI Team"
+      }
     }
   ]
 }
