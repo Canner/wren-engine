@@ -3469,6 +3469,7 @@ databricks = [
     { name = "databricks-sql-connector" },
 ]
 dev = [
+    { name = "httpx" },
     { name = "orjson" },
     { name = "pytest" },
     { name = "ruff" },
@@ -3522,6 +3523,7 @@ requires-dist = [
     { name = "duckdb", specifier = ">=1.0" },
     { name = "google-auth", marker = "extra == 'all'" },
     { name = "google-auth", marker = "extra == 'bigquery'" },
+    { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
     { name = "ibis-framework", specifier = ">=10" },
     { name = "ibis-framework", extras = ["athena"], marker = "extra == 'all'" },
     { name = "ibis-framework", extras = ["athena"], marker = "extra == 'athena'" },

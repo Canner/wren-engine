@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import os
+import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -32,6 +34,187 @@ def _convert_keys(obj: Any) -> Any:
     if isinstance(obj, list):
         return [_convert_keys(item) for item in obj]
     return obj
+
+
+# Known camelCase → snake_case pairs (inverse of snake→camel mapping)
+_CAMEL_TO_SNAKE_MAP = {
+    "tableReference": "table_reference",
+    "refSql": "ref_sql",
+    "isCalculated": "is_calculated",
+    "notNull": "not_null",
+    "isPrimaryKey": "is_primary_key",
+    "primaryKey": "primary_key",
+    "joinType": "join_type",
+    "dataSource": "data_source",
+}
+
+
+def _camel_to_snake(name: str) -> str:
+    """Convert camelCase to snake_case.
+
+    Uses known mapping table first, then generic regex fallback.
+    """
+    if name in _CAMEL_TO_SNAKE_MAP:
+        return _CAMEL_TO_SNAKE_MAP[name]
+    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", name).lower()
+
+
+def _convert_keys_to_snake(obj: Any) -> Any:
+    """Recursively convert all dict keys from camelCase to snake_case."""
+    if isinstance(obj, dict):
+        return {_camel_to_snake(k): _convert_keys_to_snake(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_convert_keys_to_snake(item) for item in obj]
+    return obj
+
+
+# ── MDL JSON → YAML project conversion ───────────────────────────────────
+
+
+@dataclass
+class ProjectFile:
+    """A file to be written during project conversion."""
+
+    relative_path: str  # e.g. "models/orders/metadata.yml"
+    content: str  # file content (YAML or SQL or Markdown)
+
+
+def convert_mdl_to_project(mdl_json: dict) -> list[ProjectFile]:
+    """Convert an MDL JSON manifest to a list of project files.
+
+    Args:
+        mdl_json: Parsed MDL JSON (camelCase keys).
+
+    Returns:
+        List of ProjectFile objects, each representing a file to write.
+    """
+    files: list[ProjectFile] = []
+
+    # ── wren_project.yml ──────────────────────────────────────
+    project_config: dict[str, Any] = {"schema_version": 2}
+    if "catalog" in mdl_json:
+        project_config["catalog"] = mdl_json["catalog"]
+    if "schema" in mdl_json:
+        project_config["schema"] = mdl_json["schema"]
+    if "dataSource" in mdl_json:
+        project_config["data_source"] = mdl_json["dataSource"]
+
+    files.append(
+        ProjectFile(
+            relative_path="wren_project.yml",
+            content=yaml.dump(
+                project_config, default_flow_style=False, sort_keys=False
+            ),
+        )
+    )
+
+    # ── Models ────────────────────────────────────────────────
+    for model in mdl_json.get("models", []):
+        model_snake = _convert_keys_to_snake(model)
+        name = model_snake["name"]
+        dir_path = f"models/{name}"
+
+        ref_sql = model_snake.pop("ref_sql", None)
+        if ref_sql:
+            files.append(
+                ProjectFile(
+                    relative_path=f"{dir_path}/ref_sql.sql",
+                    content=ref_sql.strip() + "\n",
+                )
+            )
+
+        files.append(
+            ProjectFile(
+                relative_path=f"{dir_path}/metadata.yml",
+                content=yaml.dump(
+                    model_snake, default_flow_style=False, sort_keys=False
+                ),
+            )
+        )
+
+    # ── Views ─────────────────────────────────────────────────
+    for view in mdl_json.get("views", []):
+        view_snake = _convert_keys_to_snake(view)
+        name = view_snake["name"]
+        dir_path = f"views/{name}"
+
+        statement = view_snake.pop("statement", None)
+        if statement and "\n" in statement.strip():
+            files.append(
+                ProjectFile(
+                    relative_path=f"{dir_path}/sql.yml",
+                    content=yaml.dump(
+                        {"statement": statement},
+                        default_flow_style=False,
+                        sort_keys=False,
+                    ),
+                )
+            )
+        elif statement:
+            view_snake["statement"] = statement
+
+        files.append(
+            ProjectFile(
+                relative_path=f"{dir_path}/metadata.yml",
+                content=yaml.dump(
+                    view_snake, default_flow_style=False, sort_keys=False
+                ),
+            )
+        )
+
+    # ── Relationships ─────────────────────────────────────────
+    relationships = mdl_json.get("relationships", [])
+    if relationships:
+        rels_snake = [_convert_keys_to_snake(r) for r in relationships]
+        files.append(
+            ProjectFile(
+                relative_path="relationships.yml",
+                content=yaml.dump(
+                    {"relationships": rels_snake},
+                    default_flow_style=False,
+                    sort_keys=False,
+                ),
+            )
+        )
+
+    # ── Instructions ──────────────────────────────────────────
+    instructions = mdl_json.get("_instructions")
+    if instructions:
+        files.append(
+            ProjectFile(
+                relative_path="instructions.md",
+                content=instructions.strip() + "\n",
+            )
+        )
+
+    return files
+
+
+def write_project_files(
+    files: list[ProjectFile],
+    output_dir: Path,
+    *,
+    force: bool = False,
+) -> None:
+    """Write project files to disk.
+
+    Args:
+        files: List of ProjectFile from convert_mdl_to_project().
+        output_dir: Target directory.
+        force: If False, raise SystemExit if wren_project.yml already exists.
+    """
+    output_dir = Path(output_dir)
+    project_file = output_dir / "wren_project.yml"
+
+    if project_file.exists() and not force:
+        raise SystemExit(
+            f"Error: {project_file} already exists. Use --force to overwrite."
+        )
+
+    for f in files:
+        path = output_dir / f.relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f.content)
 
 
 # ── Project discovery ─────────────────────────────────────────────────────
