@@ -546,6 +546,10 @@ from wren.utils_cli import utils_app  # noqa: E402, PLC0415
 app.add_typer(context_app)
 app.add_typer(utils_app)
 
+from wren.context_cli import context_app  # noqa: E402, PLC0415
+
+app.add_typer(context_app)
+
 try:
     import lancedb  # noqa: PLC0415, F401
     import sentence_transformers  # noqa: PLC0415, F401
