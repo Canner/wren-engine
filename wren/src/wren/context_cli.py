@@ -27,16 +27,59 @@ ProjectPathOpt = Annotated[
 @context_app.command()
 def init(
     path: ProjectPathOpt = None,
+    from_mdl: Annotated[
+        Optional[str],
+        typer.Option("--from-mdl", help="Import from MDL JSON file (camelCase)."),
+    ] = None,
+    force: Annotated[
+        bool,
+        typer.Option("--force", help="Overwrite existing project files."),
+    ] = False,
 ) -> None:
-    """Initialize a new Wren project with scaffold files.
+    """Initialize a new Wren project.
 
-    Creates the directory structure with wren_project.yml,
-    an example model, and placeholder files.
+    Without --from-mdl: scaffolds an empty project structure.
+    With --from-mdl: imports an existing MDL JSON and produces a complete
+    v2 YAML project, ready for `wren context validate/build`.
     """
     project_path = Path(path).expanduser() if path else Path.cwd()
 
+    if from_mdl:
+        # ── Import from MDL JSON ──────────────────────────────
+        from wren.context import (  # noqa: PLC0415
+            convert_mdl_to_project,
+            write_project_files,
+        )
+
+        mdl_path = Path(from_mdl).expanduser()
+        if not mdl_path.exists():
+            typer.echo(f"Error: {mdl_path} not found.", err=True)
+            raise typer.Exit(1)
+
+        mdl_json = json.loads(mdl_path.read_text())
+        files = convert_mdl_to_project(mdl_json)
+        try:
+            write_project_files(files, project_path, force=force)
+        except SystemExit as e:
+            typer.echo(str(e), err=True)
+            raise typer.Exit(1)
+
+        model_count = len(mdl_json.get("models", []))
+        view_count = len(mdl_json.get("views", []))
+        rel_count = len(mdl_json.get("relationships", []))
+
+        typer.echo(f"Imported MDL to YAML project at {project_path}/")
+        typer.echo(
+            f"  {model_count} models, {view_count} views, {rel_count} relationships"
+        )
+        typer.echo("\nNext steps:")
+        typer.echo(f"  wren context validate --path {project_path}")
+        typer.echo(f"  wren context build --path {project_path}")
+        return
+
+    # ── Scaffold empty project (existing behavior) ────────────
     project_file = project_path / "wren_project.yml"
-    if project_file.exists():
+    if project_file.exists() and not force:
         typer.echo(
             f"Error: '{project_file}' already exists. This is already a Wren project.",
             err=True,
