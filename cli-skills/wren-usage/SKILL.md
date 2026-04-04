@@ -74,7 +74,7 @@ JOIN customer ON orders.o_custkey = customer.c_custkey
 GROUP BY 1 ORDER BY 2 DESC LIMIT 5'
 ```
 
-**For complex queries** (JOINs, subqueries, multi-step):
+**For complex queries** (non-trivial JOINs not covered by MDL relationships, subqueries, multi-step logic):
 Verify first with dry-plan:
 ```bash
 wren dry-plan --sql 'SELECT ...'
