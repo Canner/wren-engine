@@ -107,6 +107,7 @@ wren memory store --nl "<user's original question>" --sql "<the SQL>"
 - The query failed or returned an error
 - The user said the result is wrong
 - The query is exploratory (`SELECT * ... LIMIT N` without analytical clauses)
+- There is no natural language question — just raw SQL
 - The user explicitly asked not to store
 
 The CLI auto-detects exploratory queries — if you see no store hint
