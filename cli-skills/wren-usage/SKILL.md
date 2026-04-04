@@ -66,7 +66,7 @@ query, go ahead. Decompose when the SQL would be hard to debug if it fails.
 
 ### Step 3 — Write, verify, and execute SQL
 
-**For simple queries** (single table, straightforward aggregation):
+**For simple queries** (single table or simple MDL-defined JOINs, straightforward aggregation):
 Execute directly:
 ```bash
 wren --sql 'SELECT c_name, SUM(o_totalprice) FROM orders
