@@ -98,9 +98,24 @@ data_source: postgres
 | `schema_version` | Directory layout version. `2` = folder-per-entity (current). Owned by the CLI — do not bump manually. |
 | `name` | Project name |
 | `version` | User's own project version (free-form, no effect on parsing) |
-| `catalog` | MDL catalog |
-| `schema` | MDL schema |
+| `catalog` | **Wren Engine namespace** — NOT your database catalog. Identifies this MDL project within the engine. Default: `wren`. |
+| `schema` | **Wren Engine namespace** — NOT your database schema. Default: `public`. |
 | `data_source` | Data source type (e.g. `postgres`, `bigquery`, `snowflake`) |
+
+> **`catalog` / `schema` are NOT database settings.**
+>
+> These two fields define the Wren Engine's internal namespace for addressing models in SQL. They exist to support future multi-project querying. For single-project use, keep the defaults (`catalog: wren`, `schema: public`).
+>
+> Your database's actual catalog and schema are specified per-model in the `table_reference` section of each model's `metadata.yml`.
+
+#### Two levels of catalog/schema
+
+The same field names appear in two places with completely different meanings:
+
+| Location | Refers to | Example | When to change |
+|----------|-----------|---------|----------------|
+| `wren_project.yml` → `catalog`, `schema` | Wren Engine namespace | `wren`, `public` | Only for multi-project setups |
+| `models/*/metadata.yml` → `table_reference.catalog`, `table_reference.schema` | Database location | `""`, `main` | Must match your actual database |
 
 ### Model (`models/<name>/metadata.yml`)
 
