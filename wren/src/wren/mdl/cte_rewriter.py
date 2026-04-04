@@ -226,9 +226,10 @@ class CTERewriter:
             for cte in with_clause.expressions:
                 alias = cte.args.get("alias")
                 if alias:
-                    names.add(
+                    raw = (
                         alias.this.name
                         if isinstance(alias.this, exp.Identifier)
                         else str(alias.this)
                     )
+                    names.add(raw.lower())
         return names

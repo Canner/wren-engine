@@ -208,6 +208,22 @@ class TestCTEEdgeCases:
         # (wren-core may restructure the query but won't add a model CTE)
         assert not _has_cte(result, "orders") or _count_ctes(result) <= 1
 
+    def test_user_cte_shadows_model_case_insensitive(self):
+        """User CTE 'Orders' (mixed case) should shadow model 'orders'."""
+        rw = _make_rewriter(_SINGLE_MODEL_MANIFEST, fallback=True)
+        result = rw.rewrite(
+            "WITH Orders AS (SELECT 1 AS o_orderkey, 'OPEN' AS o_orderstatus) "
+            "SELECT * FROM Orders"
+        )
+        ast = sqlglot.parse_one(result, dialect="duckdb")
+        with_clause = ast.args.get("with_")
+        if with_clause:
+            cte_names = [
+                cte.args["alias"].this.name for cte in with_clause.expressions
+            ]
+            orders_count = sum(1 for n in cte_names if n.lower() == "orders")
+            assert orders_count <= 1, f"Duplicate 'orders' CTE: {result}"
+
     def test_nested_cte_shadows_model(self):
         """CTE defined in a subquery WITH should also shadow the model name."""
         rw = _make_rewriter(_MULTI_MODEL_MANIFEST, fallback=True)
