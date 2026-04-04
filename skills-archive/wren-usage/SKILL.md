@@ -4,7 +4,7 @@ description: "Wren Engine — semantic SQL engine for AI agents. Query 22+ data 
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.2"
+  version: "1.3"
 ---
 
 # Wren Engine — Usage Guide

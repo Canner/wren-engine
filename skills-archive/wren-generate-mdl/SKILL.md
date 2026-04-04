@@ -5,7 +5,7 @@ compatibility: Requires a running ibis-server (default port 8000). No local data
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.4"
+  version: "1.5"
 ---
 
 # Generate Wren MDL
