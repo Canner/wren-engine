@@ -154,6 +154,15 @@ project/
 └── instructions.md
 ```
 
+> **IMPORTANT: `catalog` and `schema` in `wren_project.yml`**
+>
+> These are Wren Engine's internal namespace — they are NOT the database's
+> native catalog or schema. Keep the defaults (`catalog: wren`, `schema: public`)
+> unless you are intentionally configuring a multi-project namespace.
+>
+> Your database's actual catalog/schema is specified per-model in `table_reference`
+> (see Step 2). Do not copy database catalog/schema values into `wren_project.yml`.
+
 ### Step 2 — Write model files
 
 For each table, create a YAML file under `models/`. Use snake_case
@@ -163,9 +172,9 @@ naming (the build step converts to camelCase automatically).
 # models/orders/metadata.yml
 name: orders
 table_reference:
-  catalog: ""
-  schema: public
-  table: orders
+  catalog: ""           # database catalog (empty string if not applicable)
+  schema: public        # database schema (this IS the DB schema)
+  table: orders         # database table name
 primary_key: order_id
 columns:
   - name: order_id

@@ -52,9 +52,14 @@ def init(
         "schema_version: 2\n"
         "name: my_project\n"
         'version: "1.0"\n'
+        "\n"
+        "# Wren Engine namespace (NOT your database's catalog/schema).\n"
+        "# These identify this MDL project within the engine.\n"
+        "# Your database's actual catalog/schema goes in each model's table_reference.\n"
         "catalog: wren\n"
         "schema: public\n"
-        "data_source: postgres\n"
+        "\n"
+        "data_source: postgres  # change to your datasource type\n"
     )
     project_file.write_text(project_yml)
 
@@ -64,10 +69,11 @@ def init(
     (example_model_dir / "metadata.yml").write_text(
         "# Example model — replace with your actual table\n"
         "name: example\n"
+        "# table_reference points to the ACTUAL database table location\n"
         "table_reference:\n"
-        '  catalog: ""\n'
-        "  schema: public\n"
-        "  table: example\n"
+        '  catalog: ""        # your database catalog (empty if N/A)\n'
+        "  schema: public      # your database schema\n"
+        "  table: example      # your database table name\n"
         "columns:\n"
         "  - name: id\n"
         "    type: INTEGER\n"
