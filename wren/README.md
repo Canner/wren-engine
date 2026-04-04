@@ -67,7 +67,21 @@ Requires Python 3.11+.
 }
 ```
 
-**3. Run queries** — `wren` auto-discovers both files from `~/.wren`:
+**3. (Optional) Create `~/.wren/config.json`** — security policy:
+
+```json
+{
+  "strict_mode": true,
+  "denied_functions": ["pg_read_file", "dblink", "lo_import"]
+}
+```
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `strict_mode` | `false` | When `true`, every table in a query must be defined in the MDL. Queries referencing undeclared tables are rejected before execution. |
+| `denied_functions` | `[]` | List of function names (case-insensitive) that are forbidden in queries. |
+
+**4. Run queries** — `wren` auto-discovers all files from `~/.wren` (override with `WREN_HOME=/path/to/dir`):
 
 ```bash
 wren --sql 'SELECT order_id FROM "orders" LIMIT 10'
