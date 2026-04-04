@@ -7,6 +7,8 @@ import json
 
 from wren.model.data_source import DataSource
 
+_VALID_LEVELS = frozenset({"error", "warning", "strict"})
+
 
 def _prop_description(item: dict) -> str | None:
     return (item.get("properties") or {}).get("description")
@@ -16,22 +18,25 @@ def _check_descriptions(manifest: dict, *, strict: bool = False) -> list[str]:
     warnings: list[str] = []
 
     for model in manifest.get("models", []):
+        name = model.get("name", "<unknown>")
         if not _prop_description(model):
             warnings.append(
-                f"Model '{model['name']}' has no description — "
+                f"Model '{name}' has no description — "
                 "add properties.description to improve memory search and agent comprehension"
             )
         if strict:
             for col in model.get("columns", []):
+                col_name = col.get("name", "<unknown>")
                 if not _prop_description(col):
                     warnings.append(
-                        f"Column '{col['name']}' in model '{model['name']}' has no description"
+                        f"Column '{col_name}' in model '{name}' has no description"
                     )
 
     for view in manifest.get("views", []):
+        view_name = view.get("name", "<unknown>")
         if not _prop_description(view):
             warnings.append(
-                f"View '{view['name']}' has no description — "
+                f"View '{view_name}' has no description — "
                 "views with descriptions are indexed as NL-SQL examples in memory"
             )
 
@@ -62,6 +67,12 @@ def validate(
     errors: list[str] = []
     warnings: list[str] = []
 
+    if level not in _VALID_LEVELS:
+        errors.append(
+            f"Invalid level '{level}' — must be one of: {', '.join(sorted(_VALID_LEVELS))}"
+        )
+        return {"errors": errors, "warnings": warnings}
+
     try:
         manifest = json.loads(base64.b64decode(manifest_str))
     except Exception as e:
@@ -72,13 +83,17 @@ def validate(
     views = manifest.get("views", [])
     if views:
         if isinstance(data_source, str):
-            data_source = DataSource(data_source)
+            try:
+                data_source = DataSource(data_source)
+            except ValueError:
+                errors.append(f"Invalid datasource '{data_source}'")
+                return {"errors": errors, "warnings": warnings}
         with WrenEngine(
             manifest_str=manifest_str, data_source=data_source, connection_info={}
         ) as engine:
             for view in views:
                 name = view.get("name", "<unknown>")
-                stmt = view.get("statement", "")
+                stmt = (view.get("statement") or "").strip()
                 if not stmt:
                     errors.append(f"View '{name}': empty statement")
                     continue

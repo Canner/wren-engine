@@ -144,6 +144,22 @@ def test_validate_strict_column_warning():
     assert "acct_id" in warning_text
 
 
+# ── Invalid-input contract tests ─────────────────────────────────────────
+
+
+def test_validate_invalid_datasource():
+    manifest = {**_BASE_MANIFEST, "views": [_VALID_VIEW]}
+    result = validate(_b64(manifest), "not-a-datasource")
+    assert len(result["errors"]) == 1
+    assert "not-a-datasource" in result["errors"][0]
+
+
+def test_validate_invalid_level():
+    result = validate(_b64(_BASE_MANIFEST), DataSource.duckdb, level="nope")
+    assert len(result["errors"]) == 1
+    assert "nope" in result["errors"][0]
+
+
 # ── CLI exit-code tests ───────────────────────────────────────────────────
 
 

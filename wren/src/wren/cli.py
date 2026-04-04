@@ -8,6 +8,8 @@ from typing import Annotated, Optional
 
 import typer
 
+from wren.context_cli import context_app
+
 app = typer.Typer(name="wren", help="Wren Engine CLI", no_args_is_help=False)
 
 _WREN_HOME = Path.home() / ".wren"
@@ -480,9 +482,6 @@ def docs_connection_info(
 
 
 app.add_typer(docs_app)
-
-from wren.context_cli import context_app  # noqa: PLC0415
-
 app.add_typer(context_app)
 
 try:
