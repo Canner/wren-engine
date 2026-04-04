@@ -60,7 +60,7 @@ statement: >
 
 | | Model | View |
 |-|-------|------|
-| Data source | Physical table, `ref_sql`, or `base_object` | SQL `statement` |
+| Data source | `table_reference` or `ref_sql` | SQL `statement` |
 | Column declarations | Explicit (with types) | Inferred from `statement` |
 | Relationship columns | Supported | Not supported |
 | Calculated columns | Supported | Not supported |

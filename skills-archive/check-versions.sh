@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verify that skills/versions.json and skills/index.json both match
+# Verify that versions.json and index.json (in this script's directory) both match
 # the version in each skill's SKILL.md frontmatter.
 # Exits non-zero if any mismatch is found.
 set -euo pipefail

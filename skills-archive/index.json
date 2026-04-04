@@ -16,7 +16,7 @@
         "database",
         "security"
       ],
-      "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-connection-info"
+      "repository": "https://github.com/Canner/wren-engine/tree/main/skills-archive/wren-connection-info"
     },
     {
       "name": "wren-generate-mdl",
@@ -34,7 +34,7 @@
         "clickhouse",
         "trino"
       ],
-      "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-generate-mdl"
+      "repository": "https://github.com/Canner/wren-engine/tree/main/skills-archive/wren-generate-mdl"
     },
     {
       "name": "wren-project",
@@ -48,7 +48,7 @@
         "project",
         "git"
       ],
-      "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-project"
+      "repository": "https://github.com/Canner/wren-engine/tree/main/skills-archive/wren-project"
     },
     {
       "name": "wren-sql",
@@ -64,7 +64,7 @@
         "mdl",
         "text-to-sql"
       ],
-      "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-sql"
+      "repository": "https://github.com/Canner/wren-engine/tree/main/skills-archive/wren-sql"
     },
     {
       "name": "wren-mcp-setup",
@@ -78,7 +78,7 @@
         "cursor",
         "cline"
       ],
-      "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-mcp-setup"
+      "repository": "https://github.com/Canner/wren-engine/tree/main/skills-archive/wren-mcp-setup"
     },
     {
       "name": "wren-quickstart",
@@ -96,7 +96,7 @@
         "wren-project",
         "wren-mcp-setup"
       ],
-      "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-quickstart"
+      "repository": "https://github.com/Canner/wren-engine/tree/main/skills-archive/wren-quickstart"
     },
     {
       "name": "wren-http-api",
@@ -110,7 +110,7 @@
         "openclaw",
         "rest"
       ],
-      "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-http-api"
+      "repository": "https://github.com/Canner/wren-engine/tree/main/skills-archive/wren-http-api"
     },
     {
       "name": "wren-usage",
@@ -135,7 +135,7 @@
         "wren-mcp-setup",
         "wren-http-api"
       ],
-      "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-usage"
+      "repository": "https://github.com/Canner/wren-engine/tree/main/skills-archive/wren-usage"
     }
   ]
 }

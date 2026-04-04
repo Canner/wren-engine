@@ -31,7 +31,7 @@ Skills are instruction files that extend AI agents with Wren-specific workflows.
 
 > Installing `wren-usage` via `install.sh` automatically installs all dependent skills:
 > ```bash
-> bash skills/install.sh wren-usage
+> bash skills-archive/install.sh wren-usage
 > ```
 
 ---
@@ -226,10 +226,10 @@ Interact with Wren Engine MCP server via plain HTTP JSON-RPC requests — no MCP
 
 ```bash
 # Install wren-usage (auto-installs all dependencies)
-bash skills/install.sh wren-usage
+bash skills-archive/install.sh wren-usage
 
 # Or install everything
-bash skills/install.sh
+bash skills-archive/install.sh
 ```
 
 Then invoke in your AI client:

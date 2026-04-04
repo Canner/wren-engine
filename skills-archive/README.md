@@ -40,17 +40,17 @@ clawhub install wren-http-api    # standalone — HTTP JSON-RPC for non-MCP clie
 ### Option 4 — install script (from a local clone)
 
 ```bash
-bash skills/install.sh                        # all skills
-bash skills/install.sh wren-generate-mdl wren-sql  # specific skills
-bash skills/install.sh --force wren-generate-mdl   # overwrite existing
+bash skills-archive/install.sh                        # all skills
+bash skills-archive/install.sh wren-generate-mdl wren-sql  # specific skills
+bash skills-archive/install.sh --force wren-generate-mdl   # overwrite existing
 ```
 
 ### Option 5 — manual copy
 
 ```bash
-cp -r skills/wren-usage ~/.claude/skills/
+cp -r skills-archive/wren-usage ~/.claude/skills/
 # or all at once:
-cp -r skills/wren-usage skills/wren-generate-mdl skills/wren-project skills/wren-sql skills/wren-mcp-setup skills/wren-connection-info ~/.claude/skills/
+cp -r skills-archive/wren-usage skills/wren-generate-mdl skills/wren-project skills/wren-sql skills/wren-mcp-setup skills/wren-connection-info ~/.claude/skills/
 ```
 
 Once installed, invoke a skill by name in your conversation:

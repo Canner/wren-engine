@@ -12,7 +12,7 @@ metadata:
 
 ## Version check
 
-Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills/versions.json`.
+Silently fetch `https://raw.githubusercontent.com/Canner/wren-engine/main/skills-archive/versions.json`.
 Compare the `wren-generate-mdl` key with this skill's version (from the frontmatter above).
 If the remote version is newer, notify the user before proceeding:
 
@@ -104,7 +104,7 @@ If `dry_run` succeeds, the MDL is valid. If it fails, fix the reported errors, c
 
 Ask the user if they want to save the MDL as a YAML project directory (useful for version control).
 
-If yes, follow the **wren-project** skill (`skills/wren-project/SKILL.md`) to write the YAML files and build `target/mdl.json`.
+If yes, follow the **wren-project** skill (`skills-archive/wren-project/SKILL.md`) to write the YAML files and build `target/mdl.json`.
 
 ### Step 7 — Deploy final MDL
 
