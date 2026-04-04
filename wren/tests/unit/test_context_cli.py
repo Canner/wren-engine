@@ -56,6 +56,18 @@ def test_init_creates_scaffold(tmp_path):
     assert (tmp_path / "relationships.yml").exists()
     assert (tmp_path / "instructions.md").exists()
 
+    # Verify wren_project.yml contains namespace clarification comments and defaults
+    project_yml = (tmp_path / "wren_project.yml").read_text()
+    assert "catalog: wren" in project_yml
+    assert "schema: public" in project_yml
+    assert "data_source: postgres" in project_yml
+    assert "NOT your database" in project_yml
+
+    # Verify example model metadata contains table_reference annotation
+    model_meta = (tmp_path / "models" / "example" / "metadata.yml").read_text()
+    assert "table_reference" in model_meta
+    assert "ACTUAL database" in model_meta
+
 
 def test_init_refuses_existing(tmp_path):
     (tmp_path / "wren_project.yml").write_text("name: existing\n")

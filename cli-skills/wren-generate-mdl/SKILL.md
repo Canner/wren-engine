@@ -157,12 +157,11 @@ project/
 > **IMPORTANT: `catalog` and `schema` in `wren_project.yml`**
 >
 > These are Wren Engine's internal namespace — they are NOT the database's
-> native catalog or schema. Always keep the defaults:
-> - `catalog: wren`
-> - `schema: public`
+> native catalog or schema. Keep the defaults (`catalog: wren`, `schema: public`)
+> unless you are intentionally configuring a multi-project namespace.
 >
-> The actual database catalog/schema is specified per-model in `table_reference`.
-> Do NOT copy database catalog/schema values into `wren_project.yml`.
+> Your database's actual catalog/schema is specified per-model in `table_reference`
+> (see Step 2). Do not copy database catalog/schema values into `wren_project.yml`.
 
 ### Step 2 — Write model files
 
