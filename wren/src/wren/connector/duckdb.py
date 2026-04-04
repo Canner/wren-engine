@@ -23,7 +23,7 @@ def _init_duckdb_s3(connection, info: S3FileConnectionInfo):
         TYPE S3,
         KEY_ID '{_escape_sql(info.access_key.get_secret_value())}',
         SECRET '{_escape_sql(info.secret_key.get_secret_value())}',
-        REGION '{_escape_sql(info.region.get_secret_value())}'
+        REGION '{_escape_sql(info.region)}'
     )""")
 
 
@@ -35,7 +35,7 @@ def _init_duckdb_minio(connection, info: MinioFileConnectionInfo):
         SECRET '{_escape_sql(info.secret_key.get_secret_value())}',
         REGION 'ap-northeast-1'
     )""")
-    connection.execute("SET s3_endpoint=?", [info.endpoint.get_secret_value()])
+    connection.execute("SET s3_endpoint=?", [info.endpoint])
     connection.execute("SET s3_url_style='path'")
     connection.execute("SET s3_use_ssl=?", [info.ssl_enabled])
 
@@ -98,16 +98,14 @@ class DuckDBConnector(ConnectorABC):
                 )
 
     def _list_duckdb_files(self, connection_info) -> list[str]:
-        op = opendal.Operator("fs", root=connection_info.url.get_secret_value())
+        op = opendal.Operator("fs", root=connection_info.url)
         files = []
         try:
             for file in op.list("/"):
                 if file.path != "/":
                     stat = op.stat(file.path)
                     if not stat.mode.is_dir() and file.path.endswith(".duckdb"):
-                        files.append(
-                            f"{connection_info.url.get_secret_value()}/{file.path}"
-                        )
+                        files.append(f"{connection_info.url}/{file.path}")
         except Exception as e:
             raise WrenError(
                 ErrorCode.GENERIC_USER_ERROR, f"Failed to list files: {e!s}"

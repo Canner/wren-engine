@@ -53,13 +53,48 @@ def add(
     interactive: Annotated[
         bool, typer.Option("--interactive", "-i", help="Interactive prompts")
     ] = False,
+    ui: Annotated[
+        bool,
+        typer.Option("--ui", help="Open browser-based form to fill connection fields"),
+    ] = False,
+    ui_port: Annotated[
+        int, typer.Option("--port", help="Port for the UI server (0 = auto-select)")
+    ] = 0,
+    no_open: Annotated[
+        bool, typer.Option("--no-open", help="Don't auto-open browser (just print URL)")
+    ] = False,
 ) -> None:
     """Add a new connection profile.
 
-    Three modes: --from-file (import), --interactive (guided prompts), or
-    inline --datasource + additional --key=value pairs (future).
+    Four modes: --ui (browser form), --from-file (import), --interactive
+    (guided prompts), or inline --datasource (minimal profile).
     """
     from wren.profile import add_profile  # noqa: PLC0415
+
+    if ui:
+        try:
+            from wren.profile_web import start as web_start  # noqa: PLC0415
+        except ImportError:
+            typer.echo(
+                "Error: --ui requires extra dependencies.\n"
+                "Install with: pip install 'wren-engine[ui]'",
+                err=True,
+            )
+            raise typer.Exit(1)
+        typer.echo("Opening browser... (press Ctrl+C to cancel)")
+        result = web_start(
+            name, activate=activate, port=ui_port, open_browser=not no_open
+        )
+        if result:
+            typer.echo(
+                f"Profile '{result['name']}' saved (datasource: {result['datasource']})"
+            )
+            if activate:
+                typer.echo(f"  Profile '{result['name']}' is now active.")
+        else:
+            typer.echo("Cancelled.", err=True)
+            raise typer.Exit(1)
+        return
 
     if from_file:
         from pathlib import Path  # noqa: PLC0415
@@ -113,12 +148,16 @@ def add(
 
 
 def _interactive_add(default_ds: str | None) -> dict:
-    """Guided interactive profile creation."""
+    """Guided interactive profile creation using shared field registry."""
     import click  # noqa: PLC0415
 
-    from wren.model.data_source import DataSource  # noqa: PLC0415
+    from wren.model.field_registry import (  # noqa: PLC0415
+        get_datasource_options,
+        get_fields,
+        get_variants,
+    )
 
-    ds_choices = [e.value for e in DataSource]
+    ds_choices = get_datasource_options()
     ds = typer.prompt(
         "Data source",
         default=default_ds,
@@ -126,50 +165,60 @@ def _interactive_add(default_ds: str | None) -> dict:
     )
     profile: dict = {"datasource": ds}
 
-    # Fields to prompt for each datasource: list of (name, default) pairs.
-    # format is injected automatically for duckdb/local_file — not prompted.
-    _COMMON_FIELDS: dict[str, list[tuple[str, str]]] = {
-        "postgres": [
-            ("host", ""),
-            ("port", "5432"),
-            ("database", ""),
-            ("user", ""),
-            ("password", ""),
-        ],
-        "mysql": [
-            ("host", ""),
-            ("port", "3306"),
-            ("database", ""),
-            ("user", ""),
-            ("password", ""),
-        ],
-        "bigquery": [("project_id", ""), ("dataset_id", ""), ("credentials", "")],
-        "duckdb": [("url", "")],
-        "local_file": [("url", ""), ("format", "csv")],
-    }
-    _AUTO_FIELDS: dict[str, dict[str, str]] = {
-        "duckdb": {"format": "duckdb"},
-    }
-    default_fields: list[tuple[str, str]] = [
-        ("host", ""),
-        ("port", ""),
-        ("database", ""),
-        ("user", ""),
-        ("password", ""),
-    ]
-    _SENSITIVE_FIELDS = {"password", "credentials", "secret", "token", "private_key"}
-    fields = _COMMON_FIELDS.get(ds, default_fields)
-    for field, default in fields:
-        hide = field.lower() in _SENSITIVE_FIELDS
-        value = typer.prompt(
-            f"  {field}",
-            default=default,
-            show_default=bool(default) and not hide,
-            hide_input=hide,
+    # Handle datasources with subtypes (bigquery, redshift, databricks)
+    variants = get_variants(ds)
+    if variants:
+        variant = typer.prompt(
+            f"  Type ({', '.join(variants)})",
+            type=click.Choice(variants, case_sensitive=False),
         )
-        if value:
-            profile[field] = value
-    profile.update(_AUTO_FIELDS.get(ds, {}))
+        profile[f"{ds}_type"] = variant
+    else:
+        variant = None
+
+    fields = get_fields(ds, variant=variant)
+
+    for f in fields:
+        # Hidden fields (e.g. duckdb format, discriminator fields) are injected automatically
+        if f.input_type == "hidden":
+            if f.default is not None:
+                profile[f.name] = f.default
+            continue
+        # File fields: accept a path, read & base64-encode
+        if f.input_type == "file_base64":
+            path_str = typer.prompt(
+                f"  {f.label} (file path)", default="", show_default=False
+            )
+            if path_str:
+                import base64  # noqa: PLC0415
+                from pathlib import Path  # noqa: PLC0415
+
+                file_path = Path(path_str).expanduser()
+                try:
+                    content = file_path.read_bytes()
+                    profile[f.name] = base64.b64encode(content).decode()
+                except (FileNotFoundError, PermissionError) as e:
+                    typer.echo(f"  Warning: could not read file: {e}", err=True)
+        # Sensitive fields: hide input
+        elif f.sensitive or f.input_type == "password":
+            value = typer.prompt(
+                f"  {f.label}",
+                default=f.default or "",
+                show_default=False,
+                hide_input=True,
+            )
+            if value:
+                profile[f.name] = value
+        # Normal text fields
+        else:
+            prompt_default = f.default or f.placeholder or ""
+            value = typer.prompt(
+                f"  {f.label}",
+                default=prompt_default,
+                show_default=bool(prompt_default),
+            )
+            if value:
+                profile[f.name] = value
     return profile
 
 

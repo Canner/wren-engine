@@ -104,7 +104,7 @@ def _make_oracle_connection(connection_info):
         )
     if hasattr(connection_info, "dsn") and connection_info.dsn:
         return oracledb.connect(
-            user=connection_info.user.get_secret_value(),
+            user=connection_info.user,
             password=(
                 connection_info.password.get_secret_value()
                 if connection_info.password
@@ -113,15 +113,15 @@ def _make_oracle_connection(connection_info):
             dsn=connection_info.dsn.get_secret_value(),
         )
     return oracledb.connect(
-        user=connection_info.user.get_secret_value(),
+        user=connection_info.user,
         password=(
             connection_info.password.get_secret_value()
             if connection_info.password
             else None
         ),
-        host=connection_info.host.get_secret_value(),
-        port=int(connection_info.port.get_secret_value()),
-        service_name=connection_info.database.get_secret_value(),
+        host=connection_info.host,
+        port=int(connection_info.port),
+        service_name=connection_info.database,
     )
 
 

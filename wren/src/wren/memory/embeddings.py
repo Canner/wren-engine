@@ -5,7 +5,11 @@ Uses LanceDB's embedding registry with sentence-transformers (local, no API key)
 
 from __future__ import annotations
 
-_DEFAULT_MODEL = "paraphrase-multilingual-MiniLM-L12-v2"
+import os
+
+_DEFAULT_MODEL = os.getenv(
+    "WREN_EMBEDDING_MODEL", "paraphrase-multilingual-MiniLM-L12-v2"
+)
 _DEFAULT_DIM = 384
 
 
