@@ -105,7 +105,22 @@ def create_app(
 
         if not ds:
             return HTMLResponse(
-                '<small style="color:var(--pico-color-red-500)">✗ Please select a data source.</small>'
+                '<small style="color:var(--pico-color-red-500)">✗ Please select a data source.</small>',
+                status_code=400,
+            )
+
+        try:
+            valid_variants = get_variants(ds)
+            if valid_variants and variant_key and variant_key not in valid_variants:
+                return HTMLResponse(
+                    '<small style="color:var(--pico-color-red-500)">✗ Invalid variant.</small>',
+                    status_code=400,
+                )
+            get_fields(ds, variant=variant_key)
+        except ValueError:
+            return HTMLResponse(
+                '<small style="color:var(--pico-color-red-500)">✗ Unsupported data source.</small>',
+                status_code=400,
             )
 
         profile: dict[str, Any] = {"datasource": ds}
@@ -122,7 +137,8 @@ def create_app(
                 profile.update(parsed)
             except json.JSONDecodeError:
                 return HTMLResponse(
-                    '<small style="color:var(--pico-color-red-500)">✗ Invalid JSON.</small>'
+                    '<small style="color:var(--pico-color-red-500)">✗ Invalid JSON.</small>',
+                    status_code=400,
                 )
         else:
             for k, v in form.items():
