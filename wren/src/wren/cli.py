@@ -12,7 +12,7 @@ import typer
 app = typer.Typer(name="wren", help="Wren Engine CLI", no_args_is_help=False)
 
 _WREN_HOME = Path(os.environ.get("WREN_HOME", Path.home() / ".wren")).expanduser()
-_DEFAULT_MDL = _WREN_HOME / "mdl.json"
+_WREN_HOME = Path.home() / ".wren"
 _DEFAULT_CONN = _WREN_HOME / "connection_info.json"
 
 
@@ -20,15 +20,23 @@ _DEFAULT_CONN = _WREN_HOME / "connection_info.json"
 
 
 def _require_mdl(mdl: str | None) -> str:
-    """Return mdl arg if given, else auto-discover mdl.json from ~/.wren."""
+    """Return mdl path — explicit flag or auto-discovered from project root."""
     if mdl is not None:
         return mdl
-    if _DEFAULT_MDL.exists():
-        return str(_DEFAULT_MDL)
-    typer.echo(
-        f"Error: --mdl not specified and '{_DEFAULT_MDL}' not found.",
-        err=True,
-    )
+    try:
+        from wren.context import discover_project_path  # noqa: PLC0415
+
+        project_path = discover_project_path()
+        target = project_path / "target" / "mdl.json"
+        if target.exists():
+            return str(target)
+        typer.echo(
+            f"Error: project found at {project_path} but target/mdl.json missing.\n"
+            "  Hint: run `wren context build` first.",
+            err=True,
+        )
+    except SystemExit as e:
+        typer.echo(str(e), err=True)
     raise typer.Exit(1)
 
 
@@ -202,7 +210,7 @@ MdlOpt = Annotated[
     typer.Option(
         "--mdl",
         "-m",
-        help=f"Path to MDL JSON file or base64 string. Defaults to {_DEFAULT_MDL}.",
+        help="Path to MDL JSON file or base64 string. Defaults to <project>/target/mdl.json.",
     ),
 ]
 ConnInfoOpt = Annotated[
@@ -532,8 +540,10 @@ def docs_connection_info(
 
 app.add_typer(docs_app)
 
+from wren.context_cli import context_app  # noqa: E402, PLC0415
 from wren.utils_cli import utils_app  # noqa: E402, PLC0415
 
+app.add_typer(context_app)
 app.add_typer(utils_app)
 
 try:

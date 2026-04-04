@@ -12,11 +12,10 @@ import duckdb
 import orjson
 import pytest
 
-from wren import WrenEngine
-from wren.model.data_source import DataSource
-
 from tests.suite.manifests import make_tpch_manifest
 from tests.suite.query import WrenQueryTestSuite
+from wren import WrenEngine
+from wren.model.data_source import DataSource
 
 pytestmark = pytest.mark.duckdb
 
@@ -44,5 +43,7 @@ class TestDuckDB(WrenQueryTestSuite):
 
         manifest_str = base64.b64encode(orjson.dumps(self.manifest)).decode()
         conn_info = {"url": str(db_dir), "format": "duckdb"}
-        with WrenEngine(manifest_str, DataSource.duckdb, conn_info, fallback=False) as e:
+        with WrenEngine(
+            manifest_str, DataSource.duckdb, conn_info, fallback=False
+        ) as e:
             yield e
