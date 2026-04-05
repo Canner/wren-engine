@@ -94,6 +94,12 @@ A model must define its source in exactly one of two ways. Using both `table_ref
 
 Used when the underlying table already exists in the database.
 
+| Field | Description |
+|-------|-------------|
+| `catalog` | Database catalog. Empty string if not applicable. For DuckDB, use the DB file name without extension (e.g. `jaffle_shop.duckdb` → `jaffle_shop`). |
+| `schema` | Database schema (e.g. `public`, `main`). |
+| `table` | Physical table name. |
+
 **jaffle_shop example** — the `orders` model maps directly to `jaffle_shop.main.orders`:
 
 ```yaml

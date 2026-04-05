@@ -188,7 +188,9 @@ naming (the build step converts to camelCase automatically).
 # models/orders/metadata.yml
 name: orders
 table_reference:
-  catalog: ""           # database catalog (empty string if not applicable)
+  catalog: ""           # database catalog (empty string if not applicable;
+                        #   for DuckDB, use the DB file name without extension,
+                        #   e.g. jaffle_shop.duckdb → catalog: jaffle_shop)
   schema: public        # database schema (this IS the DB schema)
   table: orders         # database table name
 primary_key: order_id
