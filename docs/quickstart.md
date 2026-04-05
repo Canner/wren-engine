@@ -110,7 +110,7 @@ This opens a browser form. Fill in:
 
 - **Profile name:** `jaffle-shop`
 - **Data source:** `duckdb`
-- **Database path:** `/Users/you/jaffle_shop_duckdb` (your absolute path from Step 1)
+- **Database path:** `/Users/you/jaffle_shop_duckdb` — the **directory** containing `.duckdb` files, not the `.duckdb` file itself (your absolute path from Step 1)
 
 ### Option B: Interactive CLI
 
