@@ -12,7 +12,7 @@ Use natural-language questions against the **jaffle\_shop** dataset using **Wren
 
 - **Claude Code** — installed and authenticated ([install guide](https://docs.anthropic.com/en/docs/claude-code/overview))
 - **Python 3.11+**
-- **Node.js / npm** — required for `npx` skill installer
+- **Node.js / npm** — required if using `npx` to install skills (see Step 3)
 - **Git**
 
 ---
@@ -94,7 +94,6 @@ This installs two skills:
 | **wren-usage** | Day-to-day workflow — gather context, recall past queries, write SQL, store results |
 | **wren-generate-mdl** | One-time setup — explore database schema and generate the MDL project |
 
-
 ---
 
 ## Step 4 — Set up a profile
@@ -128,6 +127,7 @@ Create a YAML file `jaffle-profile.yml`:
 ```yaml
 datasource: duckdb
 url: /Users/you/jaffle_shop_duckdb
+format: duckdb
 ```
 
 Then import it:
@@ -172,20 +172,9 @@ This creates:
 └── instructions.md         # business rules for the AI
 ```
 
-Edit `wren_project.yml` to set the data source:
+The generated `wren_project.yml` contains default values for `catalog` and `schema`:
 
-```yaml
-schema_version: 2
-name: jaffle_shop
-version: "1.0"
-# catalog and schema are Wren Engine's internal namespace for this MDL project.
-# They are NOT your database's native catalog/schema. Keep the defaults.
-catalog: wren
-schema: public
-data_source: duckdb
-```
-
-> **Note:** `catalog` and `schema` here define the **Wren Engine namespace** — how the engine addresses this MDL project internally. They have nothing to do with your database's catalog or schema. The actual database location of each table is specified per-model in the `table_reference` section. Keep the defaults (`wren` / `public`) unless you plan to query across multiple MDL projects.
+> **Note:** `catalog` and `schema` in `wren_project.yml` define the **Wren Engine namespace** — they have nothing to do with your database's catalog or schema. Keep the defaults (`wren` / `public`). The actual database location of each table is specified per-model in the `table_reference` section.
 
 ---
 
@@ -315,8 +304,8 @@ wren memory index
 | Show project context | `wren context show` |
 | Show instructions | `wren context instructions` |
 | Build manifest | `wren context build` |
-| Fetch context for a question | `wren memory fetch --question "..."` |
-| Recall similar queries | `wren memory recall --question "..."` |
+| Fetch context for a question | `wren memory fetch --query "..."` |
+| Recall similar queries | `wren memory recall --query "..."` |
 | Store a NL-SQL pair | `wren memory store --nl "..." --sql "..."` |
 | Check memory status | `wren memory status` |
 | Re-index memory | `wren memory index` |
