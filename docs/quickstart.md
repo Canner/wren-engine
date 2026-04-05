@@ -11,8 +11,22 @@ Use natural-language questions against the **jaffle\_shop** dataset using **Wren
 ## Prerequisites
 
 - **Claude Code** — installed and authenticated ([install guide](https://docs.anthropic.com/en/docs/claude-code/overview))
-- **Python 3.9+**
+- **Python 3.11+**
+- **Node.js / npm** — required for `npx` skill installer
 - **Git**
+
+---
+
+## Step 0 — Create a Python virtual environment
+
+Create and activate a virtual environment before installing any packages. This keeps dbt and wren-engine dependencies isolated from your system Python:
+
+```bash
+python3 -m venv ~/.venvs/wren
+source ~/.venvs/wren/bin/activate
+```
+
+> **Tip:** Activate this environment (`source ~/.venvs/wren/bin/activate`) in every new terminal session before running `dbt` or `wren` commands.
 
 ---
 
@@ -23,8 +37,6 @@ Clone the dbt jaffle\_shop project and build the DuckDB database:
 ```bash
 git clone https://github.com/dbt-labs/jaffle_shop_duckdb.git
 cd jaffle_shop_duckdb
-python3 -m venv .venv
-source .venv/bin/activate
 pip install dbt-core dbt-duckdb
 dbt build
 ```
@@ -82,7 +94,6 @@ This installs two skills:
 | **wren-usage** | Day-to-day workflow — gather context, recall past queries, write SQL, store results |
 | **wren-generate-mdl** | One-time setup — explore database schema and generate the MDL project |
 
-> **Important:** Start a **new Claude Code session** after installing skills so they are loaded.
 
 ---
 
