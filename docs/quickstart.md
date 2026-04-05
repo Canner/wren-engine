@@ -180,6 +180,12 @@ The generated `wren_project.yml` contains default values for `catalog` and `sche
 
 ## Step 6 — Generate MDL with Claude Code
 
+First, remove the example model and view that `wren context init` created — they are placeholders and will be replaced by the generated models:
+
+```bash
+rm -rf models/example_model views/example_view
+```
+
 Now let Claude Code explore the database and generate the MDL project files. Open Claude Code **in the project directory**:
 
 ```bash
@@ -300,7 +306,7 @@ wren memory index
 |------|---------|
 | Run SQL | `wren --sql "SELECT ..." -o table` |
 | Preview planned SQL | `wren dry-plan --sql "SELECT ..."` |
-| Validate SQL | `wren validate --sql "SELECT ..."` |
+| Validate SQL | `wren dry-run --sql "SELECT ..."` |
 | Show project context | `wren context show` |
 | Show instructions | `wren context instructions` |
 | Build manifest | `wren context build` |

@@ -287,7 +287,7 @@ def main(
     """Wren Engine CLI.
 
     Run with --sql to execute a query using mdl.json and connection_info.json from
-    ~/.wren.  Use a subcommand (query / dry-run / dry-plan / validate)
+    ~/.wren.  Use a subcommand (query / dry-run / dry-plan)
     for explicit control.
 
     The data source is always read from the 'datasource' field in
@@ -350,23 +350,6 @@ def query(
             raise typer.Exit(1)
     _print_result(result, output)
     _maybe_print_store_tip(sql, quiet)
-
-
-@app.command(name="dry-run")
-def dry_run(
-    sql: Annotated[str, typer.Option("--sql", "-s", help="SQL query to validate")],
-    mdl: MdlOpt = None,
-    connection_info: ConnInfoOpt = None,
-    connection_file: ConnFileOpt = None,
-):
-    """Dry-run a SQL query (parse + validate, no results returned)."""
-    with _build_engine(mdl, connection_info, connection_file) as engine:
-        try:
-            engine.dry_run(sql)
-            typer.echo("OK")
-        except Exception as e:
-            typer.echo(f"Error: {e}", err=True)
-            raise typer.Exit(1)
 
 
 @app.command(name="dry-plan")
@@ -445,20 +428,20 @@ def dry_plan(
             raise typer.Exit(1)
 
 
-@app.command()
-def validate(
-    sql: Annotated[str, typer.Option("--sql", "-s", help="SQL query to validate")],
+@app.command(name="dry-run")
+def dry_run(
+    sql: Annotated[str, typer.Option("--sql", "-s", help="SQL query to dry-run")],
     mdl: MdlOpt = None,
     connection_info: ConnInfoOpt = None,
     connection_file: ConnFileOpt = None,
 ):
-    """Validate SQL can be planned and dry-run against the data source."""
+    """Dry-run SQL against the data source (parse + validate, no results returned)."""
     with _build_engine(mdl, connection_info, connection_file) as engine:
         try:
             engine.dry_run(sql)
-            typer.echo("Valid")
+            typer.echo("OK")
         except Exception as e:
-            typer.echo(f"Invalid: {e}", err=True)
+            typer.echo(f"Error: {e}", err=True)
             raise typer.Exit(1)
 
 
