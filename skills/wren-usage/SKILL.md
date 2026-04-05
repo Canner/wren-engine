@@ -27,11 +27,11 @@ Then continue with the workflow below regardless of update status.
 
 The `wren` CLI queries databases through an MDL (Model Definition Language) semantic layer. You write SQL against model names, not raw tables. The engine translates to the target dialect.
 
-Two files drive everything (auto-discovered from `~/.wren/`):
-- `mdl.json` — the semantic model
-- `connection_info.json` — database credentials + `datasource` field (e.g. `"datasource": "postgres"`)
+Two things drive everything:
+- **Profile** — database connection + datasource type, managed via `wren profile` (stored in `~/.wren/profiles.yml`)
+- **Project** — MDL model definitions in YAML, compiled to `target/mdl.json` via `wren context build`
 
-The data source is always read from `connection_info.json`. There is no `--datasource` flag on execution commands (`query`, `dry-run`, `validate`). Only `dry-plan` accepts `--datasource` / `-d` as an override (for transpile-only use without a connection file).
+The CLI reads the active profile for connection info and datasource. Use `wren profile list` to see which profile is active, `wren profile switch <name>` to change it. `dry-plan` also accepts `--datasource` / `-d` for transpile-only use without a profile.
 
 For memory-specific decisions, see [references/memory.md](references/memory.md).
 For SQL syntax, CTE-based modeling, and error diagnosis, see [references/wren-sql.md](references/wren-sql.md).
@@ -46,7 +46,7 @@ For SQL syntax, CTE-based modeling, and error diagnosis, see [references/wren-sq
 |-----------|---------|
 | Default | `wren memory fetch -q "<question>"` |
 | Need specific model's columns | `wren memory fetch -q "..." --model <name> --threshold 0` |
-| Memory not installed | Read `target/mdl.json` in the project directory directly |
+| Memory not installed | Read `target/mdl.json` in the project directory, or run `wren context show` |
 
 If this is the first query in the conversation, also run:
 
@@ -150,16 +150,16 @@ after execution, the query was classified as exploratory.
 ### "table not found"
 
 1. Verify model name: `wren memory fetch -q "<name>" --type model --threshold 0`
-2. Check MDL exists: `ls ~/.wren/mdl.json`
+2. Check MDL exists: `ls target/mdl.json` (or `wren context show`)
 3. Verify column: `wren memory fetch -q "<column>" --model <name> --threshold 0`
 
 ### Connection error
 
-1. Check: `cat ~/.wren/connection_info.json`
-2. Verify the `datasource` field is present and valid
+1. Check active profile: `wren profile debug`
+2. Verify datasource and connection fields are correct
 3. Test: `wren --sql "SELECT 1"`
 4. Valid datasource values: `postgres`, `mysql`, `bigquery`, `snowflake`, `clickhouse`, `trino`, `mssql`, `databricks`, `redshift`, `spark`, `athena`, `oracle`, `duckdb`
-5. Both flat format (`{"datasource": ..., "host": ...}`) and MCP envelope format (`{"datasource": ..., "properties": {...}}`) are accepted
+5. If no profile exists, create one: `wren profile add --ui` (or `--interactive` / `--from-file`)
 
 ### SQL syntax / planning error (enhanced)
 
@@ -212,26 +212,30 @@ For the CTE rewrite pipeline and additional error patterns, see [references/wren
 
 ## Workflow 3: Connecting a new data source
 
-1. Create `~/.wren/connection_info.json` — see [wren/docs/connections.md](../../wren/docs/connections.md) for per-connector formats
-2. Test: `wren --sql "SELECT 1"`
-3. Place or create `~/.wren/mdl.json`
-4. Index: `wren memory index`
-5. Verify: `wren --sql "SELECT * FROM <model> LIMIT 5"`
+1. Add a profile: `wren profile add --ui` (or `--interactive` / `--from-file`)
+2. Test connection: `wren profile debug`
+3. Test query: `wren --sql "SELECT 1"`
+4. Initialize project: `wren context init`
+5. Index: `wren memory index`
+6. Verify: `wren --sql "SELECT * FROM <model> LIMIT 5"`
 
 ---
 
 ## Workflow 4: After MDL changes
 
-When the MDL is updated, downstream state goes stale:
+When model YAML files are updated, rebuild and re-index:
 
 ```bash
-# 1. Deploy updated MDL
-cp updated-mdl.json ~/.wren/mdl.json
+# 1. Validate changes
+wren context validate
 
-# 2. Re-index schema memory
+# 2. Rebuild manifest
+wren context build
+
+# 3. Re-index schema memory
 wren memory index
 
-# 3. Verify
+# 4. Verify
 wren --sql "SELECT * FROM <changed_model> LIMIT 1"
 ```
 
@@ -241,7 +245,7 @@ wren --sql "SELECT * FROM <changed_model> LIMIT 1"
 
 ```
 Get data back           → wren --sql "..."
-See translated SQL only → wren dry-plan --sql "..." (accepts -d <datasource> if no connection file)
+See translated SQL only → wren dry-plan --sql "..." (accepts -d <datasource> if no active profile)
 Validate against DB     → wren dry-run --sql "..."
 Schema context          → wren memory fetch -q "..."
 Filter by type/model    → wren memory fetch -q "..." --type T --model M --threshold 0
@@ -249,6 +253,10 @@ Store confirmed query   → wren memory store --nl "..." --sql "..."
 Few-shot examples       → wren memory recall -q "..."
 Index stats             → wren memory status
 Re-index after MDL change → wren memory index
+Show project context    → wren context show
+Rebuild manifest        → wren context build
+Check profile           → wren profile debug
+Switch profile          → wren profile switch <name>
 ```
 
 ---
@@ -259,4 +267,4 @@ Re-index after MDL change → wren memory index
 - Do not store failed queries or queries the user said are wrong
 - Do not skip storing successful queries with a clear NL question — default is to store
 - Do not re-index before every query — once per MDL change
-- Do not pass passwords via `--connection-info` if shell history is shared — use `--connection-file`
+- Do not pass passwords via `--connection-info` if shell history is shared — use profiles (`wren profile add`) or `--connection-file`

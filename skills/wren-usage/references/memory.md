@@ -28,7 +28,7 @@ wren memory fetch -q "revenue" --threshold 50000   # raise for larger context wi
 ## Indexing: `wren memory index`
 
 **When to index:**
-- After deploying a new or updated MDL
+- After updating model YAML files and rebuilding (`wren context build`)
 - When `wren memory status` shows `schema_items: 0 rows`
 - When `wren memory fetch` returns stale results (references deleted models)
 
@@ -37,7 +37,7 @@ wren memory fetch -q "revenue" --threshold 50000   # raise for larger context wi
 - When only using `describe` or `fetch` with full strategy — those read the MDL directly
 
 ```bash
-wren memory index --mdl ~/.wren/mdl.json
+wren memory index
 ```
 
 ---
@@ -112,4 +112,4 @@ wren memory status              # path, table names, row counts
 wren memory reset --force       # drop everything, start fresh
 ```
 
-All memory commands accept `--path DIR` to override `~/.wren/memory/`.
+All memory commands accept `--path DIR` to override the default storage directory (`<project>/.wren/memory/`, falling back to `~/.wren/memory/` outside a project).
