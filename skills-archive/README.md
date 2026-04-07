@@ -50,7 +50,7 @@ bash skills-archive/install.sh --force wren-generate-mdl   # overwrite existing
 ```bash
 cp -r skills-archive/wren-usage ~/.claude/skills/
 # or all at once:
-cp -r skills-archive/wren-usage skills-archive/wren-generate-mdl skills-archive/wren-project skills-archive/wren-sql skills-archive/wren-mcp-setup skills-archive/wren-connection-info ~/.claude/skills/
+cp -r skills-archive/wren-usage skills-archive/wren-quickstart skills-archive/wren-generate-mdl skills-archive/wren-project skills-archive/wren-sql skills-archive/wren-mcp-setup skills-archive/wren-connection-info skills-archive/wren-http-api ~/.claude/skills/
 ```
 
 Once installed, invoke a skill by name in your conversation:

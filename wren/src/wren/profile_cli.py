@@ -71,6 +71,14 @@ def add(
     """
     from wren.profile import add_profile  # noqa: PLC0415
 
+    selected_modes = sum(bool(flag) for flag in (ui, from_file, interactive))
+    if selected_modes > 1:
+        typer.echo(
+            "Error: choose only one of --ui, --from-file, or --interactive.",
+            err=True,
+        )
+        raise typer.Exit(1)
+
     if ui:
         try:
             from wren.profile_web import start as web_start  # noqa: PLC0415
@@ -83,7 +91,8 @@ def add(
                 err=True,
             )
             raise typer.Exit(1)
-        typer.echo("Opening browser... (press Ctrl+C to cancel)")
+        if not no_open:
+            typer.echo("Opening browser... (press Ctrl+C to cancel)")
         result = web_start(
             name, activate=activate, port=ui_port, open_browser=not no_open
         )
@@ -200,7 +209,15 @@ def _interactive_add(default_ds: str | None) -> dict:
                     content = file_path.read_bytes()
                     profile[f.name] = base64.b64encode(content).decode()
                 except (FileNotFoundError, PermissionError) as e:
+                    if f.required:
+                        typer.echo(
+                            f"  Error: required file not readable: {e}", err=True
+                        )
+                        raise typer.Exit(1)
                     typer.echo(f"  Warning: could not read file: {e}", err=True)
+            elif f.required:
+                typer.echo(f"  Error: {f.label} is required.", err=True)
+                raise typer.Exit(1)
         # Sensitive fields: hide input
         elif f.sensitive or f.input_type == "password":
             value = typer.prompt(
@@ -211,6 +228,9 @@ def _interactive_add(default_ds: str | None) -> dict:
             )
             if value:
                 profile[f.name] = value
+            elif f.required:
+                typer.echo(f"  Error: {f.label} is required.", err=True)
+                raise typer.Exit(1)
         # Normal text fields
         else:
             prompt_default = f.default or ""
@@ -224,6 +244,9 @@ def _interactive_add(default_ds: str | None) -> dict:
             )
             if value:
                 profile[f.name] = value
+            elif f.required:
+                typer.echo(f"  Error: {f.label} is required.", err=True)
+                raise typer.Exit(1)
     return profile
 
 

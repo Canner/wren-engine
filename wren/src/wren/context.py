@@ -210,6 +210,22 @@ def write_project_files(
     output_dir = Path(output_dir)
     project_file = output_dir / "wren_project.yml"
 
+    if force and output_dir.exists():
+        import shutil  # noqa: PLC0415
+
+        for managed in (
+            "models",
+            "views",
+            "relationships.yml",
+            "instructions.md",
+            "wren_project.yml",
+        ):
+            target = output_dir / managed
+            if target.is_dir():
+                shutil.rmtree(target)
+            elif target.exists():
+                target.unlink()
+
     if project_file.exists() and not force:
         raise SystemExit(
             f"Error: {project_file} already exists. Use --force to overwrite."

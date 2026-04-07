@@ -38,6 +38,8 @@ def _require_mdl(mdl: str | None) -> str:
         )
     except SystemExit as e:
         typer.echo(str(e), err=True)
+    except Exception as e:
+        typer.echo(f"Error discovering project: {e}", err=True)
     raise typer.Exit(1)
 
 

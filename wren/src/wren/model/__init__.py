@@ -10,7 +10,12 @@ from pydantic import BaseModel, BeforeValidator, Field, SecretStr
 
 from wren.model.error import ErrorCode, WrenError
 
-StrPort = Annotated[str, BeforeValidator(lambda v: str(v) if isinstance(v, int) else v)]
+StrPort = Annotated[
+    str,
+    BeforeValidator(
+        lambda v: str(v) if isinstance(v, int) and not isinstance(v, bool) else v
+    ),
+]
 
 
 class BaseConnectionInfo(BaseModel):
