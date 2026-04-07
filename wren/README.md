@@ -33,29 +33,46 @@ Requires Python 3.11+.
 
 ## Quick start
 
-**1. Create `~/.wren/mdl.json`** — your semantic model:
+**1. Initialize a project** — scaffolds a YAML-based MDL project:
 
-```json
-{
-  "catalog": "wren",
-  "schema": "public",
-  "models": [
-    {
-      "name": "orders",
-      "tableReference": { "schema": "mydb", "table": "orders" },
-      "columns": [
-        { "name": "order_id",    "type": "integer" },
-        { "name": "customer_id", "type": "integer" },
-        { "name": "total",       "type": "double" },
-        { "name": "status",      "type": "varchar" }
-      ],
-      "primaryKey": "order_id"
-    }
-  ]
-}
+```bash
+mkdir my-project && cd my-project
+wren context init
 ```
 
-**2. Configure a connection profile** — pick one of three ways:
+This creates `wren_project.yml`, `models/`, and `views/`. Edit `wren_project.yml` to set your `data_source` and add models under `models/`:
+
+```yaml
+# wren_project.yml
+schema_version: 2
+name: my_project
+catalog: wren
+schema: public
+data_source: postgres
+```
+
+```yaml
+# models/orders/metadata.yml
+name: orders
+table_reference:
+  schema: mydb
+  table: orders
+columns:
+  - name: order_id
+    type: integer
+  - name: customer_id
+    type: integer
+  - name: total
+    type: double
+  - name: status
+    type: varchar
+primary_key: order_id
+```
+
+> **Already have an MDL JSON?** Import it directly:
+> `wren context init --from-mdl path/to/mdl.json`
+
+**2. Configure a connection profile:**
 
 ```bash
 # Browser form (recommended, requires wren-engine[ui])
@@ -68,20 +85,25 @@ wren profile add my-db --interactive
 wren profile add my-db --from-file connection_info.json
 ```
 
-Or create `~/.wren/connection_info.json` manually:
+**3. Build the manifest:**
 
-```json
-{
-  "datasource": "mysql",
-  "host": "localhost",
-  "port": 3306,
-  "database": "mydb",
-  "user": "root",
-  "password": "secret"
-}
+```bash
+wren context build
 ```
 
-**3. (Optional) Create `~/.wren/config.json`** — security policy:
+This compiles YAML files into `target/mdl.json`. The CLI auto-discovers this file when you run queries from within the project directory.
+
+**4. Run queries:**
+
+```bash
+wren --sql 'SELECT order_id FROM "orders" LIMIT 10'
+```
+
+`wren` walks up from the current directory to find `wren_project.yml` and uses `target/mdl.json`. You can also pass `--mdl path/to/mdl.json` explicitly.
+
+For the full CLI reference and per-datasource connection field reference, see [`docs/cli.md`](docs/cli.md) and [`docs/connections.md`](docs/connections.md).
+
+**5. (Optional) Configure security policy** — create `~/.wren/config.json`:
 
 ```json
 {
@@ -95,15 +117,7 @@ Or create `~/.wren/connection_info.json` manually:
 | `strict_mode` | `false` | When `true`, every table in a query must be defined in the MDL. Queries referencing undeclared tables are rejected before execution. |
 | `denied_functions` | `[]` | List of function names (case-insensitive) that are forbidden in queries. |
 
-**4. Run queries** — `wren` auto-discovers all files from `~/.wren` (override with `WREN_HOME=/path/to/dir`):
-
-```bash
-wren --sql 'SELECT order_id FROM "orders" LIMIT 10'
-```
-
-For the full CLI reference and per-datasource connection field reference, see [`docs/cli.md`](docs/cli.md) and [`docs/connections.md`](docs/connections.md).
-
-**5. Index schema for semantic search** (optional, requires `wren-engine[memory]`):
+**6. (Optional) Index schema for semantic search** (requires `wren-engine[memory]`):
 
 ```bash
 wren memory index                              # index MDL schema
