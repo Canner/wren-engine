@@ -154,8 +154,8 @@ def init(
     (example_view_dir / "metadata.yml").write_text(
         "# Example view — replace with your actual view\n"
         "name: example_view\n"
-        'description: "An example view"\n'
-        "properties: {}\n"
+        "properties:\n"
+        '  description: "An example view"\n'
     )
     (example_view_dir / "sql.yml").write_text(
         "statement: >\n  SELECT * FROM example LIMIT 100\n"

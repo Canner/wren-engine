@@ -58,14 +58,16 @@ pwd
 
 ## Step 2 — Install wren-engine Python package
 
-Install `wren-engine` with the DuckDB connector, UI support, and memory system:
+Install `wren-engine` with UI support and memory system:
 
 ```bash
-pip install "wren-engine[duckdb,ui,memory]"
+pip install "wren-engine[ui,memory]"
 ```
 
-> **Extras explained:**
-> - `duckdb` — DuckDB connector (use `postgres`, `bigquery`, etc. for other data sources)
+DuckDB is included by default — no extra needed. For other data sources, install the corresponding extra (e.g. `pip install "wren-engine[postgres,ui,memory]"`).
+
+> **Available extras:**
+> - `postgres`, `mysql`, `bigquery`, `snowflake`, `clickhouse`, `trino`, `mssql`, `databricks`, `redshift`, `athena`, `oracle`, `spark` — data source connectors
 > - `ui` — browser-based profile configuration UI
 > - `memory` — LanceDB-backed memory system for context retrieval and NL-SQL recall
 
@@ -103,19 +105,18 @@ A profile stores your database connection info (like dbt profiles). Create one f
 ### Option A: Browser UI (recommended)
 
 ```bash
-wren profile add --ui
+wren profile add jaffle-shop --ui
 ```
 
 This opens a browser form. Fill in:
 
-- **Profile name:** `jaffle-shop`
 - **Data source:** `duckdb`
 - **Database path:** `/Users/you/jaffle_shop_duckdb` — the **directory** containing `.duckdb` files, not the `.duckdb` file itself (your absolute path from Step 1)
 
 ### Option B: Interactive CLI
 
 ```bash
-wren profile add --interactive
+wren profile add jaffle-shop --interactive
 ```
 
 Follow the prompts to enter profile name, data source, and connection fields.
@@ -133,7 +134,7 @@ format: duckdb
 Then import it:
 
 ```bash
-wren profile add --from-file jaffle-profile.yml --name jaffle-shop
+wren profile add jaffle-shop --from-file jaffle-profile.yml
 ```
 
 ---
@@ -286,7 +287,7 @@ Key files to customize:
   - Always use order_date for time-based filtering, not created_at
   ```
 
-- **`models/*/metadata.yml`** — Add or refine `description` fields on models and columns. Better descriptions = better memory search.
+- **`models/*/metadata.yml`** — Add or refine `properties.description` on models and columns. Better descriptions = better memory search.
 
 - **`relationships.yml`** — Add or fix join conditions. Wrong relationships cause silent query errors.
 

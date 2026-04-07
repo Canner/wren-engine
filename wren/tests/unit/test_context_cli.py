@@ -29,12 +29,12 @@ def _make_valid_project(tmp_path: Path) -> Path:
         "columns:\n"
         "  - name: id\n    type: INTEGER\n    is_calculated: false\n    not_null: true\n    properties: {}\n"
         "  - name: total\n    type: DECIMAL\n    is_calculated: false\n    not_null: false\n    properties: {}\n"
-        "primary_key: id\ncached: false\nproperties: {}\n"
+        "primary_key: id\ncached: false\nproperties:\n  description: Orders table\n"
     )
     view_dir = tmp_path / "views" / "summary"
     view_dir.mkdir(parents=True)
     (view_dir / "metadata.yml").write_text(
-        "name: summary\ndescription: test view\nproperties: {}\n"
+        "name: summary\nproperties:\n  description: test view\n"
     )
     (view_dir / "sql.yml").write_text(
         "statement: SELECT id, total FROM wren.public.orders\n"

@@ -58,7 +58,7 @@ A Wren project keeps schema artifacts together in the project directory. Global 
 
 When you run a wren command that needs the project (query, memory fetch, etc.), the CLI resolves the project root in this order:
 
-1. `--project` flag (explicit)
+1. `--path` flag (explicit)
 2. `WREN_PROJECT_HOME` environment variable
 3. Walk up from the current directory looking for `wren_project.yml`
 4. `default_project` in `~/.wren/config.yml`
@@ -182,8 +182,8 @@ name: top_customers
 statement: >
   SELECT customer_id, SUM(total) AS lifetime_value
   FROM wren.public.orders GROUP BY 1 ORDER BY 2 DESC LIMIT 100
-description: "Top customers by lifetime value"
-properties: {}
+properties:
+  description: "Top customers by lifetime value"
 ```
 
 ### `relationships.yml`
