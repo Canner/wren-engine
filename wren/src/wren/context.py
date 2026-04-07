@@ -45,25 +45,13 @@ When the user wants to add models, change schema, or onboard a new table:
 
 ## Prerequisites
 
-This project requires the `wren` CLI. If not installed:
+This project requires the `wren` CLI. Install with your data source extra:
 
 ```bash
-pip install "wren-engine[memory]"
+pip install "wren-engine[postgres,memory,ui]"
 ```
 
-Each data source needs its own extra — install the one matching your `data_source` in `wren_project.yml`:
-
-```bash
-pip install "wren-engine[postgres]"   # or mysql, bigquery, snowflake, clickhouse,
-                                      # trino, mssql, databricks, redshift, spark,
-                                      # athena, oracle
-```
-
-Or install everything at once:
-
-```bash
-pip install "wren-engine[all]"
-```
+Replace `postgres` with your data source (`mysql`, `bigquery`, `snowflake`, `clickhouse`, `trino`, `mssql`, `databricks`, `redshift`, `spark`, `athena`, `oracle`). The `memory` extra enables semantic search; `ui` enables the interactive UI.
 
 See https://docs.getwren.ai/oss/engine/get_started/installation for full setup.
 
