@@ -57,14 +57,21 @@ Run `wren --version`. If the command is not found or errors:
    inferred, ask the user which database they plan to connect to. Valid
    extras: `postgres`, `mysql`, `bigquery`, `snowflake`, `clickhouse`,
    `trino`, `mssql`, `databricks`, `redshift`, `spark`, `athena`, `oracle`.
+   DuckDB is included by default — no extra needed.
 
 4. Install with the detected or chosen extra:
    ```bash
+   # DuckDB (no extra needed)
+   pip install "wren-engine"
+
+   # Other datasources
    pip install "wren-engine[<datasource>]"
    ```
-   To also enable semantic memory (recommended):
+   To also enable semantic memory and web UI (recommended):
    ```bash
    pip install "wren-engine[<datasource>,memory,ui]"
+   # or for DuckDB:
+   pip install "wren-engine[memory,ui]"
    ```
 
 5. Verify: `wren --version`
