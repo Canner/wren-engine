@@ -7,7 +7,7 @@
   "skills": [
     {
       "name": "wren-generate-mdl",
-      "version": "2.0",
+      "version": "2.1",
       "description": "Generate a Wren MDL project by exploring a database with available tools (SQLAlchemy, database drivers, MCP connectors, or raw SQL). Guides agents through schema discovery, type normalization, and MDL YAML generation using the wren CLI.",
       "tags": [
         "wren",
