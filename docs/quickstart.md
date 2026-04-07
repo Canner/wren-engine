@@ -105,19 +105,18 @@ A profile stores your database connection info (like dbt profiles). Create one f
 ### Option A: Browser UI (recommended)
 
 ```bash
-wren profile add --ui
+wren profile add jaffle-shop --ui
 ```
 
 This opens a browser form. Fill in:
 
-- **Profile name:** `jaffle-shop`
 - **Data source:** `duckdb`
 - **Database path:** `/Users/you/jaffle_shop_duckdb` — the **directory** containing `.duckdb` files, not the `.duckdb` file itself (your absolute path from Step 1)
 
 ### Option B: Interactive CLI
 
 ```bash
-wren profile add --interactive
+wren profile add jaffle-shop --interactive
 ```
 
 Follow the prompts to enter profile name, data source, and connection fields.
@@ -135,7 +134,7 @@ format: duckdb
 Then import it:
 
 ```bash
-wren profile add --from-file jaffle-profile.yml --name jaffle-shop
+wren profile add jaffle-shop --from-file jaffle-profile.yml
 ```
 
 ---
