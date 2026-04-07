@@ -246,20 +246,16 @@ class DataSourceExtension(Enum):
     def get_athena_connection(info: AthenaConnectionInfo) -> BaseBackend:
         kwargs: dict[str, Any] = {
             "s3_staging_dir": info.s3_staging_dir.get_secret_value(),
-            "schema_name": info.schema_name.get_secret_value(),
+            "schema_name": info.schema_name,
         }
         if info.region_name:
-            kwargs["region_name"] = info.region_name.get_secret_value()
+            kwargs["region_name"] = info.region_name
 
         if info.web_identity_token and info.role_arn:
             oidc_token = info.web_identity_token.get_secret_value()
             role_arn = info.role_arn.get_secret_value()
-            session_name = (
-                info.role_session_name.get_secret_value()
-                if info.role_session_name
-                else "wren-oidc-session"
-            )
-            region = info.region_name.get_secret_value() if info.region_name else None
+            session_name = info.role_session_name or "wren-oidc-session"
+            region = info.region_name if info.region_name else None
             sts = boto3.client("sts", region_name=region)
             resp = sts.assume_role_with_web_identity(
                 RoleArn=role_arn,
@@ -297,9 +293,7 @@ class DataSourceExtension(Enum):
                 "https://www.googleapis.com/auth/cloud-platform",
             ]
         )
-        bq_client = bigquery.Client(
-            project=info.project_id.get_secret_value(), credentials=credentials
-        )
+        bq_client = bigquery.Client(project=info.project_id, credentials=credentials)
         job_config = bigquery.QueryJobConfig()
         job_config.job_timeout_ms = info.job_timeout_ms
         bq_client.default_query_job_config = job_config
@@ -308,20 +302,20 @@ class DataSourceExtension(Enum):
     @staticmethod
     def get_canner_connection(info: CannerConnectionInfo) -> BaseBackend:
         return ibis.postgres.connect(
-            host=info.host.get_secret_value(),
-            port=int(info.port.get_secret_value()),
-            database=info.workspace.get_secret_value(),
-            user=info.user.get_secret_value(),
+            host=info.host,
+            port=int(info.port),
+            database=info.workspace,
+            user=info.user,
             password=info.pat.get_secret_value(),
         )
 
     @staticmethod
     def get_clickhouse_connection(info: ClickHouseConnectionInfo) -> BaseBackend:
         return ibis.clickhouse.connect(
-            host=info.host.get_secret_value(),
-            port=int(info.port.get_secret_value()),
-            database=info.database.get_secret_value(),
-            user=info.user.get_secret_value(),
+            host=info.host,
+            port=int(info.port),
+            database=info.database,
+            user=info.user,
             password=(info.password and info.password.get_secret_value()),
             settings=info.settings if info.settings else {},
             **info.kwargs if info.kwargs else {},
@@ -330,10 +324,10 @@ class DataSourceExtension(Enum):
     @classmethod
     def get_mssql_connection(cls, info: MSSqlConnectionInfo) -> BaseBackend:
         return ibis.mssql.connect(
-            host=info.host.get_secret_value(),
-            port=info.port.get_secret_value(),
-            database=info.database.get_secret_value(),
-            user=info.user.get_secret_value(),
+            host=info.host,
+            port=info.port,
+            database=info.database,
+            user=info.user,
             password=info.password.get_secret_value(),
             driver=info.driver,
             TDS_Version=info.tds_version,
@@ -348,10 +342,10 @@ class DataSourceExtension(Enum):
         if info.kwargs:
             kwargs.update(info.kwargs)
         return ibis.mysql.connect(
-            host=info.host.get_secret_value(),
-            port=int(info.port.get_secret_value()),
-            database=info.database.get_secret_value(),
-            user=info.user.get_secret_value(),
+            host=info.host,
+            port=int(info.port),
+            database=info.database,
+            user=info.user,
             password=info.password.get_secret_value() if info.password else "",
             **kwargs,
         )
@@ -363,10 +357,10 @@ class DataSourceExtension(Enum):
         if info.kwargs:
             kwargs.update(info.kwargs)
         connection = ibis.mysql.connect(
-            host=info.host.get_secret_value(),
-            port=int(info.port.get_secret_value()),
-            database=info.database.get_secret_value(),
-            user=info.user.get_secret_value(),
+            host=info.host,
+            port=int(info.port),
+            database=info.database,
+            user=info.user,
             password=info.password.get_secret_value() if info.password else "",
             **kwargs,
         )
@@ -376,10 +370,10 @@ class DataSourceExtension(Enum):
     @staticmethod
     def get_postgres_connection(info: PostgresConnectionInfo) -> BaseBackend:
         return ibis.postgres.connect(
-            host=info.host.get_secret_value(),
-            port=int(info.port.get_secret_value()),
-            database=info.database.get_secret_value(),
-            user=info.user.get_secret_value(),
+            host=info.host,
+            port=int(info.port),
+            database=info.database,
+            user=info.user,
             password=(info.password and info.password.get_secret_value()),
             **info.kwargs if info.kwargs else {},
         )
@@ -389,14 +383,14 @@ class DataSourceExtension(Enum):
         if hasattr(info, "dsn") and info.dsn:
             return ibis.oracle.connect(
                 dsn=info.dsn.get_secret_value(),
-                user=info.user.get_secret_value(),
+                user=info.user,
                 password=(info.password and info.password.get_secret_value()),
             )
         return ibis.oracle.connect(
-            host=info.host.get_secret_value(),
-            port=int(info.port.get_secret_value()),
-            database=info.database.get_secret_value(),
-            user=info.user.get_secret_value(),
+            host=info.host,
+            port=int(info.port),
+            database=info.database,
+            user=info.user,
             password=(info.password and info.password.get_secret_value()),
         )
 
@@ -404,22 +398,22 @@ class DataSourceExtension(Enum):
     def get_snowflake_connection(info: SnowflakeConnectionInfo) -> BaseBackend:
         if hasattr(info, "private_key") and info.private_key:
             params = {
-                "user": info.user.get_secret_value(),
+                "user": info.user,
                 "private_key": info.private_key.get_secret_value(),
-                "account": info.account.get_secret_value(),
-                "database": info.database.get_secret_value(),
-                "schema": info.sf_schema.get_secret_value(),
+                "account": info.account,
+                "database": info.database,
+                "schema": info.sf_schema,
             }
         else:
             params = {
-                "user": info.user.get_secret_value(),
+                "user": info.user,
                 "password": info.password.get_secret_value(),
-                "account": info.account.get_secret_value(),
-                "database": info.database.get_secret_value(),
-                "schema": info.sf_schema.get_secret_value(),
+                "account": info.account,
+                "database": info.database,
+                "schema": info.sf_schema,
             }
         if hasattr(info, "warehouse") and info.warehouse:
-            params["warehouse"] = info.warehouse.get_secret_value()
+            params["warehouse"] = info.warehouse
         if info.kwargs:
             params.update(info.kwargs)
         return ibis.snowflake.connect(**params)
@@ -427,11 +421,11 @@ class DataSourceExtension(Enum):
     @staticmethod
     def get_trino_connection(info: TrinoConnectionInfo) -> BaseBackend:
         return ibis.trino.connect(
-            host=info.host.get_secret_value(),
-            port=int(info.port.get_secret_value()),
-            database=info.catalog.get_secret_value(),
-            schema=info.trino_schema.get_secret_value(),
-            user=(info.user and info.user.get_secret_value()),
+            host=info.host,
+            port=int(info.port),
+            database=info.catalog,
+            schema=info.trino_schema,
+            user=info.user,
             password=(info.password and info.password.get_secret_value()),
             **info.kwargs if info.kwargs else {},
         )
@@ -439,17 +433,15 @@ class DataSourceExtension(Enum):
     @staticmethod
     def get_databricks_connection(info: DatabricksTokenConnectionInfo) -> BaseBackend:
         return ibis.databricks.connect(
-            server_hostname=info.server_hostname.get_secret_value(),
-            http_path=info.http_path.get_secret_value(),
+            server_hostname=info.server_hostname,
+            http_path=info.http_path,
             access_token=info.access_token.get_secret_value(),
         )
 
     @staticmethod
     def _create_ssl_context(info: ConnectionInfo) -> ssl.SSLContext | None:
         ssl_mode = (
-            info.ssl_mode.get_secret_value()
-            if hasattr(info, "ssl_mode") and info.ssl_mode
-            else None
+            info.ssl_mode if hasattr(info, "ssl_mode") and info.ssl_mode else None
         )
 
         if ssl_mode == SSLMode.VERIFY_CA and not info.ssl_ca:

@@ -14,10 +14,10 @@ Five main modules:
 - **wren-core-base/** — Shared Rust crate with manifest types (`Model`, `Column`, `Metric`, `Relationship`, `View`). Has optional `python-binding` feature for PyO3 compatibility.
 - **wren-core-py/** — PyO3 bindings exposing wren-core to Python. Built with Maturin. Published to PyPI.
 - **ibis-server/** — FastAPI web server (Python 3.11). Provides REST API for query execution, validation, and metadata. Uses Ibis framework for data source connectivity.
-- **wren/** — Standalone Python SDK and CLI (`wren-engine` on PyPI). Wraps `wren-core-py` + Ibis connectors into a single installable package with `wren` CLI tool. Includes optional LanceDB-backed memory layer for semantic schema/query retrieval.
+- **wren/** — Python SDK and CLI (`wren-engine` on PyPI). Wraps `wren-core-py` + Ibis connectors into a single installable package with `wren` CLI tool. Features YAML-based MDL project management (`wren context`), named connection profiles (`wren profile`), strict SQL policy mode, and optional LanceDB-backed memory layer for semantic schema/query retrieval.
 - **mcp-server/** — MCP server exposing Wren Engine to AI agents (Claude, Cline, Cursor).
 
-Supporting modules: `wren-core-legacy/` (Java engine, fallback for v2 queries), `cli-skills/` (agent skill definitions), `mock-web-server/`, `benchmark/`, `example/`.
+Supporting modules: `wren-core-legacy/` (Java engine, fallback for v2 queries), `skills/` (CLI-based agent skills: `wren-generate-mdl`, `wren-usage`), `skills-archive/` (legacy HTTP-based skills), `mock-web-server/`, `benchmark/`, `example/`.
 
 ## Build & Development Commands
 

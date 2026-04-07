@@ -1,13 +1,13 @@
 ---
 name: wren-usage
-description: "Wren Engine — semantic SQL engine for AI agents. Query 22+ data sources (PostgreSQL, BigQuery, Snowflake, MySQL, ClickHouse, etc.) through a modeling layer (MDL). This skill is the main entry point: it guides setup, delegates to focused sub-skills for SQL authoring, MDL generation, project management, and MCP server operations. Use when: write SQL, query data, generate or update MDL, change database connection, manage YAML projects, set up or operate MCP server, or get started with Wren Engine for the first time."
+description: "Wren Engine CLI workflow guide for AI agents. Answer data questions end-to-end using the wren CLI: gather schema context, recall past queries, write SQL through the MDL semantic layer, execute, and learn from confirmed results. Use when: agent needs to query data, connect a data source, handle errors, or manage MDL changes via the wren CLI."
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.2"
+  version: "2.0"
 ---
 
-# Wren Engine — Usage Guide
+# Wren Engine CLI — Agent Workflow Guide
 
 ## Version check
 
@@ -25,144 +25,249 @@ Then continue with the workflow below regardless of update status.
 
 ---
 
-This skill is your day-to-day reference for working with Wren Engine. It delegates to focused sub-skills for each task.
+The `wren` CLI queries databases through an MDL (Model Definition Language) semantic layer. You write SQL against model names, not raw tables. The engine translates to the target dialect.
+
+Two things drive everything:
+- **Profile** — database connection + datasource type, managed via `wren profile` (stored in `~/.wren/profiles.yml`)
+- **Project** — MDL model definitions in YAML, compiled to `target/mdl.json` via `wren context build`
+
+The CLI reads the active profile for connection info and datasource. Use `wren profile list` to see which profile is active, `wren profile switch <name>` to change it. `dry-plan` also accepts `--datasource` / `-d` for transpile-only use without a profile.
+
+For memory-specific decisions, see [references/memory.md](references/memory.md).
+For SQL syntax, CTE-based modeling, and error diagnosis, see [references/wren-sql.md](references/wren-sql.md).
 
 ---
 
-## Step 0 — Install dependent skills (first time only)
+## Workflow 1: Answering a data question
 
-Check whether the required skills are already installed in `~/.claude/skills/`. If any are missing, tell the user to run:
+### Step 1 — Gather context
+
+| Situation | Command |
+|-----------|---------|
+| Default | `wren memory fetch -q "<question>"` |
+| Need specific model's columns | `wren memory fetch -q "..." --model <name> --threshold 0` |
+| Memory not installed | Read `target/mdl.json` in the project directory, or run `wren context show` |
+
+If this is the first query in the conversation, also run:
+
+```text
+wren context instructions
+```
+
+If it returns content, treat it as **rules that override defaults** — apply them to all subsequent queries in this session.
+
+### Step 2 — Recall past queries
 
 ```bash
-# Option A — npx skills (works with Claude Code, Cursor, and 30+ agents)
-npx skills add Canner/wren-engine --skill '*' --agent claude-code
-
-# Option B — Clawhub (if installed via clawhub)
-clawhub install wren-usage
+wren memory recall -q "<question>" --limit 3
 ```
 
-This installs `wren-usage` and its dependent skills (`wren-connection-info`, `wren-generate-mdl`, `wren-project`, `wren-sql`, `wren-mcp-setup`, `wren-http-api`) into `~/.claude/skills/`.
+Use results as few-shot examples. Skip if empty.
 
-After installation, the user must **start a new session** for the new skills to be loaded.
+### Step 2.5 — Assess complexity (before writing SQL)
 
-> If the user only wants the MCP server set up (no Docker yet), use `/wren-quickstart` for a guided end-to-end walkthrough instead.
+If the question involves **any** of the following, consider decomposing:
+- Multiple metrics or aggregations (e.g., "churn rate AND expansion revenue")
+- Multi-step calculations (e.g., "month-over-month growth rate")
+- Comparisons across segments (e.g., "by plan tier, by region")
+- Time-series analysis requiring baseline + change (e.g., "retention curve")
 
----
+**Decomposition strategy:**
+1. Identify the sub-questions (e.g., "total subscribers at start" + "subscribers who cancelled" → churn rate)
+2. For each sub-question:
+   - `wren memory recall -q "<sub-question>"` — check if a similar pattern exists
+   - Write and execute a simple SQL
+   - Note the result
+3. Combine sub-results to answer the original question
 
-## What do you want to do?
+**When NOT to decompose:**
+- Single-table aggregation with GROUP BY — just write the SQL
+- Simple JOINs that the MDL relationships already define
+- Questions where `memory recall` returns a near-exact match
 
-Identify the user's intent and delegate to the appropriate skill:
+This is a judgment call, not a rigid rule. If you're confident in a single
+query, go ahead. Decompose when the SQL would be hard to debug if it fails.
 
-| Task | Skill |
-|------|-------|
-| Write or debug a SQL query | `@wren-sql` |
-| Connect to a new database / change credentials | `@wren-connection-info` |
-| Generate MDL from an existing database | `@wren-generate-mdl` |
-| Save MDL to YAML files (version control) | `@wren-project` |
-| Load a saved YAML project / rebuild `target/mdl.json` | `@wren-project` |
-| Add a new model or column to the MDL | `@wren-project` |
-| Start, reset, or reconfigure the MCP server | `@wren-mcp-setup` |
-| Call Wren tools via HTTP JSON-RPC (no MCP SDK) | `@wren-http-api` |
-| First-time setup from scratch | `@wren-quickstart` |
+### Step 3 — Write, verify, and execute SQL
 
----
-
-## Common workflows
-
-### Query your data
-
-Invoke `@wren-sql` to write a SQL query against the deployed MDL.
-
-Key rules:
-- Query MDL model names directly (e.g. `SELECT * FROM orders`)
-- Use `CAST` for type conversions, not `::` syntax
-- Avoid correlated subqueries — use JOINs or CTEs instead
-
-```sql
--- Example: revenue by month
-SELECT DATE_TRUNC('month', order_date) AS month,
-       SUM(total) AS revenue
-FROM orders
-GROUP BY 1
-ORDER BY 1
+**For simple queries** (single table or simple MDL-defined JOINs, straightforward aggregation):
+Execute directly:
+```bash
+wren --sql 'SELECT c_name, SUM(o_totalprice) FROM orders
+JOIN customer ON orders.o_custkey = customer.c_custkey
+GROUP BY 1 ORDER BY 2 DESC LIMIT 5'
 ```
 
-For type-specific patterns (ARRAY, STRUCT, JSON), date/time arithmetic, or BigQuery dialect quirks, invoke `@wren-sql` for full guidance.
+**For complex queries** (non-trivial JOINs not covered by MDL relationships, subqueries, multi-step logic):
+Verify first with dry-plan:
+```bash
+wren dry-plan --sql 'SELECT ...'
+```
+
+Check the expanded SQL output:
+- Are the correct models and columns referenced?
+- Do the JOINs match expected relationships?
+- Are CTEs expanded correctly?
+
+If the expanded SQL looks wrong, fix before executing.
+If it looks correct, proceed:
+```bash
+wren --sql 'SELECT ...'
+```
+
+**SQL rules:**
+- Target MDL model names, not database tables
+- Write dialect-neutral SQL — the engine translates
+
+### Step 4 — Store and continue
+
+After successful execution, **store the query by default**:
+
+```bash
+wren memory store --nl "<user's original question>" --sql "<the SQL>"
+```
+
+**Skip storing only when:**
+- The query failed or returned an error
+- The user said the result is wrong
+- The query is exploratory (`SELECT * ... LIMIT N` without analytical clauses)
+- There is no natural language question — just raw SQL
+- The user explicitly asked not to store
+
+The CLI auto-detects exploratory queries — if you see no store hint
+after execution, the query was classified as exploratory.
+
+| Outcome | Action |
+|---------|--------|
+| User confirms correct | Store |
+| User continues with follow-up | Store, then handle follow-up |
+| User says nothing (but question had clear NL description) | Store |
+| User says wrong | Do NOT store — fix the SQL |
+| Query error | See Error recovery below |
 
 ---
 
-### Update connection credentials
+## Workflow 2: Error recovery
 
-To change credentials, direct the user to the MCP server Web UI at `http://localhost:9001`. Connection info can only be configured through the Web UI — do not attempt to set it programmatically.
+### "table not found"
 
-Invoke `@wren-connection-info` for a reference of required fields per data source (so you can guide the user on what to enter in the Web UI).
+1. Verify model name: `wren memory fetch -q "<name>" --type model --threshold 0`
+2. Check MDL exists: `ls target/mdl.json` (or `wren context show`)
+3. Verify column: `wren memory fetch -q "<column>" --model <name> --threshold 0`
+
+### Connection error
+
+1. Check active profile: `wren profile debug`
+2. Verify datasource and connection fields are correct
+3. Test: `wren --sql "SELECT 1"`
+4. Valid datasource values: `postgres`, `mysql`, `bigquery`, `snowflake`, `clickhouse`, `trino`, `mssql`, `databricks`, `redshift`, `spark`, `athena`, `oracle`, `duckdb`
+5. If no profile exists, create one: `wren profile add --ui` (or `--interactive` / `--from-file`)
+
+### SQL syntax / planning error (enhanced)
+
+#### Layer 1: Identify the failure point
+
+```bash
+wren dry-plan --sql "<failed SQL>"
+```
+
+| dry-plan result | Failure layer | Next step |
+|-----------------|---------------|-----------|
+| dry-plan fails | MDL / semantic | → Layer 2A |
+| dry-plan succeeds, execution fails | DB / dialect | → Layer 2B |
+
+#### Layer 2A: MDL-level diagnosis (dry-plan failed)
+
+The dry-plan error message tells you exactly what's wrong:
+
+| Error pattern | Diagnosis | Fix |
+|---------------|-----------|-----|
+| `column 'X' not found in model 'Y'` | Wrong column name | `wren memory fetch -q "X" --model Y --threshold 0` to find correct name |
+| `model 'X' not found` | Wrong model name | `wren memory fetch -q "X" --type model --threshold 0` |
+| `ambiguous column 'X'` | Column exists in multiple models | Qualify with model name: `ModelName.column` |
+| Planning error with JOIN | Relationship not defined in MDL | Check available relationships in context |
+
+**Key principle**: Fix ONE issue at a time. Re-run dry-plan after each fix
+to see if new errors surface.
+
+#### Layer 2B: DB-level diagnosis (dry-plan OK, execution failed)
+
+The DB error + dry-plan output together pinpoint the issue:
+
+1. Read the dry-plan expanded SQL — this is what actually runs on the DB
+2. Compare with the DB error message:
+
+| Error pattern | Diagnosis | Fix |
+|---------------|-----------|-----|
+| Type mismatch | Column type differs from assumed | Check column type in context, add explicit CAST |
+| Function not supported | Dialect-specific function | Use dialect-neutral alternative |
+| Permission denied | Table/schema access | Check connection credentials |
+| Timeout | Query too expensive | Simplify: reduce JOINs, add filters, LIMIT |
+
+**For small models**: If the error message is unclear, try simplifying
+the query to the smallest failing fragment. Execute subqueries independently
+to isolate which part fails.
+
+For the CTE rewrite pipeline and additional error patterns, see [references/wren-sql.md](references/wren-sql.md).
 
 ---
 
-### Extend the MDL
+## Workflow 3: Connecting a new data source
 
-To add a model, column, relationship, or view to an existing project:
-
-1. Invoke `@wren-project` — **Load** the existing YAML project into an MDL dict
-2. Edit the relevant YAML file (e.g. `models/orders.yml`)
-3. Invoke `@wren-project` — **Build** to compile updated `target/mdl.json`
-4. Call `deploy(mdl_file_path="./target/mdl.json")` to apply the change
-
----
-
-### Regenerate MDL from database
-
-When the database schema has changed and the MDL needs to be refreshed:
-
-1. Invoke `@wren-connection-info` — confirm or update credentials
-2. Invoke `@wren-generate-mdl` — re-introspect the database and rebuild the MDL JSON
-3. Invoke `@wren-project` — **Save** the new MDL as an updated YAML project
-4. Invoke `@wren-project` — **Build** to compile `target/mdl.json`
-5. Deploy
+1. Add a profile: `wren profile add --ui` (or `--interactive` / `--from-file`)
+2. Test connection: `wren profile debug`
+3. Test query: `wren --sql "SELECT 1"`
+4. Initialize project: `wren context init`
+5. Build manifest: `wren context build`
+6. Index: `wren memory index`
+7. Verify: `wren --sql "SELECT * FROM <model> LIMIT 5"`
 
 ---
 
-### MCP server operations
+## Workflow 4: After MDL changes
 
-| Operation | Command |
-|-----------|---------|
-| Check status | `docker ps --filter name=wren-mcp` |
-| View logs | `docker logs wren-mcp` |
-| Restart | `docker restart wren-mcp` |
-| Full reconfigure | Invoke `@wren-mcp-setup` |
-| Verify health | `health_check()` via MCP tools |
+When model YAML files are updated, rebuild and re-index:
 
----
+```bash
+# 1. Validate changes
+wren context validate
 
-## Quick reference — MCP tools
+# 2. Rebuild manifest
+wren context build
 
-| Tool | Purpose |
-|------|---------|
-| `health_check()` | Verify Wren Engine is reachable |
-| `query(sql=...)` | Execute a SQL query against the deployed MDL |
-| `deploy(mdl_file_path=...)` | Load a compiled `mdl.json` |
-| `setup_connection(...)` | Configure data source credentials |
-| `list_remote_tables(...)` | Introspect database schema |
-| `mdl_validate_manifest(...)` | Validate an MDL JSON dict |
-| `mdl_save_project(...)` | Save MDL as a YAML project |
+# 3. Re-index schema memory
+wren memory index
+
+# 4. Verify
+wren --sql "SELECT * FROM <changed_model> LIMIT 1"
+```
 
 ---
 
-## Troubleshooting quick guide
+## Command decision tree
 
-**Query fails with "table not found":**
-- The MDL may not be deployed. Run `deploy(mdl_file_path="./target/mdl.json")`.
-- Check model names match exactly (case-sensitive).
+```text
+Get data back           → wren --sql "..."
+See translated SQL only → wren dry-plan --sql "..." (accepts -d <datasource> if no active profile)
+Validate against DB     → wren dry-run --sql "..."
+Schema context          → wren memory fetch -q "..."
+Filter by type/model    → wren memory fetch -q "..." --type T --model M --threshold 0
+Store confirmed query   → wren memory store --nl "..." --sql "..."
+Few-shot examples       → wren memory recall -q "..."
+Index stats             → wren memory status
+Re-index after MDL change → wren memory index
+Show project context    → wren context show
+Rebuild manifest        → wren context build
+Check profile           → wren profile debug
+Switch profile          → wren profile switch <name>
+```
 
-**Connection error on queries:**
-- Verify credentials with `@wren-connection-info`.
-- Inside Docker: use `host.docker.internal` instead of `localhost`.
+---
 
-**MDL changes not reflected:**
-- Re-run `@wren-project` **Build** step and re-deploy.
+## Things to avoid
 
-**MCP tools unavailable:**
-- Start a new Claude Code session after registering the MCP server.
-- Check: `docker ps --filter name=wren-mcp` and `docker logs wren-mcp`.
-
-For detailed MCP setup troubleshooting, invoke `@wren-mcp-setup`.
+- Do not guess model or column names — check context first
+- Do not store failed queries or queries the user said are wrong
+- Do not skip storing successful queries with a clear NL question — default is to store
+- Do not re-index before every query — once per MDL change
+- Do not pass passwords via `--connection-info` if shell history is shared — use profiles (`wren profile add`) or `--connection-file`

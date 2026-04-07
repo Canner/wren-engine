@@ -31,19 +31,14 @@ wren dry-plan --sql 'SELECT order_id FROM "orders"' -d postgres  # explicit data
 
 ## `wren dry-run`
 
-Validate SQL against the live database without returning rows. Prints `OK` on success.
+Dry-run SQL against the live database without returning rows. Prints `OK` on success, `Error: <reason>` on failure.
 
 ```bash
 wren dry-run --sql 'SELECT * FROM "orders" LIMIT 1'
-```
+# OK
 
-## `wren validate`
-
-Same as `dry-run` but prints `Valid` / `Invalid: <reason>`.
-
-```bash
-wren validate --sql 'SELECT * FROM "NonExistent"'
-# Invalid: table not found ...
+wren dry-run --sql 'SELECT * FROM "NonExistent"'
+# Error: table not found ...
 ```
 
 ## Overriding defaults

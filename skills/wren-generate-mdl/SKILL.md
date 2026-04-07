@@ -1,14 +1,13 @@
 ---
 name: wren-generate-mdl
-description: Generate a Wren MDL manifest from a database using ibis-server metadata endpoints. Use when a user wants to create or set up a new Wren MDL, scaffold a manifest from an existing database, or onboard a new data source without installing any database drivers locally.
-compatibility: Requires a running ibis-server (default port 8000). No local database drivers needed.
+description: "Generate a Wren MDL project by exploring a database with available tools (SQLAlchemy, database drivers, MCP connectors, or raw SQL). Guides agents through schema discovery, type normalization, and MDL YAML generation using the wren CLI. Use when: user wants to create or set up a new MDL, onboard a new data source, or scaffold a project from an existing database."
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "1.4"
+  version: "2.0"
 ---
 
-# Generate Wren MDL
+# Generate Wren MDL — CLI Agent Workflow
 
 ## Version check
 
@@ -26,189 +25,300 @@ Then continue with the workflow below regardless of update status.
 
 ---
 
-Generates a Wren MDL manifest by using ibis-server to introspect the database schema — no local database drivers required. All schema discovery goes through ibis-server, which already has drivers for all supported data sources.
+Builds an MDL project by discovering database schema and converting it
+into Wren's YAML project format. The agent uses whatever database tools
+are available in its environment for introspection; the wren CLI handles
+type normalization, validation, and build.
 
-## Workflow
-
-Follow these steps in order. Do not skip steps or ask unnecessary questions between them.
-
-### Step 1 — Verify connection and choose data source
-
-> **Connection info can ONLY be configured through the Web UI at `http://localhost:9001`.** Do not attempt to set connection info programmatically via ibis-server API calls, curl, or any other method. The ibis-server does not expose a public API for writing connection info — only the Web UI can do this.
-
-Confirm the MCP server has a working connection before proceeding:
-
-```text
-health_check()
-```
-
-If the health check fails, or if the user has not yet configured a connection, direct them to the Web UI at `http://localhost:9001` to enter their data source credentials. Wait for the user to confirm the connection is saved before continuing.
-
-Ask the user for:
-1. **Data source type** (e.g. `POSTGRES`, `BIGQUERY`, `SNOWFLAKE`, …) — needed to set `dataSource` in the MDL
-2. **Schema filter** (optional) — if the database has many schemas, ask which schema(s) to include
-
-After this step you will have:
-- `data_source`: e.g. `"POSTGRES"`
-- Optional `schema_filter`: used to narrow down results in subsequent steps
-
-### Step 2 — Fetch table schema
-
-```text
-list_remote_tables()
-```
-
-Returns a list of tables with their column names and types. Each table entry has a `properties.schema` field — use it to filter to the user's target schema if specified.
-
-If this fails:
-1. Check that read-only mode is **disabled** in the Web UI (`http://localhost:9001`) — `list_remote_tables()` will fail when read-only mode is on, even if the connection is healthy.
-2. Ask the user to verify connection info in the Web UI if read-only mode is already off.
-
-### Step 3 — Fetch relationships
-
-```text
-list_remote_constraints()
-```
-
-Returns foreign key constraints. Use these to build `Relationship` entries in the MDL. If the response is empty (`[]`), infer relationships from column naming conventions (e.g. `order_id` → `orders.id`).
-
-If this fails, verify that read-only mode is disabled in the Web UI (`http://localhost:9001`).
-
-### Step 4 — Build MDL JSON
-
-Construct the manifest following the [MDL structure](#mdl-structure) below.
-
-Rules:
-- `catalog`: use `"wren"` unless the user specifies otherwise
-- `schema`: use the target schema name (e.g. `"public"` for PostgreSQL default, `"jaffle_shop"` if user specified)
-- `dataSource`: set to the enum value from Step 1 (e.g. `"POSTGRES"`)
-- `tableReference.catalog`: set to the database name (not `"wren"`)
-- Each table → one `Model`. Set `tableReference.table` to the exact table name
-- Each column → one `Column`. Use the exact DB column name
-- Mark primary key columns with `"isPrimaryKey": true` and set `primaryKey` on the model
-- For FK columns, add a `Relationship` entry linking the two models
-- Omit calculated columns for now — they can be added later
-
-### Step 5 — Validate
-
-Deploy the draft MDL and validate it with a dry run:
-
-```text
-deploy_manifest(mdl=<manifest dict>)
-dry_run(sql="SELECT * FROM <any_model_name> LIMIT 1")
-```
-
-If `dry_run` succeeds, the MDL is valid. If it fails, fix the reported errors, call `deploy_manifest` again with the corrected MDL, and retry.
-
-### Step 6 — Save project (optional)
-
-Ask the user if they want to save the MDL as a YAML project directory (useful for version control).
-
-If yes, follow the **wren-project** skill (`skills/wren-project/SKILL.md`) to write the YAML files and build `target/mdl.json`.
-
-### Step 7 — Deploy final MDL
-
-```
-deploy_manifest(mdl=<manifest dict>)
-```
-
-Confirm success to the user. The MDL is now active and queries can run.
+For memory and query workflows after setup, see the **wren-usage** skill.
 
 ---
 
-## MDL Structure
+## Prerequisites
 
-```json
-{
-  "catalog": "wren",
-  "schema": "public",
-  "dataSource": "POSTGRES",
-  "models": [
-    {
-      "name": "orders",
-      "tableReference": {
-        "catalog": "",
-        "schema": "public",
-        "table": "orders"
-      },
-      "columns": [
-        {
-          "name": "order_id",
-          "type": "INTEGER",
-          "isCalculated": false,
-          "notNull": true,
-          "isPrimaryKey": true,
-          "properties": {}
-        },
-        {
-          "name": "customer_id",
-          "type": "INTEGER",
-          "isCalculated": false,
-          "notNull": false,
-          "properties": {}
-        },
-        {
-          "name": "total",
-          "type": "DECIMAL",
-          "isCalculated": false,
-          "notNull": false,
-          "properties": {}
-        }
-      ],
-      "primaryKey": "order_id",
-      "cached": false,
-      "properties": {}
-    }
-  ],
-  "relationships": [
-    {
-      "name": "orders_customer",
-      "models": ["orders", "customers"],
-      "joinType": "MANY_TO_ONE",
-      "condition": "orders.customer_id = customers.customer_id"
-    }
-  ],
-  "views": []
-}
-```
-
-### Column types
-
-Map SQL/ibis types to MDL type strings:
-
-| SQL / ibis type | MDL type |
-|-----------------|----------|
-| INT, INTEGER, INT4 | `INTEGER` |
-| BIGINT, INT8 | `BIGINT` |
-| SMALLINT, INT2 | `SMALLINT` |
-| FLOAT, FLOAT4, REAL | `FLOAT` |
-| DOUBLE, FLOAT8 | `DOUBLE` |
-| DECIMAL, NUMERIC | `DECIMAL` |
-| VARCHAR, TEXT, STRING | `VARCHAR` |
-| CHAR | `CHAR` |
-| BOOLEAN, BOOL | `BOOLEAN` |
-| DATE | `DATE` |
-| TIMESTAMP, DATETIME | `TIMESTAMP` |
-| TIMESTAMPTZ | `TIMESTAMPTZ` |
-| JSON, JSONB | `JSON` |
-| ARRAY | `ARRAY` |
-| BYTES, BYTEA | `BYTES` |
-
-When in doubt, use `VARCHAR` as a safe fallback.
-
-### Relationship join types
-
-| Cardinality | `joinType` value |
-|-------------|-----------------|
-| Many-to-one (FK table → PK table) | `MANY_TO_ONE` |
-| One-to-many | `ONE_TO_MANY` |
-| One-to-one | `ONE_TO_ONE` |
-| Many-to-many | `MANY_TO_MANY` |
+- `wren` CLI installed (`pip install wren-engine[<datasource>]`)
+- A working database connection (credentials available to the agent)
+- A wren profile configured (`wren profile add`) or connection info ready
 
 ---
 
-## Connection setup
+## Phase 1 — Establish connection and scope
 
-Connection info is configured **exclusively** via the MCP server Web UI at `http://localhost:9001`. There is no API endpoint for setting connection info — do not attempt to configure it programmatically. See the **wren-mcp-setup** skill for Docker setup instructions.
+**Goal:** Confirm the agent can reach the database and agree on scope with the user.
 
-> **Note:** If the Web UI is disabled (`WEB_UI_ENABLED=false`), connection info must be pre-configured in `~/.wren/connection_info.json` before starting the container. Use `/wren-connection-info` in Claude Code for the required fields per data source.
+1. Verify connectivity using whichever tool is available:
+   - If SQLAlchemy: `engine.connect()` test
+   - If database driver: simple query like `SELECT 1`
+   - If wren profile exists: `wren profile debug` to check config
+   - If raw SQL via wren: `wren --sql "SELECT 1"` (requires profile or connection file)
+
+2. Ask the user:
+   - Which **schema(s)** or **dataset(s)** to include (skip if only one exists)
+   - Whether to include **all tables** or a subset
+   - The **datasource type** for wren (e.g., `postgres`, `bigquery`, `snowflake`) — needed for type normalization dialect
+
+---
+
+## Phase 2 — Discover schema
+
+**Goal:** Collect table names, column names, column types, and constraints.
+
+Use whatever introspection method is available. Here are common approaches
+ranked by convenience:
+
+### Option A: SQLAlchemy (recommended if available)
+
+```python
+from sqlalchemy import create_engine, inspect
+
+engine = create_engine(connection_url)
+inspector = inspect(engine)
+
+tables = inspector.get_table_names(schema="public")
+
+for table in tables:
+    columns = inspector.get_columns(table, schema="public")
+    # columns → [{"name": "id", "type": INTEGER(), "nullable": False, ...}]
+
+    pk = inspector.get_pk_constraint(table, schema="public")
+    # pk → {"constrained_columns": ["id"], "name": "orders_pkey"}
+
+    fks = inspector.get_foreign_keys(table, schema="public")
+    # fks → [{"constrained_columns": ["customer_id"],
+    #          "referred_table": "customers",
+    #          "referred_columns": ["id"]}]
+```
+
+### Option B: Database-specific driver
+
+- **psycopg / asyncpg (Postgres):** Query `information_schema.columns` and `information_schema.table_constraints`
+- **google-cloud-bigquery:** `client.list_tables()`, `client.get_table()` → `table.schema`
+- **snowflake-connector-python:** `SHOW COLUMNS IN TABLE`, `SHOW PRIMARY KEYS IN TABLE`
+- **clickhouse-driver:** `DESCRIBE TABLE`, `system.tables`
+
+### Option C: Raw SQL via wren
+
+If no driver is available but a wren profile is configured, query
+`information_schema` through wren itself:
+
+```bash
+wren --sql "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'" -o json
+wren --sql "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'orders'" -o json
+```
+
+Note: this goes through the MDL layer, so it only works if you already
+have a minimal MDL or if the database supports `information_schema` as
+regular tables. For bootstrapping from zero, Option A or B is preferred.
+
+---
+
+## Phase 3 — Normalize types
+
+**Goal:** Convert raw database types to wren-core-compatible types.
+
+### Python import (recommended for batch processing)
+
+```python
+from wren.type_mapping import parse_type, parse_types
+
+# Single type
+normalized = parse_type("character varying(255)", "postgres")  # → "VARCHAR(255)"
+
+# Batch — entire table at once
+columns = [
+    {"column": "id", "raw_type": "int8"},
+    {"column": "name", "raw_type": "character varying"},
+    {"column": "total", "raw_type": "numeric(10,2)"},
+]
+normalized_cols = parse_types(columns, dialect="postgres")
+# Each dict now has a "type" key with the normalized value
+```
+
+### CLI (if Python import not available)
+
+Single type:
+```bash
+wren utils parse-type --type "character varying(255)" --dialect postgres
+# → VARCHAR(255)
+```
+
+Batch (stdin JSON):
+```bash
+echo '[{"column":"id","raw_type":"int8"},{"column":"name","raw_type":"character varying"}]' \
+  | wren utils parse-types --dialect postgres
+```
+
+---
+
+## Phase 4 — Scaffold and write MDL project
+
+**Goal:** Create the YAML project structure.
+
+### Step 1 — Initialize project
+
+```bash
+wren context init --path /path/to/project
+```
+
+This creates:
+```text
+project/
+├── wren_project.yml
+├── models/
+├── views/
+├── relationships.yml
+└── instructions.md
+```
+
+> **IMPORTANT: `catalog` and `schema` in `wren_project.yml`**
+>
+> These are Wren Engine's internal namespace — they are NOT the database's
+> native catalog or schema. Keep the defaults (`catalog: wren`, `schema: public`)
+> unless you are intentionally configuring a multi-project namespace.
+>
+> Your database's actual catalog/schema is specified per-model in `table_reference`
+> (see Step 2). Do not copy database catalog/schema values into `wren_project.yml`.
+
+### Step 2 — Write model files
+
+For each table, create a YAML file under `models/`. Use snake_case
+naming (the build step converts to camelCase automatically).
+
+```yaml
+# models/orders/metadata.yml
+name: orders
+table_reference:
+  catalog: ""           # database catalog (empty string if not applicable;
+                        #   for DuckDB, use the DB file name without extension,
+                        #   e.g. jaffle_shop.duckdb → catalog: jaffle_shop)
+  schema: public        # database schema (this IS the DB schema)
+  table: orders         # database table name
+primary_key: order_id
+columns:
+  - name: order_id
+    type: INTEGER
+    not_null: true
+  - name: customer_id
+    type: INTEGER
+  - name: total
+    type: "DECIMAL(10, 2)"
+  - name: status
+    type: VARCHAR
+    properties:
+      description: "Order status: pending, shipped, delivered, cancelled"
+```
+
+### Step 3 — Write relationships
+
+From foreign key constraints discovered in Phase 2:
+
+```yaml
+# relationships.yml
+- name: orders_customers
+  models:
+    - orders
+    - customers
+  join_type: many_to_one
+  condition: "orders.customer_id = customers.customer_id"
+```
+
+Join type mapping:
+- FK table → PK table: `many_to_one`
+- PK table → FK table: `one_to_many`
+- Unique FK: `one_to_one`
+- Junction table: `many_to_many`
+
+If no foreign keys were found, infer from naming conventions:
+- Column `<table>_id` or `<table_singular>_id` → likely FK to `<table>`
+- Ask the user to confirm inferred relationships
+
+### Step 4 — Add descriptions (optional but valuable)
+
+Ask the user to describe:
+- Each model (1-2 sentences about what the table represents)
+- Key columns (especially calculated fields or non-obvious names)
+
+These descriptions are indexed by `wren memory index` and significantly
+improve LLM query accuracy.
+
+---
+
+## Phase 5 — Validate and build
+
+```bash
+# Validate YAML structure and integrity
+wren context validate --path /path/to/project
+
+# If strict mode is desired:
+wren context validate --path /path/to/project --strict
+
+# Build JSON manifest
+wren context build --path /path/to/project
+
+# Verify against database
+wren --sql "SELECT * FROM <model_name> LIMIT 1"
+```
+
+If validation fails, fix the reported issues and re-run. Common errors:
+- Duplicate model/column names
+- Missing primary key
+- Relationship referencing non-existent model
+- Invalid column type (try re-running through `parse_type`)
+
+---
+
+## Phase 6 — Initialize memory
+
+```bash
+# Index schema (generates seed NL-SQL examples automatically)
+wren memory index
+
+# Verify
+wren memory status
+```
+
+After this step, `wren memory fetch` and `wren memory recall` are
+operational. See the **wren-usage** skill for query workflows.
+
+---
+
+## Phase 7 — Iterate with the user
+
+The initial MDL is a starting point. Improve it by:
+- Adding calculated columns based on business logic
+- Adding views for common query patterns
+- Refining descriptions based on actual query usage
+- Adding access control (RLAC/CLAC) if needed
+
+Each change follows: edit YAML → `wren context validate` →
+`wren context build` → `wren memory index`.
+
+---
+
+## Quick reference
+
+| Task | Command / Method |
+|------|-----------------|
+| Discover tables | Agent's own tools (SQLAlchemy, driver, raw SQL) |
+| Discover columns + types | Agent's own tools |
+| Discover constraints | Agent's own tools |
+| Normalize types (Python) | `from wren.type_mapping import parse_type` |
+| Normalize types (CLI) | `wren utils parse-type --type T --dialect D` |
+| Normalize types (batch) | `wren utils parse-types --dialect D < columns.json` |
+| Scaffold project | `wren context init` |
+| Write models | Create `models/<name>/metadata.yml` |
+| Write relationships | Edit `relationships.yml` |
+| Validate | `wren context validate` |
+| Build manifest | `wren context build` |
+| Test query | `wren --sql "SELECT * FROM <model> LIMIT 1"` |
+| Index memory | `wren memory index` |
+
+---
+
+## Things to avoid
+
+- Do not hardcode database-specific type strings in MDL — always normalize via `parse_type`
+- Do not skip validation before build — invalid YAML produces broken manifests silently
+- Do not guess column types — introspect from the actual database
+- Do not write relationships without confirming join conditions — wrong conditions cause silent query errors
+- Do not skip `wren memory index` after build — stale indexes degrade recall quality

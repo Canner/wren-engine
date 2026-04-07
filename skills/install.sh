@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Install Wren Engine skills into your local AI agent skills directory.
+# Install Wren Engine CLI skills into your local AI agent skills directory.
 #
 # Usage:
 #   ./install.sh                     # install all skills
-#   ./install.sh wren-generate-mdl    # install specific skills
-#   ./install.sh --force wren-sql    # overwrite without prompt
+#   ./install.sh wren-usage          # install specific skills
+#   ./install.sh --force wren-usage  # overwrite without prompt
 #   curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash
 #   curl -fsSL .../install.sh | bash -s -- wren-generate-mdl
 
@@ -13,7 +13,7 @@ set -euo pipefail
 REPO="Canner/wren-engine"
 BRANCH="${WREN_SKILLS_BRANCH:-main}"
 DEST="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}"
-ALL_SKILLS=(wren-generate-mdl wren-project wren-sql wren-mcp-setup wren-quickstart wren-connection-info wren-usage wren-http-api)
+ALL_SKILLS=(wren-generate-mdl wren-usage)
 
 # Parse --force flag and skill list from arguments
 FORCE=false
@@ -44,7 +44,6 @@ for skill in "${SELECTED_SKILLS[@]}"; do
 done
 
 # Detect whether we are running from a local clone or piped via curl.
-# When piped, BASH_SOURCE[0] is empty or "/dev/stdin".
 SCRIPT_DIR=""
 if [ -n "${BASH_SOURCE[0]:-}" ] && [ "${BASH_SOURCE[0]}" != "/dev/stdin" ]; then
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -57,7 +56,6 @@ if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/index.json" ]; then
 fi
 
 # Expand SELECTED_SKILLS to include dependencies declared in index.json.
-# Only runs when python3 is available and index.json is accessible.
 expand_with_deps() {
   local json_file="$1"
   shift
@@ -157,7 +155,6 @@ else
   tmpdir=$(mktemp -d)
   trap 'rm -rf "$tmpdir"' EXIT
 
-  # Build the list of paths to extract from the tarball
   extract_paths=()
   for skill in "${SELECTED_SKILLS[@]}"; do
     extract_paths+=("wren-engine-${BRANCH}/skills/${skill}")
@@ -179,4 +176,3 @@ done
 echo ""
 echo "To update skills later, re-run with --force:"
 echo "  curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash -s -- --force"
-echo "Or check for updates: each skill notifies you automatically when a newer version is available."

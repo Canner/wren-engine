@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import sys
 import threading
 from pathlib import Path
 from typing import Callable
@@ -21,122 +22,190 @@ except ImportError:
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
-# Fields definition for known datasources (name, label, input type, placeholder)
-DATASOURCE_FIELDS: dict[str, list[dict]] = {
-    "POSTGRES": [
-        {"name": "host", "label": "Host", "type": "text", "placeholder": "localhost"},
-        {"name": "port", "label": "Port", "type": "text", "placeholder": "5432"},
-        {"name": "database", "label": "Database", "type": "text", "placeholder": "postgres"},
-        {"name": "user", "label": "User", "type": "text", "placeholder": "postgres"},
-        {"name": "password", "label": "Password", "type": "password", "placeholder": ""},
-    ],
-    "MYSQL": [
-        {"name": "host", "label": "Host", "type": "text", "placeholder": "localhost"},
-        {"name": "port", "label": "Port", "type": "text", "placeholder": "3306"},
-        {"name": "database", "label": "Database", "type": "text", "placeholder": "mydb"},
-        {"name": "user", "label": "User", "type": "text", "placeholder": "root"},
-        {"name": "password", "label": "Password", "type": "password", "placeholder": ""},
-    ],
-    "DUCKDB": [
-        {"name": "url", "label": "Directory Path", "type": "text", "placeholder": "/data", "hint": "Path to a directory containing .duckdb files, not the .duckdb file itself."},
-        {"name": "format", "label": "Format", "type": "hidden", "value": "duckdb"},
-    ],
-    "BIGQUERY": [
-        {"name": "project_id", "label": "Project ID", "type": "text", "placeholder": "my-gcp-project"},
-        {"name": "dataset_id", "label": "Dataset", "type": "text", "placeholder": "my_dataset"},
-        {"name": "credentials", "label": "Service Account JSON", "type": "file_base64", "accept": ".json", "hint": "Upload your GCP service account credentials.json file. It will be base64-encoded automatically."},
-    ],
-    "SNOWFLAKE": [
-        {"name": "user", "label": "User", "type": "text", "placeholder": ""},
-        {"name": "password", "label": "Password", "type": "password", "placeholder": ""},
-        {"name": "account", "label": "Account", "type": "text", "placeholder": "xy12345.us-east-1"},
-        {"name": "database", "label": "Database", "type": "text", "placeholder": ""},
-        {"name": "schema", "label": "Schema", "type": "text", "placeholder": "PUBLIC"},
-        {"name": "warehouse", "label": "Warehouse", "type": "text", "placeholder": ""},
-    ],
-    "CLICKHOUSE": [
-        {"name": "host", "label": "Host", "type": "text", "placeholder": "localhost"},
-        {"name": "port", "label": "Port", "type": "text", "placeholder": "8123"},
-        {"name": "database", "label": "Database", "type": "text", "placeholder": "default"},
-        {"name": "user", "label": "User", "type": "text", "placeholder": "default"},
-        {"name": "password", "label": "Password", "type": "password", "placeholder": ""},
-    ],
-    "TRINO": [
-        {"name": "host", "label": "Host", "type": "text", "placeholder": "localhost"},
-        {"name": "port", "label": "Port", "type": "text", "placeholder": "8080"},
-        {"name": "catalog", "label": "Catalog", "type": "text", "placeholder": ""},
-        {"name": "schema", "label": "Schema", "type": "text", "placeholder": ""},
-        {"name": "user", "label": "User", "type": "text", "placeholder": ""},
-    ],
-    "MSSQL": [
-        {"name": "host", "label": "Host", "type": "text", "placeholder": "localhost"},
-        {"name": "port", "label": "Port", "type": "text", "placeholder": "1433"},
-        {"name": "database", "label": "Database", "type": "text", "placeholder": "master"},
-        {"name": "user", "label": "User", "type": "text", "placeholder": "sa"},
-        {"name": "password", "label": "Password", "type": "password", "placeholder": ""},
-    ],
-    "ORACLE": [
-        {"name": "host", "label": "Host", "type": "text", "placeholder": "localhost"},
-        {"name": "port", "label": "Port", "type": "text", "placeholder": "1521"},
-        {"name": "database", "label": "Database", "type": "text", "placeholder": "orcl"},
-        {"name": "user", "label": "User", "type": "text", "placeholder": "admin"},
-        {"name": "password", "label": "Password", "type": "password", "placeholder": ""},
-    ],
-    "REDSHIFT": [
-        {"name": "host", "label": "Host", "type": "text", "placeholder": ""},
-        {"name": "port", "label": "Port", "type": "text", "placeholder": "5439"},
-        {"name": "database", "label": "Database", "type": "text", "placeholder": "dev"},
-        {"name": "user", "label": "User", "type": "text", "placeholder": ""},
-        {"name": "password", "label": "Password", "type": "password", "placeholder": ""},
-    ],
-    "ATHENA": [
-        {"name": "s3_staging_dir", "label": "S3 Staging Dir", "type": "text", "placeholder": "s3://my-bucket/staging/"},
-        {"name": "region_name", "label": "Region", "type": "text", "placeholder": "us-east-1"},
-        {"name": "aws_access_key_id", "label": "Access Key ID", "type": "text", "placeholder": ""},
-        {"name": "aws_secret_access_key", "label": "Secret Access Key", "type": "password", "placeholder": ""},
-    ],
-    "DORIS": [
-        {"name": "host", "label": "Host", "type": "text", "placeholder": "localhost"},
-        {"name": "port", "label": "Port", "type": "text", "placeholder": "9030"},
-        {"name": "database", "label": "Database", "type": "text", "placeholder": "default"},
-        {"name": "user", "label": "User", "type": "text", "placeholder": "root"},
-        {"name": "password", "label": "Password", "type": "password", "placeholder": ""},
-    ],
-    "LOCAL_FILE": [
-        {"name": "url", "label": "Root Path", "type": "text", "placeholder": "/data"},
-        {"name": "format", "label": "Format", "type": "text", "placeholder": "csv"},
-    ],
-    "S3_FILE": [
-        {"name": "url", "label": "Root Path", "type": "text", "placeholder": "/data"},
-        {"name": "format", "label": "Format", "type": "text", "placeholder": "csv"},
-        {"name": "bucket", "label": "Bucket", "type": "text", "placeholder": "my-bucket"},
-        {"name": "region", "label": "Region", "type": "text", "placeholder": "us-east-1"},
-        {"name": "access_key", "label": "Access Key ID", "type": "text", "placeholder": ""},
-        {"name": "secret_key", "label": "Secret Access Key", "type": "password", "placeholder": ""},
-    ],
-    "MINIO_FILE": [
-        {"name": "url", "label": "Root Path", "type": "text", "placeholder": "/data"},
-        {"name": "format", "label": "Format", "type": "text", "placeholder": "csv"},
-        {"name": "endpoint", "label": "Endpoint", "type": "text", "placeholder": "localhost:9000"},
-        {"name": "bucket", "label": "Bucket", "type": "text", "placeholder": "my-bucket"},
-        {"name": "access_key", "label": "Access Key ID", "type": "text", "placeholder": ""},
-        {"name": "secret_key", "label": "Secret Access Key", "type": "password", "placeholder": ""},
-        {"name": "ssl_enabled", "label": "SSL Enabled", "type": "text", "placeholder": "false"},
-    ],
-    "GCS_FILE": [
-        {"name": "url", "label": "Root Path", "type": "text", "placeholder": "/data"},
-        {"name": "format", "label": "Format", "type": "text", "placeholder": "csv"},
-        {"name": "bucket", "label": "Bucket", "type": "text", "placeholder": "my-bucket"},
-        {"name": "key_id", "label": "Key ID", "type": "text", "placeholder": ""},
-        {"name": "secret_key", "label": "Secret Key", "type": "password", "placeholder": ""},
-        {"name": "credentials", "label": "Credentials (Base64)", "type": "password", "placeholder": "eyJ..."},
-    ],
-    "DATABRICKS": [
-        {"name": "serverHostname", "label": "Server Hostname", "type": "text", "placeholder": "dbc-xxxxxxxx-xxxx.cloud.databricks.com"},
-        {"name": "httpPath", "label": "HTTP Path", "type": "text", "placeholder": "/sql/1.0/warehouses/xxxxxxxx"},
-        {"name": "accessToken", "label": "Access Token", "type": "password", "placeholder": ""},
-    ],
-}
+
+def _import_field_registry():
+    """Import wren.model.field_registry, bypassing app/wren.py shadow.
+
+    When app/wren.py runs as a script, Python adds app/ to sys.path,
+    causing ``import wren`` to find app/wren.py (a file module) instead
+    of the installed wren package (a directory with __path__).
+    We temporarily remove the app/ path entry and any shadow module
+    so the real package is found.
+    """
+    app_dir = os.path.realpath(str(Path(__file__).parent))
+
+    # Remove app/ entries from sys.path
+    saved_paths = [(i, p) for i, p in enumerate(sys.path) if os.path.realpath(p) == app_dir]
+    for _, p in reversed(saved_paths):
+        sys.path.remove(p)
+
+    # Remove shadow wren module (file, not package) if present
+    saved_mod = None
+    wren_mod = sys.modules.get("wren")
+    if wren_mod is not None and not hasattr(wren_mod, "__path__"):
+        saved_mod = sys.modules.pop("wren")
+
+    try:
+        from wren.model import field_registry
+
+        return field_registry
+    finally:
+        # Restore sys.path entries at original positions
+        for i, p in saved_paths:
+            sys.path.insert(i, p)
+        if saved_mod is not None:
+            sys.modules.setdefault("wren", saved_mod)
+
+
+def _fields_to_web_format(datasource: str) -> list[dict]:
+    """Convert FieldDef list to the dict format expected by _fields.html template."""
+    registry = _import_field_registry()
+    result = []
+    for f in registry.get_fields(datasource.lower()):
+        entry: dict = {
+            "name": f.name,
+            "label": f.label,
+            "type": f.input_type,
+            "placeholder": f.placeholder,
+        }
+        if f.hint:
+            entry["hint"] = f.hint
+        if f.accept:
+            entry["accept"] = f.accept
+        if f.input_type == "hidden" and f.default is not None:
+            entry["value"] = f.default
+        result.append(entry)
+    return result
+
+
+def _build_datasource_fields() -> dict[str, list[dict]]:
+    """Build DATASOURCE_FIELDS from the shared field registry."""
+    registry = _import_field_registry()
+    return {ds.upper(): _fields_to_web_format(ds) for ds in registry.get_datasource_options()}
+
+
+try:
+    DATASOURCE_FIELDS: dict[str, list[dict]] = _build_datasource_fields()
+except ImportError as e:
+    if e.name not in {"wren", "wren.model", "wren.model.field_registry"}:
+        raise
+    # Fallback when wren package is not installed (standalone mcp-server).
+    # Keep a minimal hardcoded set so the web UI remains functional.
+    DATASOURCE_FIELDS = {
+        "POSTGRES": [
+            {"name": "host", "label": "Host", "type": "text", "placeholder": "localhost"},
+            {"name": "port", "label": "Port", "type": "text", "placeholder": "5432"},
+            {"name": "database", "label": "Database", "type": "text", "placeholder": "postgres"},
+            {"name": "user", "label": "User", "type": "text", "placeholder": "postgres"},
+            {"name": "password", "label": "Password", "type": "password", "placeholder": ""},
+        ],
+        "MYSQL": [
+            {"name": "host", "label": "Host", "type": "text", "placeholder": "localhost"},
+            {"name": "port", "label": "Port", "type": "text", "placeholder": "3306"},
+            {"name": "database", "label": "Database", "type": "text", "placeholder": "mydb"},
+            {"name": "user", "label": "User", "type": "text", "placeholder": "root"},
+            {"name": "password", "label": "Password", "type": "password", "placeholder": ""},
+        ],
+        "DUCKDB": [
+            {"name": "url", "label": "Directory Path", "type": "text", "placeholder": "/data", "hint": "Path to a directory containing .duckdb files, not the .duckdb file itself."},
+            {"name": "format", "label": "Format", "type": "hidden", "value": "duckdb"},
+        ],
+        "BIGQUERY": [
+            {"name": "project_id", "label": "Project ID", "type": "text", "placeholder": "my-gcp-project"},
+            {"name": "dataset_id", "label": "Dataset Id", "type": "text", "placeholder": "my_dataset"},
+            {"name": "credentials", "label": "Service Account JSON", "type": "file_base64", "accept": ".json", "hint": "Upload your GCP service account credentials.json file. It will be base64-encoded automatically."},
+        ],
+        "SNOWFLAKE": [
+            {"name": "user", "label": "User", "type": "text", "placeholder": ""},
+            {"name": "password", "label": "Password", "type": "password", "placeholder": ""},
+            {"name": "account", "label": "Account", "type": "text", "placeholder": "xy12345.us-east-1"},
+            {"name": "database", "label": "Database", "type": "text", "placeholder": ""},
+            {"name": "sf_schema", "label": "Schema", "type": "text", "placeholder": "PUBLIC"},
+            {"name": "warehouse", "label": "Warehouse", "type": "text", "placeholder": ""},
+        ],
+        "CLICKHOUSE": [
+            {"name": "host", "label": "Host", "type": "text", "placeholder": "localhost"},
+            {"name": "port", "label": "Port", "type": "text", "placeholder": "8123"},
+            {"name": "database", "label": "Database", "type": "text", "placeholder": "default"},
+            {"name": "user", "label": "User", "type": "text", "placeholder": "default"},
+            {"name": "password", "label": "Password", "type": "password", "placeholder": ""},
+        ],
+        "TRINO": [
+            {"name": "host", "label": "Host", "type": "text", "placeholder": "localhost"},
+            {"name": "port", "label": "Port", "type": "text", "placeholder": "8080"},
+            {"name": "catalog", "label": "Catalog", "type": "text", "placeholder": ""},
+            {"name": "schema", "label": "Schema", "type": "text", "placeholder": ""},
+            {"name": "user", "label": "User", "type": "text", "placeholder": ""},
+        ],
+        "MSSQL": [
+            {"name": "host", "label": "Host", "type": "text", "placeholder": "localhost"},
+            {"name": "port", "label": "Port", "type": "text", "placeholder": "1433"},
+            {"name": "database", "label": "Database", "type": "text", "placeholder": "master"},
+            {"name": "user", "label": "User", "type": "text", "placeholder": "sa"},
+            {"name": "password", "label": "Password", "type": "password", "placeholder": ""},
+        ],
+        "ORACLE": [
+            {"name": "host", "label": "Host", "type": "text", "placeholder": "localhost"},
+            {"name": "port", "label": "Port", "type": "text", "placeholder": "1521"},
+            {"name": "database", "label": "Database", "type": "text", "placeholder": "orcl"},
+            {"name": "user", "label": "User", "type": "text", "placeholder": "admin"},
+            {"name": "password", "label": "Password", "type": "password", "placeholder": ""},
+        ],
+        "REDSHIFT": [
+            {"name": "host", "label": "Host", "type": "text", "placeholder": ""},
+            {"name": "port", "label": "Port", "type": "text", "placeholder": "5439"},
+            {"name": "database", "label": "Database", "type": "text", "placeholder": "dev"},
+            {"name": "user", "label": "User", "type": "text", "placeholder": ""},
+            {"name": "password", "label": "Password", "type": "password", "placeholder": ""},
+        ],
+        "ATHENA": [
+            {"name": "s3_staging_dir", "label": "S3 Staging Dir", "type": "text", "placeholder": "s3://my-bucket/staging/"},
+            {"name": "region_name", "label": "Region", "type": "text", "placeholder": "us-east-1"},
+            {"name": "aws_access_key_id", "label": "Access Key ID", "type": "text", "placeholder": ""},
+            {"name": "aws_secret_access_key", "label": "Secret Access Key", "type": "password", "placeholder": ""},
+        ],
+        "DORIS": [
+            {"name": "host", "label": "Host", "type": "text", "placeholder": "localhost"},
+            {"name": "port", "label": "Port", "type": "text", "placeholder": "9030"},
+            {"name": "database", "label": "Database", "type": "text", "placeholder": "default"},
+            {"name": "user", "label": "User", "type": "text", "placeholder": "root"},
+            {"name": "password", "label": "Password", "type": "password", "placeholder": ""},
+        ],
+        "LOCAL_FILE": [
+            {"name": "url", "label": "Root Path", "type": "text", "placeholder": "/data"},
+            {"name": "format", "label": "Format", "type": "text", "placeholder": "csv"},
+        ],
+        "S3_FILE": [
+            {"name": "url", "label": "Root Path", "type": "text", "placeholder": "/data"},
+            {"name": "format", "label": "Format", "type": "text", "placeholder": "csv"},
+            {"name": "bucket", "label": "Bucket", "type": "text", "placeholder": "my-bucket"},
+            {"name": "region", "label": "Region", "type": "text", "placeholder": "us-east-1"},
+            {"name": "access_key", "label": "Access Key ID", "type": "text", "placeholder": ""},
+            {"name": "secret_key", "label": "Secret Access Key", "type": "password", "placeholder": ""},
+        ],
+        "MINIO_FILE": [
+            {"name": "url", "label": "Root Path", "type": "text", "placeholder": "/data"},
+            {"name": "format", "label": "Format", "type": "text", "placeholder": "csv"},
+            {"name": "endpoint", "label": "Endpoint", "type": "text", "placeholder": "localhost:9000"},
+            {"name": "bucket", "label": "Bucket", "type": "text", "placeholder": "my-bucket"},
+            {"name": "access_key", "label": "Access Key ID", "type": "text", "placeholder": ""},
+            {"name": "secret_key", "label": "Secret Access Key", "type": "password", "placeholder": ""},
+            {"name": "ssl_enabled", "label": "SSL Enabled", "type": "text", "placeholder": "false"},
+        ],
+        "GCS_FILE": [
+            {"name": "url", "label": "Root Path", "type": "text", "placeholder": "/data"},
+            {"name": "format", "label": "Format", "type": "text", "placeholder": "csv"},
+            {"name": "bucket", "label": "Bucket", "type": "text", "placeholder": "my-bucket"},
+            {"name": "key_id", "label": "Key ID", "type": "text", "placeholder": ""},
+            {"name": "secret_key", "label": "Secret Key", "type": "password", "placeholder": ""},
+            {"name": "credentials", "label": "Credentials (Base64)", "type": "password", "placeholder": "eyJ..."},
+        ],
+        "DATABRICKS": [
+            {"name": "serverHostname", "label": "Server Hostname", "type": "text", "placeholder": "dbc-xxxxxxxx-xxxx.cloud.databricks.com"},
+            {"name": "httpPath", "label": "HTTP Path", "type": "text", "placeholder": "/sql/1.0/warehouses/xxxxxxxx"},
+            {"name": "accessToken", "label": "Access Token", "type": "password", "placeholder": ""},
+        ],
+    }
 
 # Callbacks injected by wren.py via init()
 _get_state: Callable[[], dict] | None = None

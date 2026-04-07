@@ -28,7 +28,7 @@ wren memory fetch -q "revenue" --threshold 50000   # raise for larger context wi
 ## Indexing: `wren memory index`
 
 **When to index:**
-- After deploying a new or updated MDL
+- After updating model YAML files and rebuilding (`wren context build`)
 - When `wren memory status` shows `schema_items: 0 rows`
 - When `wren memory fetch` returns stale results (references deleted models)
 
@@ -37,22 +37,24 @@ wren memory fetch -q "revenue" --threshold 50000   # raise for larger context wi
 - When only using `describe` or `fetch` with full strategy — those read the MDL directly
 
 ```bash
-wren memory index --mdl ~/.wren/mdl.json
+wren memory index
 ```
 
 ---
 
 ## Storing queries: `wren memory store`
 
-**Store when ALL of these are true:**
-1. The SQL query executed successfully
-2. The user confirmed the result is correct, OR continued working with it (follow-up question, exported data, etc.)
-3. There is a clear natural language question that the SQL answers
+**Store by default** when a query executes successfully and there is a clear natural language question. The default is to store, not to wait for explicit confirmation.
+
+**Store (default):**
+- Query executed successfully, user confirmed the result is correct
+- Query executed successfully, user continued with a follow-up (implicit confirmation)
+- Query executed successfully, user said nothing but the question had a clear NL description
 
 **Do NOT store when:**
 - The query failed or returned an error
 - The user said the result is wrong or asked to fix it
-- The query is exploratory / throwaway (`SELECT * FROM orders LIMIT 5`)
+- The query is exploratory / throwaway (`SELECT * FROM orders LIMIT 5`) — the CLI auto-detects these
 - There is no natural language question — just raw SQL
 - The user explicitly asked not to store it
 
@@ -95,9 +97,10 @@ User asks a question:
 
 After execution:
   6. Show results to user
-  7. User confirms → wren memory store --nl "..." --sql "..."
+  7. Store by default → wren memory store --nl "..." --sql "..."
      User says wrong → fix SQL, do NOT store
-     User silent → do NOT store
+     Query failed → do NOT store
+     Exploratory query → do NOT store (CLI auto-detects)
 ```
 
 ---
@@ -109,4 +112,4 @@ wren memory status              # path, table names, row counts
 wren memory reset --force       # drop everything, start fresh
 ```
 
-All memory commands accept `--path DIR` to override `~/.wren/memory/`.
+All memory commands accept `--path DIR` to override the default storage directory (`<project>/.wren/memory/`, falling back to `~/.wren/memory/` outside a project).

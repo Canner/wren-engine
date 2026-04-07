@@ -226,7 +226,9 @@ class TestDescribeSchema:
 def memory_store(tmp_path):
     """Create a MemoryStore backed by a temp directory."""
     pytest.importorskip("lancedb", reason="wren[memory] extras not installed")
-    pytest.importorskip("sentence_transformers", reason="wren[memory] extras not installed")
+    pytest.importorskip(
+        "sentence_transformers", reason="wren[memory] extras not installed"
+    )
 
     from wren.memory.store import MemoryStore  # noqa: PLC0415
 
@@ -236,13 +238,13 @@ def memory_store(tmp_path):
 @pytest.mark.unit
 class TestMemoryStore:
     def test_index_and_context(self, memory_store):
-        count = memory_store.index_schema(_MANIFEST)
-        assert count == 10
+        result = memory_store.index_schema(_MANIFEST)
+        assert result["schema_items"] == 10
 
         # Small schema → full strategy
-        result = memory_store.get_context(_MANIFEST, "customer order price")
-        assert result["strategy"] == "full"
-        assert "### Model: orders" in result["schema"]
+        ctx = memory_store.get_context(_MANIFEST, "customer order price")
+        assert ctx["strategy"] == "full"
+        assert "### Model: orders" in ctx["schema"]
 
     def test_context_search_strategy(self, memory_store):
         memory_store.index_schema(_MANIFEST)
@@ -316,8 +318,8 @@ class TestMemoryStore:
 
     def test_index_replace(self, memory_store):
         memory_store.index_schema(_MANIFEST)
-        count = memory_store.index_schema(_MANIFEST, replace=True)
-        assert count == 10
+        result = memory_store.index_schema(_MANIFEST, replace=True)
+        assert result["schema_items"] == 10
         info = memory_store.status()
         assert info["tables"]["schema_items"] == 10
 
@@ -329,7 +331,9 @@ class TestMemoryStore:
 def wren_memory(tmp_path):
     """Create a WrenMemory instance backed by a temp directory."""
     pytest.importorskip("lancedb", reason="wren[memory] extras not installed")
-    pytest.importorskip("sentence_transformers", reason="wren[memory] extras not installed")
+    pytest.importorskip(
+        "sentence_transformers", reason="wren[memory] extras not installed"
+    )
 
     from wren.memory import WrenMemory  # noqa: PLC0415
 
@@ -339,8 +343,8 @@ def wren_memory(tmp_path):
 @pytest.mark.unit
 class TestWrenMemory:
     def test_full_lifecycle(self, wren_memory):
-        count = wren_memory.index_manifest(_MANIFEST)
-        assert count == 10
+        result = wren_memory.index_manifest(_MANIFEST)
+        assert result["schema_items"] == 10
 
         ctx = wren_memory.get_context(_MANIFEST, "customer")
         assert ctx["strategy"] == "full"
@@ -351,13 +355,90 @@ class TestWrenMemory:
             sql_query="SELECT * FROM orders WHERE o_totalprice > 1000",
         )
         recalled = wren_memory.recall_queries("costly orders")
-        assert len(recalled) == 1
+        assert len(recalled) >= 1
+        assert any(r["nl_query"] == "find expensive orders" for r in recalled)
 
         assert wren_memory.schema_is_current(_MANIFEST)
 
         status = wren_memory.status()
         assert status["tables"]["schema_items"] == 10
-        assert status["tables"]["query_history"] == 1
+        # query_history has 1 user query + seed queries
+        assert status["tables"]["query_history"] >= 1
 
         wren_memory.reset()
         assert wren_memory.status()["tables"] == {}
+
+
+# ── MemoryStore seed lifecycle tests ─────────────────────────────────────
+
+
+@pytest.mark.unit
+class TestMemoryStoreSeedLifecycle:
+    def test_index_schema_seeds_query_history(self, memory_store):
+        from wren.memory.seed_queries import SEED_TAG  # noqa: PLC0415
+
+        result = memory_store.index_schema(_MANIFEST, seed_queries=True)
+        assert result["seed_queries"] > 0
+
+        import pandas as pd  # noqa: PLC0415
+
+        table = memory_store._db.open_table("query_history")
+        df = table.to_pandas()
+        seeds = df[df["tags"] == SEED_TAG]
+        assert len(seeds) == result["seed_queries"]
+
+    def test_index_schema_no_seed_flag(self, memory_store):
+        result = memory_store.index_schema(_MANIFEST, seed_queries=False)
+        assert result["seed_queries"] == 0
+        from wren.memory.store import _table_names  # noqa: PLC0415
+
+        assert "query_history" not in _table_names(memory_store._db)
+
+    def test_reindex_replaces_seeds_preserves_user_queries(self, memory_store):
+        from wren.memory.seed_queries import SEED_TAG  # noqa: PLC0415
+
+        # Index once to create seeds
+        first = memory_store.index_schema(_MANIFEST, seed_queries=True)
+        seed_count = first["seed_queries"]
+        assert seed_count > 0
+
+        # Store a user-confirmed query (no seed tag)
+        memory_store.store_query(
+            nl_query="show me the most expensive orders",
+            sql_query="SELECT * FROM orders ORDER BY o_totalprice DESC LIMIT 10",
+        )
+
+        import pandas as pd  # noqa: PLC0415
+
+        table = memory_store._db.open_table("query_history")
+        total_before = table.count_rows()
+        assert total_before == seed_count + 1
+
+        # Re-index — seeds should be replaced, user entry preserved
+        second = memory_store.index_schema(_MANIFEST, seed_queries=True)
+        assert second["seed_queries"] == seed_count
+
+        table = memory_store._db.open_table("query_history")
+        df = table.to_pandas()
+        seeds = df[df["tags"] == SEED_TAG]
+        user_rows = df[df["tags"] != SEED_TAG]
+        assert len(seeds) == seed_count
+        assert len(user_rows) == 1
+        assert "expensive orders" in user_rows.iloc[0]["nl_query"]
+
+    def test_recall_returns_seed_entries(self, memory_store):
+        from wren.memory.seed_queries import SEED_TAG  # noqa: PLC0415
+
+        memory_store.index_schema(_MANIFEST, seed_queries=True)
+        results = memory_store.recall_queries("list all orders", limit=5)
+        assert len(results) > 0
+        # At least one result should be a seed entry
+        tags = [r.get("tags", "") for r in results]
+        assert any(t == SEED_TAG for t in tags)
+
+    def test_index_schema_returns_dict(self, memory_store):
+        result = memory_store.index_schema(_MANIFEST)
+        assert isinstance(result, dict)
+        assert "schema_items" in result
+        assert "seed_queries" in result
+        assert result["schema_items"] == 10

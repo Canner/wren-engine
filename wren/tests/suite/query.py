@@ -124,9 +124,9 @@ class WrenQueryTestSuite:
     manifest: ClassVar[dict]
 
     # Overridable expectations — connectors may differ on counts or dtypes
-    order_count: ClassVar[int] = 15000      # TPCH sf=0.01
-    customer_count: ClassVar[int] = 1500    # TPCH sf=0.01
-    order_id_dtype: ClassVar[str] = "int32" # Postgres INTEGER → Arrow int32
+    order_count: ClassVar[int] = 15000  # TPCH sf=0.01
+    customer_count: ClassVar[int] = 1500  # TPCH sf=0.01
+    order_id_dtype: ClassVar[str] = "int32"  # Postgres INTEGER → Arrow int32
 
     # ------------------------------------------------------------------
     # Helpers
@@ -156,7 +156,9 @@ class WrenQueryTestSuite:
 
     def test_query_with_limit(self, engine: WrenEngine) -> None:
         # engine.query limit= parameter truncates the result
-        result = engine.query('SELECT o_orderkey FROM "orders" ORDER BY o_orderkey', limit=3)
+        result = engine.query(
+            'SELECT o_orderkey FROM "orders" ORDER BY o_orderkey', limit=3
+        )
         assert result.num_rows == 3
 
     def test_calculated_field(self, engine: WrenEngine) -> None:

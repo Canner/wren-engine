@@ -2378,6 +2378,15 @@ wheels = [
 ]
 
 [[package]]
+name = "python-multipart"
+version = "0.0.22"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/94/01/979e98d542a70714b0cb2b6728ed0b7c46792b695e3eaec3e20711271ca3/python_multipart-0.0.22.tar.gz", hash = "sha256:7340bef99a7e0032613f56dc36027b959fd3b30a787ed62d310e951f7c3a3a58", size = 37612 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1b/d0/397f9626e711ff749a95d96b7af99b9c566a9bb5129b8e4c10fc4d100304/python_multipart-0.0.22-py3-none-any.whl", hash = "sha256:2b2cd894c83d21bf49d702499531c7bafd057d730c201782048f7945d82de155", size = 24579 },
+]
+
+[[package]]
 name = "pytz"
 version = "2026.1.post1"
 source = { registry = "https://pypi.org/simple" }
@@ -2999,6 +3008,19 @@ wheels = [
 ]
 
 [[package]]
+name = "starlette"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/81/69/17425771797c36cded50b7fe44e850315d039f28b15901ab44839e70b593/starlette-1.0.0.tar.gz", hash = "sha256:6a4beaf1f81bb472fd19ea9b918b50dc3a77a6f2e190a12954b25e6ed5eea149", size = 2655289 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0b/c9/584bc9651441b4ba60cc4d557d8a547b5aff901af35bda3a4ee30c819b82/starlette-1.0.0-py3-none-any.whl", hash = "sha256:d3ec55e0bb321692d275455ddfd3df75fff145d009685eb40dc91fc66b03d38b", size = 72651 },
+]
+
+[[package]]
 name = "sympy"
 version = "1.14.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3286,6 +3308,19 @@ wheels = [
 ]
 
 [[package]]
+name = "uvicorn"
+version = "0.42.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "click" },
+    { name = "h11" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e3/ad/4a96c425be6fb67e0621e62d86c402b4a17ab2be7f7c055d9bd2f638b9e2/uvicorn-0.42.0.tar.gz", hash = "sha256:9b1f190ce15a2dd22e7758651d9b6d12df09a13d51ba5bf4fc33c383a48e1775", size = 85393 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0a/89/f8827ccff89c1586027a105e5630ff6139a64da2515e24dafe860bd9ae4d/uvicorn-0.42.0-py3-none-any.whl", hash = "sha256:96c30f5c7abe6f74ae8900a70e92b85ad6613b745d4879eb9b16ccad15645359", size = 68830 },
+]
+
+[[package]]
 name = "win32-setctime"
 version = "1.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3372,9 +3407,10 @@ wheels = [
 [[package]]
 name = "wren-core-py"
 version = "0.1.0"
-source = { registry = "../wren-core-py/target/wheels" }
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7e/89/64d5a0a5b4e6e4d9f36d0e8856e358b78f8df537d754457a143c596ade68/wren_core_py-0.1.0.tar.gz", hash = "sha256:e1f85e4a76cd753850ab9750121c85788eff85ef9497481ac8c660bf92363e80", size = 173500 }
 wheels = [
-    { path = "wren_core_py-0.1.0-cp311-abi3-macosx_11_0_arm64.whl" },
+    { url = "https://files.pythonhosted.org/packages/c8/37/02dae70f121c22cfb60dd0a0e16afd349d193e4bdca0e836e0b1952bb3c1/wren_core_py-0.1.0-cp311-abi3-macosx_11_0_arm64.whl", hash = "sha256:51624141000c008cead7b330883d39fd36d2a1ffc10e18aedcf1a938df2ced6f", size = 31035179 },
 ]
 
 [[package]]
@@ -3405,14 +3441,18 @@ all = [
     { name = "databricks-sql-connector" },
     { name = "google-auth" },
     { name = "ibis-framework", extra = ["athena", "bigquery", "clickhouse", "mssql", "mysql", "postgres", "snowflake", "trino"] },
+    { name = "jinja2" },
     { name = "lancedb" },
     { name = "mysqlclient" },
     { name = "oracledb" },
     { name = "psycopg" },
     { name = "pyspark" },
+    { name = "python-multipart" },
     { name = "redshift-connector" },
     { name = "sentence-transformers" },
+    { name = "starlette" },
     { name = "trino" },
+    { name = "uvicorn" },
 ]
 athena = [
     { name = "ibis-framework", extra = ["athena"] },
@@ -3429,6 +3469,7 @@ databricks = [
     { name = "databricks-sql-connector" },
 ]
 dev = [
+    { name = "httpx" },
     { name = "orjson" },
     { name = "pytest" },
     { name = "ruff" },
@@ -3465,6 +3506,12 @@ trino = [
     { name = "ibis-framework", extra = ["trino"] },
     { name = "trino" },
 ]
+ui = [
+    { name = "jinja2" },
+    { name = "python-multipart" },
+    { name = "starlette" },
+    { name = "uvicorn" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -3476,6 +3523,7 @@ requires-dist = [
     { name = "duckdb", specifier = ">=1.0" },
     { name = "google-auth", marker = "extra == 'all'" },
     { name = "google-auth", marker = "extra == 'bigquery'" },
+    { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
     { name = "ibis-framework", specifier = ">=10" },
     { name = "ibis-framework", extras = ["athena"], marker = "extra == 'all'" },
     { name = "ibis-framework", extras = ["athena"], marker = "extra == 'athena'" },
@@ -3493,6 +3541,8 @@ requires-dist = [
     { name = "ibis-framework", extras = ["snowflake"], marker = "extra == 'snowflake'" },
     { name = "ibis-framework", extras = ["trino"], marker = "extra == 'all'" },
     { name = "ibis-framework", extras = ["trino"], marker = "extra == 'trino'" },
+    { name = "jinja2", marker = "extra == 'all'", specifier = ">=3.1" },
+    { name = "jinja2", marker = "extra == 'ui'", specifier = ">=3.1" },
     { name = "lancedb", marker = "extra == 'all'", specifier = ">=0.6" },
     { name = "lancedb", marker = "extra == 'memory'", specifier = ">=0.6" },
     { name = "loguru", specifier = ">=0.7" },
@@ -3513,6 +3563,8 @@ requires-dist = [
     { name = "pyspark", marker = "extra == 'all'", specifier = ">=3.5" },
     { name = "pyspark", marker = "extra == 'spark'", specifier = ">=3.5" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
+    { name = "python-multipart", marker = "extra == 'all'", specifier = ">=0.0.9" },
+    { name = "python-multipart", marker = "extra == 'ui'", specifier = ">=0.0.9" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "redshift-connector", marker = "extra == 'all'" },
     { name = "redshift-connector", marker = "extra == 'redshift'" },
@@ -3521,13 +3573,17 @@ requires-dist = [
     { name = "sentence-transformers", marker = "extra == 'all'", specifier = ">=2.2" },
     { name = "sentence-transformers", marker = "extra == 'memory'", specifier = ">=2.2" },
     { name = "sqlglot", specifier = ">=27" },
+    { name = "starlette", marker = "extra == 'all'", specifier = ">=0.37" },
+    { name = "starlette", marker = "extra == 'ui'", specifier = ">=0.37" },
     { name = "testcontainers", extras = ["mysql", "postgres"], marker = "extra == 'dev'", specifier = ">=4" },
     { name = "trino", marker = "extra == 'all'", specifier = ">=0.321" },
     { name = "trino", marker = "extra == 'trino'", specifier = ">=0.321" },
     { name = "typer", specifier = ">=0.12" },
+    { name = "uvicorn", marker = "extra == 'all'", specifier = ">=0.29" },
+    { name = "uvicorn", marker = "extra == 'ui'", specifier = ">=0.29" },
     { name = "wren-core-py", specifier = ">=0.1" },
 ]
-provides-extras = ["all", "athena", "bigquery", "clickhouse", "databricks", "dev", "memory", "mssql", "mysql", "oracle", "postgres", "redshift", "snowflake", "spark", "trino"]
+provides-extras = ["all", "athena", "bigquery", "clickhouse", "databricks", "dev", "memory", "mssql", "mysql", "oracle", "postgres", "redshift", "snowflake", "spark", "trino", "ui"]
 
 [[package]]
 name = "zstandard"

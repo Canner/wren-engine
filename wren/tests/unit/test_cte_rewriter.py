@@ -7,9 +7,8 @@ import base64
 import orjson
 import pytest
 import sqlglot
-from sqlglot import exp
 
-from wren.mdl import get_session_context, to_json_base64
+from wren.mdl import get_session_context
 from wren.mdl.cte_rewriter import CTERewriter, get_sqlglot_dialect
 from wren.model.data_source import DataSource
 
@@ -157,7 +156,7 @@ class TestMultiModel:
     def test_join_generates_two_ctes(self):
         rw = _make_rewriter(_MULTI_MODEL_MANIFEST)
         result = rw.rewrite(
-            'SELECT o.o_orderkey, c.c_name '
+            "SELECT o.o_orderkey, c.c_name "
             'FROM "orders" o JOIN "customer" c ON o.o_custkey = c.c_custkey'
         )
         assert _has_cte(result, "orders")
@@ -166,9 +165,7 @@ class TestMultiModel:
 
     def test_qualified_star(self):
         rw = _make_rewriter(_MULTI_MODEL_MANIFEST)
-        result = rw.rewrite(
-            'SELECT "orders".* FROM "orders"'
-        )
+        result = rw.rewrite('SELECT "orders".* FROM "orders"')
         assert _has_cte(result, "orders")
 
 
@@ -182,8 +179,7 @@ class TestCTEEdgeCases:
         """User CTE that references a model — model CTE should be prepended."""
         rw = _make_rewriter(_SINGLE_MODEL_MANIFEST)
         result = rw.rewrite(
-            'WITH summary AS (SELECT o_orderkey FROM "orders") '
-            "SELECT * FROM summary"
+            'WITH summary AS (SELECT o_orderkey FROM "orders") SELECT * FROM summary'
         )
         assert _has_cte(result, "orders")
         assert _has_cte(result, "summary")
@@ -197,9 +193,7 @@ class TestCTEEdgeCases:
     def test_user_cte_shadows_model(self):
         """User CTE with same name as model — no model CTE generated for that name."""
         rw = _make_rewriter(_SINGLE_MODEL_MANIFEST, fallback=True)
-        result = rw.rewrite(
-            "WITH orders AS (SELECT 1 AS id) SELECT * FROM orders"
-        )
+        result = rw.rewrite("WITH orders AS (SELECT 1 AS id) SELECT * FROM orders")
         # The model name is shadowed by user CTE, so CTERewriter skips it
         # and falls back to session_context.transform_sql which processes
         # the whole query (wren-core handles user CTEs natively).
@@ -207,6 +201,22 @@ class TestCTEEdgeCases:
         # No model-generated CTE named "orders" should be present
         # (wren-core may restructure the query but won't add a model CTE)
         assert not _has_cte(result, "orders") or _count_ctes(result) <= 1
+
+    def test_user_cte_shadows_model_case_insensitive(self):
+        """User CTE 'Orders' (mixed case) should shadow model 'orders'."""
+        rw = _make_rewriter(_SINGLE_MODEL_MANIFEST, fallback=True)
+        result = rw.rewrite(
+            "WITH Orders AS (SELECT 1 AS o_orderkey, 'OPEN' AS o_orderstatus) "
+            "SELECT * FROM Orders"
+        )
+        ast = sqlglot.parse_one(result, dialect="duckdb")
+        with_clause = ast.args.get("with_")
+        if with_clause:
+            cte_names = [
+                cte.args["alias"].this.name for cte in with_clause.expressions
+            ]
+            orders_count = sum(1 for n in cte_names if n.lower() == "orders")
+            assert orders_count <= 1, f"Duplicate 'orders' CTE: {result}"
 
     def test_nested_cte_shadows_model(self):
         """CTE defined in a subquery WITH should also shadow the model name."""

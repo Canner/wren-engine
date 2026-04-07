@@ -20,19 +20,19 @@ class RedshiftConnector(ConnectorABC):
         if isinstance(connection_info, RedshiftIAMConnectionInfo):
             self.connection = redshift_connector.connect(
                 iam=True,
-                cluster_identifier=connection_info.cluster_identifier.get_secret_value(),
-                database=connection_info.database.get_secret_value(),
-                db_user=connection_info.user.get_secret_value(),
+                cluster_identifier=connection_info.cluster_identifier,
+                database=connection_info.database,
+                db_user=connection_info.user,
                 access_key_id=connection_info.access_key_id.get_secret_value(),
                 secret_access_key=connection_info.access_key_secret.get_secret_value(),
-                region=connection_info.region.get_secret_value(),
+                region=connection_info.region,
             )
         elif isinstance(connection_info, RedshiftConnectionInfo):
             self.connection = redshift_connector.connect(
-                host=connection_info.host.get_secret_value(),
-                port=int(connection_info.port.get_secret_value()),
-                database=connection_info.database.get_secret_value(),
-                user=connection_info.user.get_secret_value(),
+                host=connection_info.host,
+                port=int(connection_info.port),
+                database=connection_info.database,
+                user=connection_info.user,
                 password=connection_info.password.get_secret_value(),
             )
         else:

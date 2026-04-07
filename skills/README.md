@@ -1,6 +1,6 @@
-# Wren Engine Skills
+# Wren Engine CLI Skills
 
-This directory contains reusable AI agent skills for working with Wren Engine. Skills are instruction files that teach AI agents (Claude, Cline, Cursor, etc.) how to perform specific workflows with Wren's tools and APIs.
+This directory contains AI agent skills for working with the Wren Engine CLI (`wren`). Skills are instruction files that teach AI agents how to query data, generate MDL projects, and manage semantic layers using the `wren` CLI — no Docker or MCP server required.
 
 ## Installation
 
@@ -17,7 +17,7 @@ Or test locally during development:
 claude --plugin-dir ./skills
 ```
 
-Skills are namespaced as `/wren:<skill>` (e.g., `/wren:generate-mdl`, `/wren:wren-sql`).
+Skills are namespaced as `/wren:<skill>` (e.g., `/wren:wren-generate-mdl`, `/wren:wren-usage`).
 
 ### Option 2 — npx skills
 
@@ -28,95 +28,71 @@ npx skills add Canner/wren-engine --skill '*' --agent claude-code
 
 `npx skills` also supports Cursor, Windsurf, and 30+ other agent tools — replace `--agent claude-code` with your agent of choice.
 
-### Option 3 — ClawHub
-
-Two skills are published on [ClawHub](https://clawhub.ai) for agents that support the ClawHub registry:
+### Option 3 — install script (from a local clone)
 
 ```bash
-clawhub install wren-usage       # main entry point — installs all dependent skills
-clawhub install wren-http-api    # standalone — HTTP JSON-RPC for non-MCP clients
+bash skills/install.sh                    # all skills
+bash skills/install.sh wren-usage         # specific skill (auto-installs dependencies)
+bash skills/install.sh --force wren-usage # overwrite existing
 ```
 
-### Option 4 — install script (from a local clone)
+### Option 4 — manual copy
 
 ```bash
-bash skills/install.sh                        # all skills
-bash skills/install.sh wren-generate-mdl wren-sql  # specific skills
-bash skills/install.sh --force wren-generate-mdl   # overwrite existing
-```
-
-### Option 5 — manual copy
-
-```bash
-cp -r skills/wren-usage ~/.claude/skills/
-# or all at once:
-cp -r skills/wren-usage skills/wren-generate-mdl skills/wren-project skills/wren-sql skills/wren-mcp-setup skills/wren-connection-info ~/.claude/skills/
+cp -r skills/wren-usage skills/wren-generate-mdl ~/.claude/skills/
 ```
 
 Once installed, invoke a skill by name in your conversation:
 
 ```text
 /wren-usage
-/wren-quickstart
 /wren-generate-mdl
-/wren-project
-/wren-sql
-/wren-mcp-setup
 ```
 
-> **Tip:** Use `--skill '*'` to install all skills at once, or specify individual skills (e.g., `--skill wren-generate-mdl --skill wren-sql`).
+> **Tip:** Use `--skill '*'` to install all skills at once, or specify individual skills.
 
 ## Available Skills
 
 | Skill | Description |
 |-------|-------------|
-| [wren-usage](wren-usage/SKILL.md) | **Primary skill** — daily usage guide: query data, manage MDL, connect databases, operate MCP server `ClawHub` |
-| [wren-quickstart](wren-quickstart/SKILL.md) | End-to-end first-time setup — install skills, generate MDL, save project, start MCP server, verify setup |
-| [wren-generate-mdl](wren-generate-mdl/SKILL.md) | Generate a Wren MDL manifest from a live database using ibis-server introspection |
-| [wren-project](wren-project/SKILL.md) | Save, load, and build MDL manifests as version-controlled YAML project directories |
-| [wren-sql](wren-sql/SKILL.md) | Write and correct SQL queries for Wren Engine — types, date/time, BigQuery dialect, error diagnosis |
-| [wren-mcp-setup](wren-mcp-setup/SKILL.md) | Set up Wren Engine MCP via Docker, register with Claude Code or other MCP clients, and start querying |
-| [wren-connection-info](wren-connection-info/SKILL.md) | Set up data source credentials — produces `connectionFilePath` or inline dict |
-| [wren-http-api](wren-http-api/SKILL.md) | Interact with Wren MCP via plain HTTP JSON-RPC — no MCP SDK required (for OpenClaw, custom clients, scripts) `ClawHub` |
+| [wren-usage](wren-usage/SKILL.md) | **Primary skill** — CLI workflow guide: query data via `wren --sql`, gather schema context with `wren memory`, store/recall queries, handle errors |
+| [wren-generate-mdl](wren-generate-mdl/SKILL.md) | Generate a Wren MDL project from a live database — schema discovery, type normalization, YAML generation |
 
-See [SKILLS.md](SKILLS.md) for full details on each skill.
+### wren-usage reference files
+
+| File | Topic |
+|------|-------|
+| [references/memory.md](wren-usage/references/memory.md) | When to index, fetch, store, and recall |
+| [references/wren-sql.md](wren-usage/references/wren-sql.md) | CTE rewrite pipeline, SQL rules, error diagnosis |
 
 ## Updating Skills
 
-Each skill automatically checks for updates when invoked. If a newer version is available, the AI agent will notify you with the update command before continuing.
-
-To update manually at any time:
+Each skill automatically checks for updates when invoked. To update manually:
 
 ```bash
 # Re-add to reinstall the latest version
 npx skills add Canner/wren-engine --skill '*' --agent claude-code
 
-# Or reinstall a specific skill
-npx skills add Canner/wren-engine --skill wren-generate-mdl --agent claude-code
+# Or reinstall from a local clone
+bash skills/install.sh --force
 ```
 
 ## Releasing a New Skill Version
 
-When updating a skill, two files must be kept in sync:
+When updating a skill, three files must be kept in sync:
 
-1. Update `version` in the skill's `SKILL.md` frontmatter:
-   ```yaml
-   metadata:
-     author: wren-engine
-     version: "1.2"   # bump this
-   ```
+1. Update `version` in the skill's `SKILL.md` frontmatter
+2. Update the matching entry in [`versions.json`](versions.json)
+3. Update the matching entry in [`index.json`](index.json)
 
-2. Update the matching entry in [`versions.json`](versions.json):
-   ```json
-   {
-     "wren-generate-mdl": "1.2"
-   }
-   ```
-
-Both files must have the same version number. The `SKILL.md` version is what users have installed locally; `versions.json` is what the update check compares against.
+Run `bash skills/check-versions.sh` to verify parity before merging.
 
 ## Requirements
 
-- A running [ibis-server](../ibis-server/) instance
-- The [Wren MCP server](../mcp-server/) connected to your AI client
+- `wren` CLI installed (`pip install wren-engine` or `pip install wren-engine[<datasource>]`)
+- A database connection (configured via `wren profile add` or `~/.wren/connection_info.json`)
 - An AI client that supports skills (Claude Code, Cline, Cursor, etc.)
+
+## Archived Skills (MCP-based)
+
+The previous MCP server-based skills are preserved in [`skills-archive/`](../skills-archive/). Those skills require a running ibis-server and MCP server. The CLI skills in this directory replace that workflow with the standalone `wren` CLI.

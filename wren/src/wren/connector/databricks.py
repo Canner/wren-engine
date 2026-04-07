@@ -19,27 +19,25 @@ class DatabricksConnector(ConnectorABC):
 
         if isinstance(connection_info, DatabricksTokenConnectionInfo):
             self.connection = dbsql.connect(
-                server_hostname=connection_info.server_hostname.get_secret_value(),
-                http_path=connection_info.http_path.get_secret_value(),
+                server_hostname=connection_info.server_hostname,
+                http_path=connection_info.http_path,
                 access_token=connection_info.access_token.get_secret_value(),
             )
         elif isinstance(connection_info, DatabricksServicePrincipalConnectionInfo):
             kwargs = {
-                "host": connection_info.server_hostname.get_secret_value(),
+                "host": connection_info.server_hostname,
                 "client_id": connection_info.client_id.get_secret_value(),
                 "client_secret": connection_info.client_secret.get_secret_value(),
             }
             if connection_info.azure_tenant_id is not None:
-                kwargs["azure_tenant_id"] = (
-                    connection_info.azure_tenant_id.get_secret_value()
-                )
+                kwargs["azure_tenant_id"] = connection_info.azure_tenant_id
 
             def credential_provider():
                 return oauth_service_principal(DbConfig(**kwargs))
 
             self.connection = dbsql.connect(
-                server_hostname=connection_info.server_hostname.get_secret_value(),
-                http_path=connection_info.http_path.get_secret_value(),
+                server_hostname=connection_info.server_hostname,
+                http_path=connection_info.http_path,
                 credentials_provider=credential_provider,
             )
 

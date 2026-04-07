@@ -3,15 +3,17 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
 
+from wren.context_cli import context_app
+
 app = typer.Typer(name="wren", help="Wren Engine CLI", no_args_is_help=False)
 
-_WREN_HOME = Path.home() / ".wren"
-_DEFAULT_MDL = _WREN_HOME / "mdl.json"
+_WREN_HOME = Path(os.environ.get("WREN_HOME", str(Path.home() / ".wren"))).expanduser()
 _DEFAULT_CONN = _WREN_HOME / "connection_info.json"
 
 
@@ -19,21 +21,34 @@ _DEFAULT_CONN = _WREN_HOME / "connection_info.json"
 
 
 def _require_mdl(mdl: str | None) -> str:
-    """Return mdl arg if given, else auto-discover mdl.json from ~/.wren."""
+    """Return mdl path — explicit flag or auto-discovered from project root."""
     if mdl is not None:
         return mdl
-    if _DEFAULT_MDL.exists():
-        return str(_DEFAULT_MDL)
-    typer.echo(
-        f"Error: --mdl not specified and '{_DEFAULT_MDL}' not found.",
-        err=True,
-    )
+    try:
+        from wren.context import discover_project_path  # noqa: PLC0415
+
+        project_path = discover_project_path()
+        target = project_path / "target" / "mdl.json"
+        if target.exists():
+            return str(target)
+        typer.echo(
+            f"Error: project found at {project_path} but target/mdl.json missing.\n"
+            "  Hint: run `wren context build` first.",
+            err=True,
+        )
+    except SystemExit as e:
+        typer.echo(str(e), err=True)
+    except Exception as e:
+        typer.echo(f"Error discovering project: {e}", err=True)
     raise typer.Exit(1)
 
 
 def _load_manifest(mdl: str) -> str:
     """Load MDL from a file path or treat as base64 string directly."""
     path = Path(mdl).expanduser()
+    if path.suffix.lower() == ".json" and not path.exists():
+        typer.echo(f"Error: MDL file not found: {path}", err=True)
+        raise typer.Exit(1)
     if path.exists():
         import base64  # noqa: PLC0415
 
@@ -138,8 +153,10 @@ def _build_engine(
     conn_required: bool = True,
     datasource: str | None = None,
 ):
+    from wren.config import load_config  # noqa: PLC0415
     from wren.engine import WrenEngine  # noqa: PLC0415
     from wren.model.data_source import DataSource  # noqa: PLC0415
+    from wren.model.error import WrenError  # noqa: PLC0415
 
     manifest_str = _load_manifest(_require_mdl(mdl))
 
@@ -162,8 +179,16 @@ def _build_engine(
             from pydantic import ValidationError  # noqa: PLC0415
 
             try:
+                config = load_config(_WREN_HOME)
+            except (WrenError, OSError) as e:
+                typer.echo(f"Error: {e}", err=True)
+                raise typer.Exit(1) from e
+            try:
                 return WrenEngine(
-                    manifest_str=manifest_str, data_source=ds, connection_info=prof_dict
+                    manifest_str=manifest_str,
+                    data_source=ds,
+                    connection_info=prof_dict,
+                    config=config,
                 )
             except ValidationError as e:
                 typer.echo(f"Error: invalid profile connection info: {e}", err=True)
@@ -179,9 +204,17 @@ def _build_engine(
         typer.echo(f"Error: unknown datasource '{ds_str}'", err=True)
         raise typer.Exit(1)
 
-    return WrenEngine(
-        manifest_str=manifest_str, data_source=ds, connection_info=conn_dict
-    )
+    try:
+        config = load_config(_WREN_HOME)
+        return WrenEngine(
+            manifest_str=manifest_str,
+            data_source=ds,
+            connection_info=conn_dict,
+            config=config,
+        )
+    except (WrenError, OSError) as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1) from e
 
 
 # ── Shared option types ────────────────────────────────────────────────────
@@ -191,7 +224,7 @@ MdlOpt = Annotated[
     typer.Option(
         "--mdl",
         "-m",
-        help=f"Path to MDL JSON file or base64 string. Defaults to {_DEFAULT_MDL}.",
+        help="Path to MDL JSON file or base64 string. Defaults to <project>/target/mdl.json.",
     ),
 ]
 ConnInfoOpt = Annotated[
@@ -211,6 +244,34 @@ LimitOpt = Annotated[
 OutputOpt = Annotated[
     str, typer.Option("--output", "-o", help="Output format: json|csv|table")
 ]
+QuietOpt = Annotated[
+    bool,
+    typer.Option(
+        "--quiet",
+        "-q",
+        help="Suppress informational tips (e.g. store hints after query).",
+    ),
+]
+
+
+def _print_store_tip(sql: str) -> None:
+    """Print a memory store hint to stderr."""
+    escaped = sql.replace("'", "'\\''")
+    typer.echo(
+        f"\n# To save this query:\n"
+        f"# wren memory store --nl '<natural language question>' "
+        f"--sql '{escaped}'",
+        err=True,
+    )
+
+
+def _maybe_print_store_tip(sql: str, quiet: bool) -> None:
+    if quiet:
+        return
+    from wren.sql_classify import is_exploratory  # noqa: PLC0415
+
+    if not is_exploratory(sql):
+        _print_store_tip(sql)
 
 
 # ── Default command (no subcommand = query) ────────────────────────────────
@@ -230,11 +291,12 @@ def main(
     connection_file: ConnFileOpt = None,
     limit: LimitOpt = None,
     output: OutputOpt = "table",
+    quiet: QuietOpt = False,
 ) -> None:
     """Wren Engine CLI.
 
     Run with --sql to execute a query using mdl.json and connection_info.json from
-    ~/.wren.  Use a subcommand (query / dry-run / dry-plan / validate)
+    ~/.wren.  Use a subcommand (query / dry-run / dry-plan)
     for explicit control.
 
     The data source is always read from the 'datasource' field in
@@ -272,6 +334,7 @@ def main(
             typer.echo(f"Error: {e}", err=True)
             raise typer.Exit(1)
     _print_result(result, output)
+    _maybe_print_store_tip(sql, quiet)
 
 
 # ── Subcommands ────────────────────────────────────────────────────────────
@@ -285,6 +348,7 @@ def query(
     connection_file: ConnFileOpt = None,
     limit: LimitOpt = None,
     output: OutputOpt = "table",
+    quiet: QuietOpt = False,
 ):
     """Execute a SQL query through the Wren semantic layer."""
     with _build_engine(mdl, connection_info, connection_file) as engine:
@@ -294,23 +358,7 @@ def query(
             typer.echo(f"Error: {e}", err=True)
             raise typer.Exit(1)
     _print_result(result, output)
-
-
-@app.command(name="dry-run")
-def dry_run(
-    sql: Annotated[str, typer.Option("--sql", "-s", help="SQL query to validate")],
-    mdl: MdlOpt = None,
-    connection_info: ConnInfoOpt = None,
-    connection_file: ConnFileOpt = None,
-):
-    """Dry-run a SQL query (parse + validate, no results returned)."""
-    with _build_engine(mdl, connection_info, connection_file) as engine:
-        try:
-            engine.dry_run(sql)
-            typer.echo("OK")
-        except Exception as e:
-            typer.echo(f"Error: {e}", err=True)
-            raise typer.Exit(1)
+    _maybe_print_store_tip(sql, quiet)
 
 
 @app.command(name="dry-plan")
@@ -328,8 +376,10 @@ def dry_plan(
     connection_file: ConnFileOpt = None,
 ):
     """Plan SQL through MDL and print the expanded SQL (no DB required)."""
+    from wren.config import load_config  # noqa: PLC0415
     from wren.engine import WrenEngine  # noqa: PLC0415
     from wren.model.data_source import DataSource  # noqa: PLC0415
+    from wren.model.error import WrenError  # noqa: PLC0415
 
     manifest_str = _load_manifest(_require_mdl(mdl))
 
@@ -348,8 +398,16 @@ def dry_plan(
             except ValueError:
                 typer.echo(f"Error: unknown datasource '{prof_ds}'", err=True)
                 raise typer.Exit(1)
+            try:
+                config = load_config(_WREN_HOME)
+            except (WrenError, OSError) as e:
+                typer.echo(f"Error: {e}", err=True)
+                raise typer.Exit(1) from e
             with WrenEngine(
-                manifest_str=manifest_str, data_source=ds, connection_info={}
+                manifest_str=manifest_str,
+                data_source=ds,
+                connection_info={},
+                config=config,
             ) as engine:
                 try:
                     result = engine.dry_plan(sql)
@@ -370,8 +428,14 @@ def dry_plan(
         typer.echo(f"Error: unknown datasource '{ds_str}'", err=True)
         raise typer.Exit(1)
 
+    try:
+        config = load_config(_WREN_HOME)
+    except (WrenError, OSError) as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1) from e
+
     with WrenEngine(
-        manifest_str=manifest_str, data_source=ds, connection_info={}
+        manifest_str=manifest_str, data_source=ds, connection_info={}, config=config
     ) as engine:
         try:
             result = engine.dry_plan(sql)
@@ -381,20 +445,20 @@ def dry_plan(
             raise typer.Exit(1)
 
 
-@app.command()
-def validate(
-    sql: Annotated[str, typer.Option("--sql", "-s", help="SQL query to validate")],
+@app.command(name="dry-run")
+def dry_run(
+    sql: Annotated[str, typer.Option("--sql", "-s", help="SQL query to dry-run")],
     mdl: MdlOpt = None,
     connection_info: ConnInfoOpt = None,
     connection_file: ConnFileOpt = None,
 ):
-    """Validate SQL can be planned and dry-run against the data source."""
+    """Dry-run SQL against the data source (parse + validate, no results returned)."""
     with _build_engine(mdl, connection_info, connection_file) as engine:
         try:
             engine.dry_run(sql)
-            typer.echo("Valid")
+            typer.echo("OK")
         except Exception as e:
-            typer.echo(f"Invalid: {e}", err=True)
+            typer.echo(f"Error: {e}", err=True)
             raise typer.Exit(1)
 
 
@@ -481,6 +545,10 @@ def docs_connection_info(
 
 app.add_typer(docs_app)
 
+from wren.utils_cli import utils_app  # noqa: E402, PLC0415
+
+app.add_typer(context_app)
+app.add_typer(utils_app)
 
 try:
     import lancedb  # noqa: PLC0415, F401

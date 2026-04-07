@@ -7,12 +7,15 @@ A **Model** is the core building block of Wren MDL. It maps a physical table (or
 Every model requires three things:
 
 1. A **name** — the identifier used in queries (`SELECT * FROM customers`)
-2. A **data source** — where the data lives (`table_reference`, `ref_sql`, or `base_object`)
+2. A **data source** — where the data lives (`table_reference` or `ref_sql`)
 3. **Columns** — the fields that are exposed
 
 ### YAML format (wren project)
 
+Each model lives in its own directory under `models/` as `models/<name>/metadata.yml`.
+
 ```yaml
+# models/customers/metadata.yml
 name: customers
 table_reference:
   catalog: jaffle_shop
@@ -22,15 +25,32 @@ primary_key: customer_id
 columns:
   - name: customer_id
     type: INTEGER
+    is_calculated: false
+    not_null: true
     is_primary_key: true
+    properties: {}
   - name: first_name
     type: VARCHAR
+    is_calculated: false
+    not_null: false
+    properties: {}
   - name: last_name
     type: VARCHAR
+    is_calculated: false
+    not_null: false
+    properties: {}
   - name: number_of_orders
     type: BIGINT
+    is_calculated: false
+    not_null: false
+    properties: {}
   - name: customer_lifetime_value
     type: DOUBLE
+    is_calculated: false
+    not_null: false
+    properties: {}
+cached: false
+properties: {}
 ```
 
 ### JSON format (MDL manifest)
@@ -59,18 +79,26 @@ columns:
 | Field | Required | Description |
 |-------|----------|-------------|
 | `name` | Yes | Unique identifier used in SQL queries |
-| `table_reference` | One of three | Points to an existing physical table (`catalog.schema.table`) |
-| `ref_sql` | One of three | A SQL SELECT statement used as the model's data source |
-| `base_object` | One of three | References another model or view as the base |
+| `table_reference` | One of two | Points to an existing physical table (`catalog.schema.table`) |
+| `ref_sql` | One of two | A SQL SELECT statement used as the model's data source |
 | `columns` | Yes | List of columns to expose (see [Column Fields](#column-fields)) |
 | `primary_key` | No | Column name that uniquely identifies a row; required for relationships |
+| `cached` | No | Whether query results for this model should be cached; `false` by default |
 | `properties` | No | Arbitrary key-value metadata (description, tags, etc.) |
 
-## Data Source: Three Ways to Point at Data
+## Data Source: Two Ways to Point at Data
+
+A model must define its source in exactly one of two ways. Using both `table_reference` and `ref_sql` in the same model is a validation error.
 
 ### 1. `table_reference` — map to a physical table
 
 Used when the underlying table already exists in the database.
+
+| Field | Description |
+|-------|-------------|
+| `catalog` | Database catalog. Empty string if not applicable. For DuckDB, use the DB file name without extension (e.g. `jaffle_shop.duckdb` → `jaffle_shop`). |
+| `schema` | Database schema (e.g. `public`, `main`). |
+| `table` | Physical table name. |
 
 **jaffle_shop example** — the `orders` model maps directly to `jaffle_shop.main.orders`:
 
@@ -84,33 +112,58 @@ table_reference:
 
 When a query like `SELECT * FROM orders` is executed, Wren rewrites it to the fully-qualified physical table.
 
-### 2. `ref_sql` — define the model inline with SQL (not yet supported)
+### 2. `ref_sql` — define the model with SQL
 
 Used when the model is derived — for example, a staging transform or a complex join that doesn't exist as a physical table.
 
+The SQL can be inline in `metadata.yml` or in a separate `ref_sql.sql` file. The `.sql` file takes precedence if both exist.
+
+**Inline in metadata.yml:**
+
 ```yaml
-name: stg_orders
+name: revenue_summary
 ref_sql: >
-  SELECT
-    id AS order_id,
-    user_id AS customer_id,
-    order_date,
-    status
-  FROM jaffle_shop.main.raw_orders
+  SELECT DATE_TRUNC('month', order_date) AS month,
+         SUM(total) AS total_revenue
+  FROM orders
+  GROUP BY 1
+columns:
+  - name: month
+    type: DATE
+    is_calculated: false
+    not_null: true
+    properties: {}
+  - name: total_revenue
+    type: DECIMAL
+    is_calculated: false
+    not_null: false
+    properties: {}
 ```
 
-### 3. `base_object` — inherit from another model (not yet supported)
-
-References an existing model or view by name as the base. Useful for layered modeling (raw → staging → mart).
+**Separate SQL file:**
 
 ```yaml
-name: active_orders
-base_object: orders
+# models/revenue_summary/metadata.yml
+name: revenue_summary
 columns:
-  - name: order_id
-    type: INTEGER
-  - name: order_date
+  - name: month
     type: DATE
+    is_calculated: false
+    not_null: true
+    properties: {}
+  - name: total_revenue
+    type: DECIMAL
+    is_calculated: false
+    not_null: false
+    properties: {}
+```
+
+```sql
+-- models/revenue_summary/ref_sql.sql
+SELECT DATE_TRUNC('month', order_date) AS month,
+       SUM(total) AS total_revenue
+FROM orders
+GROUP BY 1
 ```
 
 ## Column Fields

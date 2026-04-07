@@ -1,0 +1,43 @@
+{
+  "name": "wren",
+  "owner": {
+    "name": "Canner",
+    "email": "dev@cannerdata.com"
+  },
+  "metadata": {
+    "description": "Wren Engine skills — semantic SQL, MDL management, MCP server setup for 20+ data sources"
+  },
+  "plugins": [
+    {
+      "name": "wren",
+      "source": ".",
+      "description": "AI agent skills for Wren Engine — semantic SQL layer and MCP server for 20+ data sources.",
+      "version": "1.0.0",
+      "keywords": [
+        "wren",
+        "sql",
+        "mdl",
+        "mcp",
+        "semantic-layer",
+        "docker",
+        "amazon-s3",
+        "apache-spark",
+        "apache-doris",
+        "athena",
+        "bigquery",
+        "clickhouse",
+        "databricks",
+        "duckdb",
+        "google-cloud-storage",
+        "minio",
+        "mysql",
+        "oracle",
+        "postgres",
+        "redshift",
+        "sql-server",
+        "snowflake",
+        "trino"
+      ]
+    }
+  ]
+}

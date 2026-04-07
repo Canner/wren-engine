@@ -1,36 +1,6 @@
 # CLAUDE.md — wren package
 
-Standalone Python SDK and CLI for Wren Engine. Wraps `wren-core-py` (PyO3 bindings) + Ibis connectors into a single installable package.
-
-## Package Structure
-
-```
-wren/
-  src/wren/
-    engine.py       — WrenEngine facade (transpile / query / dry_run / dry_plan)
-    cli.py          — Typer CLI: wren query|dry-run|dry-plan|validate
-    mdl/            — wren-core-py session context + manifest extraction helpers
-      cte_rewriter.py — CTE-based query rewriting
-      wren_dialect.py — Custom sqlglot dialect
-    connector/      — Per-datasource Ibis connectors (factory.py + one file per source)
-      factory.py    — DataSource → connector dispatch registry
-      base.py       — Base connector interface
-      ibis.py       — Shared Ibis-backed connector (trino, clickhouse, snowflake, athena)
-      postgres.py, mysql.py, mssql.py, bigquery.py, duckdb.py, oracle.py,
-      redshift.py, spark.py, databricks.py, canner.py
-    model/
-      data_source.py — DataSource enum + per-source ConnectionInfo factories
-      error.py       — WrenError, ErrorCode, ErrorPhase
-    memory/         — Optional LanceDB-backed semantic memory (requires `wren[memory]`)
-      store.py      — LanceDB vector store operations
-      schema_indexer.py — MDL schema embedding/indexing
-      embeddings.py — Sentence transformer integration
-      cli.py        — `wren memory` CLI subcommands
-  tests/
-    unit/           — test_engine.py, test_cte_rewriter.py, test_memory.py
-    connectors/     — test_duckdb.py, test_postgres.py, test_mysql.py
-    suite/          — Shared test helpers (manifests.py, query.py)
-```
+Python SDK and CLI for Wren Engine. Wraps `wren-core-py` (PyO3 bindings) + Ibis connectors into a single installable package with YAML-based MDL project management, named connection profiles, and optional semantic memory.
 
 ## Build & Development
 
@@ -50,6 +20,15 @@ just build            # uv build (produces wheel)
 
 Uses `uv` (not Poetry). `pyproject.toml` uses `hatchling` as build backend.
 
+## CLI Command Groups
+
+- `wren query` / `wren dry-plan` / `wren validate` — Core query operations
+- `wren context init|build|validate|show` — YAML MDL project management
+- `wren profile add|list|show|remove|activate` — Named connection profiles
+- `wren docs connection-info` — Generate connection field docs
+- `wren utils parse-type` — SQL type normalization
+- `wren memory index|fetch|store|recall` — Semantic memory (when `wren[memory]` installed)
+
 ## Key Design Points
 
 - **WrenEngine** is the main entry point. It accepts a base64-encoded MDL JSON string, a `DataSource`, and a connection dict.
@@ -58,6 +37,10 @@ Uses `uv` (not Poetry). `pyproject.toml` uses `hatchling` as build backend.
 - **`get_session_context` is `@cache`-decorated** — same `(manifest_str, function_path, properties, data_source)` tuple reuses the same SessionContext. Avoid mutating session state.
 - **Write dialect mapping**: `canner` → `trino`; file sources (`local_file`, `s3_file`, `minio_file`, `gcs_file`) → `duckdb`. All others use `data_source.name` directly.
 - **WrenEngine is a context manager** (`__enter__` / `__exit__` call `close()`).
+- **Profile-based workflow**: When no explicit `--connection-*` flags are given, the CLI auto-discovers the active profile from `~/.wren/profiles.yml`. Profiles store datasource type + connection fields.
+- **YAML MDL project**: `wren context build` compiles YAML model/view/relationship files from a project directory into `target/mdl.json`. `_require_mdl()` auto-discovers this target file.
+- **Config system**: `~/.wren/config.json` with `strict_mode` (reject queries referencing non-MDL tables) and `denied_functions` (block specific SQL functions).
+- **Field registry** (`model/field_registry.py`): Single source of truth for per-datasource connection fields, derived from Pydantic models. Used by CLI interactive prompts, MCP web UI forms, and documentation generation.
 
 ## Connectors
 
@@ -75,6 +58,7 @@ Uses `uv` (not Poetry). `pyproject.toml` uses `hatchling` as build backend.
 
 - **`WrenMemory`** — Main API: `index_manifest()`, `get_context()`, `store_query()`, `recall_queries()`, `describe_schema()`, `schema_is_current()`, `status()`, `reset()`
 - Uses sentence-transformers for embedding MDL schema items and NL↔SQL query pairs
+- **Seed queries** (`seed_queries.py`): On index, generates canonical NL-SQL pairs from the MDL manifest to bootstrap the query history
 - CLI: `wren memory index|fetch|store|recall` subcommands (auto-registered when extras installed)
 - Backing store: LanceDB (local or remote via opendal)
 

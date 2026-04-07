@@ -100,10 +100,20 @@ class MemoryStore:
 
     # ── Schema indexing ───────────────────────────────────────────────────
 
-    def index_schema(self, manifest: dict, *, replace: bool = True) -> int:
+    def index_schema(
+        self,
+        manifest: dict,
+        *,
+        replace: bool = True,
+        seed_queries: bool = True,
+    ) -> dict:
         """Extract schema items from *manifest*, embed, and store.
 
-        Returns the number of records indexed.
+        If *seed_queries* is True, also generates canonical NL-SQL pairs
+        and inserts them into query_history (tagged 'source:seed').
+        Old seed entries are replaced; user-confirmed entries are preserved.
+
+        Returns {"schema_items": int, "seed_queries": int}.
         """
         items = extract_schema_items(manifest)
         table_exists = _SCHEMA_TABLE in _table_names(self._db)
@@ -111,34 +121,65 @@ class MemoryStore:
         if not items:
             if replace and table_exists:
                 self._db.drop_table(_SCHEMA_TABLE)
-            return 0
-
-        texts = [item["text"] for item in items]
-        vectors = self._embed_fn.compute_source_embeddings(texts)
-
-        for item, vec in zip(items, vectors):
-            item["vector"] = vec
-
-        if replace:
-            if table_exists:
-                self._db.drop_table(_SCHEMA_TABLE)
-            self._db.create_table(
-                _SCHEMA_TABLE,
-                items,
-                schema=self._schema_table_schema(),
-            )
+            schema_count = 0
         else:
-            if table_exists:
-                tbl = self._db.open_table(_SCHEMA_TABLE)
-                tbl.add(items)
-            else:
+            texts = [item["text"] for item in items]
+            vectors = self._embed_fn.compute_source_embeddings(texts)
+
+            for item, vec in zip(items, vectors):
+                item["vector"] = vec
+
+            if replace:
+                if table_exists:
+                    self._db.drop_table(_SCHEMA_TABLE)
                 self._db.create_table(
                     _SCHEMA_TABLE,
                     items,
                     schema=self._schema_table_schema(),
                 )
+            else:
+                if table_exists:
+                    tbl = self._db.open_table(_SCHEMA_TABLE)
+                    tbl.add(items)
+                else:
+                    self._db.create_table(
+                        _SCHEMA_TABLE,
+                        items,
+                        schema=self._schema_table_schema(),
+                    )
+            schema_count = len(items)
 
-        return len(items)
+        seed_count = 0
+        if seed_queries:
+            seed_count = self._upsert_seed_queries(manifest)
+
+        return {"schema_items": schema_count, "seed_queries": seed_count}
+
+    def _upsert_seed_queries(self, manifest: dict) -> int:
+        """Replace seed query entries, preserving user-confirmed ones."""
+        from wren.memory.seed_queries import (  # noqa: PLC0415
+            SEED_TAG,
+            generate_seed_queries,
+        )
+
+        # Remove old seeds (tagged 'source:seed') but keep user entries
+        if _QUERY_TABLE in _table_names(self._db):
+            table = self._db.open_table(_QUERY_TABLE)
+            table.delete(f"tags = '{SEED_TAG}'")
+
+        pairs = generate_seed_queries(manifest)
+        if not pairs:
+            return 0
+
+        # Insert new seeds via the existing store_query() method
+        for pair in pairs:
+            self.store_query(
+                nl_query=pair["nl"],
+                sql_query=pair["sql"],
+                tags=SEED_TAG,
+            )
+
+        return len(pairs)
 
     def schema_is_current(self, manifest: dict) -> bool:
         """Check whether the indexed schema matches *manifest*.

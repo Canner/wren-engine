@@ -7,14 +7,14 @@ transpile path without connecting to any data source.
 from __future__ import annotations
 
 import base64
-import math
 
 import orjson
 import pytest
 
 from wren import WrenEngine
+from wren.config import WrenConfig
 from wren.model.data_source import DataSource
-from wren.model.error import WrenError
+from wren.model.error import ErrorCode, WrenError
 
 pytestmark = pytest.mark.unit
 
@@ -109,3 +109,62 @@ def test_context_manager_closes_connector() -> None:
 
     # After __exit__, internal state is cleaned up
     assert e._connector is None
+
+
+# ------------------------------------------------------------------
+# Strict mode (no DB access)
+# ------------------------------------------------------------------
+
+_STRICT_CONFIG = WrenConfig(strict_mode=True)
+_BLACKLIST_CONFIG = WrenConfig(denied_functions=frozenset(["pg_read_file"]))
+
+
+def test_strict_mode_blocks_unknown_table():
+    conn_info = {"url": "/tmp", "format": "duckdb"}
+    with WrenEngine(
+        _MANIFEST_STR,
+        DataSource.duckdb,
+        conn_info,
+        fallback=False,
+        config=_STRICT_CONFIG,
+    ) as engine:
+        with pytest.raises(WrenError) as exc_info:
+            engine.dry_plan("SELECT * FROM secret_table")
+        assert exc_info.value.error_code == ErrorCode.MODEL_NOT_FOUND
+
+
+def test_strict_mode_allows_mdl_table():
+    conn_info = {"url": "/tmp", "format": "duckdb"}
+    with WrenEngine(
+        _MANIFEST_STR,
+        DataSource.duckdb,
+        conn_info,
+        fallback=False,
+        config=_STRICT_CONFIG,
+    ) as engine:
+        sql = engine.dry_plan('SELECT o_orderkey FROM "orders" LIMIT 1')
+        assert isinstance(sql, str)
+        assert len(sql) > 0
+
+
+def test_strict_mode_blocks_denied_function():
+    conn_info = {"url": "/tmp", "format": "duckdb"}
+    with WrenEngine(
+        _MANIFEST_STR,
+        DataSource.duckdb,
+        conn_info,
+        fallback=False,
+        config=_BLACKLIST_CONFIG,
+    ) as engine:
+        with pytest.raises(WrenError) as exc_info:
+            engine.dry_plan("SELECT pg_read_file('/etc/passwd')")
+        assert exc_info.value.error_code == ErrorCode.BLOCKED_FUNCTION
+
+
+def test_non_strict_mode_allows_unknown_table(duckdb_engine: WrenEngine):
+    # Default config (no strict mode) — non-MDL tables should not be blocked
+    # by policy (may still fail during planning, but not with MODEL_NOT_FOUND)
+    try:
+        duckdb_engine.dry_plan("SELECT * FROM unknown_table")
+    except WrenError as e:
+        assert e.error_code != ErrorCode.MODEL_NOT_FOUND
