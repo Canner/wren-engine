@@ -26,7 +26,7 @@
     },
     {
       "name": "wren-usage",
-      "version": "2.0",
+      "version": "2.1",
       "description": "Wren Engine CLI workflow guide for AI agents. Answer data questions end-to-end using the wren CLI: gather schema context, recall past queries, write SQL through the MDL semantic layer, execute, and learn from confirmed results.",
       "tags": [
         "wren",

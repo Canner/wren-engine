@@ -18,8 +18,9 @@ If the remote version is newer, notify the user before proceeding:
 > A newer version of the **wren-generate-mdl** skill is available.
 > Update with:
 > ```
-> npx skills add Canner/wren-engine --skill wren-generate-mdl --agent claude-code
+> npx skills add Canner/wren-engine --skill wren-generate-mdl
 > ```
+> The CLI auto-detects your installed agent. To target a specific one, add `--agent <name>` (e.g., `claude-code`, `cursor`, `windsurf`, `cline`).
 
 Then continue with the workflow below regardless of update status.
 
