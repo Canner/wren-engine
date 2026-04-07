@@ -43,6 +43,30 @@ When the user wants to add models, change schema, or onboard a new table:
 3. `wren context build` — compile to `target/mdl.json`
 4. `wren memory index` — re-index schema for search
 
+## Prerequisites
+
+This project requires the `wren` CLI. If not installed:
+
+```bash
+pip install "wren-engine[memory]"
+```
+
+Each data source needs its own extra — install the one matching your `data_source` in `wren_project.yml`:
+
+```bash
+pip install "wren-engine[postgres]"   # or mysql, bigquery, snowflake, clickhouse,
+                                      # trino, mssql, databricks, redshift, spark,
+                                      # athena, oracle
+```
+
+Or install everything at once:
+
+```bash
+pip install "wren-engine[all]"
+```
+
+See https://docs.getwren.ai/oss/engine/get_started/installation for full setup.
+
 ## Quick reference
 
 | Task | Command |
