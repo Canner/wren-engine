@@ -35,6 +35,7 @@ The CLI reads the active profile for connection info and datasource. Use `wren p
 
 For memory-specific decisions, see [references/memory.md](references/memory.md).
 For SQL syntax, CTE-based modeling, and error diagnosis, see [references/wren-sql.md](references/wren-sql.md).
+For project structure, MDL field definitions, and CLI workflow details, see the [documentation](https://github.com/Canner/wren-engine/tree/main/docs).
 
 ---
 
