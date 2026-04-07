@@ -21,12 +21,12 @@ Skills are namespaced as `/wren:<skill>` (e.g., `/wren:wren-generate-mdl`, `/wre
 
 ### Option 2 — npx skills
 
-Install all skills for Claude Code:
+Install all skills:
 ```bash
-npx skills add Canner/wren-engine --skill '*' --agent claude-code
+npx skills add Canner/wren-engine --skill '*'
 ```
 
-`npx skills` also supports Cursor, Windsurf, and 30+ other agent tools — replace `--agent claude-code` with your agent of choice.
+The CLI auto-detects your installed agent. To target a specific one, add `--agent <name>` (e.g., `claude-code`, `cursor`, `windsurf`, `cline`).
 
 ### Option 3 — install script (from a local clone)
 
@@ -71,7 +71,7 @@ Each skill automatically checks for updates when invoked. To update manually:
 
 ```bash
 # Re-add to reinstall the latest version
-npx skills add Canner/wren-engine --skill '*' --agent claude-code
+npx skills add Canner/wren-engine --skill '*'
 
 # Or reinstall from a local clone
 bash skills/install.sh --force

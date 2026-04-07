@@ -81,13 +81,15 @@ wren version
 
 ## Step 3 — Install CLI skills
 
-Skills are workflow guides that tell Claude Code how to use the Wren CLI effectively. Install both skills:
+Skills are workflow guides that tell your AI coding agent how to use the Wren CLI effectively. Install both skills:
 
 ```bash
-npx skills add Canner/wren-engine --skill '*' --agent claude-code
+npx skills add Canner/wren-engine --skill '*'
 # or:
 curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash
 ```
+
+The CLI auto-detects your installed agent. To target a specific one, add `--agent <name>` (e.g., `claude-code`, `cursor`, `windsurf`, `cline`).
 
 This installs two skills:
 
