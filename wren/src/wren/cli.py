@@ -177,8 +177,16 @@ def _build_engine(
             from pydantic import ValidationError  # noqa: PLC0415
 
             try:
+                config = load_config(_WREN_HOME)
+            except (WrenError, OSError) as e:
+                typer.echo(f"Error: {e}", err=True)
+                raise typer.Exit(1) from e
+            try:
                 return WrenEngine(
-                    manifest_str=manifest_str, data_source=ds, connection_info=prof_dict
+                    manifest_str=manifest_str,
+                    data_source=ds,
+                    connection_info=prof_dict,
+                    config=config,
                 )
             except ValidationError as e:
                 typer.echo(f"Error: invalid profile connection info: {e}", err=True)
@@ -388,8 +396,16 @@ def dry_plan(
             except ValueError:
                 typer.echo(f"Error: unknown datasource '{prof_ds}'", err=True)
                 raise typer.Exit(1)
+            try:
+                config = load_config(_WREN_HOME)
+            except (WrenError, OSError) as e:
+                typer.echo(f"Error: {e}", err=True)
+                raise typer.Exit(1) from e
             with WrenEngine(
-                manifest_str=manifest_str, data_source=ds, connection_info={}
+                manifest_str=manifest_str,
+                data_source=ds,
+                connection_info={},
+                config=config,
             ) as engine:
                 try:
                     result = engine.dry_plan(sql)

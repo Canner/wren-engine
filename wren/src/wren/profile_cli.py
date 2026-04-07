@@ -74,7 +74,9 @@ def add(
     if ui:
         try:
             from wren.profile_web import start as web_start  # noqa: PLC0415
-        except ImportError:
+        except ImportError as e:
+            if e.name not in {"starlette", "uvicorn", "jinja2"}:
+                raise
             typer.echo(
                 "Error: --ui requires extra dependencies.\n"
                 "Install with: pip install 'wren-engine[ui]'",

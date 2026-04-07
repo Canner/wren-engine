@@ -50,7 +50,9 @@ For SQL syntax, CTE-based modeling, and error diagnosis, see [references/wren-sq
 
 If this is the first query in the conversation, also run:
 
-    wren context instructions
+```text
+wren context instructions
+```
 
 If it returns content, treat it as **rules that override defaults** — apply them to all subsequent queries in this session.
 
@@ -244,7 +246,7 @@ wren --sql "SELECT * FROM <changed_model> LIMIT 1"
 
 ## Command decision tree
 
-```
+```text
 Get data back           → wren --sql "..."
 See translated SQL only → wren dry-plan --sql "..." (accepts -d <datasource> if no active profile)
 Validate against DB     → wren dry-run --sql "..."

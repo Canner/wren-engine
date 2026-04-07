@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from enum import Enum
 from typing import Annotated, Literal, Union
 
@@ -16,13 +17,19 @@ class BaseConnectionInfo(BaseModel):
     model_config = {"populate_by_name": True}
 
     def to_key_string(self) -> str:
-        key_parts = []
-        for _, field_value in self:
-            if isinstance(field_value, SecretStr):
-                key_parts.append(field_value.get_secret_value())
-            elif isinstance(field_value, str):
-                key_parts.append(field_value)
-        return "|".join(key_parts)
+        def _normalize(value):
+            if isinstance(value, SecretStr):
+                return value.get_secret_value()
+            if isinstance(value, dict):
+                return {k: _normalize(v) for k, v in sorted(value.items())}
+            return value
+
+        return json.dumps(
+            {name: _normalize(value) for name, value in self},
+            sort_keys=True,
+            separators=(",", ":"),
+            default=str,
+        )
 
 
 class BigQueryConnectionInfo(BaseConnectionInfo):

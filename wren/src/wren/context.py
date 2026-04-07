@@ -744,8 +744,6 @@ def validate_project(project_path: Path) -> list[ValidationError]:
 
 _VALID_LEVELS = frozenset({"error", "warning", "strict"})
 
-_VALID_LEVELS = frozenset({"error", "warning", "strict"})
-
 
 def _prop_description(item: dict) -> str | None:
     return (item.get("properties") or {}).get("description")
