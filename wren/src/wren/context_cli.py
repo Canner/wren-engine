@@ -84,7 +84,7 @@ def init(
     if conflicts and not force:
         names = ", ".join(f"'{c.name}'" for c in conflicts)
         typer.echo(
-            f"Error: {names} already exists. This is already a Wren project.",
+            f"Error: {names} already exists. Use --force to overwrite.",
             err=True,
         )
         raise typer.Exit(1)

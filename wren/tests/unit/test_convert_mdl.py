@@ -9,6 +9,7 @@ import pytest
 import yaml
 
 from wren.context import (
+    _AGENTS_MD_TEMPLATE,
     _CAMEL_TO_SNAKE_MAP,
     _camel_to_snake,
     _snake_to_camel,
@@ -150,6 +151,8 @@ def test_convert_mdl_to_project():
     assert "views/monthly_revenue/sql.yml" in file_map
     assert "relationships.yml" in file_map
     assert "instructions.md" in file_map
+    assert "AGENTS.md" in file_map
+    assert file_map["AGENTS.md"] == _AGENTS_MD_TEMPLATE
 
     # wren_project.yml
     project = yaml.safe_load(file_map["wren_project.yml"])
@@ -206,6 +209,8 @@ def test_write_project_files(tmp_path: Path):
     assert (tmp_path / "views" / "monthly_revenue" / "sql.yml").exists()
     assert (tmp_path / "relationships.yml").exists()
     assert (tmp_path / "instructions.md").exists()
+    assert (tmp_path / "AGENTS.md").exists()
+    assert (tmp_path / "AGENTS.md").read_text() == _AGENTS_MD_TEMPLATE
 
 
 def test_write_project_files_refuses_overwrite(tmp_path: Path):
@@ -251,11 +256,11 @@ def test_convert_then_build_roundtrip(tmp_path: Path):
 
 
 def test_empty_mdl():
-    """Empty models/views/relationships — only wren_project.yml is produced."""
+    """Empty models/views/relationships — only wren_project.yml and AGENTS.md are produced."""
     mdl = {"catalog": "wren", "schema": "public"}
     files = convert_mdl_to_project(mdl)
     paths = {f.relative_path for f in files}
-    assert paths == {"wren_project.yml"}
+    assert paths == {"wren_project.yml", "AGENTS.md"}
     assert "instructions.md" not in paths
 
 

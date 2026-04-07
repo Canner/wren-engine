@@ -279,10 +279,9 @@ def write_project_files(
     Args:
         files: List of ProjectFile from convert_mdl_to_project().
         output_dir: Target directory.
-        force: If False, raise SystemExit if wren_project.yml already exists.
+        force: If False, raise SystemExit if any target file already exists.
     """
     output_dir = Path(output_dir)
-    project_file = output_dir / "wren_project.yml"
 
     if force and output_dir.exists():
         import shutil  # noqa: PLC0415
@@ -301,10 +300,15 @@ def write_project_files(
             elif target.exists():
                 target.unlink()
 
-    if project_file.exists() and not force:
-        raise SystemExit(
-            f"Error: {project_file} already exists. Use --force to overwrite."
-        )
+    if not force:
+        conflicts = [
+            f.relative_path for f in files if (output_dir / f.relative_path).exists()
+        ]
+        if conflicts:
+            names = ", ".join(f"'{Path(p).name}'" for p in conflicts)
+            raise SystemExit(
+                f"Error: {names} already exists. Use --force to overwrite."
+            )
 
     for f in files:
         root = output_dir.resolve()
