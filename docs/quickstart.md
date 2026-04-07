@@ -58,14 +58,16 @@ pwd
 
 ## Step 2 — Install wren-engine Python package
 
-Install `wren-engine` with the DuckDB connector, UI support, and memory system:
+Install `wren-engine` with UI support and memory system:
 
 ```bash
-pip install "wren-engine[duckdb,ui,memory]"
+pip install "wren-engine[ui,memory]"
 ```
 
-> **Extras explained:**
-> - `duckdb` — DuckDB connector (use `postgres`, `bigquery`, etc. for other data sources)
+DuckDB is included by default — no extra needed. For other data sources, install the corresponding extra (e.g. `pip install "wren-engine[postgres,ui,memory]"`).
+
+> **Available extras:**
+> - `postgres`, `mysql`, `bigquery`, `snowflake`, `clickhouse`, `trino`, `mssql`, `databricks`, `redshift`, `athena`, `oracle`, `spark` — data source connectors
 > - `ui` — browser-based profile configuration UI
 > - `memory` — LanceDB-backed memory system for context retrieval and NL-SQL recall
 
