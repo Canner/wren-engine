@@ -151,7 +151,7 @@ See the connector API docs in the project documentation for the latest connectio
 
 ### Use Wren Engine through AI Agents
 
-If you want to use Wren Engine from an Claude Code or other AI Agents, start here:
+If you want to use Wren Engine from a Claude Code or other AI Agents, start here:
 
 - [Installation](https://docs.getwren.ai/oss/engine/get_started/installation)
 - [Quick start: Chat with jaffle_shop using Wren Engine + Claude Code](https://docs.getwren.ai/oss/engine/get_started/quickstart)
