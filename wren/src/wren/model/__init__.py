@@ -20,6 +20,8 @@ class BaseConnectionInfo(BaseModel):
         for _, field_value in self:
             if isinstance(field_value, SecretStr):
                 key_parts.append(field_value.get_secret_value())
+            elif isinstance(field_value, str):
+                key_parts.append(field_value)
         return "|".join(key_parts)
 
 

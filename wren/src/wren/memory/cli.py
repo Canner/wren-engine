@@ -160,7 +160,7 @@ def index(
     """Index MDL schema into LanceDB (and optionally seed example queries)."""
     manifest = _load_manifest(mdl)
 
-    if include_instructions:
+    if include_instructions and mdl is None:
         try:
             from wren.context import (  # noqa: I001, PLC0415
                 discover_project_path,

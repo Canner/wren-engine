@@ -103,7 +103,7 @@ wren --sql 'SELECT order_id FROM "orders" LIMIT 10'
 
 For the full CLI reference and per-datasource connection field reference, see [`docs/cli.md`](docs/cli.md) and [`docs/connections.md`](docs/connections.md).
 
-**4. Index schema for semantic search** (optional, requires `wren-engine[memory]`):
+**5. Index schema for semantic search** (optional, requires `wren-engine[memory]`):
 
 ```bash
 wren memory index                              # index MDL schema

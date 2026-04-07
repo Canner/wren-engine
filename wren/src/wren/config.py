@@ -39,7 +39,7 @@ def load_config(wren_home: Path) -> WrenConfig:
 
     try:
         raw = json.loads(config_path.read_text())
-    except (json.JSONDecodeError, OSError) as e:
+    except (UnicodeDecodeError, json.JSONDecodeError, OSError) as e:
         raise WrenError(
             ErrorCode.GENERIC_USER_ERROR,
             f"Failed to read {config_path}: {e}",

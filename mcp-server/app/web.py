@@ -86,7 +86,9 @@ def _build_datasource_fields() -> dict[str, list[dict]]:
 
 try:
     DATASOURCE_FIELDS: dict[str, list[dict]] = _build_datasource_fields()
-except ImportError:
+except ImportError as e:
+    if e.name not in {"wren", "wren.model", "wren.model.field_registry"}:
+        raise
     # Fallback when wren package is not installed (standalone mcp-server).
     # Keep a minimal hardcoded set so the web UI remains functional.
     DATASOURCE_FIELDS = {

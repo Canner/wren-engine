@@ -17,7 +17,7 @@
 
   {% for field in fields %}
     {% if field.input_type == 'hidden' %}
-      <input type="hidden" name="{{ field.name }}" value="{{ field.default or '' }}">
+      <input type="hidden" name="{{ field.name }}" value="{{ field.default if field.default is not none else '' }}">
     {% elif field.input_type == 'file_base64' %}
     <label>
       {{ field.label }}
@@ -32,7 +32,8 @@
     <label>
       {{ field.label }}
       <input type="{{ field.input_type }}" name="{{ field.name }}"
-             placeholder="{{ field.placeholder or '' }}">
+             placeholder="{{ field.placeholder or '' }}"
+             value="{{ field.default if field.default is not none else '' }}">
       {% if field.hint %}<small style="color:var(--pico-muted-color)">{{ field.hint }}</small>{% endif %}
     </label>
     {% endif %}

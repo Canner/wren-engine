@@ -13,8 +13,7 @@ from wren.context_cli import context_app
 
 app = typer.Typer(name="wren", help="Wren Engine CLI", no_args_is_help=False)
 
-_WREN_HOME = Path(os.environ.get("WREN_HOME", Path.home() / ".wren")).expanduser()
-_WREN_HOME = Path.home() / ".wren"
+_WREN_HOME = Path(os.environ.get("WREN_HOME", str(Path.home() / ".wren"))).expanduser()
 _DEFAULT_CONN = _WREN_HOME / "connection_info.json"
 
 
@@ -532,7 +531,6 @@ from wren.utils_cli import utils_app  # noqa: E402, PLC0415
 
 app.add_typer(context_app)
 app.add_typer(utils_app)
-app.add_typer(context_app)
 
 try:
     import lancedb  # noqa: PLC0415, F401

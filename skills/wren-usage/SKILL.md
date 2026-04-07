@@ -216,8 +216,9 @@ For the CTE rewrite pipeline and additional error patterns, see [references/wren
 2. Test connection: `wren profile debug`
 3. Test query: `wren --sql "SELECT 1"`
 4. Initialize project: `wren context init`
-5. Index: `wren memory index`
-6. Verify: `wren --sql "SELECT * FROM <model> LIMIT 5"`
+5. Build manifest: `wren context build`
+6. Index: `wren memory index`
+7. Verify: `wren --sql "SELECT * FROM <model> LIMIT 5"`
 
 ---
 

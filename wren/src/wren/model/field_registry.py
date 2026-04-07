@@ -361,8 +361,16 @@ def get_fields(datasource: str, *, variant: str | None = None) -> list[FieldDef]
     else:
         model_cls = next(
             (m for m in models if _get_variant_name(m) == variant),
-            models[0],
+            None,
         )
+        if model_cls is None:
+            available = ", ".join(
+                _get_variant_name(m) for m in models if _get_variant_name(m)
+            )
+            raise ValueError(
+                f"Unknown variant: {variant!r} for datasource {datasource!r}. "
+                f"Available: {available}"
+            )
 
     model_overrides = _MODEL_UI_OVERRIDES.get(model_cls.__name__, {})
     datasource_overrides = _DATASOURCE_UI_OVERRIDES.get(key, {})

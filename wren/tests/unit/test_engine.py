@@ -117,9 +117,6 @@ def test_context_manager_closes_connector() -> None:
 
 _STRICT_CONFIG = WrenConfig(strict_mode=True)
 _BLACKLIST_CONFIG = WrenConfig(denied_functions=frozenset(["pg_read_file"]))
-_COMBINED_CONFIG = WrenConfig(
-    strict_mode=True, denied_functions=frozenset(["pg_read_file"])
-)
 
 
 def test_strict_mode_blocks_unknown_table():

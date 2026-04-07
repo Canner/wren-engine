@@ -8,13 +8,13 @@ This directory contains reusable AI agent skills for working with Wren Engine. S
 
 Add the marketplace and install:
 ```
-/plugin marketplace add Canner/wren-engine --path skills
+/plugin marketplace add Canner/wren-engine --path skills-archive
 /plugin install wren@wren
 ```
 
 Or test locally during development:
 ```bash
-claude --plugin-dir ./skills
+claude --plugin-dir ./skills-archive
 ```
 
 Skills are namespaced as `/wren:<skill>` (e.g., `/wren:generate-mdl`, `/wren:wren-sql`).
@@ -50,7 +50,7 @@ bash skills-archive/install.sh --force wren-generate-mdl   # overwrite existing
 ```bash
 cp -r skills-archive/wren-usage ~/.claude/skills/
 # or all at once:
-cp -r skills-archive/wren-usage skills/wren-generate-mdl skills/wren-project skills/wren-sql skills/wren-mcp-setup skills/wren-connection-info ~/.claude/skills/
+cp -r skills-archive/wren-usage skills-archive/wren-generate-mdl skills-archive/wren-project skills-archive/wren-sql skills-archive/wren-mcp-setup skills-archive/wren-connection-info ~/.claude/skills/
 ```
 
 Once installed, invoke a skill by name in your conversation:

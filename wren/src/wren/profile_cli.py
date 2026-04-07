@@ -211,11 +211,14 @@ def _interactive_add(default_ds: str | None) -> dict:
                 profile[f.name] = value
         # Normal text fields
         else:
-            prompt_default = f.default or f.placeholder or ""
+            prompt_default = f.default or ""
+            prompt_label = f"  {f.label}"
+            if f.placeholder and not f.default:
+                prompt_label += f" ({f.placeholder})"
             value = typer.prompt(
-                f"  {f.label}",
+                prompt_label,
                 default=prompt_default,
-                show_default=bool(prompt_default),
+                show_default=bool(f.default),
             )
             if value:
                 profile[f.name] = value

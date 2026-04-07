@@ -92,6 +92,10 @@ def convert_mdl_to_project(mdl_json: dict) -> list[ProjectFile]:
 
     # ── wren_project.yml ──────────────────────────────────────
     project_config: dict[str, Any] = {"schema_version": 2}
+    if "name" in mdl_json:
+        project_config["name"] = mdl_json["name"]
+    elif "projectName" in mdl_json:
+        project_config["name"] = mdl_json["projectName"]
     if "catalog" in mdl_json:
         project_config["catalog"] = mdl_json["catalog"]
     if "schema" in mdl_json:
@@ -212,7 +216,12 @@ def write_project_files(
         )
 
     for f in files:
-        path = output_dir / f.relative_path
+        root = output_dir.resolve()
+        path = (output_dir / f.relative_path).resolve()
+        try:
+            path.relative_to(root)
+        except ValueError:
+            raise SystemExit(f"Error: invalid output path: {f.relative_path!r}")
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(f.content)
 
@@ -544,6 +553,9 @@ def validate_project(project_path: Path) -> list[ValidationError]:
                     f"unsupported schema_version {sv} — please upgrade wren CLI",
                 )
             )
+
+    if any(e.path == _PROJECT_FILE and "schema_version" in e.message for e in errors):
+        return errors
 
     # Load data (snake_case)
     models = load_models(project_path)
