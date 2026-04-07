@@ -149,13 +149,13 @@ See the connector API docs in the project documentation for the latest connectio
 
 ## Get Started
 
-### Use Wren Engine through MCP
+### Use Wren Engine through AI Agents
 
-If you want to use Wren Engine from an Claude Code or MCP-capable IDE, start here:
+If you want to use Wren Engine from an Claude Code or other AI Agents, start here:
 
+- [Installation](https://docs.getwren.ai/oss/engine/get_started/installation)
 - [Quick start: Chat with jaffle_shop using Wren Engine + Claude Code](https://docs.getwren.ai/oss/engine/get_started/quickstart)
-- [Quick start with Claude Desktop](https://docs.getwren.ai/oss/engine/get_started/quickstart_claude)
-- [Understanding Wren AI project structure](https://docs.getwren.ai/oss/engine/get_started/structure)
+- [Understanding Wren AI project structure](https://docs.getwren.ai/oss/engine/guide/modeling/wren_project)
 
 The MCP server includes:
 
