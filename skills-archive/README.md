@@ -17,7 +17,7 @@ Or test locally during development:
 claude --plugin-dir ./skills-archive
 ```
 
-Skills are namespaced as `/wren:<skill>` (e.g., `/wren:generate-mdl`, `/wren:wren-sql`).
+Skills are namespaced as `/wren:<skill>` (e.g., `/wren:generate-mdl`, `/wren:sql`).
 
 ### Option 2 — npx skills
 

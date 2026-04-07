@@ -113,8 +113,10 @@ def convert_mdl_to_project(mdl_json: dict) -> list[ProjectFile]:
     )
 
     # ── Models ────────────────────────────────────────────────
-    for model in mdl_json.get("models", []):
+    for i, model in enumerate(mdl_json.get("models", [])):
         model_snake = _convert_keys_to_snake(model)
+        if "name" not in model_snake:
+            raise ValueError(f"Model at index {i} is missing required 'name' field")
         name = model_snake["name"]
         dir_path = f"models/{name}"
 
@@ -137,8 +139,10 @@ def convert_mdl_to_project(mdl_json: dict) -> list[ProjectFile]:
         )
 
     # ── Views ─────────────────────────────────────────────────
-    for view in mdl_json.get("views", []):
+    for i, view in enumerate(mdl_json.get("views", [])):
         view_snake = _convert_keys_to_snake(view)
+        if "name" not in view_snake:
+            raise ValueError(f"View at index {i} is missing required 'name' field")
         name = view_snake["name"]
         dir_path = f"views/{name}"
 
