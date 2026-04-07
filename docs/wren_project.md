@@ -182,8 +182,8 @@ name: top_customers
 statement: >
   SELECT customer_id, SUM(total) AS lifetime_value
   FROM wren.public.orders GROUP BY 1 ORDER BY 2 DESC LIMIT 100
-description: "Top customers by lifetime value"
-properties: {}
+properties:
+  description: "Top customers by lifetime value"
 ```
 
 ### `relationships.yml`

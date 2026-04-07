@@ -286,7 +286,7 @@ Key files to customize:
   - Always use order_date for time-based filtering, not created_at
   ```
 
-- **`models/*/metadata.yml`** — Add or refine `description` fields on models and columns. Better descriptions = better memory search.
+- **`models/*/metadata.yml`** — Add or refine `properties.description` on models and columns. Better descriptions = better memory search.
 
 - **`relationships.yml`** — Add or fix join conditions. Wrong relationships cause silent query errors.
 
