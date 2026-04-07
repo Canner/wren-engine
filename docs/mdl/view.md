@@ -16,8 +16,8 @@ name: top_customers
 statement: >
   SELECT customer_id, SUM(total) AS lifetime_value
   FROM wren.public.orders GROUP BY 1 ORDER BY 2 DESC LIMIT 100
-description: "Top customers by lifetime value"
-properties: {}
+properties:
+  description: "Top customers by lifetime value"
 ```
 
 **Separate SQL file:**
@@ -25,8 +25,8 @@ properties: {}
 ```yaml
 # views/monthly_revenue/metadata.yml
 name: monthly_revenue
-description: "Monthly revenue aggregation"
-properties: {}
+properties:
+  description: "Monthly revenue aggregation"
 ```
 
 ```yaml
@@ -53,8 +53,7 @@ statement: >
 |-------|----------|-------------|
 | `name` | Yes | Unique identifier used in SQL queries |
 | `statement` | Yes | A complete SQL SELECT statement; may reference other models or views |
-| `description` | No | Human-readable description of the view's purpose |
-| `properties` | No | Arbitrary key-value metadata |
+| `properties` | No | Arbitrary key-value metadata (use `properties.description` for a human-readable description) |
 
 ## Model vs View
 
@@ -82,8 +81,8 @@ statement: >
   SELECT order_id, customer_id, order_date, amount
   FROM orders
   WHERE status = 'completed'
-description: "Orders with completed status"
-properties: {}
+properties:
+  description: "Orders with completed status"
 ```
 
 ```sql
@@ -105,8 +104,8 @@ statement: >
   FROM customers c
   JOIN orders o ON c.customer_id = o.customer_id
   GROUP BY c.customer_id, c.first_name, c.last_name
-description: "Per-customer order counts and lifetime value"
-properties: {}
+properties:
+  description: "Per-customer order counts and lifetime value"
 ```
 
 The `statement` references `customers` and `orders` by their model names. The engine resolves them through the normal model pipeline after expanding the view.
@@ -120,8 +119,8 @@ statement: >
   SELECT customer_id, first_name, last_name, lifetime_value
   FROM customer_order_summary
   WHERE lifetime_value > 500
-description: "Customers with lifetime value over 500"
-properties: {}
+properties:
+  description: "Customers with lifetime value over 500"
 ```
 
 Views can reference other views. The engine expands all view references recursively before resolving model references.
