@@ -291,7 +291,8 @@ def discover_project_path(explicit: str | None = None) -> Path:
 
     raise SystemExit(
         "Error: no wren project found.\n"
-        "  Run `wren context init` to create one, or set WREN_PROJECT_HOME."
+        "  Run this command from a directory containing wren_project.yml,\n"
+        "  run `wren context init` to create one, or set WREN_PROJECT_HOME."
     )
 
 
