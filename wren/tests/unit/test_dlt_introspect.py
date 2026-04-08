@@ -2,14 +2,22 @@
 
 from __future__ import annotations
 
-import warnings
+import logging
 from pathlib import Path
 
 import pytest
+import yaml
+from typer.testing import CliRunner
+
+from wren.cli import app
+from wren.context import convert_dlt_to_project
+from wren.dlt_introspect import DltIntrospector
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
+runner = CliRunner()
 
 
 @pytest.fixture()
@@ -96,8 +104,6 @@ def orphan_child_duckdb(tmp_path: Path):
 
 class TestDiscoverTables:
     def test_finds_user_tables(self, dlt_duckdb):
-        from wren.dlt_introspect import DltIntrospector
-
         with DltIntrospector(dlt_duckdb) as intro:
             tables, _ = intro.introspect()
 
@@ -106,8 +112,6 @@ class TestDiscoverTables:
         assert "hubspot__contacts__emails" in names
 
     def test_excludes_dlt_internal_tables(self, dlt_duckdb):
-        from wren.dlt_introspect import DltIntrospector
-
         with DltIntrospector(dlt_duckdb) as intro:
             tables, _ = intro.introspect()
 
@@ -116,8 +120,6 @@ class TestDiscoverTables:
         assert "_dlt_pipeline_state" not in names
 
     def test_empty_database_returns_no_tables(self, empty_duckdb):
-        from wren.dlt_introspect import DltIntrospector
-
         with DltIntrospector(empty_duckdb) as intro:
             tables, rels = intro.introspect()
 
@@ -125,8 +127,6 @@ class TestDiscoverTables:
         assert rels == []
 
     def test_multiple_schemas_discovered(self, multi_schema_duckdb):
-        from wren.dlt_introspect import DltIntrospector
-
         with DltIntrospector(multi_schema_duckdb) as intro:
             tables, _ = intro.introspect()
 
@@ -135,8 +135,6 @@ class TestDiscoverTables:
         assert "orders" in names
 
     def test_schema_field_populated(self, multi_schema_duckdb):
-        from wren.dlt_introspect import DltIntrospector
-
         with DltIntrospector(multi_schema_duckdb) as intro:
             tables, _ = intro.introspect()
 
@@ -147,8 +145,6 @@ class TestDiscoverTables:
 
 class TestFilterDltColumns:
     def test_excludes_dlt_columns_from_contacts(self, dlt_duckdb):
-        from wren.dlt_introspect import DltIntrospector
-
         with DltIntrospector(dlt_duckdb) as intro:
             tables, _ = intro.introspect()
 
@@ -161,8 +157,6 @@ class TestFilterDltColumns:
         assert "email" in col_names
 
     def test_excludes_dlt_columns_from_child(self, dlt_duckdb):
-        from wren.dlt_introspect import DltIntrospector
-
         with DltIntrospector(dlt_duckdb) as intro:
             tables, _ = intro.introspect()
 
@@ -173,8 +167,6 @@ class TestFilterDltColumns:
         assert "email_address" in col_names
 
     def test_has_dlt_parent_id_flag(self, dlt_duckdb):
-        from wren.dlt_introspect import DltIntrospector
-
         with DltIntrospector(dlt_duckdb) as intro:
             tables, _ = intro.introspect()
 
@@ -186,8 +178,6 @@ class TestFilterDltColumns:
 
 class TestTypeNormalization:
     def test_bigint_normalized(self, dlt_duckdb):
-        from wren.dlt_introspect import DltIntrospector
-
         with DltIntrospector(dlt_duckdb) as intro:
             tables, _ = intro.introspect()
 
@@ -196,8 +186,6 @@ class TestTypeNormalization:
         assert col.normalized_type == "BIGINT"
 
     def test_varchar_normalized(self, dlt_duckdb):
-        from wren.dlt_introspect import DltIntrospector
-
         with DltIntrospector(dlt_duckdb) as intro:
             tables, _ = intro.introspect()
 
@@ -207,8 +195,6 @@ class TestTypeNormalization:
         assert col.normalized_type in ("VARCHAR", "TEXT")
 
     def test_timestamp_normalized(self, dlt_duckdb):
-        from wren.dlt_introspect import DltIntrospector
-
         with DltIntrospector(dlt_duckdb) as intro:
             tables, _ = intro.introspect()
 
@@ -220,8 +206,6 @@ class TestTypeNormalization:
 
 class TestDetectRelationships:
     def test_detects_parent_child(self, dlt_duckdb):
-        from wren.dlt_introspect import DltIntrospector
-
         with DltIntrospector(dlt_duckdb) as intro:
             _, rels = intro.introspect()
 
@@ -233,18 +217,12 @@ class TestDetectRelationships:
         assert "_dlt_id" in rel["condition"]
 
     def test_relationship_name(self, dlt_duckdb):
-        from wren.dlt_introspect import DltIntrospector
-
         with DltIntrospector(dlt_duckdb) as intro:
             _, rels = intro.introspect()
 
         assert rels[0]["name"] == "hubspot__contacts_emails"
 
     def test_no_parent_found_emits_warning(self, orphan_child_duckdb, caplog):
-        import logging
-
-        from wren.dlt_introspect import DltIntrospector
-
         with caplog.at_level(logging.WARNING, logger="wren.dlt_introspect"):
             with DltIntrospector(orphan_child_duckdb) as intro:
                 _, rels = intro.introspect()
@@ -253,8 +231,6 @@ class TestDetectRelationships:
         assert any("no matching parent" in r.message for r in caplog.records)
 
     def test_no_parent_found_skips_relationship(self, orphan_child_duckdb):
-        from wren.dlt_introspect import DltIntrospector
-
         with DltIntrospector(orphan_child_duckdb) as intro:
             _, rels = intro.introspect()
 
@@ -268,17 +244,11 @@ class TestDetectRelationships:
 
 class TestConvertDltToProject:
     def test_produces_project_file(self, dlt_duckdb):
-        from wren.context import convert_dlt_to_project
-
         files = convert_dlt_to_project(dlt_duckdb)
         paths = {f.relative_path for f in files}
         assert "wren_project.yml" in paths
 
     def test_wren_project_yml_content(self, dlt_duckdb):
-        import yaml
-
-        from wren.context import convert_dlt_to_project
-
         files = convert_dlt_to_project(dlt_duckdb)
         proj = next(f for f in files if f.relative_path == "wren_project.yml")
         data = yaml.safe_load(proj.content)
@@ -287,31 +257,22 @@ class TestConvertDltToProject:
         assert data["name"] == "test_pipeline"
 
     def test_custom_project_name(self, dlt_duckdb):
-        import yaml
-
-        from wren.context import convert_dlt_to_project
-
         files = convert_dlt_to_project(dlt_duckdb, project_name="my_project")
         proj = next(f for f in files if f.relative_path == "wren_project.yml")
         data = yaml.safe_load(proj.content)
         assert data["name"] == "my_project"
 
     def test_model_files_generated(self, dlt_duckdb):
-        from wren.context import convert_dlt_to_project
-
         files = convert_dlt_to_project(dlt_duckdb)
         paths = {f.relative_path for f in files}
         assert "models/hubspot__contacts/metadata.yml" in paths
         assert "models/hubspot__contacts__emails/metadata.yml" in paths
 
     def test_model_content(self, dlt_duckdb):
-        import yaml
-
-        from wren.context import convert_dlt_to_project
-
         files = convert_dlt_to_project(dlt_duckdb)
         meta = next(
-            f for f in files
+            f
+            for f in files
             if f.relative_path == "models/hubspot__contacts/metadata.yml"
         )
         data = yaml.safe_load(meta.content)
@@ -326,17 +287,11 @@ class TestConvertDltToProject:
         assert "_dlt_load_id" not in col_names
 
     def test_relationships_file_generated(self, dlt_duckdb):
-        from wren.context import convert_dlt_to_project
-
         files = convert_dlt_to_project(dlt_duckdb)
         paths = {f.relative_path for f in files}
         assert "relationships.yml" in paths
 
     def test_relationships_content(self, dlt_duckdb):
-        import yaml
-
-        from wren.context import convert_dlt_to_project
-
         files = convert_dlt_to_project(dlt_duckdb)
         rel_file = next(f for f in files if f.relative_path == "relationships.yml")
         data = yaml.safe_load(rel_file.content)
@@ -345,33 +300,22 @@ class TestConvertDltToProject:
         assert rels[0]["join_type"] == "ONE_TO_MANY"
 
     def test_instructions_file_generated(self, dlt_duckdb):
-        from wren.context import convert_dlt_to_project
-
         files = convert_dlt_to_project(dlt_duckdb)
         paths = {f.relative_path for f in files}
         assert "instructions.md" in paths
 
     def test_instructions_content(self, dlt_duckdb):
-        from wren.context import convert_dlt_to_project
-
         files = convert_dlt_to_project(dlt_duckdb)
         inst = next(f for f in files if f.relative_path == "instructions.md")
         assert "dlt" in inst.content
         assert "test_pipeline" in inst.content
 
     def test_empty_database_no_models(self, empty_duckdb):
-        from wren.context import convert_dlt_to_project
-
         files = convert_dlt_to_project(empty_duckdb)
-        model_files = [
-            f for f in files
-            if f.relative_path.startswith("models/")
-        ]
+        model_files = [f for f in files if f.relative_path.startswith("models/")]
         assert model_files == []
 
     def test_missing_file_raises(self, tmp_path):
-        from wren.context import convert_dlt_to_project
-
         with pytest.raises(FileNotFoundError):
             convert_dlt_to_project(tmp_path / "nonexistent.duckdb")
 
@@ -383,11 +327,6 @@ class TestConvertDltToProject:
 
 class TestInitFromDlt:
     def test_init_from_dlt_creates_project(self, dlt_duckdb, tmp_path):
-        from typer.testing import CliRunner
-
-        from wren.cli import app
-
-        runner = CliRunner()
         result = runner.invoke(
             app,
             ["context", "init", "--from-dlt", str(dlt_duckdb), "--path", str(tmp_path)],
@@ -401,11 +340,6 @@ class TestInitFromDlt:
         assert (tmp_path / "relationships.yml").exists()
 
     def test_init_from_dlt_summary_output(self, dlt_duckdb, tmp_path):
-        from typer.testing import CliRunner
-
-        from wren.cli import app
-
-        runner = CliRunner()
         result = runner.invoke(
             app,
             ["context", "init", "--from-dlt", str(dlt_duckdb), "--path", str(tmp_path)],
@@ -414,11 +348,6 @@ class TestInitFromDlt:
         assert "1 relationships" in result.output
 
     def test_init_from_dlt_missing_file(self, tmp_path):
-        from typer.testing import CliRunner
-
-        from wren.cli import app
-
-        runner = CliRunner()
         result = runner.invoke(
             app,
             [
@@ -434,11 +363,6 @@ class TestInitFromDlt:
         assert "not found" in result.output
 
     def test_init_from_dlt_and_mdl_mutually_exclusive(self, tmp_path):
-        from typer.testing import CliRunner
-
-        from wren.cli import app
-
-        runner = CliRunner()
         result = runner.invoke(
             app,
             [
@@ -456,12 +380,7 @@ class TestInitFromDlt:
         assert "cannot be used together" in result.output
 
     def test_init_from_dlt_refuses_existing_without_force(self, dlt_duckdb, tmp_path):
-        from typer.testing import CliRunner
-
-        from wren.cli import app
-
         (tmp_path / "wren_project.yml").write_text("name: existing\n")
-        runner = CliRunner()
         result = runner.invoke(
             app,
             ["context", "init", "--from-dlt", str(dlt_duckdb), "--path", str(tmp_path)],
@@ -470,12 +389,7 @@ class TestInitFromDlt:
         assert "already exists" in result.output
 
     def test_init_from_dlt_force_overwrites(self, dlt_duckdb, tmp_path):
-        from typer.testing import CliRunner
-
-        from wren.cli import app
-
         (tmp_path / "wren_project.yml").write_text("name: existing\n")
-        runner = CliRunner()
         result = runner.invoke(
             app,
             [

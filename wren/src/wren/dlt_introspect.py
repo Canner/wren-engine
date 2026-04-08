@@ -15,9 +15,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 # dlt internal table names to exclude (exact match)
-_DLT_INTERNAL_TABLES = frozenset(
-    {"_dlt_loads", "_dlt_pipeline_state", "_dlt_version"}
-)
+_DLT_INTERNAL_TABLES = frozenset({"_dlt_loads", "_dlt_pipeline_state", "_dlt_version"})
 
 # dlt internal column names to exclude from model output
 # (still read internally for relationship detection)
@@ -29,16 +27,16 @@ _DLT_INTERNAL_COLUMNS = frozenset(
 @dataclass
 class DltColumn:
     name: str
-    data_type: str        # raw DuckDB type string
+    data_type: str  # raw DuckDB type string
     normalized_type: str  # after sqlglot parse_type()
     is_nullable: bool
 
 
 @dataclass
 class DltTable:
-    catalog: str              # attached database alias (filename stem)
-    schema: str               # DuckDB schema (e.g. "main", "hubspot_crm")
-    name: str                 # table name
+    catalog: str  # attached database alias (filename stem)
+    schema: str  # DuckDB schema (e.g. "main", "hubspot_crm")
+    name: str  # table name
     columns: list[DltColumn] = field(default_factory=list)
     has_dlt_parent_id: bool = False
 
@@ -78,13 +76,16 @@ class DltIntrospector:
         from wren.type_mapping import parse_type  # noqa: PLC0415
 
         # duckdb_tables() returns (database_name, schema_name, table_name, ...)
-        table_rows = self._con.execute("""
+        table_rows = self._con.execute(
+            """
             SELECT schema_name, table_name
             FROM duckdb_tables()
             WHERE database_name = ?
               AND NOT starts_with(table_name, '_dlt_')
             ORDER BY schema_name, table_name
-        """, [self._catalog]).fetchall()
+        """,
+            [self._catalog],
+        ).fetchall()
 
         tables: list[DltTable] = []
         for schema, table_name in table_rows:
@@ -93,12 +94,15 @@ class DltIntrospector:
 
             # duckdb_columns() returns (database_name, schema_name, table_name,
             # column_name, data_type, is_nullable, ...)
-            col_rows = self._con.execute("""
+            col_rows = self._con.execute(
+                """
                 SELECT column_name, data_type, is_nullable
                 FROM duckdb_columns()
                 WHERE database_name = ? AND schema_name = ? AND table_name = ?
                 ORDER BY column_index
-            """, [self._catalog, schema, table_name]).fetchall()
+            """,
+                [self._catalog, schema, table_name],
+            ).fetchall()
 
             has_parent_id = False
             columns: list[DltColumn] = []
@@ -108,20 +112,24 @@ class DltIntrospector:
                 if col_name in _DLT_INTERNAL_COLUMNS:
                     continue
                 normalized = parse_type(raw_type, "duckdb")
-                columns.append(DltColumn(
-                    name=col_name,
-                    data_type=raw_type,
-                    normalized_type=normalized,
-                    is_nullable=bool(is_nullable),
-                ))
+                columns.append(
+                    DltColumn(
+                        name=col_name,
+                        data_type=raw_type,
+                        normalized_type=normalized,
+                        is_nullable=bool(is_nullable),
+                    )
+                )
 
-            tables.append(DltTable(
-                catalog=self._catalog,
-                schema=schema,
-                name=table_name,
-                columns=columns,
-                has_dlt_parent_id=has_parent_id,
-            ))
+            tables.append(
+                DltTable(
+                    catalog=self._catalog,
+                    schema=schema,
+                    name=table_name,
+                    columns=columns,
+                    has_dlt_parent_id=has_parent_id,
+                )
+            )
 
         return tables
 
@@ -155,16 +163,18 @@ class DltIntrospector:
                 )
                 continue
 
-            child_suffix = table.name[len(parent_name) + 2:]  # strip "parent__"
+            child_suffix = table.name[len(parent_name) + 2 :]  # strip "parent__"
             rel_name = f"{parent_name}_{child_suffix}"
-            relationships.append({
-                "name": rel_name,
-                "models": [parent_name, table.name],
-                "join_type": "ONE_TO_MANY",
-                "condition": (
-                    f"{table.name}._dlt_parent_id = {parent_name}._dlt_id"
-                ),
-            })
+            relationships.append(
+                {
+                    "name": rel_name,
+                    "models": [parent_name, table.name],
+                    "join_type": "ONE_TO_MANY",
+                    "condition": (
+                        f"{table.name}._dlt_parent_id = {parent_name}._dlt_id"
+                    ),
+                }
+            )
 
         return relationships
 

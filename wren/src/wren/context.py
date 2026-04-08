@@ -244,10 +244,14 @@ def convert_dlt_to_project(
         "schema": "public",
         "data_source": "duckdb",
     }
-    files.append(ProjectFile(
-        relative_path="wren_project.yml",
-        content=yaml.dump(project_config, default_flow_style=False, sort_keys=False),
-    ))
+    files.append(
+        ProjectFile(
+            relative_path="wren_project.yml",
+            content=yaml.dump(
+                project_config, default_flow_style=False, sort_keys=False
+            ),
+        )
+    )
 
     # ── Models ────────────────────────────────────────────────
     for table in tables:
@@ -271,32 +275,38 @@ def convert_dlt_to_project(
             "cached": False,
             "properties": {"description": "Imported from dlt pipeline"},
         }
-        files.append(ProjectFile(
-            relative_path=f"models/{table.name}/metadata.yml",
-            content=yaml.dump(model, default_flow_style=False, sort_keys=False),
-        ))
+        files.append(
+            ProjectFile(
+                relative_path=f"models/{table.name}/metadata.yml",
+                content=yaml.dump(model, default_flow_style=False, sort_keys=False),
+            )
+        )
 
     # ── Relationships ─────────────────────────────────────────
-    files.append(ProjectFile(
-        relative_path="relationships.yml",
-        content=yaml.dump(
-            {"relationships": relationships},
-            default_flow_style=False,
-            sort_keys=False,
-        ),
-    ))
+    files.append(
+        ProjectFile(
+            relative_path="relationships.yml",
+            content=yaml.dump(
+                {"relationships": relationships},
+                default_flow_style=False,
+                sort_keys=False,
+            ),
+        )
+    )
 
     # ── Instructions ──────────────────────────────────────────
     now = datetime.utcnow().isoformat(timespec="seconds")
-    files.append(ProjectFile(
-        relative_path="instructions.md",
-        content=(
-            "# Instructions\n\n"
-            "This project was generated from a dlt DuckDB pipeline.\n"
-            f"Source: {duckdb_path}\n"
-            f"Generated: {now}\n"
-        ),
-    ))
+    files.append(
+        ProjectFile(
+            relative_path="instructions.md",
+            content=(
+                "# Instructions\n\n"
+                "This project was generated from a dlt DuckDB pipeline.\n"
+                f"Source: {duckdb_path}\n"
+                f"Generated: {now}\n"
+            ),
+        )
+    )
 
     return files
 

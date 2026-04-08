@@ -125,13 +125,16 @@ def init(
 
         # Count models and relationships from generated files
         model_count = sum(
-            1 for f in files if f.relative_path.startswith("models/")
+            1
+            for f in files
+            if f.relative_path.startswith("models/")
             and f.relative_path.endswith("/metadata.yml")
         )
         rel_count = 0
         for f in files:
             if f.relative_path == "relationships.yml":
                 import yaml as _yaml  # noqa: PLC0415
+
                 data = _yaml.safe_load(f.content) or {}
                 rel_count = len(data.get("relationships", []))
                 break
