@@ -60,9 +60,7 @@ class DltIntrospector:
         self._con = duckdb.connect()
         escaped_path = str(self._path).replace("'", "''")
         escaped_alias = self._alias.replace('"', '""')
-        self._con.execute(
-            f"ATTACH '{escaped_path}' AS \"{escaped_alias}\" (READ_ONLY)"
-        )
+        self._con.execute(f"ATTACH '{escaped_path}' AS \"{escaped_alias}\" (READ_ONLY)")
 
     # ── Public API ─────────────────────────────────────────────────────────
 
