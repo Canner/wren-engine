@@ -198,6 +198,98 @@ def convert_mdl_to_project(mdl_json: dict) -> list[ProjectFile]:
     return files
 
 
+def convert_dlt_to_project(
+    duckdb_path: str | Path,
+    *,
+    project_name: str | None = None,
+) -> list[ProjectFile]:
+    """Introspect a dlt DuckDB file and generate Wren v2 project files.
+
+    Args:
+        duckdb_path: Path to .duckdb file produced by dlt.
+        project_name: Project name (defaults to DuckDB filename stem).
+
+    Returns:
+        List of ProjectFile ready for write_project_files().
+    """
+    from datetime import datetime  # noqa: PLC0415
+
+    from wren.dlt_introspect import DltIntrospector  # noqa: PLC0415
+
+    duckdb_path = Path(duckdb_path)
+    project_name = project_name or duckdb_path.stem
+
+    with DltIntrospector(duckdb_path) as introspector:
+        tables, relationships = introspector.introspect()
+
+    files: list[ProjectFile] = []
+
+    # ── wren_project.yml ──────────────────────────────────────
+    project_config: dict[str, Any] = {
+        "schema_version": 2,
+        "name": project_name,
+        "version": "1.0",
+        "catalog": "",
+        "schema": "public",
+        "data_source": "duckdb",
+    }
+    files.append(ProjectFile(
+        relative_path="wren_project.yml",
+        content=yaml.dump(project_config, default_flow_style=False, sort_keys=False),
+    ))
+
+    # ── Models ────────────────────────────────────────────────
+    for table in tables:
+        model: dict[str, Any] = {
+            "name": table.name,
+            "table_reference": {
+                "catalog": table.catalog,
+                "schema": table.schema,
+                "table": table.name,
+            },
+            "columns": [
+                {
+                    "name": col.name,
+                    "type": col.normalized_type,
+                    "is_calculated": False,
+                    "not_null": not col.is_nullable,
+                    "properties": {},
+                }
+                for col in table.columns
+            ],
+            "cached": False,
+            "properties": {"description": "Imported from dlt pipeline"},
+        }
+        files.append(ProjectFile(
+            relative_path=f"models/{table.name}/metadata.yml",
+            content=yaml.dump(model, default_flow_style=False, sort_keys=False),
+        ))
+
+    # ── Relationships ─────────────────────────────────────────
+    files.append(ProjectFile(
+        relative_path="relationships.yml",
+        content=yaml.dump(
+            {"relationships": relationships},
+            default_flow_style=False,
+            sort_keys=False,
+        ),
+    ))
+
+    # ── Instructions ──────────────────────────────────────────
+    now = datetime.utcnow().isoformat(timespec="seconds")
+    files.append(ProjectFile(
+        relative_path="instructions.md",
+        content=(
+            "# Instructions\n\n"
+            "This project was generated from a dlt DuckDB pipeline.\n"
+            f"Source: {duckdb_path}\n"
+            f"Generated: {now}\n"
+        ),
+    ))
+
+    return files
+
+
 def write_project_files(
     files: list[ProjectFile],
     output_dir: Path,

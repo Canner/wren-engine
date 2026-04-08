@@ -31,6 +31,17 @@ def init(
         Optional[str],
         typer.Option("--from-mdl", help="Import from MDL JSON file (camelCase)."),
     ] = None,
+    from_dlt: Annotated[
+        Optional[str],
+        typer.Option("--from-dlt", help="Import from dlt-produced DuckDB file."),
+    ] = None,
+    profile: Annotated[
+        Optional[str],
+        typer.Option(
+            "--profile",
+            help="Create a named DuckDB connection profile (requires --from-dlt).",
+        ),
+    ] = None,
     force: Annotated[
         bool,
         typer.Option("--force", help="Overwrite existing project files."),
@@ -38,11 +49,19 @@ def init(
 ) -> None:
     """Initialize a new Wren project.
 
-    Without --from-mdl: scaffolds an empty project structure.
+    Without flags: scaffolds an empty project structure.
     With --from-mdl: imports an existing MDL JSON and produces a complete
     v2 YAML project, ready for `wren context validate/build`.
+    With --from-dlt: introspects a dlt DuckDB file and generates models,
+    relationships, and project config automatically.
     """
     project_path = Path(path).expanduser() if path else Path.cwd()
+
+    if from_mdl and from_dlt:
+        typer.echo(
+            "Error: --from-mdl and --from-dlt cannot be used together.", err=True
+        )
+        raise typer.Exit(1)
 
     if from_mdl:
         # ── Import from MDL JSON ──────────────────────────────
@@ -72,6 +91,64 @@ def init(
         typer.echo(
             f"  {model_count} models, {view_count} views, {rel_count} relationships"
         )
+        typer.echo("\nNext steps:")
+        typer.echo(f"  wren context validate --path {project_path}")
+        typer.echo(f"  wren context build --path {project_path}")
+        return
+
+    if from_dlt:
+        # ── Import from dlt DuckDB ────────────────────────────
+        from wren.context import (  # noqa: PLC0415
+            convert_dlt_to_project,
+            write_project_files,
+        )
+
+        duckdb_path = Path(from_dlt).expanduser()
+        if not duckdb_path.exists():
+            typer.echo(f"Error: {duckdb_path} not found.", err=True)
+            raise typer.Exit(1)
+
+        try:
+            files = convert_dlt_to_project(duckdb_path)
+        except Exception as e:
+            typer.echo(f"Error reading DuckDB file: {e}", err=True)
+            raise typer.Exit(1)
+
+        try:
+            write_project_files(files, project_path, force=force)
+        except SystemExit as e:
+            typer.echo(str(e), err=True)
+            raise typer.Exit(1)
+
+        # Count models and relationships from generated files
+        model_count = sum(
+            1 for f in files if f.relative_path.startswith("models/")
+            and f.relative_path.endswith("/metadata.yml")
+        )
+        rel_count = 0
+        for f in files:
+            if f.relative_path == "relationships.yml":
+                import yaml as _yaml  # noqa: PLC0415
+                data = _yaml.safe_load(f.content) or {}
+                rel_count = len(data.get("relationships", []))
+                break
+
+        typer.echo(f"Imported dlt DuckDB to YAML project at {project_path}/")
+        typer.echo(f"  {model_count} models, {rel_count} relationships")
+
+        if profile:
+            from wren.profile import add_profile  # noqa: PLC0415
+
+            add_profile(
+                profile,
+                {
+                    "datasource": "duckdb",
+                    "url": str(duckdb_path.resolve()),
+                },
+                activate=True,
+            )
+            typer.echo(f"  Profile '{profile}' created and activated.")
+
         typer.echo("\nNext steps:")
         typer.echo(f"  wren context validate --path {project_path}")
         typer.echo(f"  wren context build --path {project_path}")
