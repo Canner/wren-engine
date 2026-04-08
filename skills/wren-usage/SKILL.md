@@ -1,10 +1,10 @@
 ---
 name: wren-usage
-description: "Wren Engine CLI workflow guide for AI agents. Answer data questions end-to-end using the wren CLI: gather schema context, recall past queries, write SQL through the MDL semantic layer, execute, and learn from confirmed results. Use when: agent needs to query data, connect a data source, handle errors, or manage MDL changes via the wren CLI."
+description: "Wren Engine CLI workflow guide for AI agents. Answer data questions end-to-end using the wren CLI: gather schema context, recall past queries, write SQL through the MDL semantic layer, execute, and learn from confirmed results. Use when: user asks a data question, requests a report or analysis, asks about metrics, revenue, customers, orders, trends, or any business data; user says 'how many', 'show me', 'what is the', 'top N', 'compare', 'trend', 'growth', 'breakdown'; user wants to explore, analyze, filter, aggregate, or summarize data from a database; agent needs to query data, connect a data source, handle errors, or manage MDL changes via the wren CLI."
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "2.0"
+  version: "2.1"
 ---
 
 # Wren Engine CLI — Agent Workflow Guide
@@ -18,10 +18,65 @@ If the remote version is newer, notify the user before proceeding:
 > A newer version of the **wren-usage** skill is available.
 > Update with:
 > ```
-> npx skills add Canner/wren-engine --skill wren-usage --agent claude-code
+> npx skills add Canner/wren-engine --skill wren-usage
 > ```
+> The CLI auto-detects your installed agent. To target a specific one, add `--agent <name>` (e.g., `claude-code`, `cursor`, `windsurf`, `cline`).
 
 Then continue with the workflow below regardless of update status.
+
+---
+
+## Preflight — Verify environment and installation
+
+**Goal:** Ensure the `wren` CLI is available before entering any workflow.
+
+### Step 1 — Check Python virtual environment
+
+Run `python -c "import sys; print(sys.prefix)"` (or equivalent) to determine
+whether a virtual environment is active.
+
+- If **no venv is active**, warn the user and ask whether to:
+  - Create one (e.g., `python -m venv .venv && source .venv/bin/activate`)
+  - Continue without a venv (not recommended — may pollute global packages)
+
+### Step 2 — Check if `wren-engine` is installed
+
+Run `wren --version`. If the command is not found or errors:
+
+1. Tell the user that the `wren` CLI is not installed.
+2. Ask if you should help install it.
+3. If the user agrees, determine the **datasource extra** to install:
+
+   **Auto-detect from project:** Check whether the current directory is inside
+   a wren project (look for `wren_project.yml` up to the repository root).
+   If found, read the active profile with `cat ~/.wren/profiles.yml` or look
+   for a datasource hint in the project's profile configuration. Extract the
+   datasource type from there.
+
+   **Ask the user:** If no project is detected or no datasource can be
+   inferred, ask the user which database they plan to connect to. Valid
+   extras: `postgres`, `mysql`, `bigquery`, `snowflake`, `clickhouse`,
+   `trino`, `mssql`, `databricks`, `redshift`, `spark`, `athena`, `oracle`.
+   DuckDB is included by default — no extra needed.
+
+4. Install with the detected or chosen extra:
+   ```bash
+   # DuckDB (no extra needed)
+   pip install "wren-engine"
+
+   # Other datasources
+   pip install "wren-engine[<datasource>]"
+   ```
+   To also enable semantic memory and web UI (recommended):
+   ```bash
+   pip install "wren-engine[<datasource>,memory,ui]"
+   # or for DuckDB:
+   pip install "wren-engine[memory,ui]"
+   ```
+
+5. Verify: `wren --version`
+
+If `wren --version` succeeds, proceed to the relevant workflow below.
 
 ---
 

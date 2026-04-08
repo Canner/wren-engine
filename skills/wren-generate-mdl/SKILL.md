@@ -4,7 +4,7 @@ description: "Generate a Wren MDL project by exploring a database with available
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "2.0"
+  version: "2.1"
 ---
 
 # Generate Wren MDL — CLI Agent Workflow
@@ -18,8 +18,9 @@ If the remote version is newer, notify the user before proceeding:
 > A newer version of the **wren-generate-mdl** skill is available.
 > Update with:
 > ```
-> npx skills add Canner/wren-engine --skill wren-generate-mdl --agent claude-code
+> npx skills add Canner/wren-engine --skill wren-generate-mdl
 > ```
+> The CLI auto-detects your installed agent. To target a specific one, add `--agent <name>` (e.g., `claude-code`, `cursor`, `windsurf`, `cline`).
 
 Then continue with the workflow below regardless of update status.
 
@@ -39,6 +40,27 @@ For memory and query workflows after setup, see the **wren-usage** skill.
 - `wren` CLI installed (`pip install wren-engine[<datasource>]`)
 - A working database connection (credentials available to the agent)
 - A wren profile configured (`wren profile add`) or connection info ready
+
+---
+
+## Phase 0 — Detect existing project
+
+**Goal:** If the current directory is already inside a wren project, let the user decide how to proceed.
+
+Check whether `wren_project.yml` exists in the current working directory
+(or any parent up to the repository root). If found:
+
+1. Tell the user that an existing wren project was detected and show its path.
+2. Ask:
+   - **Reset** — wipe the existing project (`models/`, `views/`,
+     `relationships.yml`, `instructions.md`, and rebuild `wren_project.yml`)
+     and regenerate from scratch in the same directory.
+   - **New path** — keep the existing project untouched and choose a
+     different directory for the new project. Ask the user for the new path,
+     then `wren context init --path <new_path>` and continue from Phase 1
+     using that path.
+
+If no existing project is detected, proceed directly to Phase 1.
 
 ---
 
