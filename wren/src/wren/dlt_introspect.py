@@ -52,13 +52,16 @@ class DltIntrospector:
         if not self._path.exists():
             raise FileNotFoundError(f"DuckDB file not found: {self._path}")
 
-        # Use the filename stem as catalog alias (consistent with direct connection)
+        # Use the filename stem as the catalog name for table_reference output,
+        # but prefix the ATTACH alias to avoid collisions with DuckDB reserved
+        # catalog names (memory, system, temp, etc.).
         self._catalog = self._path.stem
+        self._alias = "dlt_" + self._catalog
         self._con = duckdb.connect()
         escaped_path = str(self._path).replace("'", "''")
-        escaped_catalog = self._catalog.replace('"', '""')
+        escaped_alias = self._alias.replace('"', '""')
         self._con.execute(
-            f"ATTACH '{escaped_path}' AS \"{escaped_catalog}\" (READ_ONLY)"
+            f"ATTACH '{escaped_path}' AS \"{escaped_alias}\" (READ_ONLY)"
         )
 
     # ── Public API ─────────────────────────────────────────────────────────
@@ -84,7 +87,7 @@ class DltIntrospector:
               AND NOT starts_with(table_name, '_dlt_')
             ORDER BY schema_name, table_name
         """,
-            [self._catalog],
+            [self._alias],
         ).fetchall()
 
         tables: list[DltTable] = []
@@ -101,7 +104,7 @@ class DltIntrospector:
                 WHERE database_name = ? AND schema_name = ? AND table_name = ?
                 ORDER BY column_index
             """,
-                [self._catalog, schema, table_name],
+                [self._alias, schema, table_name],
             ).fetchall()
 
             has_parent_id = False
