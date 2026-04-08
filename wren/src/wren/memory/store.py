@@ -472,16 +472,21 @@ class MemoryStore:
         exact_set, nl_to_rowid = self._existing_pairs_index()
 
         if upsert:
+            # Deduplicate input by nl_query (last occurrence wins).
+            seen_nl: dict[str, dict] = {}
+            for p in pairs:
+                seen_nl[p["nl"]] = p
+            deduped = list(seen_nl.values())
+
             # Batch: collect IDs to delete, then delete once, then insert all.
             ids_to_delete = []
-            for p in pairs:
-                nl = p["nl"]
-                if nl in nl_to_rowid:
-                    ids_to_delete.append(nl_to_rowid[nl])
+            for p in deduped:
+                if p["nl"] in nl_to_rowid:
+                    ids_to_delete.append(nl_to_rowid[p["nl"]])
             if ids_to_delete:
                 self.forget_queries_by_ids(ids_to_delete)
             updated = len(ids_to_delete)
-            for p in pairs:
+            for p in deduped:
                 tags = f"source:{p.get('source', 'user')}"
                 self.store_query(
                     nl_query=p["nl"],
@@ -489,7 +494,7 @@ class MemoryStore:
                     datasource=p.get("datasource"),
                     tags=tags,
                 )
-            loaded = len(pairs) - updated
+            loaded = len(deduped) - updated
             return {"loaded": loaded, "skipped": 0, "updated": updated}
 
         # Default (skip duplicates)

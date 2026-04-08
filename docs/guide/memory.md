@@ -231,7 +231,7 @@ Embeddings are recalculated on import — the YAML file only stores text, not ve
 
 NL-SQL pairs can be managed as part of your project, alongside models, views, and instructions:
 
-```
+```text
 project_root/
 ├── wren_project.yml
 ├── models/
