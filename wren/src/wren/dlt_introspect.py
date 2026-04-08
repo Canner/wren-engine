@@ -57,8 +57,10 @@ class DltIntrospector:
         # Use the filename stem as catalog alias (consistent with direct connection)
         self._catalog = self._path.stem
         self._con = duckdb.connect()
+        escaped_path = str(self._path).replace("'", "''")
+        escaped_catalog = self._catalog.replace('"', '""')
         self._con.execute(
-            f"ATTACH '{self._path}' AS \"{self._catalog}\" (READ_ONLY)"
+            f"ATTACH '{escaped_path}' AS \"{escaped_catalog}\" (READ_ONLY)"
         )
 
     # ── Public API ─────────────────────────────────────────────────────────
@@ -80,7 +82,7 @@ class DltIntrospector:
             SELECT schema_name, table_name
             FROM duckdb_tables()
             WHERE database_name = ?
-              AND table_name NOT LIKE '_dlt_%'
+              AND NOT starts_with(table_name, '_dlt_')
             ORDER BY schema_name, table_name
         """, [self._catalog]).fetchall()
 
@@ -105,10 +107,7 @@ class DltIntrospector:
                     has_parent_id = True
                 if col_name in _DLT_INTERNAL_COLUMNS:
                     continue
-                try:
-                    normalized = parse_type(raw_type, "duckdb")
-                except Exception:
-                    normalized = raw_type
+                normalized = parse_type(raw_type, "duckdb")
                 columns.append(DltColumn(
                     name=col_name,
                     data_type=raw_type,

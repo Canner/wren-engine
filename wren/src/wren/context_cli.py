@@ -62,6 +62,9 @@ def init(
             "Error: --from-mdl and --from-dlt cannot be used together.", err=True
         )
         raise typer.Exit(1)
+    if profile and not from_dlt:
+        typer.echo("Error: --profile requires --from-dlt.", err=True)
+        raise typer.Exit(1)
 
     if from_mdl:
         # ── Import from MDL JSON ──────────────────────────────

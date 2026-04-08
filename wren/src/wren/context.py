@@ -222,6 +222,17 @@ def convert_dlt_to_project(
     with DltIntrospector(duckdb_path) as introspector:
         tables, relationships = introspector.introspect()
 
+    # Guard: same table name in multiple schemas would silently overwrite model files
+    seen: dict[str, str] = {}
+    for table in tables:
+        prev_schema = seen.setdefault(table.name, table.schema)
+        if prev_schema != table.schema:
+            raise ValueError(
+                f"Duplicate table name across schemas is ambiguous for project "
+                f"generation: {table.name!r} appears in {prev_schema!r} "
+                f"and {table.schema!r}. Rename one of the tables before importing."
+            )
+
     files: list[ProjectFile] = []
 
     # ── wren_project.yml ──────────────────────────────────────
