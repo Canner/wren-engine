@@ -332,6 +332,171 @@ class MemoryStore:
             r.pop("vector", None)
         return results
 
+    # ── Query listing & management ───────────────────────────────────────
+
+    def list_queries(
+        self,
+        *,
+        source: str | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> tuple[list[dict], int]:
+        """List query_history pairs.
+
+        Returns (rows, total_count).  Rows include ``_row_id`` for use
+        with :meth:`forget_queries_by_ids`.
+        """
+        if _QUERY_TABLE not in _table_names(self._db):
+            return [], 0
+
+        table = self._db.open_table(_QUERY_TABLE)
+        df = table.to_pandas()
+        if source:
+            df = df[df["tags"].str.contains(f"source:{source}", na=False)]
+        total = len(df)
+        df = df.sort_values("created_at", ascending=False).reset_index(drop=True)
+        rows = df.iloc[offset : offset + limit]
+        # Expose a stable row-id that callers can pass to forget_queries_by_ids.
+        # We use the positional index within the *full* table (before filtering)
+        # so that the id corresponds to the LanceDB _rowid semantic.
+        results = rows.drop(columns=["vector"], errors="ignore").to_dict("records")
+        # Attach sequential IDs matching the sorted position (1-based).
+        for i, r in enumerate(results):
+            r["_row_id"] = offset + i
+        return results, total
+
+    def count_queries_by_source(self, source: str) -> int:
+        """Return the number of query_history rows matching *source* tag."""
+        if _QUERY_TABLE not in _table_names(self._db):
+            return 0
+        table = self._db.open_table(_QUERY_TABLE)
+        df = table.to_pandas()
+        return int(df["tags"].str.contains(f"source:{source}", na=False).sum())
+
+    def forget_queries_by_ids(self, row_ids: list[int]) -> int:
+        """Delete rows at the given positional indices.  Returns deleted count."""
+        if _QUERY_TABLE not in _table_names(self._db):
+            return 0
+        table = self._db.open_table(_QUERY_TABLE)
+        df = table.to_pandas()
+        to_delete = [i for i in row_ids if 0 <= i < len(df)]
+        if not to_delete:
+            return 0
+        keep = df.drop(index=to_delete).reset_index(drop=True)
+        # Rebuild the table with remaining rows
+        self._db.drop_table(_QUERY_TABLE)
+        if len(keep) == 0:
+            return len(to_delete)
+        keep_arrow = pa.Table.from_pandas(keep, schema=self._query_table_schema())
+        self._db.create_table(
+            _QUERY_TABLE,
+            keep_arrow,
+            schema=self._query_table_schema(),
+        )
+        return len(to_delete)
+
+    def forget_queries_by_source(self, source: str) -> int:
+        """Delete all query_history rows matching *source* tag.  Returns deleted count."""
+        if _QUERY_TABLE not in _table_names(self._db):
+            return 0
+        table = self._db.open_table(_QUERY_TABLE)
+        where = f"tags LIKE '%source:{_esc(source)}%'"
+        before = table.count_rows()
+        table.delete(where)
+        return before - table.count_rows()
+
+    # ── Dump / Load ──────────────────────────────────────────────────────
+
+    def dump_queries(
+        self,
+        *,
+        source: str | None = None,
+    ) -> list[dict]:
+        """Export all query_history pairs (without vector column)."""
+        if _QUERY_TABLE not in _table_names(self._db):
+            return []
+        table = self._db.open_table(_QUERY_TABLE)
+        df = table.to_pandas()
+        if source:
+            df = df[df["tags"].str.contains(f"source:{source}", na=False)]
+        df = df.sort_values("created_at", ascending=True)
+        return df.drop(columns=["vector"], errors="ignore").to_dict("records")
+
+    def _existing_pairs_index(self) -> tuple[set[tuple[str, str]], dict[str, int]]:
+        """Build lookup indexes from existing query_history.
+
+        Returns
+        -------
+        (exact_set, nl_to_rowid)
+            *exact_set*: ``{(nl_query, sql_query)}`` for skip dedup.
+            *nl_to_rowid*: ``{nl_query: positional_index}`` for upsert.
+        """
+        if _QUERY_TABLE not in _table_names(self._db):
+            return set(), {}
+        table = self._db.open_table(_QUERY_TABLE)
+        df = table.to_pandas()
+        exact_set: set[tuple[str, str]] = set(zip(df["nl_query"], df["sql_query"]))
+        # Last occurrence wins when the same nl_query appears multiple times.
+        nl_to_rowid: dict[str, int] = dict(zip(df["nl_query"], df.index))
+        return exact_set, nl_to_rowid
+
+    def load_queries(
+        self,
+        pairs: list[dict],
+        *,
+        overwrite: bool = False,
+        upsert: bool = False,
+    ) -> dict[str, int]:
+        """Batch-import parsed YAML pairs into query_history.
+
+        Returns ``{"loaded": N, "skipped": M, "updated": U}``.
+        """
+        if overwrite:
+            sources = {p.get("source", "user") for p in pairs}
+            for src in sources:
+                self.forget_queries_by_source(src)
+            loaded = 0
+            for p in pairs:
+                tags = f"source:{p.get('source', 'user')}"
+                self.store_query(
+                    nl_query=p["nl"],
+                    sql_query=p["sql"],
+                    datasource=p.get("datasource"),
+                    tags=tags,
+                )
+                loaded += 1
+            return {"loaded": loaded, "skipped": 0, "updated": 0}
+
+        exact_set, nl_to_rowid = self._existing_pairs_index()
+
+        loaded, skipped, updated = 0, 0, 0
+        for p in pairs:
+            nl, sql = p["nl"], p["sql"]
+            tags = f"source:{p.get('source', 'user')}"
+
+            if upsert:
+                if nl in nl_to_rowid:
+                    self.forget_queries_by_ids([nl_to_rowid[nl]])
+                    # Re-build index after deletion (row positions shift).
+                    _, nl_to_rowid = self._existing_pairs_index()
+                    updated += 1
+                else:
+                    loaded += 1
+            else:
+                if (nl, sql) in exact_set:
+                    skipped += 1
+                    continue
+                loaded += 1
+
+            self.store_query(
+                nl_query=nl,
+                sql_query=sql,
+                datasource=p.get("datasource"),
+                tags=tags,
+            )
+
+        return {"loaded": loaded, "skipped": skipped, "updated": updated}
+
     # ── Housekeeping ──────────────────────────────────────────────────────
 
     def status(self) -> dict:
