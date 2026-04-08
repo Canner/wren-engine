@@ -1,17 +1,38 @@
 # Wren Engine Documentation
 
-Wren Engine is an open-source semantic engine for AI agents and MCP clients. It translates SQL queries through MDL (Model Definition Language) and executes them against 22+ data sources.
+This directory is the **single source of truth** for Wren Engine docs published at [docs.getwren.ai](https://docs.getwren.ai/oss/engine).
 
-## Getting Started
+Changes merged to `main` are automatically synced to the doc website via GitHub Actions.
 
-- [Quick Start](quickstart.md) -- Set up a local semantic layer with the jaffle_shop dataset using the Wren CLI and Claude Code. (~15 minutes)
+## Get Started
 
-## Core Concepts
+- [Installation](get_started/installation.md)
+- [Quick Start](get_started/quickstart.md)
+- [Connect Your Database](get_started/connect.md)
 
-- [Wren Project](wren_project.md) -- Project structure, YAML authoring, and how the CLI compiles models into a deployable manifest.
+## Concepts
 
-### MDL Reference
+- [What is Context?](concept/what_is_context.md)
+- [What is MDL?](concept/what_is_mdl.md)
+- [Benefits for LLMs](concept/benefits_llm.md)
+- [Architecture](concept/architecture.md)
 
-- [Model](mdl/model.md) -- Define semantic entities over physical tables or SQL expressions.
-- [Relationship](mdl/relationship.md) -- Declare join paths between models for automatic resolution.
-- [View](mdl/view.md) -- Named SQL queries that behave as virtual tables.
+## Guides
+
+- [Data Modeling Overview](guide/modeling/overview.md)
+- [Wren Project Structure](guide/modeling/wren_project.md)
+- [Models](guide/modeling/model.md)
+- [Relations](guide/modeling/relation.md)
+- [Views](guide/modeling/view.md)
+- [Memory](guide/memory.md)
+- [Profiles](guide/profiles.md)
+
+## Reference
+
+- [CLI Reference](reference/cli.md)
+- [Skills](reference/skills.md)
+
+## Not synced
+
+- `README.md` — this file
+- `.sync.yml` — sync configuration

@@ -174,7 +174,7 @@ GROUP BY 1
 | `type` | Yes | SQL data type (`VARCHAR`, `INTEGER`, `DOUBLE`, `DATE`, `TIMESTAMP`, etc.) |
 | `is_calculated` | No | If `true`, the column value is derived from `expression` at query time |
 | `expression` | No | SQL expression for calculated columns |
-| `relationship` | No | Name of a [Relationship](./relationship.md) — makes this column a join handle |
+| `relationship` | No | Name of a [Relationship](./relation.md) — makes this column a join handle |
 | `not_null` | No | Constraint hint; `false` by default |
 | `is_primary_key` | No | Marks the column as the model's primary key |
 | `is_hidden` | No | Engine-internal flag; column is excluded from the symbol table and invisible to all clients |
@@ -222,7 +222,7 @@ Calculated columns can reference other columns in the same model or traverse rel
 
 ### Relationship columns
 
-A relationship column declares a join path to another model. The `relationship` field names a [Relationship](./relationship.md) defined elsewhere in the MDL.
+A relationship column declares a join path to another model. The `relationship` field names a [Relationship](./relation.md) defined elsewhere in the MDL.
 
 ```yaml
 # In the orders model
@@ -315,7 +315,7 @@ FROM orders
 WHERE orders.customer.number_of_orders > 3
 ```
 
-See [Relationship](./relationship.md) for full details on defining join paths.
+See [Relationship](./relation.md) for full details on defining join paths.
 
 ## Using Models in SQL
 
