@@ -220,7 +220,19 @@ def index(
                             f" ({skipped} skipped).",
                             err=True,
                         )
-        except (SystemExit, Exception):
+        except (
+            SystemExit,
+            FileNotFoundError,
+            PermissionError,
+            IsADirectoryError,
+            UnicodeDecodeError,
+            ImportError,
+            ModuleNotFoundError,
+            yaml.YAMLError,
+            KeyError,
+            TypeError,
+            ValueError,
+        ):
             pass  # queries.yml loading is best-effort
 
 

@@ -344,25 +344,27 @@ class MemoryStore:
         """List query_history pairs.
 
         Returns (rows, total_count).  Rows include ``_row_id`` for use
-        with :meth:`forget_queries_by_ids`.
+        with :meth:`forget_queries_by_ids`.  The ``_row_id`` is the
+        positional index in the *unfiltered* table so it can be passed
+        directly to :meth:`forget_queries_by_ids`.
         """
         if _QUERY_TABLE not in _table_names(self._db):
             return [], 0
 
         table = self._db.open_table(_QUERY_TABLE)
         df = table.to_pandas()
+        # Ensure a clean 0-based index matching the unfiltered table.
+        df = df.reset_index(drop=True)
         if source:
-            df = df[df["tags"].str.contains(f"source:{source}", na=False)]
+            df = df[df["tags"] == f"source:{source}"]
         total = len(df)
-        df = df.sort_values("created_at", ascending=False).reset_index(drop=True)
+        df = df.sort_values("created_at", ascending=False)
         rows = df.iloc[offset : offset + limit]
-        # Expose a stable row-id that callers can pass to forget_queries_by_ids.
-        # We use the positional index within the *full* table (before filtering)
-        # so that the id corresponds to the LanceDB _rowid semantic.
         results = rows.drop(columns=["vector"], errors="ignore").to_dict("records")
-        # Attach sequential IDs matching the sorted position (1-based).
-        for i, r in enumerate(results):
-            r["_row_id"] = offset + i
+        # Attach the *original* DataFrame index so forget_queries_by_ids
+        # deletes the correct rows even when a source filter is applied.
+        for idx, (orig_idx, _) in zip(range(len(results)), rows.iterrows()):
+            results[idx]["_row_id"] = orig_idx
         return results, total
 
     def count_queries_by_source(self, source: str) -> int:
@@ -371,7 +373,7 @@ class MemoryStore:
             return 0
         table = self._db.open_table(_QUERY_TABLE)
         df = table.to_pandas()
-        return int(df["tags"].str.contains(f"source:{source}", na=False).sum())
+        return int((df["tags"] == f"source:{source}").sum())
 
     def forget_queries_by_ids(self, row_ids: list[int]) -> int:
         """Delete rows at the given positional indices.  Returns deleted count."""
@@ -400,7 +402,7 @@ class MemoryStore:
         if _QUERY_TABLE not in _table_names(self._db):
             return 0
         table = self._db.open_table(_QUERY_TABLE)
-        where = f"tags LIKE '%source:{_esc(source)}%'"
+        where = f"tags = 'source:{_esc(source)}'"
         before = table.count_rows()
         table.delete(where)
         return before - table.count_rows()
@@ -418,7 +420,7 @@ class MemoryStore:
         table = self._db.open_table(_QUERY_TABLE)
         df = table.to_pandas()
         if source:
-            df = df[df["tags"].str.contains(f"source:{source}", na=False)]
+            df = df[df["tags"] == f"source:{source}"]
         df = df.sort_values("created_at", ascending=True)
         return df.drop(columns=["vector"], errors="ignore").to_dict("records")
 
@@ -469,25 +471,37 @@ class MemoryStore:
 
         exact_set, nl_to_rowid = self._existing_pairs_index()
 
-        loaded, skipped, updated = 0, 0, 0
+        if upsert:
+            # Batch: collect IDs to delete, then delete once, then insert all.
+            ids_to_delete = []
+            for p in pairs:
+                nl = p["nl"]
+                if nl in nl_to_rowid:
+                    ids_to_delete.append(nl_to_rowid[nl])
+            if ids_to_delete:
+                self.forget_queries_by_ids(ids_to_delete)
+            updated = len(ids_to_delete)
+            for p in pairs:
+                tags = f"source:{p.get('source', 'user')}"
+                self.store_query(
+                    nl_query=p["nl"],
+                    sql_query=p["sql"],
+                    datasource=p.get("datasource"),
+                    tags=tags,
+                )
+            loaded = len(pairs) - updated
+            return {"loaded": loaded, "skipped": 0, "updated": updated}
+
+        # Default (skip duplicates)
+        loaded, skipped = 0, 0
         for p in pairs:
             nl, sql = p["nl"], p["sql"]
+            if (nl, sql) in exact_set:
+                skipped += 1
+                continue
+            loaded += 1
+            exact_set.add((nl, sql))  # prevent duplicates within input
             tags = f"source:{p.get('source', 'user')}"
-
-            if upsert:
-                if nl in nl_to_rowid:
-                    self.forget_queries_by_ids([nl_to_rowid[nl]])
-                    # Re-build index after deletion (row positions shift).
-                    _, nl_to_rowid = self._existing_pairs_index()
-                    updated += 1
-                else:
-                    loaded += 1
-            else:
-                if (nl, sql) in exact_set:
-                    skipped += 1
-                    continue
-                loaded += 1
-
             self.store_query(
                 nl_query=nl,
                 sql_query=sql,
@@ -495,7 +509,7 @@ class MemoryStore:
                 tags=tags,
             )
 
-        return {"loaded": loaded, "skipped": skipped, "updated": updated}
+        return {"loaded": loaded, "skipped": skipped, "updated": 0}
 
     # ── Housekeeping ──────────────────────────────────────────────────────
 
