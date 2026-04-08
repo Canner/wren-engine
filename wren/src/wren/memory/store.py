@@ -7,7 +7,12 @@ from pathlib import Path
 
 import pyarrow as pa
 
-from wren.memory.embeddings import _DEFAULT_DIM, _DEFAULT_MODEL, get_embedding_function
+from wren.memory.embeddings import (
+    _DEFAULT_DIM,
+    _DEFAULT_MODEL,
+    get_embedding_function,
+    warm_up,
+)
 from wren.memory.schema_indexer import (
     SCHEMA_DESCRIBE_THRESHOLD,
     describe_schema,
@@ -88,9 +93,8 @@ class MemoryStore:
         self._path = resolved
         self._db = lancedb.connect(str(resolved))
         self._embed_fn = get_embedding_function(model_name or _DEFAULT_MODEL)
-        # Derive actual vector dimension from the model so custom models work.
-        probe = self._embed_fn.compute_source_embeddings(["probe"])
-        self._dim = len(probe[0])
+        # Trigger model loading silently and derive vector dimension.
+        self._dim = warm_up(self._embed_fn)
 
     def _schema_table_schema(self) -> pa.Schema:
         return _schema_items_arrow_schema(dim=self._dim)

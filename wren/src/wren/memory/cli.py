@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Annotated, Optional
 
@@ -13,7 +14,7 @@ memory_app = typer.Typer(
     help="Schema and query memory backed by LanceDB.",
 )
 
-_WREN_HOME = Path.home() / ".wren"
+_WREN_HOME = Path(os.environ.get("WREN_HOME", Path.home() / ".wren"))
 
 # ── Shared option types ───────────────────────────────────────────────────
 
@@ -62,7 +63,10 @@ def _load_manifest(mdl: str | None) -> dict:
             mdl_path = discover_project_path() / "target" / "mdl.json"
         except SystemExit:
             typer.echo(
-                "Error: no wren project found and --mdl not specified.", err=True
+                "Error: no wren project found and --mdl not specified.\n"
+                "  Run this command from a directory containing wren_project.yml,\n"
+                "  set WREN_PROJECT_HOME to the project path, or pass --mdl explicitly.",
+                err=True,
             )
             raise typer.Exit(1)
     if not mdl_path.exists():
