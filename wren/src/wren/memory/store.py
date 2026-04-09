@@ -381,7 +381,7 @@ class MemoryStore:
             return 0
         table = self._db.open_table(_QUERY_TABLE)
         df = table.to_pandas()
-        to_delete = [i for i in row_ids if 0 <= i < len(df)]
+        to_delete = sorted({i for i in row_ids if 0 <= i < len(df)})
         if not to_delete:
             return 0
         keep = df.drop(index=to_delete).reset_index(drop=True)
@@ -424,23 +424,27 @@ class MemoryStore:
         df = df.sort_values("created_at", ascending=True)
         return df.drop(columns=["vector"], errors="ignore").to_dict("records")
 
-    def _existing_pairs_index(self) -> tuple[set[tuple[str, str]], dict[str, int]]:
+    def _existing_pairs_index(
+        self,
+    ) -> tuple[set[tuple[str, str]], dict[str, list[int]]]:
         """Build lookup indexes from existing query_history.
 
         Returns
         -------
-        (exact_set, nl_to_rowid)
+        (exact_set, nl_to_rowids)
             *exact_set*: ``{(nl_query, sql_query)}`` for skip dedup.
-            *nl_to_rowid*: ``{nl_query: positional_index}`` for upsert.
+            *nl_to_rowids*: ``{nl_query: [positional_indices]}`` for upsert.
         """
         if _QUERY_TABLE not in _table_names(self._db):
             return set(), {}
         table = self._db.open_table(_QUERY_TABLE)
         df = table.to_pandas()
         exact_set: set[tuple[str, str]] = set(zip(df["nl_query"], df["sql_query"]))
-        # Last occurrence wins when the same nl_query appears multiple times.
-        nl_to_rowid: dict[str, int] = dict(zip(df["nl_query"], df.index))
-        return exact_set, nl_to_rowid
+        # Collect *all* row ids per nl_query so upsert removes every duplicate.
+        nl_to_rowids: dict[str, list[int]] = {}
+        for idx, nl in zip(df.index, df["nl_query"]):
+            nl_to_rowids.setdefault(nl, []).append(idx)
+        return exact_set, nl_to_rowids
 
     def load_queries(
         self,
@@ -469,7 +473,7 @@ class MemoryStore:
                 loaded += 1
             return {"loaded": loaded, "skipped": 0, "updated": 0}
 
-        exact_set, nl_to_rowid = self._existing_pairs_index()
+        exact_set, nl_to_rowids = self._existing_pairs_index()
 
         if upsert:
             # Deduplicate input by nl_query (last occurrence wins).
@@ -480,12 +484,13 @@ class MemoryStore:
 
             # Batch: collect IDs to delete, then delete once, then insert all.
             ids_to_delete = []
+            updated = 0
             for p in deduped:
-                if p["nl"] in nl_to_rowid:
-                    ids_to_delete.append(nl_to_rowid[p["nl"]])
+                if p["nl"] in nl_to_rowids:
+                    ids_to_delete.extend(nl_to_rowids[p["nl"]])
+                    updated += 1
             if ids_to_delete:
                 self.forget_queries_by_ids(ids_to_delete)
-            updated = len(ids_to_delete)
             for p in deduped:
                 tags = f"source:{p.get('source', 'user')}"
                 self.store_query(

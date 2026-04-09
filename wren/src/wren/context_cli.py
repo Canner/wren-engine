@@ -80,7 +80,8 @@ def init(
     # ── Scaffold empty project (existing behavior) ────────────
     project_file = project_path / "wren_project.yml"
     agents_file = project_path / "AGENTS.md"
-    conflicts = [f for f in (project_file, agents_file) if f.exists()]
+    queries_file = project_path / "queries.yml"
+    conflicts = [f for f in (project_file, agents_file, queries_file) if f.exists()]
     if conflicts and not force:
         names = ", ".join(f"'{c.name}'" for c in conflicts)
         typer.echo(
