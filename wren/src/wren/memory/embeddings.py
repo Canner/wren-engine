@@ -5,6 +5,7 @@ Uses LanceDB's embedding registry with sentence-transformers (local, no API key)
 
 from __future__ import annotations
 
+import contextlib
 import os
 
 _DEFAULT_MODEL = os.getenv(
@@ -23,6 +24,31 @@ def get_embedding_function(model_name: str = _DEFAULT_MODEL):
 
     registry = lancedb.embeddings.get_registry()
     return registry.get("sentence-transformers").create(name=model_name)
+
+
+@contextlib.contextmanager
+def suppress_stderr():
+    """Temporarily redirect stderr to /dev/null.
+
+    Suppresses noisy native output (progress bars, load reports) from
+    sentence-transformers / candle during model loading.
+    """
+    old_fd = os.dup(2)
+    devnull = os.open(os.devnull, os.O_WRONLY)
+    os.dup2(devnull, 2)
+    os.close(devnull)
+    try:
+        yield
+    finally:
+        os.dup2(old_fd, 2)
+        os.close(old_fd)
+
+
+def warm_up(embed_fn):
+    """Trigger model loading silently and return the vector dimension."""
+    with suppress_stderr():
+        probe = embed_fn.compute_source_embeddings(["probe"])
+    return len(probe[0])
 
 
 def default_dimension() -> int:
