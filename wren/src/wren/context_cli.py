@@ -175,6 +175,16 @@ def init(
 
     (project_path / "AGENTS.md").write_text(_AGENTS_MD_TEMPLATE)
 
+    # Curated NL-SQL pairs (auto-loaded by `wren memory index`)
+    (project_path / "queries.yml").write_text(
+        "# Curated NL-SQL pairs for this project.\n"
+        "# These are auto-loaded into memory on `wren memory index`.\n"
+        "# Use `wren memory dump` to export pairs from memory to this file.\n"
+        "# Format: same as `wren memory dump` output.\n"
+        "version: 1\n"
+        "pairs: []\n"
+    )
+
     typer.echo(f"Wren project initialized: {project_path}")
     typer.echo("  wren_project.yml            — project metadata (edit data_source)")
     typer.echo("  models/example/             — example model (metadata.yml)")
@@ -182,6 +192,7 @@ def init(
     typer.echo("  relationships.yml           — define joins between models")
     typer.echo("  instructions.md             — LLM instructions")
     typer.echo("  AGENTS.md                   — AI agent workflow guidance")
+    typer.echo("  queries.yml                 — curated NL-SQL pairs for memory")
     typer.echo("\nNext: edit your models, then run `wren context build`.")
 
 

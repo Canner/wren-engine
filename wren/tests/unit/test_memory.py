@@ -442,3 +442,237 @@ class TestMemoryStoreSeedLifecycle:
         assert "schema_items" in result
         assert "seed_queries" in result
         assert result["schema_items"] == 10
+
+
+# ── list_queries / forget / dump / load tests ────────────────────────────
+
+
+def _seed_pairs(memory_store, n=3):
+    """Insert N user query pairs and return them."""
+    pairs = []
+    for i in range(n):
+        nl = f"query number {i}"
+        sql = f"SELECT {i} FROM t"
+        memory_store.store_query(
+            nl_query=nl, sql_query=sql, tags=f"source:user"
+        )
+        pairs.append({"nl": nl, "sql": sql, "source": "user"})
+    return pairs
+
+
+@pytest.mark.unit
+class TestMemoryStoreList:
+    def test_list_empty(self, memory_store):
+        rows, total = memory_store.list_queries()
+        assert rows == []
+        assert total == 0
+
+    def test_list_returns_rows(self, memory_store):
+        _seed_pairs(memory_store, 3)
+        rows, total = memory_store.list_queries()
+        assert total == 3
+        assert len(rows) == 3
+        assert "nl_query" in rows[0]
+        assert "sql_query" in rows[0]
+        assert "_row_id" in rows[0]
+        assert "vector" not in rows[0]
+
+    def test_list_pagination(self, memory_store):
+        _seed_pairs(memory_store, 5)
+        rows, total = memory_store.list_queries(limit=2, offset=0)
+        assert total == 5
+        assert len(rows) == 2
+
+        rows2, _ = memory_store.list_queries(limit=2, offset=2)
+        assert len(rows2) == 2
+
+        rows3, _ = memory_store.list_queries(limit=2, offset=4)
+        assert len(rows3) == 1
+
+    def test_list_source_filter(self, memory_store):
+        memory_store.store_query(
+            nl_query="seed q", sql_query="SELECT 1", tags="source:seed"
+        )
+        memory_store.store_query(
+            nl_query="user q", sql_query="SELECT 2", tags="source:user"
+        )
+        rows, total = memory_store.list_queries(source="seed")
+        assert total == 1
+        assert "seed q" in rows[0]["nl_query"]
+
+
+@pytest.mark.unit
+class TestMemoryStoreForget:
+    def test_forget_by_ids(self, memory_store):
+        _seed_pairs(memory_store, 3)
+        deleted = memory_store.forget_queries_by_ids([0])
+        assert deleted == 1
+        _, total = memory_store.list_queries()
+        assert total == 2
+
+    def test_forget_by_ids_multiple(self, memory_store):
+        _seed_pairs(memory_store, 5)
+        deleted = memory_store.forget_queries_by_ids([0, 2, 4])
+        assert deleted == 3
+        _, total = memory_store.list_queries()
+        assert total == 2
+
+    def test_forget_by_ids_invalid(self, memory_store):
+        _seed_pairs(memory_store, 2)
+        deleted = memory_store.forget_queries_by_ids([99])
+        assert deleted == 0
+        _, total = memory_store.list_queries()
+        assert total == 2
+
+    def test_forget_by_source(self, memory_store):
+        memory_store.store_query(
+            nl_query="seed q", sql_query="SELECT 1", tags="source:seed"
+        )
+        memory_store.store_query(
+            nl_query="user q", sql_query="SELECT 2", tags="source:user"
+        )
+        deleted = memory_store.forget_queries_by_source("seed")
+        assert deleted == 1
+        _, total = memory_store.list_queries()
+        assert total == 1
+
+    def test_count_by_source(self, memory_store):
+        memory_store.store_query(
+            nl_query="a", sql_query="SELECT 1", tags="source:seed"
+        )
+        memory_store.store_query(
+            nl_query="b", sql_query="SELECT 2", tags="source:seed"
+        )
+        memory_store.store_query(
+            nl_query="c", sql_query="SELECT 3", tags="source:user"
+        )
+        assert memory_store.count_queries_by_source("seed") == 2
+        assert memory_store.count_queries_by_source("user") == 1
+        assert memory_store.count_queries_by_source("view") == 0
+
+    def test_forget_empty_store(self, memory_store):
+        assert memory_store.forget_queries_by_ids([0]) == 0
+        assert memory_store.forget_queries_by_source("seed") == 0
+
+
+@pytest.mark.unit
+class TestMemoryStoreDump:
+    def test_dump_empty(self, memory_store):
+        rows = memory_store.dump_queries()
+        assert rows == []
+
+    def test_dump_returns_all(self, memory_store):
+        _seed_pairs(memory_store, 3)
+        rows = memory_store.dump_queries()
+        assert len(rows) == 3
+        assert "nl_query" in rows[0]
+        assert "vector" not in rows[0]
+
+    def test_dump_source_filter(self, memory_store):
+        memory_store.store_query(
+            nl_query="a", sql_query="SELECT 1", tags="source:seed"
+        )
+        memory_store.store_query(
+            nl_query="b", sql_query="SELECT 2", tags="source:user"
+        )
+        rows = memory_store.dump_queries(source="user")
+        assert len(rows) == 1
+        assert rows[0]["nl_query"] == "b"
+
+
+@pytest.mark.unit
+class TestMemoryStoreLoad:
+    def test_load_skip_duplicates(self, memory_store):
+        pairs = [
+            {"nl": "q1", "sql": "SELECT 1", "source": "user"},
+            {"nl": "q2", "sql": "SELECT 2", "source": "user"},
+        ]
+        r1 = memory_store.load_queries(pairs)
+        assert r1 == {"loaded": 2, "skipped": 0, "updated": 0}
+
+        # Load again — should skip all
+        r2 = memory_store.load_queries(pairs)
+        assert r2 == {"loaded": 0, "skipped": 2, "updated": 0}
+
+    def test_load_upsert(self, memory_store):
+        pairs_v1 = [{"nl": "revenue", "sql": "SELECT old", "source": "user"}]
+        memory_store.load_queries(pairs_v1)
+
+        pairs_v2 = [{"nl": "revenue", "sql": "SELECT new", "source": "user"}]
+        r = memory_store.load_queries(pairs_v2, upsert=True)
+        assert r == {"loaded": 0, "skipped": 0, "updated": 1}
+
+        # Verify the updated value
+        rows = memory_store.dump_queries()
+        sqls = {row["nl_query"]: row["sql_query"] for row in rows}
+        assert sqls["revenue"] == "SELECT new"
+
+    def test_load_overwrite(self, memory_store):
+        memory_store.store_query(
+            nl_query="old", sql_query="SELECT old", tags="source:user"
+        )
+        pairs = [{"nl": "new", "sql": "SELECT new", "source": "user"}]
+        r = memory_store.load_queries(pairs, overwrite=True)
+        assert r == {"loaded": 1, "skipped": 0, "updated": 0}
+
+        rows = memory_store.dump_queries()
+        assert len(rows) == 1
+        assert rows[0]["nl_query"] == "new"
+
+    def test_load_with_datasource(self, memory_store):
+        pairs = [
+            {"nl": "q1", "sql": "SELECT 1", "source": "user", "datasource": "pg"},
+        ]
+        memory_store.load_queries(pairs)
+        rows = memory_store.dump_queries()
+        assert rows[0]["datasource"] == "pg"
+
+    def test_existing_pairs_index(self, memory_store):
+        memory_store.store_query(nl_query="a", sql_query="SELECT 1")
+        memory_store.store_query(nl_query="b", sql_query="SELECT 2")
+        exact_set, nl_map = memory_store._existing_pairs_index()
+        assert ("a", "SELECT 1") in exact_set
+        assert ("b", "SELECT 2") in exact_set
+        assert "a" in nl_map
+        assert "b" in nl_map
+
+
+# ── CLI dump/load YAML round-trip tests ──────────────────────────────────
+
+
+@pytest.mark.unit
+class TestYamlRoundTrip:
+    def test_pairs_to_yaml_and_back(self, memory_store):
+        from wren.memory.cli import _pairs_to_yaml, _parse_source  # noqa: PLC0415
+
+        memory_store.store_query(
+            nl_query="revenue by month",
+            sql_query="SELECT month, SUM(revenue) FROM orders GROUP BY month",
+            datasource="pg",
+            tags="source:user",
+        )
+        memory_store.store_query(
+            nl_query="all orders",
+            sql_query="SELECT * FROM orders",
+            tags="source:seed",
+        )
+
+        rows = memory_store.dump_queries()
+        yaml_str = _pairs_to_yaml(rows)
+
+        import yaml  # noqa: PLC0415
+
+        doc = yaml.safe_load(yaml_str)
+        assert doc["version"] == 1
+        assert "exported_at" in doc
+        assert len(doc["pairs"]) == 2
+
+        # Verify source extraction
+        sources = {p["source"] for p in doc["pairs"]}
+        assert sources == {"user", "seed"}
+
+        # Load back
+        result = memory_store.load_queries(doc["pairs"])
+        # All should be skipped as duplicates
+        assert result["skipped"] == 2
+        assert result["loaded"] == 0

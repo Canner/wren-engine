@@ -28,7 +28,7 @@
     },
     {
       "name": "wren-generate-mdl",
-      "version": "2.1",
+      "version": "2.2",
       "description": "Generate a Wren MDL project by exploring a database with available tools (SQLAlchemy, database drivers, MCP connectors, or raw SQL). Guides agents through schema discovery, type normalization, and MDL YAML generation using the wren CLI.",
       "tags": [
         "wren",
@@ -47,7 +47,7 @@
     },
     {
       "name": "wren-usage",
-      "version": "2.1",
+      "version": "2.2",
       "description": "Wren Engine CLI workflow guide for AI agents. Triggers on data questions, reports, metrics, revenue, trends, 'how many', 'show me', 'top N', 'compare', 'breakdown'. Answer data questions end-to-end using the wren CLI.",
       "tags": [
         "wren",

@@ -14,14 +14,15 @@ Optional, depending on your workflow:
 ## Install the CLI
 
 ```bash
-pip install "wren-engine[ui,memory]"
+pip install "wren-engine[main]"
 ```
 
 This installs:
 
 - `wren` CLI — query, plan, validate, build, profile, and memory commands
-- `ui` extra — browser-based profile configuration form
-- `memory` extra — LanceDB-backed schema indexing and NL-SQL recall
+- `memory` — LanceDB-backed schema indexing and NL-SQL recall
+- `interactive` — terminal-based interactive prompts
+- `ui` — browser-based profile configuration form
 
 Verify the installation:
 
@@ -35,10 +36,10 @@ DuckDB is included by default. For other databases, add the corresponding extra:
 
 ```bash
 # Single data source
-pip install "wren-engine[postgres,ui,memory]"
+pip install "wren-engine[postgres,main]"
 
 # Multiple data sources
-pip install "wren-engine[postgres,bigquery,ui,memory]"
+pip install "wren-engine[postgres,bigquery,main]"
 ```
 
 | Data source | Extra | Notes |
@@ -93,7 +94,7 @@ Keep wren-engine and its dependencies isolated from your system Python:
 ```bash
 python3 -m venv ~/.venvs/wren
 source ~/.venvs/wren/bin/activate
-pip install "wren-engine[postgres,ui,memory]"
+pip install "wren-engine[postgres,main]"
 ```
 
 Activate the environment in every new terminal session before running `wren` commands:
@@ -105,7 +106,7 @@ source ~/.venvs/wren/bin/activate
 ## Upgrading
 
 ```bash
-pip install --upgrade "wren-engine[ui,memory]"
+pip install --upgrade "wren-engine[main]"
 ```
 
 To update skills:
