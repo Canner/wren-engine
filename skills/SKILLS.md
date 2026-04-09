@@ -57,6 +57,27 @@ Generates a Wren MDL project by exploring a live database using whatever tools a
 
 ---
 
+## wren-dlt-connector
+
+**File:** [wren-dlt-connector/SKILL.md](wren-dlt-connector/SKILL.md)
+
+Connects SaaS data (HubSpot, Stripe, Salesforce, GitHub, Slack, etc.) to Wren Engine for SQL analysis. Walks through the full flow: install dlt, pick a SaaS source, set up credentials, run the data pipeline into DuckDB, then auto-generate a Wren semantic project from the loaded data.
+
+### When to use
+
+- Connecting SaaS data sources (HubSpot, Stripe, Salesforce, GitHub, Slack, etc.)
+- Importing data from an API via dlt pipelines
+- Loading SaaS data into DuckDB for SQL analysis
+- Creating a Wren project from an existing dlt-produced DuckDB file
+
+### Dependent skills
+
+| Skill | Purpose |
+|-------|---------|
+| `wren-generate-mdl` | Generate or regenerate MDL from the DuckDB database |
+
+---
+
 ## Installing a skill
 
 ```bash

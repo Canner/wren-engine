@@ -6,6 +6,27 @@
   "license": "Apache-2.0",
   "skills": [
     {
+      "name": "wren-dlt-connector",
+      "version": "1.0",
+      "description": "Connect SaaS data (HubSpot, Stripe, Salesforce, GitHub, Slack, etc.) to Wren Engine for SQL analysis via dlt pipelines into DuckDB, then auto-generate a Wren semantic project.",
+      "tags": [
+        "wren",
+        "dlt",
+        "saas",
+        "duckdb",
+        "pipeline",
+        "hubspot",
+        "stripe",
+        "salesforce",
+        "github",
+        "slack"
+      ],
+      "dependencies": [
+        "wren-generate-mdl"
+      ],
+      "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-dlt-connector"
+    },
+    {
       "name": "wren-generate-mdl",
       "version": "2.1",
       "description": "Generate a Wren MDL project by exploring a database with available tools (SQLAlchemy, database drivers, MCP connectors, or raw SQL). Guides agents through schema discovery, type normalization, and MDL YAML generation using the wren CLI.",
