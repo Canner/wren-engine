@@ -135,7 +135,7 @@ def _print_results(results: list[dict], output: str) -> None:
 
             df = pd.DataFrame(results)
             # Drop noisy columns for table display
-            for col in ("vector", "_rowid"):
+            for col in ("vector", "_rowid", "_row_id"):
                 if col in df.columns:
                     df = df.drop(columns=[col])
             typer.echo(df.to_string(index=False))
@@ -232,8 +232,12 @@ def index(
             KeyError,
             TypeError,
             ValueError,
-        ):
-            pass  # queries.yml loading is best-effort
+        ) as e:
+            if not isinstance(e, (SystemExit, ImportError, ModuleNotFoundError)):
+                typer.echo(
+                    f"Warning: failed to load queries.yml: {e}",
+                    err=True,
+                )
 
 
 @memory_app.command()
@@ -620,8 +624,12 @@ def load(
         typer.echo(f"Error: file not found: {file_path}", err=True)
         raise typer.Exit(1)
 
-    raw = file_path.read_text(encoding="utf-8")
-    doc = yaml.safe_load(raw)
+    try:
+        raw = file_path.read_text(encoding="utf-8")
+        doc = yaml.safe_load(raw)
+    except (OSError, UnicodeDecodeError, yaml.YAMLError) as e:
+        typer.echo(f"Error: unable to read YAML from {file_path}: {e}", err=True)
+        raise typer.Exit(1)
 
     # ── Validate ──
     if not isinstance(doc, dict) or "pairs" not in doc:
@@ -633,6 +641,9 @@ def load(
         raise typer.Exit(1)
 
     pairs = doc["pairs"]
+    if not isinstance(pairs, list) or not all(isinstance(p, dict) for p in pairs):
+        typer.echo("Error: 'pairs' must be a list of objects.", err=True)
+        raise typer.Exit(1)
     if not pairs:
         typer.echo("No pairs to load.")
         raise typer.Exit()

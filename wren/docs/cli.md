@@ -74,7 +74,7 @@ Both flat and MCP/web envelope formats are accepted:
 
 ## `wren memory` — Schema & Query Memory
 
-LanceDB-backed semantic memory for MDL schema search and NL→SQL retrieval. Requires the `memory` extra:
+LanceDB-backed semantic memory for MDL schema search and NL→SQL retrieval. Install with the `main` extra bundle (includes `memory`, `interactive`, `ui`):
 
 ```bash
 pip install 'wren-engine[main]'   # includes memory, interactive, ui
