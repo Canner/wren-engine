@@ -107,7 +107,7 @@ python <pipeline_script>.py
 After the run, confirm:
 1. The pipeline completed without errors
 2. A `.duckdb` file was created (usually at `<pipeline_name>.duckdb`)
-3. Print how many rows were loaded
+3. Print discovered tables and their column counts
 
 ```python
 import duckdb
@@ -177,7 +177,7 @@ wren_home = Path.home() / ".wren"
 wren_home.mkdir(exist_ok=True)
 profiles_file = wren_home / "profiles.yml"
 
-existing = yaml.safe_load(profiles_file.read_text()) if profiles_file.exists() else {}
+existing = (yaml.safe_load(profiles_file.read_text()) or {}) if profiles_file.exists() else {}
 existing.setdefault("profiles", {})
 
 profile_name = "<source>_dlt"
@@ -226,8 +226,9 @@ Once basic queries pass, run 2–3 more interesting queries to show the user wha
 # Preview data
 wren --sql 'SELECT * FROM "<table_name>" LIMIT 5'
 
-# If there's a relationship, try a join
-wren --sql 'SELECT p.id, COUNT(*) as children FROM "<parent>" p JOIN "<child>" c ON c._dlt_parent_id = p._dlt_id GROUP BY p.id LIMIT 10'
+# If there's a relationship, verify both models are queryable
+wren --sql 'SELECT * FROM "<parent>" LIMIT 5'
+wren --sql 'SELECT * FROM "<child>" LIMIT 5'
 ```
 
 Show the results to the user and explain what they're seeing. This is their first look at the data through Wren — make it count.

@@ -86,6 +86,7 @@ print(info)
 
 ```python
 import dlt
+from datetime import datetime
 from slack import slack_source
 
 pipeline = dlt.pipeline(

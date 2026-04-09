@@ -17,6 +17,7 @@ This script:
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -70,6 +71,7 @@ class Relationship:
     child_model: str
     condition: str
     join_type: str = "ONE_TO_MANY"
+    schema: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -190,7 +192,9 @@ def detect_relationships(tables: list[Table]) -> list[Relationship]:
     dlt convention: child table name = parent_name__child_suffix
     e.g. hubspot__contacts__emails is a child of hubspot__contacts
     """
-    table_names = {t.name for t in tables}
+    tables_by_schema: dict[str, set[str]] = {}
+    for t in tables:
+        tables_by_schema.setdefault(t.schema, set()).add(t.name)
     relationships: list[Relationship] = []
 
     for t in tables:
@@ -204,7 +208,7 @@ def detect_relationships(tables: list[Table]) -> list[Relationship]:
 
         for i in range(len(parts) - 1, 0, -1):
             candidate = "__".join(parts[:i])
-            if candidate in table_names and candidate != t.name:
+            if candidate in tables_by_schema.get(t.schema, set()) and candidate != t.name:
                 parent_name = candidate
                 child_suffix = "__".join(parts[i:])
                 break
@@ -223,6 +227,7 @@ def detect_relationships(tables: list[Table]) -> list[Relationship]:
                 parent_model=parent_name,
                 child_model=t.name,
                 condition=f'"{t.name}"._dlt_parent_id = "{parent_name}"._dlt_id',
+                schema=t.schema,
             )
         )
 
@@ -232,6 +237,14 @@ def detect_relationships(tables: list[Table]) -> list[Relationship]:
 # ---------------------------------------------------------------------------
 # Project generation
 # ---------------------------------------------------------------------------
+
+
+def _safe_path_segment(value: str) -> str:
+    """Sanitize a string for use as a filesystem directory name."""
+    cleaned = re.sub(r"[^A-Za-z0-9_.-]", "_", value).strip("._")
+    if not cleaned:
+        raise ValueError(f"Invalid path segment from identifier: {value!r}")
+    return cleaned
 
 
 def generate_project_files(
@@ -244,6 +257,14 @@ def generate_project_files(
     """Generate all project file contents as {relative_path: content} dict."""
 
     files: dict[str, str] = {}
+
+    # Detect cross-schema name collisions; qualify model names when needed
+    name_counts: dict[str, int] = {}
+    for t in tables:
+        name_counts[t.name] = name_counts.get(t.name, 0) + 1
+
+    def resolve_name(schema: str, table_name: str) -> str:
+        return f"{schema}__{table_name}" if name_counts.get(table_name, 0) > 1 else table_name
 
     # -- wren_project.yml --
     project_config = {
@@ -260,6 +281,7 @@ def generate_project_files(
 
     # -- models/<table_name>/metadata.yml --
     for t in tables:
+        model_name = resolve_name(t.schema, t.name)
         columns_yaml = []
         for c in t.columns:
             col_entry: dict = {
@@ -272,7 +294,7 @@ def generate_project_files(
             columns_yaml.append(col_entry)
 
         model: dict = {
-            "name": t.name,
+            "name": model_name,
             "table_reference": {
                 "catalog": t.catalog,
                 "schema": t.schema,
@@ -285,7 +307,8 @@ def generate_project_files(
             },
         }
 
-        files[f"models/{t.name}/metadata.yml"] = yaml.dump(
+        dir_name = _safe_path_segment(model_name)
+        files[f"models/{dir_name}/metadata.yml"] = yaml.dump(
             model, default_flow_style=False, sort_keys=False
         )
 
@@ -293,12 +316,14 @@ def generate_project_files(
     if relationships:
         rels_yaml = []
         for r in relationships:
+            parent = resolve_name(r.schema, r.parent_model)
+            child = resolve_name(r.schema, r.child_model)
             rels_yaml.append(
                 {
                     "name": r.name,
-                    "models": [r.parent_model, r.child_model],
+                    "models": [parent, child],
                     "join_type": r.join_type,
-                    "condition": r.condition,
+                    "condition": f'"{child}"._dlt_parent_id = "{parent}"._dlt_id',
                 }
             )
         files["relationships.yml"] = yaml.dump(
