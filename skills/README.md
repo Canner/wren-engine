@@ -57,6 +57,7 @@ Once installed, invoke a skill by name in your conversation:
 |-------|-------------|
 | [wren-usage](wren-usage/SKILL.md) | **Primary skill** — CLI workflow guide: query data via `wren --sql`, gather schema context with `wren memory`, store/recall queries, handle errors |
 | [wren-generate-mdl](wren-generate-mdl/SKILL.md) | Generate a Wren MDL project from a live database — schema discovery, type normalization, YAML generation |
+| [wren-dlt-connector](wren-dlt-connector/SKILL.md) | Connect SaaS data (HubSpot, Stripe, Salesforce, etc.) via dlt pipelines into DuckDB, then auto-generate a Wren project |
 
 ### wren-usage reference files
 

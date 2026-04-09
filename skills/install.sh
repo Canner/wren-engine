@@ -13,7 +13,7 @@ set -euo pipefail
 REPO="Canner/wren-engine"
 BRANCH="${WREN_SKILLS_BRANCH:-main}"
 DEST="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}"
-ALL_SKILLS=(wren-generate-mdl wren-usage)
+ALL_SKILLS=(wren-dlt-connector wren-generate-mdl wren-usage)
 
 # Parse --force flag and skill list from arguments
 FORCE=false
@@ -51,8 +51,17 @@ fi
 
 # Locate index.json for dependency resolution (local or remote)
 INDEX_JSON=""
+INDEX_JSON_TMP=""
 if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/index.json" ]; then
   INDEX_JSON="$SCRIPT_DIR/index.json"
+elif command -v curl &>/dev/null; then
+  INDEX_JSON_TMP="$(mktemp)"
+  if curl -fsSL "https://raw.githubusercontent.com/$REPO/$BRANCH/skills/index.json" -o "$INDEX_JSON_TMP" 2>/dev/null; then
+    INDEX_JSON="$INDEX_JSON_TMP"
+  else
+    rm -f "$INDEX_JSON_TMP"
+    INDEX_JSON_TMP=""
+  fi
 fi
 
 # Expand SELECTED_SKILLS to include dependencies declared in index.json.
@@ -153,7 +162,7 @@ else
   echo "Destination: $DEST"
   echo ""
   tmpdir=$(mktemp -d)
-  trap 'rm -rf "$tmpdir"' EXIT
+  trap 'rm -rf "$tmpdir"; [ -n "${INDEX_JSON_TMP:-}" ] && rm -f "$INDEX_JSON_TMP"' EXIT
 
   extract_paths=()
   for skill in "${SELECTED_SKILLS[@]}"; do
