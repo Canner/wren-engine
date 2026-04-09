@@ -148,15 +148,19 @@ class TestSingleModel:
         assert len(result) > 0
 
     def test_star_not_expanded(self):
-        """SELECT * should NOT be expanded — CTE body should use SELECT *."""
+        """SELECT * should pass star to wren-core so all columns are included."""
         rw = _make_rewriter(_SINGLE_MODEL_MANIFEST)
         result = rw.rewrite('SELECT * FROM "orders"')
         assert _has_cte(result, "orders")
         cte_body = _cte_body_sql(result, "orders")
         assert cte_body is not None
-        # The CTE body should contain SELECT * (from wren-core expanding
-        # the model), not individually listed columns.
-        assert ".*" not in cte_body or "*" in cte_body
+        # wren-core expands SELECT * into all model columns — verify every
+        # non-hidden, non-relationship column is present in the CTE body.
+        body_lower = cte_body.lower()
+        for col_name in ("o_orderkey", "o_custkey", "o_orderstatus", "order_cust_key"):
+            assert col_name.lower() in body_lower, (
+                f"Expected column {col_name!r} in CTE body: {cte_body}"
+            )
 
     def test_alias_resolution(self):
         rw = _make_rewriter(_SINGLE_MODEL_MANIFEST)
@@ -183,13 +187,20 @@ class TestMultiModel:
         assert _count_ctes(result) >= 2
 
     def test_qualified_star_not_expanded(self):
-        """SELECT table.* should NOT be expanded — CTE body should use SELECT *."""
+        """SELECT table.* should pass star to wren-core so all columns appear."""
         rw = _make_rewriter(_MULTI_MODEL_MANIFEST)
         result = rw.rewrite('SELECT "orders".* FROM "orders"')
         assert _has_cte(result, "orders")
+        cte_body = _cte_body_sql(result, "orders")
+        assert cte_body is not None
+        body_lower = cte_body.lower()
+        for col_name in ("o_orderkey", "o_custkey", "o_orderstatus", "order_cust_key"):
+            assert col_name.lower() in body_lower, (
+                f"Expected column {col_name!r} in CTE body: {cte_body}"
+            )
 
     def test_mixed_star_and_explicit_columns(self):
-        """orders.* should use star; customer should list only c_name."""
+        """orders.* should include all columns; customer CTE only referenced ones."""
         rw = _make_rewriter(_MULTI_MODEL_MANIFEST)
         result = rw.rewrite(
             'SELECT "orders".*, c.c_name '
@@ -197,6 +208,17 @@ class TestMultiModel:
         )
         assert _has_cte(result, "orders")
         assert _has_cte(result, "customer")
+        # orders used star → all columns present
+        orders_body = _cte_body_sql(result, "orders")
+        assert orders_body is not None
+        orders_lower = orders_body.lower()
+        for col_name in ("o_orderkey", "o_custkey", "o_orderstatus", "order_cust_key"):
+            assert col_name.lower() in orders_lower
+        # customer used explicit column → only c_name (not necessarily c_custkey
+        # in the select list, though it may appear in the subquery structure)
+        customer_body = _cte_body_sql(result, "customer")
+        assert customer_body is not None
+        assert "c_name" in customer_body.lower()
 
 
 # ---------------------------------------------------------------------------
