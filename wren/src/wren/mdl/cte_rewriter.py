@@ -119,8 +119,12 @@ class CTERewriter:
 
     def _collect_model_columns(
         self, ast: exp.Expression, user_cte_names: set[str]
-    ) -> dict[str, list[str]]:
+    ) -> dict[str, list[str] | None]:
         """Return ``{model_name: [col1, col2, ...]}`` for all referenced models.
+
+        A value of ``None`` means the model was referenced via ``SELECT *``
+        and should be passed as-is to ``transform_sql`` so that wren-core
+        can apply column-level access control (CLAC).
 
         Uses sqlglot's ``qualify_columns`` to fully resolve all column
         references (including ``SELECT *`` expansion and
@@ -131,6 +135,12 @@ class CTERewriter:
         copy = ast.copy()
         copy = qualify_tables(copy, dialect=self.dialect)
         copy = normalize_identifiers(copy, dialect=self.dialect)
+
+        # Detect models referenced via SELECT * BEFORE qualify_columns
+        # expands the star.  These will use SELECT * in transform_sql so
+        # that wren-core controls column visibility (CLAC).
+        star_models = self._detect_star_models(copy, user_cte_names)
+
         qualified = qualify_columns(
             copy,
             schema=self.schema,
@@ -161,17 +171,22 @@ class CTERewriter:
             if model_name:
                 used[model_name][col.name] = None
 
-        return {m: list(cols) for m, cols in used.items()}
+        return {m: None if m in star_models else list(cols) for m, cols in used.items()}
 
     # ------------------------------------------------------------------
     # CTE generation
     # ------------------------------------------------------------------
 
-    def _build_model_ctes(self, used_columns: dict[str, list[str]]) -> list[exp.CTE]:
+    def _build_model_ctes(
+        self, used_columns: dict[str, list[str] | None]
+    ) -> list[exp.CTE]:
         """Generate one CTE per model via wren-core transform_sql."""
         ctes: list[exp.CTE] = []
         for model_name, columns in used_columns.items():
-            if columns:
+            if columns is None:
+                # SELECT * — let wren-core handle column visibility (CLAC)
+                col_list = "*"
+            elif columns:
                 orig = self._col_orig_name.get(model_name, {})
                 resolved = [orig.get(c, c) for c in columns]
                 col_list = ", ".join(f'"{model_name}"."{c}"' for c in resolved)
@@ -217,6 +232,43 @@ class CTERewriter:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _detect_star_models(
+        self, ast: exp.Expression, user_cte_names: set[str]
+    ) -> set[str]:
+        """Detect models selected via ``*`` before column qualification.
+
+        A bare ``SELECT *`` marks all models; ``SELECT t.*`` marks only
+        the referenced model.
+        """
+        star_models: set[str] = set()
+        select = ast.find(exp.Select)
+        if not select:
+            return star_models
+
+        # Build alias → model mapping from tables in FROM/JOIN
+        alias_to_model: dict[str, str] = {}
+        for table in ast.find_all(exp.Table):
+            name = table.name
+            if name not in self.model_dict or name in user_cte_names:
+                continue
+            alias = table.alias or name
+            alias_to_model[alias] = name
+            alias_to_model[name] = name
+
+        for sel_expr in select.expressions:
+            if isinstance(sel_expr, exp.Star):
+                # Bare * → all models
+                star_models.update(alias_to_model.values())
+            elif isinstance(sel_expr, exp.Column) and isinstance(
+                sel_expr.this, exp.Star
+            ):
+                # table.* → specific model
+                table_ref = sel_expr.table
+                if table_ref and table_ref in alias_to_model:
+                    star_models.add(alias_to_model[table_ref])
+
+        return star_models
 
     @staticmethod
     def _collect_user_cte_names(ast: exp.Expression) -> set[str]:

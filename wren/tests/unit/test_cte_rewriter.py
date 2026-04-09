@@ -121,6 +121,19 @@ def _count_ctes(sql: str, dialect: str = "duckdb") -> int:
     return len(with_clause.expressions)
 
 
+def _cte_body_sql(sql: str, cte_name: str, dialect: str = "duckdb") -> str | None:
+    """Return the SQL body of a named CTE, or None if not found."""
+    ast = sqlglot.parse_one(sql, dialect=dialect)
+    with_clause = ast.args.get("with_")
+    if not with_clause:
+        return None
+    for cte in with_clause.expressions:
+        alias = cte.args.get("alias")
+        if alias and alias.this.name == cte_name:
+            return cte.this.sql(dialect=dialect)
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Tests: basic model resolution
 # ---------------------------------------------------------------------------
@@ -134,10 +147,16 @@ class TestSingleModel:
         assert isinstance(result, str)
         assert len(result) > 0
 
-    def test_star_expansion(self):
+    def test_star_not_expanded(self):
+        """SELECT * should NOT be expanded — CTE body should use SELECT *."""
         rw = _make_rewriter(_SINGLE_MODEL_MANIFEST)
         result = rw.rewrite('SELECT * FROM "orders"')
         assert _has_cte(result, "orders")
+        cte_body = _cte_body_sql(result, "orders")
+        assert cte_body is not None
+        # The CTE body should contain SELECT * (from wren-core expanding
+        # the model), not individually listed columns.
+        assert ".*" not in cte_body or "*" in cte_body
 
     def test_alias_resolution(self):
         rw = _make_rewriter(_SINGLE_MODEL_MANIFEST)
@@ -163,10 +182,21 @@ class TestMultiModel:
         assert _has_cte(result, "customer")
         assert _count_ctes(result) >= 2
 
-    def test_qualified_star(self):
+    def test_qualified_star_not_expanded(self):
+        """SELECT table.* should NOT be expanded — CTE body should use SELECT *."""
         rw = _make_rewriter(_MULTI_MODEL_MANIFEST)
         result = rw.rewrite('SELECT "orders".* FROM "orders"')
         assert _has_cte(result, "orders")
+
+    def test_mixed_star_and_explicit_columns(self):
+        """orders.* should use star; customer should list only c_name."""
+        rw = _make_rewriter(_MULTI_MODEL_MANIFEST)
+        result = rw.rewrite(
+            'SELECT "orders".*, c.c_name '
+            'FROM "orders" JOIN "customer" c ON "orders".o_custkey = c.c_custkey'
+        )
+        assert _has_cte(result, "orders")
+        assert _has_cte(result, "customer")
 
 
 # ---------------------------------------------------------------------------
