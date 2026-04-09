@@ -332,6 +332,190 @@ class MemoryStore:
             r.pop("vector", None)
         return results
 
+    # ── Query listing & management ───────────────────────────────────────
+
+    def list_queries(
+        self,
+        *,
+        source: str | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> tuple[list[dict], int]:
+        """List query_history pairs.
+
+        Returns (rows, total_count).  Rows include ``_row_id`` for use
+        with :meth:`forget_queries_by_ids`.  The ``_row_id`` is the
+        positional index in the *unfiltered* table so it can be passed
+        directly to :meth:`forget_queries_by_ids`.
+        """
+        if _QUERY_TABLE not in _table_names(self._db):
+            return [], 0
+
+        table = self._db.open_table(_QUERY_TABLE)
+        df = table.to_pandas()
+        # Ensure a clean 0-based index matching the unfiltered table.
+        df = df.reset_index(drop=True)
+        if source:
+            df = df[df["tags"] == f"source:{source}"]
+        total = len(df)
+        df = df.sort_values("created_at", ascending=False)
+        rows = df.iloc[offset : offset + limit]
+        results = rows.drop(columns=["vector"], errors="ignore").to_dict("records")
+        # Attach the *original* DataFrame index so forget_queries_by_ids
+        # deletes the correct rows even when a source filter is applied.
+        for idx, (orig_idx, _) in zip(range(len(results)), rows.iterrows()):
+            results[idx]["_row_id"] = orig_idx
+        return results, total
+
+    def count_queries_by_source(self, source: str) -> int:
+        """Return the number of query_history rows matching *source* tag."""
+        if _QUERY_TABLE not in _table_names(self._db):
+            return 0
+        table = self._db.open_table(_QUERY_TABLE)
+        df = table.to_pandas()
+        return int((df["tags"] == f"source:{source}").sum())
+
+    def forget_queries_by_ids(self, row_ids: list[int]) -> int:
+        """Delete rows at the given positional indices.  Returns deleted count."""
+        if _QUERY_TABLE not in _table_names(self._db):
+            return 0
+        table = self._db.open_table(_QUERY_TABLE)
+        df = table.to_pandas()
+        to_delete = [i for i in row_ids if 0 <= i < len(df)]
+        if not to_delete:
+            return 0
+        keep = df.drop(index=to_delete).reset_index(drop=True)
+        # Rebuild the table with remaining rows
+        self._db.drop_table(_QUERY_TABLE)
+        if len(keep) == 0:
+            return len(to_delete)
+        keep_arrow = pa.Table.from_pandas(keep, schema=self._query_table_schema())
+        self._db.create_table(
+            _QUERY_TABLE,
+            keep_arrow,
+            schema=self._query_table_schema(),
+        )
+        return len(to_delete)
+
+    def forget_queries_by_source(self, source: str) -> int:
+        """Delete all query_history rows matching *source* tag.  Returns deleted count."""
+        if _QUERY_TABLE not in _table_names(self._db):
+            return 0
+        table = self._db.open_table(_QUERY_TABLE)
+        where = f"tags = 'source:{_esc(source)}'"
+        before = table.count_rows()
+        table.delete(where)
+        return before - table.count_rows()
+
+    # ── Dump / Load ──────────────────────────────────────────────────────
+
+    def dump_queries(
+        self,
+        *,
+        source: str | None = None,
+    ) -> list[dict]:
+        """Export all query_history pairs (without vector column)."""
+        if _QUERY_TABLE not in _table_names(self._db):
+            return []
+        table = self._db.open_table(_QUERY_TABLE)
+        df = table.to_pandas()
+        if source:
+            df = df[df["tags"] == f"source:{source}"]
+        df = df.sort_values("created_at", ascending=True)
+        return df.drop(columns=["vector"], errors="ignore").to_dict("records")
+
+    def _existing_pairs_index(self) -> tuple[set[tuple[str, str]], dict[str, int]]:
+        """Build lookup indexes from existing query_history.
+
+        Returns
+        -------
+        (exact_set, nl_to_rowid)
+            *exact_set*: ``{(nl_query, sql_query)}`` for skip dedup.
+            *nl_to_rowid*: ``{nl_query: positional_index}`` for upsert.
+        """
+        if _QUERY_TABLE not in _table_names(self._db):
+            return set(), {}
+        table = self._db.open_table(_QUERY_TABLE)
+        df = table.to_pandas()
+        exact_set: set[tuple[str, str]] = set(zip(df["nl_query"], df["sql_query"]))
+        # Last occurrence wins when the same nl_query appears multiple times.
+        nl_to_rowid: dict[str, int] = dict(zip(df["nl_query"], df.index))
+        return exact_set, nl_to_rowid
+
+    def load_queries(
+        self,
+        pairs: list[dict],
+        *,
+        overwrite: bool = False,
+        upsert: bool = False,
+    ) -> dict[str, int]:
+        """Batch-import parsed YAML pairs into query_history.
+
+        Returns ``{"loaded": N, "skipped": M, "updated": U}``.
+        """
+        if overwrite:
+            sources = {p.get("source", "user") for p in pairs}
+            for src in sources:
+                self.forget_queries_by_source(src)
+            loaded = 0
+            for p in pairs:
+                tags = f"source:{p.get('source', 'user')}"
+                self.store_query(
+                    nl_query=p["nl"],
+                    sql_query=p["sql"],
+                    datasource=p.get("datasource"),
+                    tags=tags,
+                )
+                loaded += 1
+            return {"loaded": loaded, "skipped": 0, "updated": 0}
+
+        exact_set, nl_to_rowid = self._existing_pairs_index()
+
+        if upsert:
+            # Deduplicate input by nl_query (last occurrence wins).
+            seen_nl: dict[str, dict] = {}
+            for p in pairs:
+                seen_nl[p["nl"]] = p
+            deduped = list(seen_nl.values())
+
+            # Batch: collect IDs to delete, then delete once, then insert all.
+            ids_to_delete = []
+            for p in deduped:
+                if p["nl"] in nl_to_rowid:
+                    ids_to_delete.append(nl_to_rowid[p["nl"]])
+            if ids_to_delete:
+                self.forget_queries_by_ids(ids_to_delete)
+            updated = len(ids_to_delete)
+            for p in deduped:
+                tags = f"source:{p.get('source', 'user')}"
+                self.store_query(
+                    nl_query=p["nl"],
+                    sql_query=p["sql"],
+                    datasource=p.get("datasource"),
+                    tags=tags,
+                )
+            loaded = len(deduped) - updated
+            return {"loaded": loaded, "skipped": 0, "updated": updated}
+
+        # Default (skip duplicates)
+        loaded, skipped = 0, 0
+        for p in pairs:
+            nl, sql = p["nl"], p["sql"]
+            if (nl, sql) in exact_set:
+                skipped += 1
+                continue
+            loaded += 1
+            exact_set.add((nl, sql))  # prevent duplicates within input
+            tags = f"source:{p.get('source', 'user')}"
+            self.store_query(
+                nl_query=nl,
+                sql_query=sql,
+                datasource=p.get("datasource"),
+                tags=tags,
+            )
+
+        return {"loaded": loaded, "skipped": skipped, "updated": 0}
+
     # ── Housekeeping ──────────────────────────────────────────────────────
 
     def status(self) -> dict:

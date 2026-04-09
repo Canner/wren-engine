@@ -4,7 +4,7 @@ description: "Wren Engine CLI workflow guide for AI agents. Answer data question
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "2.1"
+  version: "2.2"
 ---
 
 # Wren Engine CLI — Agent Workflow Guide
@@ -67,11 +67,11 @@ Run `wren --version`. If the command is not found or errors:
    # Other datasources
    pip install "wren-engine[<datasource>]"
    ```
-   To also enable semantic memory and web UI (recommended):
+   To also enable semantic memory, interactive prompts, and web UI (recommended):
    ```bash
-   pip install "wren-engine[<datasource>,memory,ui]"
+   pip install "wren-engine[<datasource>,main]"
    # or for DuckDB:
-   pip install "wren-engine[memory,ui]"
+   pip install "wren-engine[main]"
    ```
 
 5. Verify: `wren --version`

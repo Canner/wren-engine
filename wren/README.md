@@ -26,7 +26,8 @@ pip install wren-engine[athena]      # Athena
 pip install wren-engine[oracle]      # Oracle
 pip install 'wren-engine[memory]'    # Schema & query memory (LanceDB)
 pip install 'wren-engine[ui]'        # Browser-based profile form (starlette + uvicorn)
-pip install 'wren-engine[all]'       # All connectors + memory + ui
+pip install 'wren-engine[main]'      # memory + interactive prompts + ui
+pip install 'wren-engine[all]'       # All connectors + main
 ```
 
 Requires Python 3.11+.

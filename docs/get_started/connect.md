@@ -9,7 +9,7 @@ This guide walks you through connecting Wren Engine to your own database — fro
 Each database requires its own connector. Install the extra for your data source:
 
 ```bash
-pip install "wren-engine[postgres,ui,memory]"
+pip install "wren-engine[postgres,main]"
 ```
 
 Replace `postgres` with your data source (see [supported data sources](./installation.md#data-source-extras) for the full list). If you already installed with the correct extra, skip this step.

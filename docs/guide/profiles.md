@@ -63,7 +63,7 @@ wren profile add my-db --ui
 Opens a browser form with data-source-specific fields. Select the data source type, fill in the fields, and submit. Requires the `ui` extra:
 
 ```bash
-pip install "wren-engine[ui]"
+pip install "wren-engine[main]"   # recommended: includes ui + memory + interactive
 ```
 
 ### Option B: Interactive CLI
@@ -142,7 +142,7 @@ If no profile is active when you add the first one, it becomes active automatica
 Install the extra for your data source before creating a profile:
 
 ```bash
-pip install "wren-engine[postgres,ui,memory]"
+pip install "wren-engine[postgres,main]"
 ```
 
 ## Profile vs project
