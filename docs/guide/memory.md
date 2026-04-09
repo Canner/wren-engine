@@ -24,10 +24,11 @@ Both collections live in `<project>/.wren/memory/` (or `~/.wren/memory/` outside
 
 ## Installation
 
-The memory system requires the `memory` extra:
+The memory system requires the `memory` extra (included in `main`):
 
 ```bash
-pip install "wren-engine[memory]"
+pip install "wren-engine[main]"    # recommended: memory + interactive + ui
+pip install "wren-engine[memory]"  # memory only
 ```
 
 ## Indexing the schema
@@ -165,10 +166,11 @@ wren memory forget --id 3 --id 7 --id 12 --force
 wren memory forget --source seed --force
 ```
 
-The interactive mode requires the `interactive` extra:
+The interactive mode requires the `interactive` extra (included in `main`):
 
 ```bash
-pip install "wren-engine[interactive]"
+pip install "wren-engine[main]"          # recommended
+pip install "wren-engine[interactive]"   # interactive only
 ```
 
 If InquirerPy is not installed, the command prints a hint and suggests using `--id` mode instead.
