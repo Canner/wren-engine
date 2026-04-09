@@ -77,7 +77,7 @@ Both flat and MCP/web envelope formats are accepted:
 LanceDB-backed semantic memory for MDL schema search and NL→SQL retrieval. Requires the `memory` extra:
 
 ```bash
-pip install 'wren-engine[memory]'
+pip install 'wren-engine[main]'   # includes memory, interactive, ui
 ```
 
 All `memory` subcommands accept `--path DIR` to override the default storage location (`~/.wren/memory/`).

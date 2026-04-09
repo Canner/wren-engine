@@ -61,15 +61,14 @@ pwd
 Install `wren-engine` with UI support and memory system:
 
 ```bash
-pip install "wren-engine[ui,memory]"
+pip install "wren-engine[main]"
 ```
 
-DuckDB is included by default — no extra needed. For other data sources, install the corresponding extra (e.g. `pip install "wren-engine[postgres,ui,memory]"`).
+DuckDB is included by default — no extra needed. For other data sources, install the corresponding extra (e.g. `pip install "wren-engine[postgres,main]"`).
 
 > **Available extras:**
 > - `postgres`, `mysql`, `bigquery`, `snowflake`, `clickhouse`, `trino`, `mssql`, `databricks`, `redshift`, `athena`, `oracle`, `spark` — data source connectors
-> - `ui` — browser-based profile configuration UI
-> - `memory` — LanceDB-backed memory system for context retrieval and NL-SQL recall
+> - `main` — memory + interactive prompts + browser-based profile UI
 
 Verify the installation:
 

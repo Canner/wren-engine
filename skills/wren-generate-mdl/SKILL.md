@@ -4,7 +4,7 @@ description: "Generate a Wren MDL project by exploring a database with available
 license: Apache-2.0
 metadata:
   author: wren-engine
-  version: "2.1"
+  version: "2.2"
 ---
 
 # Generate Wren MDL — CLI Agent Workflow
