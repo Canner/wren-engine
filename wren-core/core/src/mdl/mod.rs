@@ -401,7 +401,10 @@ pub fn create_wren_ctx(
     SessionContext::new_with_state(builder.build())
 }
 
-/// Transform the SQL based on the MDL
+/// Transform the SQL based on the MDL (sync wrapper, requires multi-thread tokio runtime).
+///
+/// Not available on WASM — use [`transform_sql_with_ctx`] directly in async context.
+#[cfg(feature = "multi-thread")]
 pub fn transform_sql(
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
     remote_functions: &[RemoteFunction],

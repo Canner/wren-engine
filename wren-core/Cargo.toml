@@ -14,7 +14,7 @@ version = "0.1.0"
 
 [workspace.dependencies]
 async-trait = "0.1.89"
-datafusion = { version = "53", features = [
+datafusion = { version = "53", default-features = false, features = [
     "nested_expressions",
     "crypto_expressions",
     "datetime_expressions",
@@ -31,6 +31,6 @@ log = { version = "0.4.14" }
 serde = { version = "1.0.201", features = ["derive", "rc"] }
 serde_json = { version = "1.0.149" }
 serde_with = { version = "3.18.0" }
-tokio = { version = "1.46", features = ["rt", "rt-multi-thread", "macros"] }
+tokio = { version = "1.46", features = ["rt", "macros"] }
 wren-core = { path = "core" }
 wren-core-base = { path = "../wren-core-base" }
