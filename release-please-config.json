@@ -1,0 +1,33 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "separate-pull-requests": true,
+  "include-component-in-tag": true,
+  "packages": {
+    "ibis-server": {
+      "component": "ibis-server",
+      "release-type": "python",
+      "bump-minor-pre-major": true
+    },
+    "mcp-server": {
+      "component": "mcp-server",
+      "release-type": "python",
+      "bump-minor-pre-major": true
+    },
+    "wren-core-py": {
+      "component": "wren-core-py",
+      "release-type": "python",
+      "bump-minor-pre-major": true,
+      "extra-files": [
+        "Cargo.toml"
+      ]
+    },
+    "wren": {
+      "component": "wren",
+      "release-type": "python",
+      "bump-minor-pre-major": true,
+      "extra-files": [
+        "src/wren/__init__.py"
+      ]
+    }
+  }
+}

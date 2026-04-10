@@ -1,20 +1,25 @@
 name: Publish wren-core-py to PyPI
 
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "Version number (e.g. 0.2.0)"
+        required: true
+        type: string
+      tag_name:
+        description: "Git tag to checkout (e.g. wren-core-py-v0.2.0)"
+        required: true
+        type: string
+      pypi_target:
+        description: "Publish target (pypi or testpypi)"
+        required: false
+        type: string
+        default: "pypi"
+
 permissions:
   contents: read
-  id-token: write  # Required for trusted publishing (OIDC)
-
-on:
-  workflow_dispatch:
-    inputs:
-      target:
-        description: "Publish target"
-        required: true
-        default: "testpypi"
-        type: choice
-        options:
-          - testpypi
-          - pypi
+  id-token: write
 
 jobs:
   build-wheels:
@@ -24,25 +29,24 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Linux x86_64
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-          # TODO: Linux aarch64 disabled — ring 0.17+ cross-compilation fails (__ARM_ARCH undefined)
-          # Ref: https://github.com/PyO3/maturin-action/issues/222
-          # - os: ubuntu-24.04-arm
-          #   target: aarch64-unknown-linux-gnu
-          #   manylinux: 2_28
-          # macOS x86_64
           - os: macos-15-intel
             target: x86_64-apple-darwin
-          # macOS arm64
           - os: macos-15
             target: aarch64-apple-darwin
-          # Windows x86_64
           - os: windows-latest
             target: x86_64-pc-windows-msvc
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag_name }}
+      - name: Set version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" wren-core-py/Cargo.toml
+          sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" wren-core-py/pyproject.toml
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -64,6 +68,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag_name }}
+      - name: Set version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" wren-core-py/Cargo.toml
+          sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" wren-core-py/pyproject.toml
       - name: Build sdist
         uses: PyO3/maturin-action@v1
         with:
@@ -77,24 +89,22 @@ jobs:
           path: wren-core-py/dist/*.tar.gz
 
   publish:
-    name: Publish to ${{ github.event.inputs.target || 'testpypi' }}
+    name: Publish to ${{ inputs.pypi_target }}
     needs: [build-wheels, build-sdist]
     runs-on: ubuntu-latest
     environment:
-      name: ${{ github.event.inputs.target || 'testpypi' }}
-      url: ${{ github.event.inputs.target == 'pypi' && 'https://pypi.org/project/wren-core-py/' || 'https://test.pypi.org/project/wren-core-py/' }}
+      name: ${{ inputs.pypi_target }}
+      url: ${{ inputs.pypi_target == 'pypi' && 'https://pypi.org/project/wren-core-py/' || 'https://test.pypi.org/project/wren-core-py/' }}
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: dist
           merge-multiple: true
-
       - name: List artifacts
         run: ls -lhR dist/
-
-      - name: Publish to ${{ github.event.inputs.target }}
+      - name: Publish
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          repository-url: ${{ github.event.inputs.target == 'testpypi' && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}
+          repository-url: ${{ inputs.pypi_target == 'testpypi' && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}
           packages-dir: dist/

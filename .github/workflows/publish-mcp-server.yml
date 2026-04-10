@@ -1,0 +1,54 @@
+name: Publish mcp-server
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "Version number (e.g. 0.25.0 or 0.25.0-rc.1)"
+        required: true
+        type: string
+      tag_name:
+        description: "Git tag to checkout (e.g. mcp-server-v0.25.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify mcp-server version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag_name }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Verify version matches tag
+        working-directory: mcp-server
+        env:
+          EXPECTED_VERSION: ${{ inputs.version }}
+        run: |
+          TOML_VERSION=$(python -c "
+          import re
+          with open('pyproject.toml') as f:
+              content = f.read()
+          match = re.search(r'^version\s*=\s*\"(.+?)\"', content, re.MULTILINE)
+          print(match.group(1))
+          ")
+          echo "pyproject.toml version: $TOML_VERSION"
+          echo "Expected version: $EXPECTED_VERSION"
+          if [ "$TOML_VERSION" = "$EXPECTED_VERSION" ]; then
+            echo "Version verified successfully"
+          else
+            # For RC releases, version files aren't bumped — verify base version is consistent
+            BASE_VERSION=$(echo "$EXPECTED_VERSION" | sed 's/-rc\..*//')
+            if [ "$TOML_VERSION" = "$BASE_VERSION" ]; then
+              echo "::notice::RC release — pyproject.toml has base version $TOML_VERSION, RC version is $EXPECTED_VERSION"
+            else
+              echo "::error::Version mismatch: pyproject.toml has $TOML_VERSION but expected $EXPECTED_VERSION (base: $BASE_VERSION)"
+              exit 1
+            fi
+          fi
