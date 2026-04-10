@@ -18,9 +18,7 @@ on:
         type: string
 
 permissions:
-  contents: write
-  packages: write
-  id-token: write
+  contents: read
 
 concurrency:
   group: rc-release-${{ inputs.component }}
@@ -28,6 +26,8 @@ concurrency:
 jobs:
   create-rc:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     outputs:
       version: ${{ steps.rc.outputs.version }}
       tag_name: ${{ steps.rc.outputs.tag_name }}
@@ -35,7 +35,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
+      - name: Ensure running on main
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::RC releases must be dispatched from the main branch"
+            exit 1
+          fi
       - name: Determine RC version
         id: rc
         env:
@@ -51,7 +58,10 @@ jobs:
           ")
 
           if [ -n "$RC_VERSION_INPUT" ]; then
-            if ! [[ "$RC_VERSION_INPUT" =~ ^${BASE_VERSION}-rc\.[1-9][0-9]*$ ]]; then
+            # Validate: must start with BASE_VERSION-rc. and end with a positive integer
+            EXPECTED_PREFIX="${BASE_VERSION}-rc."
+            SUFFIX="${RC_VERSION_INPUT#"$EXPECTED_PREFIX"}"
+            if [ "$SUFFIX" = "$RC_VERSION_INPUT" ] || ! [[ "$SUFFIX" =~ ^[1-9][0-9]*$ ]]; then
               echo "::error::Invalid rc_version: $RC_VERSION_INPUT (expected: ${BASE_VERSION}-rc.N)"
               exit 1
             fi
@@ -85,14 +95,6 @@ jobs:
         run: |
           git tag "$TAG_NAME"
           git push origin "$TAG_NAME"
-
-      - name: Create GitHub pre-release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.rc.outputs.tag_name }}
-          name: "${{ inputs.component }} ${{ steps.rc.outputs.version }}"
-          prerelease: true
-          generate_release_notes: true
 
   publish-ibis-server:
     needs: create-rc
@@ -135,3 +137,18 @@ jobs:
     permissions:
       contents: read
       id-token: write
+
+  create-release:
+    needs: [create-rc, publish-ibis-server, publish-mcp-server, publish-wren-core-py, publish-wren]
+    if: always() && needs.create-rc.result == 'success' && !contains(needs.*.result, 'failure')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Create GitHub pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.create-rc.outputs.tag_name }}
+          name: "${{ inputs.component }} ${{ needs.create-rc.outputs.version }}"
+          prerelease: true
+          generate_release_notes: true
