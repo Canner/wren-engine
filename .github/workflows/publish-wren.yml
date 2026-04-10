@@ -29,15 +29,23 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.tag_name }}
-      - name: Set version
-        env:
-          VERSION: ${{ inputs.version }}
-        run: |
-          sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" wren/pyproject.toml
-          sed -i "s/^__version__ = \".*\"/__version__ = \"${VERSION}\"/" wren/src/wren/__init__.py
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - name: Set version
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: python
+        run: |
+          import re, os
+          version = os.environ["VERSION"]
+          for path, pattern in [
+              ("wren/pyproject.toml", r'^(version\s*=\s*)".*?"'),
+              ("wren/src/wren/__init__.py", r'^(__version__\s*=\s*)".*?"'),
+          ]:
+              text = open(path).read()
+              text = re.sub(pattern, rf'\1"{version}"', text, count=1, flags=re.MULTILINE)
+              open(path, "w").write(text)
       - name: Install build tool
         run: pip install build
       - name: Build sdist and wheel
