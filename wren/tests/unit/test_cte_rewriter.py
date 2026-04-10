@@ -121,6 +121,19 @@ def _count_ctes(sql: str, dialect: str = "duckdb") -> int:
     return len(with_clause.expressions)
 
 
+def _cte_body_sql(sql: str, cte_name: str, dialect: str = "duckdb") -> str | None:
+    """Return the SQL body of a named CTE, or None if not found."""
+    ast = sqlglot.parse_one(sql, dialect=dialect)
+    with_clause = ast.args.get("with_")
+    if not with_clause:
+        return None
+    for cte in with_clause.expressions:
+        alias = cte.args.get("alias")
+        if alias and alias.this.name == cte_name:
+            return cte.this.sql(dialect=dialect)
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Tests: basic model resolution
 # ---------------------------------------------------------------------------
@@ -134,10 +147,20 @@ class TestSingleModel:
         assert isinstance(result, str)
         assert len(result) > 0
 
-    def test_star_expansion(self):
+    def test_star_not_expanded(self):
+        """SELECT * should pass star to wren-core so all columns are included."""
         rw = _make_rewriter(_SINGLE_MODEL_MANIFEST)
         result = rw.rewrite('SELECT * FROM "orders"')
         assert _has_cte(result, "orders")
+        cte_body = _cte_body_sql(result, "orders")
+        assert cte_body is not None
+        # wren-core expands SELECT * into all model columns — verify every
+        # non-hidden, non-relationship column is present in the CTE body.
+        body_lower = cte_body.lower()
+        for col_name in ("o_orderkey", "o_custkey", "o_orderstatus", "order_cust_key"):
+            assert col_name.lower() in body_lower, (
+                f"Expected column {col_name!r} in CTE body: {cte_body}"
+            )
 
     def test_alias_resolution(self):
         rw = _make_rewriter(_SINGLE_MODEL_MANIFEST)
@@ -163,10 +186,39 @@ class TestMultiModel:
         assert _has_cte(result, "customer")
         assert _count_ctes(result) >= 2
 
-    def test_qualified_star(self):
+    def test_qualified_star_not_expanded(self):
+        """SELECT table.* should pass star to wren-core so all columns appear."""
         rw = _make_rewriter(_MULTI_MODEL_MANIFEST)
         result = rw.rewrite('SELECT "orders".* FROM "orders"')
         assert _has_cte(result, "orders")
+        cte_body = _cte_body_sql(result, "orders")
+        assert cte_body is not None
+        body_lower = cte_body.lower()
+        for col_name in ("o_orderkey", "o_custkey", "o_orderstatus", "order_cust_key"):
+            assert col_name.lower() in body_lower, (
+                f"Expected column {col_name!r} in CTE body: {cte_body}"
+            )
+
+    def test_mixed_star_and_explicit_columns(self):
+        """orders.* should include all columns; customer CTE only referenced ones."""
+        rw = _make_rewriter(_MULTI_MODEL_MANIFEST)
+        result = rw.rewrite(
+            'SELECT "orders".*, c.c_name '
+            'FROM "orders" JOIN "customer" c ON "orders".o_custkey = c.c_custkey'
+        )
+        assert _has_cte(result, "orders")
+        assert _has_cte(result, "customer")
+        # orders used star → all columns present
+        orders_body = _cte_body_sql(result, "orders")
+        assert orders_body is not None
+        orders_lower = orders_body.lower()
+        for col_name in ("o_orderkey", "o_custkey", "o_orderstatus", "order_cust_key"):
+            assert col_name.lower() in orders_lower
+        # customer used explicit column → only c_name (not necessarily c_custkey
+        # in the select list, though it may appear in the subquery structure)
+        customer_body = _cte_body_sql(result, "customer")
+        assert customer_body is not None
+        assert "c_name" in customer_body.lower()
 
 
 # ---------------------------------------------------------------------------
