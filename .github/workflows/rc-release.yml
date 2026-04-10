@@ -140,7 +140,7 @@ jobs:
 
   create-release:
     needs: [create-rc, publish-ibis-server, publish-mcp-server, publish-wren-core-py, publish-wren]
-    if: always() && needs.create-rc.result == 'success' && !contains(needs.*.result, 'failure')
+    if: always() && needs.create-rc.result == 'success' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
     runs-on: ubuntu-latest
     permissions:
       contents: write
