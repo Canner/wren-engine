@@ -3522,6 +3522,15 @@ dev = [
 interactive = [
     { name = "inquirerpy" },
 ]
+main = [
+    { name = "inquirerpy" },
+    { name = "jinja2" },
+    { name = "lancedb" },
+    { name = "python-multipart" },
+    { name = "sentence-transformers" },
+    { name = "starlette" },
+    { name = "uvicorn" },
+]
 memory = [
     { name = "lancedb" },
     { name = "sentence-transformers" },
@@ -3590,9 +3599,12 @@ requires-dist = [
     { name = "ibis-framework", extras = ["trino"], marker = "extra == 'trino'" },
     { name = "inquirerpy", marker = "extra == 'all'", specifier = ">=0.3.4" },
     { name = "inquirerpy", marker = "extra == 'interactive'", specifier = ">=0.3.4" },
+    { name = "inquirerpy", marker = "extra == 'main'", specifier = ">=0.3.4" },
     { name = "jinja2", marker = "extra == 'all'", specifier = ">=3.1" },
+    { name = "jinja2", marker = "extra == 'main'", specifier = ">=3.1" },
     { name = "jinja2", marker = "extra == 'ui'", specifier = ">=3.1" },
     { name = "lancedb", marker = "extra == 'all'", specifier = ">=0.6" },
+    { name = "lancedb", marker = "extra == 'main'", specifier = ">=0.6" },
     { name = "lancedb", marker = "extra == 'memory'", specifier = ">=0.6" },
     { name = "loguru", specifier = ">=0.7" },
     { name = "mysqlclient", marker = "extra == 'all'", specifier = ">=2.2" },
@@ -3613,6 +3625,7 @@ requires-dist = [
     { name = "pyspark", marker = "extra == 'spark'", specifier = ">=3.5" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "python-multipart", marker = "extra == 'all'", specifier = ">=0.0.9" },
+    { name = "python-multipart", marker = "extra == 'main'", specifier = ">=0.0.9" },
     { name = "python-multipart", marker = "extra == 'ui'", specifier = ">=0.0.9" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "redshift-connector", marker = "extra == 'all'" },
@@ -3620,19 +3633,22 @@ requires-dist = [
     { name = "requests", specifier = ">=2.33.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4" },
     { name = "sentence-transformers", marker = "extra == 'all'", specifier = ">=2.2" },
+    { name = "sentence-transformers", marker = "extra == 'main'", specifier = ">=2.2" },
     { name = "sentence-transformers", marker = "extra == 'memory'", specifier = ">=2.2" },
     { name = "sqlglot", specifier = ">=27" },
     { name = "starlette", marker = "extra == 'all'", specifier = ">=0.37" },
+    { name = "starlette", marker = "extra == 'main'", specifier = ">=0.37" },
     { name = "starlette", marker = "extra == 'ui'", specifier = ">=0.37" },
     { name = "testcontainers", extras = ["mysql", "postgres"], marker = "extra == 'dev'", specifier = ">=4" },
     { name = "trino", marker = "extra == 'all'", specifier = ">=0.321" },
     { name = "trino", marker = "extra == 'trino'", specifier = ">=0.321" },
     { name = "typer", specifier = ">=0.12" },
     { name = "uvicorn", marker = "extra == 'all'", specifier = ">=0.29" },
+    { name = "uvicorn", marker = "extra == 'main'", specifier = ">=0.29" },
     { name = "uvicorn", marker = "extra == 'ui'", specifier = ">=0.29" },
     { name = "wren-core-py", specifier = ">=0.1" },
 ]
-provides-extras = ["all", "athena", "bigquery", "clickhouse", "databricks", "dev", "interactive", "memory", "mssql", "mysql", "oracle", "postgres", "redshift", "snowflake", "spark", "trino", "ui"]
+provides-extras = ["all", "athena", "bigquery", "clickhouse", "databricks", "dev", "interactive", "main", "memory", "mssql", "mysql", "oracle", "postgres", "redshift", "snowflake", "spark", "trino", "ui"]
 
 [[package]]
 name = "zstandard"
