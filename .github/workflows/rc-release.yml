@@ -51,8 +51,8 @@ jobs:
           ")
 
           if [ -n "$RC_VERSION_INPUT" ]; then
-            if ! [[ "$RC_VERSION_INPUT" =~ ^[0-9]+\.[0-9]+\.[0-9]+-rc\.[1-9][0-9]*$ ]]; then
-              echo "::error::Invalid rc_version format: $RC_VERSION_INPUT (expected: X.Y.Z-rc.N)"
+            if ! [[ "$RC_VERSION_INPUT" =~ ^${BASE_VERSION}-rc\.[1-9][0-9]*$ ]]; then
+              echo "::error::Invalid rc_version: $RC_VERSION_INPUT (expected: ${BASE_VERSION}-rc.N)"
               exit 1
             fi
             VERSION="$RC_VERSION_INPUT"
