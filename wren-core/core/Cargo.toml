@@ -29,6 +29,8 @@ datafusion = { workspace = true, features = [
     "regex_expressions",
     "unicode_expressions",
 ] }
+
+datafusion-session = { workspace = true }
 env_logger = { workspace = true }
 itertools = "0.14.0"
 log = { workspace = true }
