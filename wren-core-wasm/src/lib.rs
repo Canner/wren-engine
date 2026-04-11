@@ -184,35 +184,84 @@ impl WrenEngine {
         let default_catalog = "datafusion";
         let default_schema = "public";
 
-        for model in &manifest.models {
-            let table_ref_str = model.table_reference();
-            if table_ref_str.is_empty() {
-                continue;
-            }
+        // Determine data loading strategy based on data source and tableReference format.
+        //
+        // URL table mode (DataFusion reads Parquet directly via HTTP range requests):
+        //   - local_file with http(s):// tableReferences (rewritten by JS for WASM)
+        //   - s3, gcs, minio with native URLs (s3://, gs://, etc.)
+        //
+        // Pre-register mode (tables already loaded via registerParquet/registerJson):
+        //   - local_file with local paths (not accessible in WASM, must registerParquet first)
+        //   - no dataSource / other data sources (not supported for URL table in WASM)
+        let use_url_tables = manifest.models.iter().any(|m| {
+            let raw = m.table_reference();
+            let url_str = raw.trim_matches('"');
+            // Has a URL scheme → URL table mode
+            url::Url::parse(url_str).is_ok()
+        });
 
-            // Parse the table reference to extract the table name
-            let table_ref = datafusion::sql::TableReference::from(table_ref_str);
-            let table_name = table_ref.table();
-
-            // Look up the physical table in the default catalog/schema
-            if let Some(catalog_provider) = self.ctx.catalog(default_catalog) {
-                if let Some(schema_provider) = catalog_provider.schema(default_schema) {
-                    if let Ok(Some(table)) = schema_provider.table(table_name).await {
-                        // Register with fully qualified name so ModelGenerationRule can find it
-                        let qualified_name = format!(
-                            "{}.{}.{}",
-                            default_catalog, default_schema, table_name
-                        );
-                        register_tables.insert(qualified_name, table);
+        let analyzed_mdl = if use_url_tables {
+                // URL table mode: register object stores for each URL scheme+origin,
+                // then DataFusion's ListingTable reads Parquet via range requests.
+                let mut registered_origins = std::collections::HashSet::new();
+                for model in &manifest.models {
+                    let raw = model.table_reference();
+                    let url_str = raw.trim_matches('"');
+                    if let Ok(parsed) = url::Url::parse(url_str) {
+                        let scheme = parsed.scheme();
+                        // Only HTTP(S) needs explicit HttpStore registration.
+                        // S3/GCS/MinIO stores should be pre-registered or use
+                        // DataFusion's built-in object_store integration.
+                        if scheme == "http" || scheme == "https" {
+                            let origin = parsed.origin().unicode_serialization();
+                            if registered_origins.insert(origin.clone()) {
+                                let http_store = object_store::http::HttpBuilder::new()
+                                    .with_url(&origin)
+                                    .build()
+                                    .map_err(|e| JsError::new(&format!("Failed to create HTTP store for {origin}: {e}")))?;
+                                let base_url = url::Url::parse(&format!("{origin}/"))
+                                    .map_err(|e| JsError::new(&format!("Invalid base URL: {e}")))?;
+                                self.ctx.register_object_store(&base_url, Arc::new(http_store));
+                            }
+                        }
                     }
                 }
-            }
-        }
 
-        let analyzed_mdl = Arc::new(
-            AnalyzedWrenMDL::analyze_with_tables(manifest, register_tables)
-                .map_err(|e| JsError::new(&format!("Failed to analyze MDL: {e}")))?,
-        );
+                Arc::new(
+                    AnalyzedWrenMDL::analyze_with_url_tables(manifest, &self.ctx).await
+                        .map_err(|e| JsError::new(&format!("Failed to analyze MDL with URL tables: {e}")))?,
+                )
+        } else {
+                for model in &manifest.models {
+                    let table_ref_str = model.table_reference();
+                    if table_ref_str.is_empty() {
+                        continue;
+                    }
+
+                    // Parse the table reference to extract the table name
+                    let table_ref = datafusion::sql::TableReference::from(table_ref_str);
+                    let table_name = table_ref.table();
+
+                    // Look up the physical table in the default catalog/schema
+                    if let Some(catalog_provider) = self.ctx.catalog(default_catalog) {
+                        if let Some(schema_provider) = catalog_provider.schema(default_schema) {
+                            if let Ok(Some(table)) = schema_provider.table(table_name).await {
+                                // Register with fully qualified name so ModelGenerationRule can find it
+                                let qualified_name = format!(
+                                    "{}.{}.{}",
+                                    default_catalog, default_schema, table_name
+                                );
+                                register_tables.insert(qualified_name, table);
+                            }
+                        }
+                    }
+                }
+
+                Arc::new(
+                    AnalyzedWrenMDL::analyze_with_tables(manifest, register_tables)
+                        .map_err(|e| JsError::new(&format!("Failed to analyze MDL: {e}")))?,
+                )
+        };
 
         let properties: Arc<HashMap<String, Option<String>>> =
             Arc::new(HashMap::new());
