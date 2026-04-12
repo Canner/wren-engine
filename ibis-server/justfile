@@ -13,7 +13,6 @@ install-core:
 
 install *args:
     poetry install {{ args }}
-    just install-core
 
 pre-commit-install:
     poetry run pre-commit install

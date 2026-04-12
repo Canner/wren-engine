@@ -27,7 +27,6 @@ use datafusion::optimizer::eliminate_duplicated_expr::EliminateDuplicatedExpr;
 use datafusion::optimizer::eliminate_filter::EliminateFilter;
 use datafusion::optimizer::eliminate_group_by_constant::EliminateGroupByConstant;
 use datafusion::optimizer::eliminate_join::EliminateJoin;
-use datafusion::optimizer::eliminate_one_union::EliminateOneUnion;
 use datafusion::optimizer::eliminate_outer_join::EliminateOuterJoin;
 use datafusion::optimizer::extract_equijoin_predicate::ExtractEquijoinPredicate;
 use datafusion::optimizer::filter_null_join_keys::FilterNullJoinKeys;
@@ -252,8 +251,10 @@ fn optimize_rule_for_unparsing() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
         // Arc::new(CommonSubexprEliminate::new()),
         // Arc::new(EliminateLimit::new()),
         Arc::new(PropagateEmptyRelation::new()),
-        // Must be after PropagateEmptyRelation
-        Arc::new(EliminateOneUnion::new()),
+        // OptimizeUnions replaces both EliminateNestedUnion and EliminateOneUnion in DataFusion 53,
+        // but it also flattens nested unions into multi-input unions which the unparser cannot handle.
+        // See https://github.com/apache/datafusion/issues/13621 for details.
+        // Arc::new(OptimizeUnions::new()),
         Arc::new(FilterNullJoinKeys::default()),
         Arc::new(EliminateOuterJoin::new()),
         // Filters can't be pushed down past Limits, we should do PushDownFilter after PushDownLimit

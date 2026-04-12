@@ -110,10 +110,8 @@ pub fn create_wren_calculated_field_expr(
     // Remove all relationship fields from the expression. Only keep the target expression and its source table.
     let expr = column_rf.column.expression.clone().unwrap();
     let session_state = session_state.read();
-    let mut expr = session_state.sql_to_expr(
-        &expr,
-        session_state.config_options().sql_parser.dialect.as_str(),
-    )?;
+    let mut expr = session_state
+        .sql_to_expr(&expr, &session_state.config_options().sql_parser.dialect)?;
     let _ = visit_expressions_mut(&mut expr, |e| {
         if let CompoundIdentifier(ids) = e {
             let name_size = ids.len();
@@ -177,10 +175,8 @@ fn qualified_expr(
     schema: &DFSchema,
     session_state: &SessionState,
 ) -> Result<String> {
-    let mut expr = session_state.sql_to_expr(
-        expr,
-        session_state.config_options().sql_parser.dialect.as_str(),
-    )?;
+    let mut expr = session_state
+        .sql_to_expr(expr, &session_state.config_options().sql_parser.dialect)?;
     let _ = visit_expressions_mut(&mut expr, |e| {
         if let Identifier(id) = e {
             if let Ok((Some(qualifier), _)) =
@@ -225,7 +221,7 @@ pub fn to_remote_field(
         let session_state = session_state.read();
         let expr = session_state.sql_to_expr(
             column.expression().unwrap(),
-            session_state.config_options().sql_parser.dialect.as_str(),
+            &session_state.config_options().sql_parser.dialect,
         )?;
         let columns = collect_columns(expr);
         columns

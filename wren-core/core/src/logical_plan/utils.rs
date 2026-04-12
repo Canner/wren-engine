@@ -385,6 +385,7 @@ pub fn expr_to_columns(
             | Expr::ScalarSubquery(_)
             | Expr::Wildcard { .. }
             | Expr::Placeholder(_) => {}
+            Expr::SetComparison(_) => {}
         }
         Ok(TreeNodeRecursion::Continue)
     })
