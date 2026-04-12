@@ -12,7 +12,7 @@ use datafusion::logical_expr::{
     ScalarUDFImpl, Signature, TypeSignature, Volatility,
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct ToCharFunc {
     signature: Signature,
     aliases: Vec<String>,

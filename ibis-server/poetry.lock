@@ -8430,6 +8430,64 @@ files = [
 dev = ["pytest", "setuptools"]
 
 [[package]]
+name = "wren-core-py"
+version = "0.1.0"
+description = "Python bindings for Wren Engine semantic layer (wren-core)"
+optional = false
+python-versions = ">=3.11"
+groups = ["main"]
+files = [
+    {file = "wren_core_py-0.1.0-cp311-abi3-macosx_11_0_arm64.whl", hash = "sha256:51624141000c008cead7b330883d39fd36d2a1ffc10e18aedcf1a938df2ced6f"},
+    {file = "wren_core_py-0.1.0.tar.gz", hash = "sha256:e1f85e4a76cd753850ab9750121c85788eff85ef9497481ac8c660bf92363e80"},
+]
+
+[[package]]
+name = "wren-engine"
+version = "0.1.0"
+description = "Wren Engine CLI and Python SDK — semantic SQL layer for 20+ data sources"
+optional = false
+python-versions = ">=3.11"
+groups = ["main"]
+files = [
+    {file = "wren_engine-0.1.0-py3-none-any.whl", hash = "sha256:411c014337ec190064ca3280c7f0717e4477c58a315c8580345c570c77db4d05"},
+    {file = "wren_engine-0.1.0.tar.gz", hash = "sha256:fd6f9e26b80527a272baa2ca7dadcab71ef61a9d016ab542675f8873403f2bd3"},
+]
+
+[package.dependencies]
+boto3 = ">=1.26"
+duckdb = ">=1.0"
+ibis-framework = ">=10"
+loguru = ">=0.7"
+opendal = ">=0.45"
+pandas = ">=2"
+pyarrow = ">=14"
+pyarrow-hotfix = ">=0.6"
+pyasn1 = ">=0.6.3"
+pydantic = ">=2"
+pyopenssl = ">=26.0.0"
+requests = ">=2.33.0"
+sqlglot = ">=27"
+typer = ">=0.12"
+wren-core-py = ">=0.1"
+
+[package.extras]
+all = ["databricks-sdk", "databricks-sql-connector", "google-auth", "ibis-framework[athena]", "ibis-framework[bigquery]", "ibis-framework[clickhouse]", "ibis-framework[mssql]", "ibis-framework[mysql]", "ibis-framework[postgres]", "ibis-framework[snowflake]", "ibis-framework[trino]", "lancedb (>=0.6)", "mysqlclient (>=2.2)", "oracledb (>=2)", "psycopg (>=3)", "pyspark (>=3.5)", "redshift-connector", "sentence-transformers (>=2.2)", "trino (>=0.321)"]
+athena = ["ibis-framework[athena]"]
+bigquery = ["google-auth", "ibis-framework[bigquery]"]
+clickhouse = ["ibis-framework[clickhouse]"]
+databricks = ["databricks-sdk", "databricks-sql-connector"]
+dev = ["orjson (>=3)", "pytest (>=8)", "ruff (>=0.4)", "testcontainers[mysql,postgres] (>=4)"]
+memory = ["lancedb (>=0.6)", "sentence-transformers (>=2.2)"]
+mssql = ["ibis-framework[mssql]"]
+mysql = ["ibis-framework[mysql]", "mysqlclient (>=2.2)"]
+oracle = ["oracledb (>=2)"]
+postgres = ["ibis-framework[postgres]", "psycopg (>=3)"]
+redshift = ["redshift-connector"]
+snowflake = ["ibis-framework[snowflake]"]
+spark = ["pyspark (>=3.5)"]
+trino = ["ibis-framework[trino]", "trino (>=0.321)"]
+
+[[package]]
 name = "yarl"
 version = "1.23.0"
 description = "Yet another URL library"
@@ -8707,4 +8765,4 @@ cffi = ["cffi (>=1.17,<2.0) ; platform_python_implementation != \"PyPy\" and pyt
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "0f172e2545409e50d66fc0b55759e95852cad95b60bc4b89baa07da543156a48"
+content-hash = "db34b775d3226aea2138414f39ab656d14c994845819bffac4d9231addc31981"

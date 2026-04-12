@@ -1,5 +1,6 @@
 use crate::errors::CoreError;
 use crate::manifest::to_manifest;
+use datafusion_common::config::Dialect;
 use pyo3::{pyclass, pymethods};
 use std::collections::hash_map::Entry;
 use std::collections::{BTreeSet, HashMap, HashSet};
@@ -47,7 +48,7 @@ fn resolve_used_table_names(mdl: &WrenMDL, sql: &str) -> Result<Vec<String>, Cor
     config.options_mut().sql_parser.enable_ident_normalization = false;
     let ctx_state = wren_core::SessionContext::new_with_config(config).state();
     ctx_state
-        .sql_to_statement(sql, "generic")
+        .sql_to_statement(sql, &Dialect::Generic {})
         .map_err(CoreError::from)
         .and_then(|stmt| {
             ctx_state
