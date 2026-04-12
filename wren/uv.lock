@@ -3513,6 +3513,11 @@ ui = [
     { name = "uvicorn" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "duckdb" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "boto3", specifier = ">=1.26" },
@@ -3584,6 +3589,9 @@ requires-dist = [
     { name = "wren-core-py", specifier = ">=0.1" },
 ]
 provides-extras = ["all", "athena", "bigquery", "clickhouse", "databricks", "dev", "memory", "mssql", "mysql", "oracle", "postgres", "redshift", "snowflake", "spark", "trino", "ui"]
+
+[package.metadata.requires-dev]
+dev = [{ name = "duckdb", specifier = ">=1.5.0" }]
 
 [[package]]
 name = "zstandard"

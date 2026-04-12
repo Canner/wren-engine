@@ -24,6 +24,7 @@ from wren.model.data_source import DataSource
 
 _SQLGLOT_DIALECT_MAP: dict[DataSource, str] = {
     DataSource.canner: "trino",
+    DataSource.datafusion: "wren",
     DataSource.mssql: "tsql",
     DataSource.local_file: "duckdb",
     DataSource.s3_file: "duckdb",
