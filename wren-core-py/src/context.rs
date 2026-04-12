@@ -30,7 +30,7 @@ use std::sync::Arc;
 use std::vec;
 use tokio::runtime::Runtime;
 use wren_core::array::{AsArray, GenericByteArray};
-use wren_core::ast::{visit_statements_mut, Expr, Statement, Value, ValueWithSpan};
+use wren_core::ast::{Expr, LimitClause, Statement, Value, ValueWithSpan, visit_statements_mut};
 use wren_core::datatypes::GenericStringType;
 use wren_core::dialect::GenericDialect;
 use wren_core::mdl::context::apply_wren_on_ctx;
@@ -272,24 +272,28 @@ impl PySessionContext {
         }
         let _ = visit_statements_mut(&mut statements, |stmt| {
             if let Statement::Query(q) = stmt {
-                if let Some(limit) = &q.limit {
-                    if let Expr::Value(ValueWithSpan {
+                if let Some(LimitClause::LimitOffset { limit, offset, limit_by }) = &q.limit_clause {
+                    if let Some(Expr::Value(ValueWithSpan {
                         value: Value::Number(n, is),
                         ..
-                    }) = limit
+                    })) = limit
                     {
                         if let Ok(curr) = n.parse::<usize>() {
                             if curr > pushdown {
-                                q.limit = Some(Expr::Value(
-                                    Value::Number(pushdown.to_string(), *is).into(),
-                                ));
+                                q.limit_clause = Some(LimitClause::LimitOffset {
+                                    limit: Some(Expr::Value(Value::Number(pushdown.to_string(), *is).into())),
+                                    offset: offset.clone(),
+                                    limit_by: limit_by.clone(),
+                                });
                             }
                         }
                     }
                 } else {
-                    q.limit = Some(Expr::Value(
-                        Value::Number(pushdown.to_string(), false).into(),
-                    ));
+                    q.limit_clause = Some(LimitClause::LimitOffset {
+                        limit: Some(Expr::Value(Value::Number(pushdown.to_string(), false).into())),
+                        offset: None,
+                        limit_by: vec![],
+                    });
                 }
             }
             ControlFlow::<()>::Continue(())

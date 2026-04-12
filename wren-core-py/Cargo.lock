@@ -3738,6 +3738,7 @@ version = "0.1.0"
 dependencies = [
  "base64",
  "csv",
+ "datafusion-common",
  "env_logger",
  "log",
  "pyo3",
