@@ -15,6 +15,7 @@ crate-type = ["cdylib"]
 pyo3 = { version = "0.26.0", features = ["extension-module", "abi3-py311"] }
 wren-core = { path = "../wren-core/core" }
 wren-core-base = { path = "../wren-core-base", features = ["python-binding"] }
+datafusion-common = "53.0.0"
 base64 = "0.22.1"
 serde_json = "1.0.117"
 thiserror = "2.0.3"

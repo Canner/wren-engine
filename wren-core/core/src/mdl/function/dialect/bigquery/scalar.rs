@@ -173,6 +173,19 @@ make_udf_function!(
 
 make_udf_function!(
     ByPassScalarUDF::new(
+        "date_diff",
+        ReturnType::Specific(DataType::Int64),
+        Signature::any(3, Volatility::Immutable),
+        Some(build_document(
+            "Returns the number of date part boundaries between two date expressions.",
+            "SELECT DATE_DIFF('DAY', DATE '2021-01-10', DATE '2021-01-01'); -- returns 9"
+        )),
+    ),
+    date_diff
+);
+
+make_udf_function!(
+    ByPassScalarUDF::new(
         "date_from_unix_date",
         ReturnType::Specific(DataType::Date32),
         Signature::coercible(
