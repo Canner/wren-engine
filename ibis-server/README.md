@@ -1,5 +1,7 @@
-# Ibis Server Module
+# Ibis Server Module (Deprecated)
 This module is the API server of Wren Engine. It's built on top of [FastAPI](https://fastapi.tiangolo.com/). It provides several APIs for SQL queries. A SQL query will be planned by [wren-core](../wren-core/), transpiled by [sqlglot](https://github.com/tobymao/sqlglot), and then executed by [ibis](https://github.com/ibis-project/ibis) to query the database.
+
+## Note: This module is deprecated and will be removed in the future. We are migrate to a CLI tool with the same query capabilities. Please refer to [wren](../wren/) for the new CLI tool.
 
 ## Quick Start
 
