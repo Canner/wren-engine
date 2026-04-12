@@ -227,7 +227,7 @@ impl ByPassScalarUDF {
     ) -> Self {
         // Register with original name (e.g., "toYear") for SQL generation
         // Add lowercase alias (e.g., "toyear") for DataFusion parsing
-        let aliases = if original_name.to_lowercase() != alias_name.to_lowercase() {
+        let aliases = if original_name != alias_name {
             vec![alias_name.to_string()]
         } else {
             vec![]

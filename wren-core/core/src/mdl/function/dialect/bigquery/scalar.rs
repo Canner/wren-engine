@@ -178,7 +178,7 @@ make_udf_function!(
         Signature::any(3, Volatility::Immutable),
         Some(build_document(
             "Returns the number of date part boundaries between two date expressions.",
-            "SELECT DATE_DIFF(DATE '2021-01-10', DATE '2021-01-01', DAY); -- returns 9"
+            "SELECT DATE_DIFF('DAY', DATE '2021-01-10', DATE '2021-01-01'); -- returns 9"
         )),
     ),
     date_diff

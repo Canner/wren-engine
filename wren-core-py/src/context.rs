@@ -287,6 +287,12 @@ impl PySessionContext {
                                 });
                             }
                         }
+                    } else if limit.is_none() {
+                        q.limit_clause = Some(LimitClause::LimitOffset {
+                            limit: Some(Expr::Value(Value::Number(pushdown.to_string(), false).into())),
+                            offset: offset.clone(),
+                            limit_by: limit_by.clone(),
+                        });
                     }
                 } else {
                     q.limit_clause = Some(LimitClause::LimitOffset {
