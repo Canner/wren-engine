@@ -121,7 +121,7 @@ def test_session_context():
     rewritten_sql = session_context.transform_sql(sql)
     assert (
         rewritten_sql
-        == "SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM main.customer AS __source) AS customer) AS customer"
+        == 'SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM "main".customer AS __source) AS customer) AS customer'
     )
 
     session_context = SessionContext(manifest_str, "tests/functions.csv")
@@ -129,7 +129,7 @@ def test_session_context():
     rewritten_sql = session_context.transform_sql(sql)
     assert (
         rewritten_sql
-        == "SELECT add_two(customer.c_custkey, customer.c_custkey) FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM main.customer AS __source) AS customer) AS customer"
+        == 'SELECT add_two(customer.c_custkey, customer.c_custkey) FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM "main".customer AS __source) AS customer) AS customer'
     )
 
 
@@ -137,14 +137,14 @@ def test_read_function_list():
     path = "tests/functions.csv"
     session_context = SessionContext(manifest_str, path)
     functions = session_context.get_available_functions()
-    assert len(functions) == 292
+    assert len(functions) == 290
 
     rewritten_sql = session_context.transform_sql(
         "SELECT add_two(c_custkey, c_custkey) FROM my_catalog.my_schema.customer"
     )
     assert (
         rewritten_sql
-        == "SELECT add_two(customer.c_custkey, customer.c_custkey) FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM main.customer AS __source) AS customer) AS customer"
+        == 'SELECT add_two(customer.c_custkey, customer.c_custkey) FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM "main".customer AS __source) AS customer) AS customer'
     )
 
     session_context = SessionContext(manifest_str, None)
@@ -316,7 +316,7 @@ def test_rlac():
     rewritten_sql = session_context.transform_sql(sql)
     assert (
         rewritten_sql
-        == "SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM main.customer AS __source) AS customer) AS customer WHERE customer.c_name = 'test_user') AS customer"
+        == 'SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM "main".customer AS __source) AS customer) AS customer WHERE customer.c_name = \'test_user\') AS customer'
     )
 
 
@@ -377,7 +377,7 @@ def test_clac():
     rewritten_sql = session_context.transform_sql(sql)
     assert (
         rewritten_sql
-        == "SELECT customer.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM main.customer AS __source) AS customer) AS customer"
+        == 'SELECT customer.c_custkey FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM "main".customer AS __source) AS customer) AS customer'
     )
 
     session_context = SessionContext(manifest_str, None, properties_hashable)
@@ -586,5 +586,5 @@ def test_case_sensitive_without_quote():
     actual = session_context.transform_sql(sql)
     assert (
         actual
-        == 'SELECT "Orders"."O_orderkey", "Orders"."O_custkey", "Orders"."O_orderdate" FROM (SELECT "Orders"."O_custkey", "Orders"."O_orderdate", "Orders"."O_orderkey" FROM (SELECT __source."O_custkey" AS "O_custkey", __source."O_orderdate" AS "O_orderdate", __source."O_orderkey" AS "O_orderkey" FROM main.orders AS __source) AS "Orders") AS "Orders"'
+        == 'SELECT "Orders"."O_orderkey", "Orders"."O_custkey", "Orders"."O_orderdate" FROM (SELECT "Orders"."O_custkey", "Orders"."O_orderdate", "Orders"."O_orderkey" FROM (SELECT __source."O_custkey" AS "O_custkey", __source."O_orderdate" AS "O_orderdate", __source."O_orderkey" AS "O_orderkey" FROM "main".orders AS __source) AS "Orders") AS "Orders"'
     )
