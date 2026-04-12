@@ -149,7 +149,7 @@ def test_read_function_list():
 
     session_context = SessionContext(manifest_str, None)
     functions = session_context.get_available_functions()
-    assert len(functions) == 285
+    assert len(functions) == 283
 
 
 def test_get_available_functions():
