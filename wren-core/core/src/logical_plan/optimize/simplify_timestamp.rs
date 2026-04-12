@@ -25,7 +25,6 @@ use datafusion::common::ScalarValue::{
 };
 use datafusion::common::{DFSchema, DFSchemaRef, Result, ScalarValue};
 use datafusion::config::ConfigOptions;
-use datafusion::execution::context::ExecutionProps;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::simplify::SimplifyContext;
 use datafusion::logical_expr::utils::merge_schema;
@@ -80,8 +79,7 @@ impl TimestampSimplify {
         } else {
             Arc::new(DFSchema::empty())
         };
-        let execution_props = ExecutionProps::default();
-        let info = SimplifyContext::new(&execution_props).with_schema(schema);
+        let info = SimplifyContext::default().with_schema(schema);
 
         // Inputs have already been rewritten (due to bottom-up traversal handled by Optimizer)
         // Just need to rewrite our own expressions
@@ -114,7 +112,7 @@ impl TimestampSimplify {
 /// Rewriter for simplifying expressions in the logical plan.
 /// Try to evaluate the expression and replace it with a constant if possible.
 struct ExprRewriter<'a> {
-    simplifier: &'a ExprSimplifier<SimplifyContext<'a>>,
+    simplifier: &'a ExprSimplifier,
     name_preserver: NamePreserver,
 }
 

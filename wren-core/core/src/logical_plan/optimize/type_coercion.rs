@@ -38,8 +38,8 @@ use datafusion::{
         expr_rewriter::coerce_plan_expr_for_schema,
         expr_schema::cast_subquery,
         type_coercion::{
-            functions::{data_types_with_scalar_udf, fields_with_aggregate_udf},
-            is_datetime, is_utf8_or_utf8view_or_large_utf8,
+            functions::fields_with_udf,
+            is_datetime,
             other::{get_coerce_type_for_case_expression, get_coerce_type_for_list},
         },
         utils::merge_schema,
@@ -572,6 +572,7 @@ impl TreeNodeRewriter for TypeCoercionRewriter<'_> {
                             order_by,
                             window_frame,
                             null_treatment,
+                            ..
                         },
                 } = *window_fun;
 
@@ -613,6 +614,7 @@ impl TreeNodeRewriter for TypeCoercionRewriter<'_> {
             | Expr::Wildcard { .. }
             | Expr::GroupingSet(_)
             | Expr::Placeholder(_)
+            | Expr::SetComparison(_)
             | Expr::OuterReferenceColumn(_, _) => Ok(Transformed::no(expr)),
         }
     }
@@ -742,12 +744,15 @@ fn coerce_frame_bound(
 
 fn extract_window_frame_target_type(col_type: &DataType) -> Result<DataType> {
     if col_type.is_numeric()
-        || is_utf8_or_utf8view_or_large_utf8(col_type)
-        || matches!(col_type, DataType::List(_))
-        || matches!(col_type, DataType::LargeList(_))
-        || matches!(col_type, DataType::FixedSizeList(_, _))
-        || matches!(col_type, DataType::Null)
-        || matches!(col_type, DataType::Boolean)
+        || col_type.is_string()
+        || col_type.is_null()
+        || matches!(
+            col_type,
+            DataType::List(_)
+                | DataType::LargeList(_)
+                | DataType::FixedSizeList(_, _)
+                | DataType::Boolean
+        )
     {
         Ok(col_type.clone())
     } else if is_datetime(col_type) {
@@ -814,12 +819,17 @@ fn coerce_arguments_for_signature_with_scalar_udf(
         .map(|e| e.get_type(schema))
         .collect::<Result<Vec<_>>>()?;
 
-    let new_types = data_types_with_scalar_udf(&current_types, func)?;
+    let current_fields = current_types
+        .iter()
+        .map(|dt| Arc::new(Field::new("f", dt.clone(), true)))
+        .collect::<Vec<_>>();
+
+    let new_types = fields_with_udf(&current_fields, func)?;
 
     expressions
         .into_iter()
         .enumerate()
-        .map(|(i, expr)| expr.cast_to(&new_types[i], schema))
+        .map(|(i, expr)| expr.cast_to(new_types[i].data_type(), schema))
         .collect()
 }
 
@@ -841,7 +851,7 @@ fn coerce_arguments_for_signature_with_aggregate_udf(
         .map(|e| e.to_field(schema).map(|(_, f)| f))
         .collect::<Result<Vec<_>>>()?;
 
-    let new_types = fields_with_aggregate_udf(&current_fields, func)?
+    let new_types = fields_with_udf(&current_fields, func)?
         .into_iter()
         .map(|f| f.data_type().clone())
         .collect::<Vec<_>>();
