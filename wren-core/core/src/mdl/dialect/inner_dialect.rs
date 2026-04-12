@@ -27,15 +27,12 @@ use crate::mdl::function::{aggregate_functions, scalar_functions, window_functio
 use crate::mdl::manifest::DataSource;
 use datafusion::common::{plan_err, Result};
 use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
-use datafusion::logical_expr::{Expr, LogicalPlan};
-use datafusion::sql::sqlparser::tokenizer::Span; 
+use datafusion::logical_expr::Expr;
+use datafusion::sql::sqlparser::tokenizer::Span;
 
 use datafusion::scalar::ScalarValue;
 use datafusion::sql::sqlparser::ast::{
     self, ExtractSyntax, Function, Ident, ObjectName, ObjectNamePart, WindowFrameBound,
-};
-use datafusion::sql::unparser::ast::{
-    RelationBuilder, TableFactorBuilder, TableFunctionRelationBuilder,
 };
 use datafusion::sql::unparser::dialect::DateFieldExtractStyle;
 use datafusion::sql::unparser::Unparser;
@@ -74,27 +71,6 @@ pub trait InnerDialect: Send + Sync {
         _end_bound: &WindowFrameBound,
     ) -> bool {
         true
-    }
-
-    fn to_unicode_string_literal(&self, _s: &str) -> Option<ast::Expr> {
-        None
-    }
-
-    fn unparse_unnest_table_factor(
-        &self,
-        _unnest: &datafusion::logical_expr::Unnest,
-        _columns: &[ast::Ident],
-        _unparser: &Unparser,
-    ) -> Result<Option<datafusion::sql::unparser::ast::TableFactorBuilder>> {
-        Ok(None)
-    }
-
-    fn relation_alias_overrides(
-        &self,
-        _relation_builder: &mut datafusion::sql::unparser::ast::RelationBuilder,
-        _alias: Option<&ast::TableAlias>,
-    ) -> bool {
-        false
     }
 
     fn date_field_extract_style(&self) -> Option<DateFieldExtractStyle> {
@@ -440,19 +416,7 @@ impl InnerDialect for MsSqlDialect {
             _ => Ok(None),
         }
     }
-
-    fn to_unicode_string_literal(&self, s: &str) -> Option<ast::Expr> {
-        if !s.is_ascii() {
-            Some(ast::Expr::value(ast::Value::NationalStringLiteral(
-                s.to_string(),
-            )))
-        } else {
-            None
-        }
-    }
 }
-
-pub static UNNAMED_SNOWFLAKE_FLATTEN_SUBQUERY_PREFIX: &str = "__unnamed_flatten_subquery";
 
 pub struct SnowflakeDialect {}
 
@@ -460,131 +424,12 @@ impl InnerDialect for SnowflakeDialect {
     fn unnest_as_table_factor(&self) -> bool {
         true
     }
-
-    fn unparse_unnest_table_factor(
-        &self,
-        unnest: &datafusion::logical_expr::Unnest,
-        columns: &[ast::Ident],
-        unparser: &Unparser,
-    ) -> Result<Option<datafusion::sql::unparser::ast::TableFactorBuilder>> {
-        let LogicalPlan::Projection(projection) = unnest.input.as_ref() else {
-            return Ok(None);
-        };
-
-        if !matches!(projection.input.as_ref(), LogicalPlan::EmptyRelation(_)) {
-            // It may be possible that UNNEST is used as a source for the query.
-            // However, at this point, we don't yet know if it is just a single expression
-            // from another source or if it's from UNNEST.
-            //
-            // Unnest(Projection(EmptyRelation)) denotes a case with `UNNEST([...])`,
-            // which is normally safe to unnest as a table factor.
-            // However, in the future, more comprehensive checks can be added here.
-            return Ok(None);
-        };
-
-        let mut table_function_relation = TableFunctionRelationBuilder::default();
-        let exprs = projection
-            .expr
-            .iter()
-            .map(|e| unparser.expr_to_sql(e))
-            .collect::<Result<Vec<_>>>()?;
-
-        if exprs.len() != 1 {
-            // Snowflake FLATTEN function only supports a single argument.
-            return plan_err!(
-                "Only support one argument for Snowflake FLATTEN, found {}",
-                exprs.len()
-            );
-        }
-
-        if columns.len() != 1 {
-            // Snowflake FLATTEN function only supports a single output column.
-            return plan_err!(
-                "Only support one output column for Snowflake FLATTEN, found {}",
-                columns.len()
-            );
-        }
-
-        // To get the flattened result, we need to override the output columns of the FLATTEN function.
-        // The 4th column corresponds to the flattened value, which we will alias to the desired output column name.
-        // https://docs.snowflake.com/en/sql-reference/functions/flatten#output
-        let column_alias = vec![
-            unparser.new_ident_quoted_if_needs("SEQ".to_string()),
-            unparser.new_ident_quoted_if_needs("KEY".to_string()),
-            unparser.new_ident_quoted_if_needs("PATH".to_string()),
-            unparser.new_ident_quoted_if_needs("INDEX".to_string()),
-            columns[0].clone(),
-            unparser.new_ident_quoted_if_needs("THIS".to_string()),
-        ];
-
-        let func_expr = ast::Expr::Function(Function {
-            name: vec![Ident::new("FLATTEN")].into(),
-            uses_odbc_syntax: false,
-            parameters: ast::FunctionArguments::None,
-            args: ast::FunctionArguments::List(ast::FunctionArgumentList {
-                args: exprs
-                    .into_iter()
-                    .map(|e| ast::FunctionArg::Unnamed(ast::FunctionArgExpr::Expr(e)))
-                    .collect(),
-                duplicate_treatment: None,
-                clauses: vec![],
-            }),
-            filter: None,
-            null_treatment: None,
-            over: None,
-            within_group: vec![],
-        });
-        table_function_relation.expr(func_expr);
-        table_function_relation.alias(Some(
-            unparser.new_table_alias(
-                unparser
-                    .alias_generator
-                    .next(UNNAMED_SNOWFLAKE_FLATTEN_SUBQUERY_PREFIX),
-                column_alias,
-            ),
-        ));
-        Ok(Some(TableFactorBuilder::TableFunction(
-            table_function_relation,
-        )))
-    }
-
-    fn relation_alias_overrides(
-        &self,
-        relation_builder: &mut RelationBuilder,
-        alias: Option<&ast::TableAlias>,
-    ) -> bool {
-        if let Some(TableFactorBuilder::TableFunction(rel_builder)) =
-            relation_builder.relation.as_mut()
-        {
-            if let Some(value) = &alias {
-                if let Some(alias) = rel_builder.alias.as_mut() {
-                    if alias
-                        .name
-                        .value
-                        .starts_with(UNNAMED_SNOWFLAKE_FLATTEN_SUBQUERY_PREFIX)
-                        && value.columns.len() == 1
-                    {
-                        let mut new_columns = alias.columns.clone();
-                        new_columns[4] = value.columns[0].clone();
-                        let new_alias = ast::TableAlias {
-                            name: value.name.clone(),
-                            columns: new_columns,
-                        };
-                        rel_builder.alias = Some(new_alias);
-                        return true;
-                    }
-                }
-            }
-        }
-        false
-    }
 }
 
 /// [ClickHouseDialect] is a dialect for ClickHouse database.
 /// ClickHouse uses specific functions for date/time operations (e.g., toDayOfWeek, toYear)
 /// instead of standard SQL EXTRACT or date_part.
 pub struct ClickHouseDialect {}
-
 
 impl ClickHouseDialect {
     fn clickhouse_function_to_sql(
@@ -640,7 +485,7 @@ impl InnerDialect for ClickHouseDialect {
 
                 // Extract the field name from the first argument
                 if let Expr::Literal(ScalarValue::Utf8(Some(field)), _)
-                    | Expr::Literal(ScalarValue::LargeUtf8(Some(field)), _) = &args[0]
+                | Expr::Literal(ScalarValue::LargeUtf8(Some(field)), _) = &args[0]
                 {
                     let clickhouse_func = match field.to_lowercase().as_str() {
                         "year" => "toYear",
@@ -700,20 +545,36 @@ impl InnerDialect for ClickHouseDialect {
             "tomonth" => Self::clickhouse_function_to_sql(unparser, "toMonth", args),
             "todate" => Self::clickhouse_function_to_sql(unparser, "toDate", args),
             "todate32" => Self::clickhouse_function_to_sql(unparser, "toDate32", args),
-            "todatetime" => Self::clickhouse_function_to_sql(unparser, "toDateTime", args),
-            "todatetime64" => Self::clickhouse_function_to_sql(unparser, "toDateTime64", args),
+            "todatetime" => {
+                Self::clickhouse_function_to_sql(unparser, "toDateTime", args)
+            }
+            "todatetime64" => {
+                Self::clickhouse_function_to_sql(unparser, "toDateTime64", args)
+            }
             "toisoweek" => Self::clickhouse_function_to_sql(unparser, "toISOWeek", args),
-            "todayofmonth" => Self::clickhouse_function_to_sql(unparser, "toDayOfMonth", args),
-            "todayofweek" => Self::clickhouse_function_to_sql(unparser, "toDayOfWeek", args),
-            "todayofyear" => Self::clickhouse_function_to_sql(unparser, "toDayOfYear", args),
+            "todayofmonth" => {
+                Self::clickhouse_function_to_sql(unparser, "toDayOfMonth", args)
+            }
+            "todayofweek" => {
+                Self::clickhouse_function_to_sql(unparser, "toDayOfWeek", args)
+            }
+            "todayofyear" => {
+                Self::clickhouse_function_to_sql(unparser, "toDayOfYear", args)
+            }
             "tohour" => Self::clickhouse_function_to_sql(unparser, "toHour", args),
             "tominute" => Self::clickhouse_function_to_sql(unparser, "toMinute", args),
             "tosecond" => Self::clickhouse_function_to_sql(unparser, "toSecond", args),
             "uniqexact" => Self::clickhouse_function_to_sql(unparser, "uniqExact", args),
-            "grouparray" => Self::clickhouse_function_to_sql(unparser, "groupArray", args),
-            "groupuniqarray" => Self::clickhouse_function_to_sql(unparser, "groupUniqArray", args),
+            "grouparray" => {
+                Self::clickhouse_function_to_sql(unparser, "groupArray", args)
+            }
+            "groupuniqarray" => {
+                Self::clickhouse_function_to_sql(unparser, "groupUniqArray", args)
+            }
             "stddevpop" => Self::clickhouse_function_to_sql(unparser, "stddevPop", args),
-            "stddevsamp" => Self::clickhouse_function_to_sql(unparser, "stddevSamp", args),
+            "stddevsamp" => {
+                Self::clickhouse_function_to_sql(unparser, "stddevSamp", args)
+            }
             "varpop" => Self::clickhouse_function_to_sql(unparser, "varPop", args),
             "varsamp" => Self::clickhouse_function_to_sql(unparser, "varSamp", args),
             "anylast" => Self::clickhouse_function_to_sql(unparser, "anyLast", args),

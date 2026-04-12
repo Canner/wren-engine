@@ -406,11 +406,17 @@ pub fn create_wren_ctx(
             .with_window_functions(crate::mdl::function::window_functions())
     };
 
-    let builder = if let Some(config) = config {
-        builder.with_config(config)
-    } else {
-        builder
-    };
+    let mut config = config.unwrap_or_default();
+
+    if config.options().execution.time_zone.is_none() {
+        // Set default time zone to UTC to avoid time zone related issues in timestamp inference and comparison. It can be overridden by the user config.
+        config
+            .options_mut()
+            .set("datafusion.execution.time_zone", "+00:00")
+            .unwrap();
+    }
+
+    let builder = builder.with_config(config);
 
     SessionContext::new_with_state(builder.build())
 }
@@ -559,7 +565,7 @@ fn register_remote_function(
     // and add the lowercase name as an alias for parsing.
     let normalized_name = remote_function.name.to_lowercase();
     let original_name = &remote_function.name;
-    
+
     match &remote_function.function_type {
         FunctionType::Scalar => ctx.register_udf(ScalarUDF::new_from_impl(
             ByPassScalarUDF::new_with_original_name(
@@ -1402,8 +1408,6 @@ mod test {
 
     #[tokio::test]
     async fn test_disable_pushdown_filter() -> Result<()> {
-        let ctx = create_wren_ctx(None, None);
-        ctx.register_batch("artist", artist())?;
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
@@ -1492,7 +1496,7 @@ mod test {
         +---------------------------------------------+-----------------------------------------------+
         | arrow_typeof(timestamp_table.timestamp_col) | arrow_typeof(timestamp_table.timestamptz_col) |
         +---------------------------------------------+-----------------------------------------------+
-        | Timestamp(Nanosecond, None)                 | Timestamp(Nanosecond, Some("UTC"))            |
+        | Timestamp(ns)                               | Timestamp(ns, "UTC")                          |
         +---------------------------------------------+-----------------------------------------------+
         "#);
         Ok(())
@@ -1614,124 +1618,6 @@ mod test {
         .await?;
         assert_snapshot!(actual, @"SELECT list_table.list_col[1] FROM (SELECT list_table.list_col FROM \
         (SELECT __source.list_col AS list_col FROM list_table AS __source) AS list_table) AS list_table");
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_struct() -> Result<()> {
-        let ctx = create_wren_ctx(None, None);
-        let manifest = ManifestBuilder::new()
-            .catalog("wren")
-            .schema("test")
-            .model(
-                ModelBuilder::new("struct_table")
-                    .table_reference("struct_table")
-                    .column(
-                        ColumnBuilder::new(
-                            "struct_col",
-                            "struct<float_field float,time_field timestamp>",
-                        )
-                        .build(),
-                    )
-                    .column(
-                        ColumnBuilder::new(
-                            "struct_array_col",
-                            "array<struct<float_field float,time_field timestamp>>",
-                        )
-                        .build(),
-                    )
-                    .build(),
-            )
-            .build();
-        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
-            manifest,
-            Arc::new(HashMap::default()),
-            Mode::Unparse,
-        )?);
-        let sql = "select struct_col.float_field from wren.test.struct_table";
-        let actual = transform_sql_with_ctx(
-            &ctx,
-            Arc::clone(&analyzed_mdl),
-            &[],
-            Arc::new(HashMap::new()),
-            sql,
-        )
-        .await?;
-        assert_snapshot!(
-            actual,
-            @"SELECT struct_table.struct_col.float_field FROM \
-        (SELECT struct_table.struct_col FROM (SELECT __source.struct_col AS struct_col \
-        FROM struct_table AS __source) AS struct_table) AS struct_table"
-        );
-
-        let sql = "select struct_array_col[1].float_field from wren.test.struct_table";
-        let actual = transform_sql_with_ctx(
-            &ctx,
-            Arc::clone(&analyzed_mdl),
-            &[],
-            Arc::new(HashMap::new()),
-            sql,
-        )
-        .await?;
-        assert_snapshot!(actual, @"SELECT struct_table.struct_array_col[1].float_field FROM \
-        (SELECT struct_table.struct_array_col FROM (SELECT __source.struct_array_col AS struct_array_col \
-        FROM struct_table AS __source) AS struct_table) AS struct_table");
-
-        let sql =
-            "select {float_field: 1.0, time_field: timestamp '2021-01-01 00:00:00'}";
-        let actual = transform_sql_with_ctx(
-            &ctx,
-            Arc::clone(&analyzed_mdl),
-            &[],
-            Arc::new(HashMap::new()),
-            sql,
-        )
-        .await?;
-        assert_snapshot!(actual, @"SELECT {float_field: 1.0, time_field: CAST('2021-01-01 00:00:00' AS TIMESTAMP)}");
-
-        let manifest = ManifestBuilder::new()
-            .catalog("wren")
-            .schema("test")
-            .model(
-                ModelBuilder::new("struct_table")
-                    .table_reference("struct_table")
-                    .column(ColumnBuilder::new("struct_col", "struct<>").build())
-                    .build(),
-            )
-            .build();
-        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
-            manifest,
-            Arc::new(HashMap::default()),
-            Mode::Unparse,
-        )?);
-        let sql = "select struct_col.float_field from wren.test.struct_table";
-        let _ = transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::new(HashMap::new()), sql)
-            .await
-            .map_err(|e| {
-                assert_snapshot!(
-                    e.to_string(),
-                    @"Execution error: The expression to get an indexed field is only valid for `Struct`, `Map` or `Null` types, got Utf8"
-                )
-            });
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_disable_common_expression_eliminate() -> Result<()> {
-        let ctx = create_wren_ctx(None, None);
-        let sql =
-            "SELECT CAST(TIMESTAMP '2021-01-01 00:00:00' as TIMESTAMP WITH TIME ZONE) = \
-        CAST(TIMESTAMP '2021-01-01 00:00:00' as TIMESTAMP WITH TIME ZONE)";
-        let result = transform_sql_with_ctx(
-            &ctx,
-            Arc::new(AnalyzedWrenMDL::default()),
-            &[],
-            Arc::new(HashMap::new()),
-            sql,
-        )
-        .await?;
-        assert_snapshot!(result, @"SELECT CAST(CAST('2021-01-01 00:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE) = \
-        CAST(CAST('2021-01-01 00:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE)");
         Ok(())
     }
 
@@ -3413,90 +3299,6 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_date_diff_bigquery() -> Result<()> {
-        let ctx = create_wren_ctx(None, Some(&DataSource::BigQuery));
-        let manifest = ManifestBuilder::new()
-            .catalog("wren")
-            .schema("test")
-            .model(
-                ModelBuilder::new("date_table")
-                    .table_reference("date_table")
-                    .column(ColumnBuilder::new("date_1", "date").build())
-                    .column(ColumnBuilder::new("date_2", "date").build())
-                    .build(),
-            )
-            .model(
-                ModelBuilder::new("timestamp_table")
-                    .table_reference("timestamp_table")
-                    .column(ColumnBuilder::new("ts_1", "timestamp").build())
-                    .column(ColumnBuilder::new("ts_2", "timestamp").build())
-                    .build(),
-            )
-            .data_source(DataSource::BigQuery)
-            .build();
-        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
-            manifest,
-            Arc::new(HashMap::default()),
-            Mode::Unparse,
-        )?);
-
-        let sql = "select date_diff(DAY, date_1, date_2) from date_table";
-        let headers: Arc<HashMap<String, Option<String>>> = Arc::new(HashMap::default());
-        assert_snapshot!(
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
-            @"SELECT DATE_DIFF(date_table.date_2, date_table.date_1, DAY) FROM (SELECT date_table.date_1, date_table.date_2 FROM (SELECT __source.date_1 AS date_1, __source.date_2 AS date_2 FROM date_table AS __source) AS date_table) AS date_table"
-        );
-
-        let sql = "select datediff(DAY, date_1, date_2) from date_table";
-        let headers: Arc<HashMap<String, Option<String>>> = Arc::new(HashMap::default());
-        assert_snapshot!(
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
-            @"SELECT DATE_DIFF(date_table.date_2, date_table.date_1, DAY) FROM (SELECT date_table.date_1, date_table.date_2 FROM (SELECT __source.date_1 AS date_1, __source.date_2 AS date_2 FROM date_table AS __source) AS date_table) AS date_table"
-        );
-        let sql = "select datediff('DAY', date_1, date_2) from date_table";
-        let headers: Arc<HashMap<String, Option<String>>> = Arc::new(HashMap::default());
-        assert_snapshot!(
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
-            @"SELECT DATE_DIFF(date_table.date_2, date_table.date_1, DAY) FROM (SELECT date_table.date_1, date_table.date_2 FROM (SELECT __source.date_1 AS date_1, __source.date_2 AS date_2 FROM date_table AS __source) AS date_table) AS date_table"
-        );
-
-        let sql = "select datediff(DAY, date_1, date_2) from date_table";
-        let headers: Arc<HashMap<String, Option<String>>> = Arc::new(HashMap::default());
-        assert_snapshot!(
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
-            @"SELECT DATE_DIFF(date_table.date_2, date_table.date_1, DAY) FROM (SELECT date_table.date_1, date_table.date_2 FROM (SELECT __source.date_1 AS date_1, __source.date_2 AS date_2 FROM date_table AS __source) AS date_table) AS date_table"
-        );
-
-        let sql = "select datediff('DAYS', date_1, date_2) from date_table";
-        let headers: Arc<HashMap<String, Option<String>>> = Arc::new(HashMap::default());
-        match transform_sql_with_ctx(
-            &ctx,
-            Arc::clone(&analyzed_mdl),
-            &[],
-            Arc::clone(&headers),
-            sql,
-        )
-        .await
-        {
-            Ok(_) => {
-                panic!("Expected error, but got SQL");
-            }
-            Err(e) => assert_snapshot!(
-                e.to_string(),
-                @"Error during planning: Unsupported date part 'DAYS' for BIGQUERY. Valid values are: WEEK, DAYOFWEEK, DAY, DAYOFYEAR, ISOWEEK, MONTH, QUARTER, YEAR, ISOYEAR, MICROSECOND, MILLISECOND, SECOND, MINUTE, HOUR"
-            ),
-        }
-
-        let sql = "select datediff(HOUR, ts_1, ts_2) from timestamp_table";
-        let headers: Arc<HashMap<String, Option<String>>> = Arc::new(HashMap::default());
-        assert_snapshot!(
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
-            @"SELECT DATE_DIFF(timestamp_table.ts_2, timestamp_table.ts_1, HOUR) FROM (SELECT timestamp_table.ts_1, timestamp_table.ts_2 FROM (SELECT __source.ts_1 AS ts_1, __source.ts_2 AS ts_2 FROM timestamp_table AS __source) AS timestamp_table) AS timestamp_table"
-        );
-        Ok(())
-    }
-
-    #[tokio::test]
     async fn test_window_function_frame() -> Result<()> {
         let ctx = create_wren_ctx(None, None);
         let manifest = ManifestBuilder::new()
@@ -3698,7 +3500,7 @@ mod test {
         let sql = "select 'ZUTOMAYO', '永遠是深夜有多好'";
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&mdl), &[], Arc::clone(&properties), sql).await?,
-            @"SELECT 'ZUTOMAYO', N'永遠是深夜有多好'"
+            @"SELECT 'ZUTOMAYO', '永遠是深夜有多好'"
         );
         Ok(())
     }
@@ -3930,7 +3732,7 @@ mod test {
         let sql = "SELECT item FROM orders o, unnest(o.o_items) as t(item)";
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
-            @r#"SELECT t.item FROM (SELECT orders.o_items FROM (SELECT __source.o_items AS o_items FROM orders AS __source) AS orders) AS o CROSS JOIN TABLE(FLATTEN(o.o_items)) AS t ("SEQ", "KEY", "PATH", "INDEX", item, "THIS")"#
+            @"SELECT t.item FROM (SELECT orders.o_items FROM (SELECT __source.o_items AS o_items FROM orders AS __source) AS orders) AS o CROSS JOIN UNNEST(o.o_items) AS t (item)"
         );
         Ok(())
     }

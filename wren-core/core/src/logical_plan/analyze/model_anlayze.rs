@@ -441,6 +441,7 @@ impl ModelAnalyzeRule {
                     filter: join.filter,
                     join_constraint: join.join_constraint,
                     null_equality: join.null_equality,
+                    null_aware: join.null_aware,
                 })))
             }
             _ => Ok(Transformed::no(plan)),
