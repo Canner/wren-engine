@@ -208,7 +208,8 @@ pub fn quoted(s: &str) -> String {
 
 #[inline]
 pub fn dequote_identifier(s: &str) -> &str {
-    if s.starts_with('"') && s.ends_with('"') {
+    // Require >= 2 chars so a single `"` doesn't slice 1..0 and panic.
+    if s.len() >= 2 && s.starts_with('"') && s.ends_with('"') {
         &s[1..s.len() - 1]
     } else {
         s

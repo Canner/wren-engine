@@ -114,21 +114,25 @@ impl AnalyzedWrenMDL {
         manifest: Manifest,
         ctx: &SessionContext,
     ) -> Result<Self> {
+        use datafusion::datasource::file_format::parquet::ParquetFormat;
         use datafusion::datasource::listing::{
             ListingOptions, ListingTable, ListingTableConfig, ListingTableUrl,
         };
-        use datafusion::datasource::file_format::parquet::ParquetFormat;
 
         let mut wren_mdl = WrenMDL::new(manifest);
-        match wren_mdl.data_source().unwrap_or(DataSource::Datafusion) {
-            DataSource::LocalFile
-            | DataSource::MinioFile
-            | DataSource::S3File
-            | DataSource::GcsFile => {}
-            _ => {
-                return plan_err!(
-                    "Only file-based data source is supported for analyze_with_url_tables"
-                )
+        // Allow manifests that omit `dataSource` (treat as file-backed). Only
+        // reject when `dataSource` is explicitly set to a non-file backend.
+        if let Some(data_source) = wren_mdl.data_source() {
+            match data_source {
+                DataSource::LocalFile
+                | DataSource::MinioFile
+                | DataSource::S3File
+                | DataSource::GcsFile => {}
+                _ => {
+                    return plan_err!(
+                        "Only file-based data source is supported for analyze_with_url_tables"
+                    )
+                }
             }
         }
 
@@ -148,10 +152,7 @@ impl AnalyzedWrenMDL {
                 .await?;
 
             let table = ListingTable::try_new(config)?;
-            wren_mdl.register_table(
-                model.table_reference().to_string(),
-                Arc::new(table),
-            );
+            wren_mdl.register_table(model.table_reference().to_string(), Arc::new(table));
         }
 
         let lineage = lineage::Lineage::new(&wren_mdl)?;
