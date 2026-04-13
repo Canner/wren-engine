@@ -23,6 +23,7 @@ from wren.model import (
     ConnectionUrl,
     DatabricksServicePrincipalConnectionInfo,
     DatabricksTokenConnectionInfo,
+    DataFusionConnectionInfo,
     DorisConnectionInfo,
     GcsFileConnectionInfo,
     LocalFileConnectionInfo,
@@ -49,6 +50,7 @@ class DataSource(StrEnum):
     bigquery = auto()
     canner = auto()
     clickhouse = auto()
+    datafusion = auto()
     mssql = auto()
     mysql = auto()
     doris = auto()
@@ -154,6 +156,8 @@ class DataSource(StrEnum):
                 return SnowflakeConnectionInfo.model_validate(data)
             case DataSource.trino:
                 return TrinoConnectionInfo.model_validate(data)
+            case DataSource.datafusion:
+                return DataFusionConnectionInfo.model_validate(data)
             case DataSource.duckdb | DataSource.local_file:
                 return LocalFileConnectionInfo.model_validate(data)
             case DataSource.s3_file:
@@ -209,6 +213,7 @@ class DataSourceExtension(Enum):
     bigquery = "bigquery"
     canner = "canner"
     clickhouse = "clickhouse"
+    datafusion = "datafusion"
     mssql = "mssql"
     mysql = "mysql"
     doris = "doris"
@@ -230,7 +235,7 @@ class DataSourceExtension(Enum):
             if hasattr(info, "connection_url"):
                 kwargs = info.kwargs if info.kwargs else {}
                 return ibis.connect(info.connection_url.get_secret_value(), **kwargs)
-            if self.name in {"local_file", "redshift", "spark", "duckdb"}:
+            if self.name in {"local_file", "redshift", "spark", "duckdb", "datafusion"}:
                 raise NotImplementedError(
                     f"{self.name} connection is not implemented to get ibis backend"
                 )
