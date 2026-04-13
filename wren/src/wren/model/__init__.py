@@ -244,7 +244,7 @@ class DataFusionConnectionInfo(BaseConnectionInfo):
     format: str = Field(
         default="parquet",
         description="Default file format to scan",
-        examples=["parquet", "csv", "json"],
+        examples=["parquet", "csv"],
     )
 
 

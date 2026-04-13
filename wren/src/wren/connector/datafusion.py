@@ -32,8 +32,6 @@ class DataFusionConnector(ConnectorABC):
         if limit is not None:
             sql = f"SELECT * FROM ({sql}) AS _q LIMIT {int(limit)}"
         ipc_bytes = self.ctx.query(sql)
-        if not ipc_bytes:
-            return pa.table({})
         reader = ipc.open_stream(io.BytesIO(bytes(ipc_bytes)))
         return reader.read_all()
 
@@ -43,8 +41,16 @@ class DataFusionConnector(ConnectorABC):
     def close(self) -> None:
         pass
 
+    _SUPPORTED_FORMATS = {"parquet", "csv"}
+
     def _register_tables(self) -> None:
         """Auto-discover and register files from source directory."""
+        if self.format not in self._SUPPORTED_FORMATS:
+            raise WrenError(
+                ErrorCode.GENERIC_USER_ERROR,
+                f"Unsupported format '{self.format}'. "
+                f"Supported: {', '.join(sorted(self._SUPPORTED_FORMATS))}",
+            )
         if not self.source.is_dir():
             raise WrenError(
                 ErrorCode.GENERIC_USER_ERROR,
@@ -58,13 +64,8 @@ class DataFusionConnector(ConnectorABC):
             try:
                 if self.format == "parquet":
                     self.ctx.register_parquet(table_name, str(file_path))
-                elif self.format == "csv":
-                    self.ctx.register_csv(table_name, str(file_path))
                 else:
-                    logger.warning(
-                        f"Unsupported format '{self.format}' for {file_path}"
-                    )
-                    continue
+                    self.ctx.register_csv(table_name, str(file_path))
                 registered.append(table_name)
             except Exception as e:
                 raise WrenError(

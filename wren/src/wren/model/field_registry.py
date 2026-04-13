@@ -181,7 +181,7 @@ _MODEL_UI_OVERRIDES: dict[str, dict[str, dict]] = {
 _DATASOURCE_UI_OVERRIDES: dict[str, dict[str, dict]] = {
     "datafusion": {
         "source": {"label": "Data Directory", "examples": ["./data"]},
-        "format": {"input_type": "hidden", "default": "parquet"},
+        "format": {"label": "File Format", "placeholder": "parquet"},
     },
     "duckdb": {
         "url": {

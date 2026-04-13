@@ -319,19 +319,16 @@ impl PySessionContext {
     /// Execute SQL using DataFusion LocalRuntime and return results as Arrow IPC stream bytes.
     #[pyo3(signature = (sql))]
     pub fn query(&self, sql: &str) -> PyResult<Vec<u8>> {
-        let batches = self
+        let (batches, schema) = self
             .runtime
             .block_on(async {
                 let df = self.exec_ctx.sql(sql).await?;
-                df.collect().await
+                let schema = df.schema().inner().clone();
+                let batches = df.collect().await?;
+                Ok::<_, wren_core::DataFusionError>((batches, schema))
             })
             .map_err(CoreError::from)?;
 
-        if batches.is_empty() {
-            return Ok(vec![]);
-        }
-
-        let schema = batches[0].schema();
         let mut buf = Vec::new();
         {
             let mut writer = StreamWriter::try_new(&mut buf, &schema)
