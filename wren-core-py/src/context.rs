@@ -33,13 +33,15 @@ use wren_core::array::{AsArray, GenericByteArray};
 use wren_core::ast::{Expr, LimitClause, Statement, Value, ValueWithSpan, visit_statements_mut};
 use wren_core::datatypes::GenericStringType;
 use wren_core::dialect::GenericDialect;
+use wren_core::ipc::writer::StreamWriter;
 use wren_core::mdl::context::apply_wren_on_ctx;
 use wren_core::mdl::function::{
     ByPassAggregateUDF, ByPassScalarUDF, ByPassWindowFunction, FunctionType,
     RemoteFunction,
 };
 use wren_core::{
-    mdl, AggregateUDF, AnalyzedWrenMDL, ScalarUDF, SessionConfig, WindowUDF,
+    mdl, AggregateUDF, AnalyzedWrenMDL, CsvReadOptions, ParquetReadOptions, ScalarUDF,
+    SessionConfig, WindowUDF,
 };
 use wren_core_base::mdl::DataSource;
 
@@ -47,6 +49,9 @@ use wren_core_base::mdl::DataSource;
 #[pyclass(name = "SessionContext")]
 #[derive(Clone)]
 pub struct PySessionContext {
+    /// Base context — physical tables are registered here.
+    /// Used as the source for `load_mdl()` (two-phase init).
+    base_ctx: wren_core::SessionContext,
     ctx: wren_core::SessionContext,
     exec_ctx: wren_core::SessionContext,
     mdl: Arc<AnalyzedWrenMDL>,
@@ -62,9 +67,11 @@ impl Hash for PySessionContext {
 
 impl Default for PySessionContext {
     fn default() -> Self {
+        let ctx = wren_core::SessionContext::new();
         Self {
-            ctx: wren_core::SessionContext::new(),
-            exec_ctx: wren_core::SessionContext::new(),
+            base_ctx: ctx.clone(),
+            ctx: ctx.clone(),
+            exec_ctx: ctx,
             mdl: Arc::new(AnalyzedWrenMDL::default()),
             properties: Arc::new(HashMap::new()),
             runtime: Arc::new(Runtime::new().unwrap()),
@@ -101,6 +108,7 @@ impl PySessionContext {
                 &ctx,
             )?;
             return Ok(Self {
+                base_ctx: ctx.clone(),
                 ctx: ctx.clone(),
                 exec_ctx: ctx,
                 mdl: Arc::new(AnalyzedWrenMDL::default()),
@@ -193,6 +201,7 @@ impl PySessionContext {
                         .map_err(CoreError::from)?;
 
                     Ok(Self {
+                        base_ctx: ctx.clone(),
                         ctx: unparser_ctx,
                         exec_ctx,
                         mdl: analyzed_mdl,
@@ -249,7 +258,7 @@ impl PySessionContext {
             .block_on(Self::get_registered_function(function_name, &self.exec_ctx))
             .map_err(CoreError::from)?
             .into_iter()
-            .map(|f| PyRemoteFunction::from(f))
+            .map(PyRemoteFunction::from)
             .collect::<Vec<_>>();
         Ok(functions)
     }
@@ -305,6 +314,154 @@ impl PySessionContext {
             ControlFlow::<()>::Continue(())
         });
         Ok(statements[0].to_string())
+    }
+
+    /// Execute SQL using DataFusion LocalRuntime and return results as Arrow IPC stream bytes.
+    #[pyo3(signature = (sql))]
+    pub fn query(&self, sql: &str) -> PyResult<Vec<u8>> {
+        let (batches, schema) = self
+            .runtime
+            .block_on(async {
+                let df = self.exec_ctx.sql(sql).await?;
+                let schema = df.schema().inner().clone();
+                let batches = df.collect().await?;
+                Ok::<_, wren_core::DataFusionError>((batches, schema))
+            })
+            .map_err(CoreError::from)?;
+
+        let mut buf = Vec::new();
+        {
+            let mut writer = StreamWriter::try_new(&mut buf, &schema)
+                .map_err(|e| CoreError::new(&e.to_string()))?;
+            for batch in &batches {
+                writer
+                    .write(batch)
+                    .map_err(|e| CoreError::new(&e.to_string()))?;
+            }
+            writer
+                .finish()
+                .map_err(|e| CoreError::new(&e.to_string()))?;
+        }
+        Ok(buf)
+    }
+
+    /// Register a Parquet file as a named table.
+    /// Tables registered on base_ctx are visible to exec_ctx via shared catalog.
+    #[pyo3(signature = (name, path))]
+    pub fn register_parquet(&self, name: &str, path: &str) -> PyResult<()> {
+        self.runtime
+            .block_on(
+                self.base_ctx
+                    .register_parquet(name, path, ParquetReadOptions::default()),
+            )
+            .map_err(CoreError::from)?;
+        Ok(())
+    }
+
+    /// Register a CSV file as a named table.
+    /// Tables registered on base_ctx are visible to exec_ctx via shared catalog.
+    #[pyo3(signature = (name, path))]
+    pub fn register_csv(&self, name: &str, path: &str) -> PyResult<()> {
+        self.runtime
+            .block_on(
+                self.base_ctx
+                    .register_csv(name, path, CsvReadOptions::default()),
+            )
+            .map_err(CoreError::from)?;
+        Ok(())
+    }
+
+    /// List registered table names in the execution context.
+    pub fn list_tables(&self) -> PyResult<Vec<String>> {
+        let catalog_names = self.exec_ctx.catalog_names();
+        let mut tables = Vec::new();
+        for catalog_name in &catalog_names {
+            if let Some(catalog) = self.exec_ctx.catalog(catalog_name) {
+                for schema_name in catalog.schema_names() {
+                    if let Some(schema) = catalog.schema(&schema_name) {
+                        tables.extend(schema.table_names());
+                    }
+                }
+            }
+        }
+        Ok(tables)
+    }
+
+    /// Dry-run SQL (EXPLAIN) to validate without executing.
+    #[pyo3(signature = (sql))]
+    pub fn dry_run(&self, sql: &str) -> PyResult<String> {
+        let result = self
+            .runtime
+            .block_on(async {
+                let df = self.exec_ctx.sql(&format!("EXPLAIN {sql}")).await?;
+                df.collect().await
+            })
+            .map_err(CoreError::from)?;
+        Ok(wren_core::util::pretty::pretty_format_batches(&result)
+            .map_err(|e| CoreError::new(&e.to_string()))?
+            .to_string())
+    }
+
+    /// Load MDL and apply semantic layer rules (two-phase init).
+    /// Call this after registering physical tables to enable the semantic layer.
+    #[pyo3(signature = (mdl_base64))]
+    pub fn load_mdl(&mut self, mdl_base64: &str) -> PyResult<()> {
+        let manifest = to_manifest(mdl_base64)?;
+
+        // Extract physical table providers from base_ctx so the MDL can
+        // resolve table references to real data during LocalRuntime execution.
+        let register_tables = self.runtime.block_on(async {
+            let mut tables = HashMap::new();
+            for catalog_name in self.base_ctx.catalog_names() {
+                if let Some(catalog) = self.base_ctx.catalog(&catalog_name) {
+                    for schema_name in catalog.schema_names() {
+                        if let Some(schema) = catalog.schema(&schema_name) {
+                            for table_name in schema.table_names() {
+                                let full_ref = format!(
+                                    "{catalog_name}.{schema_name}.{table_name}"
+                                );
+                                if let Ok(Some(provider)) =
+                                    schema.table(&table_name).await
+                                {
+                                    tables.insert(full_ref, provider);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            tables
+        });
+
+        let analyzed_mdl = Arc::new(
+            AnalyzedWrenMDL::analyze_with_tables(manifest, register_tables)
+                .map_err(CoreError::from)?,
+        );
+
+        let unparser_ctx = self
+            .runtime
+            .block_on(apply_wren_on_ctx(
+                &self.base_ctx,
+                Arc::clone(&analyzed_mdl),
+                Arc::clone(&self.properties),
+                mdl::context::Mode::Unparse,
+            ))
+            .map_err(CoreError::from)?;
+
+        let exec_ctx = self
+            .runtime
+            .block_on(apply_wren_on_ctx(
+                &self.base_ctx,
+                Arc::clone(&analyzed_mdl),
+                Arc::clone(&self.properties),
+                mdl::context::Mode::LocalRuntime,
+            ))
+            .map_err(CoreError::from)?;
+
+        self.ctx = unparser_ctx;
+        self.exec_ctx = exec_ctx;
+        self.mdl = analyzed_mdl;
+        Ok(())
     }
 }
 
