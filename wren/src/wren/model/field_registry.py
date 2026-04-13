@@ -23,6 +23,7 @@ from wren.model import (
     ConnectionUrl,
     DatabricksServicePrincipalConnectionInfo,
     DatabricksTokenConnectionInfo,
+    DataFusionConnectionInfo,
     DorisConnectionInfo,
     GcsFileConnectionInfo,
     LocalFileConnectionInfo,
@@ -46,6 +47,7 @@ DATASOURCE_MODELS: dict[str, list[type[BaseConnectionInfo]]] = {
     "bigquery": [BigQueryDatasetConnectionInfo, BigQueryProjectConnectionInfo],
     "canner": [CannerConnectionInfo],
     "clickhouse": [ClickHouseConnectionInfo],
+    "datafusion": [DataFusionConnectionInfo],
     "databricks": [
         DatabricksTokenConnectionInfo,
         DatabricksServicePrincipalConnectionInfo,
@@ -177,6 +179,10 @@ _MODEL_UI_OVERRIDES: dict[str, dict[str, dict]] = {
 # Datasource-level overrides: datasource_name → field_name → override dict.
 # Takes priority over model-level overrides.
 _DATASOURCE_UI_OVERRIDES: dict[str, dict[str, dict]] = {
+    "datafusion": {
+        "source": {"label": "Data Directory", "examples": ["./data"]},
+        "format": {"label": "File Format", "placeholder": "parquet"},
+    },
     "duckdb": {
         "url": {
             "label": "Directory Path",

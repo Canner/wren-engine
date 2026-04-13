@@ -10,6 +10,7 @@ _REGISTRY: dict[DataSource, str] = {
     DataSource.mssql: "wren.connector.mssql",
     DataSource.canner: "wren.connector.canner",
     DataSource.bigquery: "wren.connector.bigquery",
+    DataSource.datafusion: "wren.connector.datafusion",
     DataSource.local_file: "wren.connector.duckdb",
     DataSource.s3_file: "wren.connector.duckdb",
     DataSource.minio_file: "wren.connector.duckdb",
