@@ -241,10 +241,9 @@ class DataFusionConnectionInfo(BaseConnectionInfo):
         description="Root path for data files",
         examples=["./data", "/absolute/path/data"],
     )
-    format: str = Field(
+    format: Literal["parquet", "csv"] = Field(
         default="parquet",
         description="Default file format to scan",
-        examples=["parquet", "csv"],
     )
 
 
