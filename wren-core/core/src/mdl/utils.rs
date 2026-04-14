@@ -206,6 +206,16 @@ pub fn quoted(s: &str) -> String {
     format!("\"{s}\"")
 }
 
+#[inline]
+pub fn dequote_identifier(s: &str) -> &str {
+    // Require >= 2 chars so a single `"` doesn't slice 1..0 and panic.
+    if s.len() >= 2 && s.starts_with('"') && s.ends_with('"') {
+        &s[1..s.len() - 1]
+    } else {
+        s
+    }
+}
+
 /// Transform the column to a datafusion field
 pub fn to_field(column: &wren_core_base::mdl::Column) -> Result<Field> {
     let data_type = try_map_data_type(&column.r#type)?;
