@@ -6,7 +6,6 @@ use crate::mdl::{Dataset, SessionStateRef};
 use datafusion::arrow::datatypes::{
     DataType, Field, IntervalUnit, Schema, SchemaBuilder, SchemaRef, TimeUnit,
 };
-use datafusion::common::{plan_err, DFSchema, DFSchemaRef};
 use datafusion::common::tree_node::{
     Transformed, TransformedResult, TreeNode, TreeNodeRecursion,
 };
@@ -14,6 +13,7 @@ use datafusion::common::types::{
     logical_binary, logical_boolean, logical_date, logical_float16, logical_float32,
     logical_float64, logical_string,
 };
+use datafusion::common::{plan_err, DFSchema, DFSchemaRef};
 use datafusion::datasource::DefaultTableSource;
 use datafusion::error::Result;
 use datafusion::logical_expr::sqlparser::ast::ArrayElemTypeDef;
@@ -285,9 +285,7 @@ pub fn create_remote_table_source(
     mdl: &WrenMDL,
     session_state_ref: SessionStateRef,
 ) -> Result<Arc<dyn TableSource>> {
-    let key = model
-        .table_reference()
-        .unwrap_or_else(|| model.name());
+    let key = model.table_reference().unwrap_or_else(|| model.name());
     if let Some(table_provider) = mdl.get_table(key) {
         Ok(Arc::new(DefaultTableSource::new(table_provider)))
     } else {
