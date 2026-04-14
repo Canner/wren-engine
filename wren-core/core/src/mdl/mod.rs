@@ -9,11 +9,11 @@ use crate::mdl::function::{
     RemoteFunction,
 };
 use crate::mdl::manifest::{Column, Manifest, Metric, Model, View};
-use crate::mdl::utils::{quoted, to_field};
+use crate::mdl::utils::{dequote_identifier, quoted, to_field};
 use crate::DataFusionError;
 use context::SessionPropertiesRef;
 use datafusion::arrow::datatypes::Field;
-use datafusion::common::internal_datafusion_err;
+use datafusion::common::{internal_datafusion_err, plan_err};
 use datafusion::datasource::TableProvider;
 use datafusion::error::Result;
 use datafusion::execution::context::SessionState;
@@ -27,7 +27,7 @@ use datafusion::sql::unparser::Unparser;
 use datafusion::sql::TableReference;
 pub use dataset::Dataset;
 use dialect::WrenDialect;
-use log::{debug, info};
+use log::{debug, info, warn};
 use manifest::Relationship;
 use parking_lot::RwLock;
 use std::hash::Hash;
@@ -94,6 +94,71 @@ impl AnalyzedWrenMDL {
         for (name, table) in register_tables {
             wren_mdl.register_table(name, table);
         }
+        let lineage = lineage::Lineage::new(&wren_mdl)?;
+        Ok(AnalyzedWrenMDL {
+            wren_mdl: Arc::new(wren_mdl),
+            lineage: Arc::new(lineage),
+        })
+    }
+
+    /// Analyze MDL with URL-based table references.
+    ///
+    /// Instead of using `DynamicListTableFactory` (which requires WebDAV PROPFIND),
+    /// directly creates `ListingTable` for each model by:
+    /// 1. Parsing the tableReference as a URL
+    /// 2. Setting format to Parquet (known from file extension)
+    /// 3. Only calling `infer_schema` (uses GET + Range to read Parquet footer)
+    ///
+    /// This follows the DuckDB-WASM pattern: known URL + known format = no listing needed.
+    pub async fn analyze_with_url_tables(
+        manifest: Manifest,
+        ctx: &SessionContext,
+    ) -> Result<Self> {
+        use datafusion::datasource::file_format::parquet::ParquetFormat;
+        use datafusion::datasource::listing::{
+            ListingOptions, ListingTable, ListingTableConfig, ListingTableUrl,
+        };
+
+        let mut wren_mdl = WrenMDL::new(manifest);
+        // Allow manifests that omit `dataSource` (treat as file-backed). Only
+        // reject when `dataSource` is explicitly set to a non-file backend.
+        if let Some(data_source) = wren_mdl.data_source() {
+            match data_source {
+                DataSource::LocalFile
+                | DataSource::MinioFile
+                | DataSource::S3File
+                | DataSource::GcsFile => {}
+                _ => {
+                    return plan_err!(
+                        "Only file-based data source is supported for analyze_with_url_tables"
+                    )
+                }
+            }
+        }
+
+        let state = ctx.state();
+        for model in wren_mdl.models().to_vec() {
+            let Some(table_reference) = model.table_reference() else {
+                warn!("Model '{}' does not have a table reference, skipping URL-based analysis", model.name());
+                continue;
+            };
+            let url_str = dequote_identifier(table_reference);
+            let table_url = ListingTableUrl::parse(url_str)?;
+
+            // Skip infer_options (which does PROPFIND/list).
+            // We know the format is Parquet from the tableReference extension.
+            let options = ListingOptions::new(Arc::new(ParquetFormat::default()))
+                .with_file_extension(".parquet");
+
+            let config = ListingTableConfig::new(table_url)
+                .with_listing_options(options)
+                .infer_schema(&state)
+                .await?;
+
+            let table = ListingTable::try_new(config)?;
+            wren_mdl.register_table(    table_reference.to_string(), Arc::new(table));
+        }
+
         let lineage = lineage::Lineage::new(&wren_mdl)?;
         Ok(AnalyzedWrenMDL {
             wren_mdl: Arc::new(wren_mdl),
@@ -421,7 +486,10 @@ pub fn create_wren_ctx(
     SessionContext::new_with_state(builder.build())
 }
 
-/// Transform the SQL based on the MDL
+/// Transform the SQL based on the MDL (sync wrapper, requires multi-thread tokio runtime).
+///
+/// Not available on WASM — use [`transform_sql_with_ctx`] directly in async context.
+#[cfg(feature = "multi-thread")]
 pub fn transform_sql(
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
     remote_functions: &[RemoteFunction],
