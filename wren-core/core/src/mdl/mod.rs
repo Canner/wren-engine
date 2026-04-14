@@ -3926,4 +3926,130 @@ mod test {
         }
         headers
     }
+
+    #[tokio::test]
+    async fn test_analyze_with_url_tables_rejects_non_file_datasource() {
+        let manifest = ManifestBuilder::new()
+            .data_source(DataSource::BigQuery)
+            .model(
+                ModelBuilder::new("test")
+                    .table_reference(r#""file:///tmp/test.parquet""#)
+                    .column(ColumnBuilder::new("id", "int").build())
+                    .build(),
+            )
+            .build();
+
+        let ctx = datafusion::prelude::SessionContext::new();
+        let result = AnalyzedWrenMDL::analyze_with_url_tables(manifest, &ctx).await;
+        match result {
+            Err(e) => assert!(
+                e.to_string().contains("Only file-based data source"),
+                "unexpected error: {e}"
+            ),
+            Ok(_) => panic!("expected error for non-file data source"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_analyze_with_url_tables_allows_no_datasource() {
+        use datafusion::arrow::array::Int32Array;
+        use datafusion::arrow::datatypes::{DataType, Schema};
+        use datafusion::parquet::arrow::ArrowWriter;
+
+        // Write a small Parquet file to a temp path
+        let dir = std::env::temp_dir().join("wren_test_url_tables_no_ds");
+        let _ = std::fs::create_dir_all(&dir);
+        let parquet_path = dir.join("data.parquet");
+
+        let schema = Arc::new(Schema::new(vec![
+            datafusion::arrow::datatypes::Field::new("id", DataType::Int32, false),
+        ]));
+        let batch = RecordBatch::try_new(
+            schema.clone(),
+            vec![Arc::new(Int32Array::from(vec![1, 2, 3])) as ArrayRef],
+        )
+        .unwrap();
+        let file = std::fs::File::create(&parquet_path).unwrap();
+        let mut writer = ArrowWriter::try_new(file, schema, None).unwrap();
+        writer.write(&batch).unwrap();
+        writer.close().unwrap();
+
+        // Manifest with NO data_source set — should be allowed
+        let url = format!("\"{}\"", parquet_path.display());
+        let manifest = ManifestBuilder::new()
+            .model(
+                ModelBuilder::new("test")
+                    .table_reference(&url)
+                    .column(ColumnBuilder::new("id", "int").build())
+                    .build(),
+            )
+            .build();
+
+        let ctx = datafusion::prelude::SessionContext::new();
+        let result = AnalyzedWrenMDL::analyze_with_url_tables(manifest, &ctx).await;
+        assert!(result.is_ok(), "expected Ok, got: {:?}", result.err());
+        let analyzed = result.unwrap();
+        assert!(analyzed.wren_mdl().get_model("test").is_some());
+
+        // Cleanup
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn test_analyze_with_url_tables_local_file_datasource() {
+        use datafusion::arrow::array::Int32Array;
+        use datafusion::arrow::datatypes::{DataType, Schema};
+        use datafusion::parquet::arrow::ArrowWriter;
+
+        let dir = std::env::temp_dir().join("wren_test_url_tables_local");
+        let _ = std::fs::create_dir_all(&dir);
+        let parquet_path = dir.join("orders.parquet");
+
+        let schema = Arc::new(Schema::new(vec![
+            datafusion::arrow::datatypes::Field::new("order_id", DataType::Int32, false),
+            datafusion::arrow::datatypes::Field::new("amount", DataType::Int32, false),
+        ]));
+        let batch = RecordBatch::try_new(
+            schema.clone(),
+            vec![
+                Arc::new(Int32Array::from(vec![1, 2])) as ArrayRef,
+                Arc::new(Int32Array::from(vec![100, 200])) as ArrayRef,
+            ],
+        )
+        .unwrap();
+        let file = std::fs::File::create(&parquet_path).unwrap();
+        let mut writer = ArrowWriter::try_new(file, schema, None).unwrap();
+        writer.write(&batch).unwrap();
+        writer.close().unwrap();
+
+        let url = format!("\"{}\"", parquet_path.display());
+        let manifest = ManifestBuilder::new()
+            .data_source(DataSource::LocalFile)
+            .model(
+                ModelBuilder::new("orders")
+                    .table_reference(&url)
+                    .column(ColumnBuilder::new("order_id", "int").build())
+                    .column(ColumnBuilder::new("amount", "int").build())
+                    .build(),
+            )
+            .build();
+
+        let ctx = datafusion::prelude::SessionContext::new();
+        let analyzed =
+            AnalyzedWrenMDL::analyze_with_url_tables(manifest, &ctx)
+                .await
+                .expect("analyze_with_url_tables should succeed for LocalFile");
+
+        // Verify the model exists and the table is registered
+        assert!(analyzed.wren_mdl().get_model("orders").is_some());
+        assert!(
+            analyzed
+                .wren_mdl()
+                .register_tables
+                .contains_key(&url),
+            "table should be registered with its quoted table_reference"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }
