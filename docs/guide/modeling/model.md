@@ -84,6 +84,7 @@ properties: {}
 | `columns` | Yes | List of columns to expose (see [Column Fields](#column-fields)) |
 | `primary_key` | No | Column name that uniquely identifies a row; required for relationships |
 | `cached` | No | Whether query results for this model should be cached; `false` by default |
+| `dialect` | No | SQL dialect of the model's `ref_sql` (e.g. `bigquery`, `postgres`). Overrides the project-level `data_source` for this model. Requires `schema_version: 3`. See [Dialect Override](./wren_project.md#dialect-override). |
 | `properties` | No | Arbitrary key-value metadata (description, tags, etc.) |
 
 ## Data Source: Two Ways to Point at Data

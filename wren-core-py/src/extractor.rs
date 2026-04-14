@@ -80,6 +80,7 @@ fn extract_manifest(
         .collect::<Vec<_>>();
     let used_relationships = extract_relationships(mdl, &used_models);
     Ok(Manifest {
+        layout_version: mdl.manifest.layout_version,
         catalog: mdl.catalog().to_string(),
         schema: mdl.schema().to_string(),
         models: used_models,

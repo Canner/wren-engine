@@ -2,6 +2,7 @@ use crate::errors::CoreError;
 use base64::prelude::BASE64_STANDARD;
 use base64::Engine;
 use pyo3::pyfunction;
+use wren_core_base::mdl::migration;
 
 pub use wren_core_base::mdl::*;
 
@@ -20,6 +21,16 @@ pub fn to_manifest(mdl_base64: &str) -> Result<Manifest, CoreError> {
     let mdl_json = String::from_utf8(decoded_bytes)?;
     let manifest = serde_json::from_str::<Manifest>(&mdl_json)?;
     Ok(manifest)
+}
+
+/// Migrate a manifest JSON string to the specified target layout version.
+#[pyfunction]
+pub fn migrate_manifest_json(
+    manifest_json: &str,
+    target_version: u32,
+) -> Result<String, CoreError> {
+    migration::migrate_manifest(manifest_json, target_version)
+        .map_err(|e| CoreError::new(&e.to_string()))
 }
 
 /// Check if the MDL can be used by the v2 wren core. If there are any access controls rules,
@@ -50,6 +61,7 @@ mod tests {
     #[test]
     fn test_manifest_to_json_base64() {
         let py_manifest = Manifest {
+            layout_version: 1,
             catalog: "catalog".to_string(),
             schema: "schema".to_string(),
             models: vec![
@@ -63,6 +75,7 @@ mod tests {
                     cached: false,
                     refresh_time: None,
                     row_level_access_controls: vec![],
+                    dialect: None,
                 }),
                 Arc::from(Model {
                     name: "model_2".to_string(),
@@ -74,6 +87,7 @@ mod tests {
                     cached: false,
                     refresh_time: None,
                     row_level_access_controls: vec![],
+                    dialect: None,
                 }),
             ],
             relationships: vec![],

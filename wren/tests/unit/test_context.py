@@ -12,6 +12,7 @@ from wren.context import (
     _snake_to_camel,
     build_json,
     build_manifest,
+    convert_mdl_to_project,
     discover_project_path,
     get_schema_version,
     load_instructions,
@@ -538,6 +539,203 @@ def test_discover_via_config(tmp_path, monkeypatch):
     importlib.reload(ctx)
     result = ctx.discover_project_path()
     assert result == project_dir
+
+
+# ── Schema version 3 / dialect / layoutVersion ──────────────────────────────
+
+
+def _make_v3_project(tmp_path: Path) -> Path:
+    """Write a minimal v3 project with dialect support."""
+    (tmp_path / "wren_project.yml").write_text(
+        "schema_version: 3\nname: test\ndata_source: postgres\ncatalog: wren\nschema: public\n"
+    )
+    return tmp_path
+
+
+def test_get_schema_version_v3(tmp_path):
+    _make_v3_project(tmp_path)
+    assert get_schema_version(tmp_path) == 3
+
+
+def test_require_schema_version_v3(tmp_path):
+    _make_v3_project(tmp_path)
+    assert require_schema_version(tmp_path) == 3
+
+
+def test_build_json_layout_version_v2_project(tmp_path):
+    """schema_version 2 → layoutVersion 1."""
+    _minimal_v2_project(tmp_path)
+    result = build_json(tmp_path)
+    assert result["layoutVersion"] == 1
+
+
+def test_build_json_layout_version_v3_project(tmp_path):
+    """schema_version 3 → layoutVersion 2."""
+    _make_v3_project(tmp_path)
+    d = tmp_path / "models" / "orders"
+    d.mkdir(parents=True)
+    (d / "metadata.yml").write_text(
+        "name: orders\n"
+        "table_reference:\n  table: orders\n"
+        "columns:\n  - name: id\n    type: INTEGER\n"
+    )
+    result = build_json(tmp_path)
+    assert result["layoutVersion"] == 2
+
+
+def test_build_json_model_dialect_preserved(tmp_path):
+    """Model dialect field flows through to JSON output."""
+    _make_v3_project(tmp_path)
+    d = tmp_path / "models" / "revenue"
+    d.mkdir(parents=True)
+    (d / "metadata.yml").write_text(
+        "name: revenue\n"
+        "table_reference:\n  table: revenue\n"
+        "dialect: bigquery\n"
+        "columns:\n  - name: amount\n    type: decimal\n"
+    )
+    result = build_json(tmp_path)
+    assert result["models"][0]["dialect"] == "bigquery"
+
+
+def test_build_json_view_dialect_preserved(tmp_path):
+    """View dialect field flows through to JSON output."""
+    _make_v3_project(tmp_path)
+    d = tmp_path / "views" / "summary"
+    d.mkdir(parents=True)
+    (d / "metadata.yml").write_text(
+        "name: summary\n"
+        "statement: SELECT 1\n"
+        "dialect: postgres\n"
+    )
+    result = build_json(tmp_path)
+    assert result["views"][0]["dialect"] == "postgres"
+
+
+def test_v3_models_load_same_as_v2(tmp_path):
+    """schema_version 3 uses the same directory layout as v2."""
+    _make_v3_project(tmp_path)
+    d = tmp_path / "models" / "orders"
+    d.mkdir(parents=True)
+    (d / "metadata.yml").write_text("name: orders\ntable_reference:\n  table: orders\n")
+    models = load_models(tmp_path)
+    assert len(models) == 1
+    assert models[0]["name"] == "orders"
+
+
+def test_convert_mdl_preserves_dialect(tmp_path):
+    """convert_mdl_to_project preserves dialect on models and views."""
+    mdl = {
+        "layoutVersion": 2,
+        "catalog": "wren",
+        "schema": "public",
+        "dataSource": "POSTGRES",
+        "models": [
+            {
+                "name": "revenue",
+                "tableReference": {"table": "revenue"},
+                "dialect": "bigquery",
+                "columns": [{"name": "amount", "type": "decimal"}],
+            }
+        ],
+        "views": [
+            {
+                "name": "summary",
+                "statement": "SELECT 1",
+                "dialect": "postgres",
+            }
+        ],
+    }
+    files = convert_mdl_to_project(mdl)
+    file_map = {f.relative_path: f.content for f in files}
+
+    # Check schema_version derived from layoutVersion 2
+    import yaml
+
+    project = yaml.safe_load(file_map["wren_project.yml"])
+    assert project["schema_version"] == 3
+
+    # Check model dialect preserved
+    model_meta = yaml.safe_load(file_map["models/revenue/metadata.yml"])
+    assert model_meta["dialect"] == "bigquery"
+
+    # Check view dialect preserved
+    view_meta = yaml.safe_load(file_map["views/summary/metadata.yml"])
+    assert view_meta["dialect"] == "postgres"
+
+
+def test_convert_mdl_v1_layout_version(tmp_path):
+    """layoutVersion 1 (or missing) → schema_version 2."""
+    mdl = {
+        "catalog": "wren",
+        "schema": "public",
+        "models": [],
+    }
+    files = convert_mdl_to_project(mdl)
+    import yaml
+
+    project = yaml.safe_load(files[0].content)
+    assert project["schema_version"] == 2
+
+
+def test_validate_dialect_unknown_value(tmp_path):
+    """Unknown dialect value is an error."""
+    _make_v3_project(tmp_path)
+    d = tmp_path / "models" / "bad"
+    d.mkdir(parents=True)
+    (d / "metadata.yml").write_text(
+        "name: bad\n"
+        "table_reference:\n  table: bad\n"
+        "dialect: nosuchdb\n"
+        "columns:\n  - name: id\n    type: INTEGER\n"
+    )
+    errors = validate_project(tmp_path)
+    assert any("unknown dialect" in e.message for e in errors)
+
+
+def test_validate_dialect_valid_value(tmp_path):
+    """Valid dialect does not produce errors."""
+    _make_v3_project(tmp_path)
+    d = tmp_path / "models" / "ok"
+    d.mkdir(parents=True)
+    (d / "metadata.yml").write_text(
+        "name: ok\n"
+        "table_reference:\n  table: ok\n"
+        "dialect: bigquery\n"
+        "columns:\n  - name: id\n    type: INTEGER\n"
+        "primary_key: id\n"
+    )
+    (tmp_path / "relationships.yml").write_text("relationships: []\n")
+    errors = validate_project(tmp_path)
+    assert errors == []
+
+
+def test_validate_dialect_warning_in_v2(tmp_path):
+    """dialect on a schema_version 2 project produces a warning."""
+    _make_v2_project(tmp_path)
+    d = tmp_path / "models" / "mixed"
+    d.mkdir(parents=True)
+    (d / "metadata.yml").write_text(
+        "name: mixed\n"
+        "table_reference:\n  table: mixed\n"
+        "dialect: bigquery\n"
+        "columns:\n  - name: id\n    type: INTEGER\n"
+    )
+    errors = validate_project(tmp_path)
+    warnings = [e for e in errors if e.level == "warning"]
+    assert any("schema_version >= 3" in w.message for w in warnings)
+
+
+def test_validate_view_dialect_unknown(tmp_path):
+    """Unknown dialect on a view is an error."""
+    _make_v3_project(tmp_path)
+    d = tmp_path / "views" / "badview"
+    d.mkdir(parents=True)
+    (d / "metadata.yml").write_text(
+        "name: badview\nstatement: SELECT 1\ndialect: nosuchdb\n"
+    )
+    errors = validate_project(tmp_path)
+    assert any("unknown dialect" in e.message for e in errors)
 
 
 # ── Semantic validation tests (view dry-plan + description checks) ─────────

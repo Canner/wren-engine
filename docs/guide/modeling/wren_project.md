@@ -85,7 +85,7 @@ default_project: ~/projects/sales
 ### `wren_project.yml`
 
 ```yaml
-schema_version: 2
+schema_version: 3
 name: my_project
 version: "1.0"
 catalog: wren
@@ -95,7 +95,7 @@ data_source: postgres
 
 | Field | Description |
 |-------|-------------|
-| `schema_version` | Directory layout version. `2` = folder-per-entity (current). Owned by the CLI — do not bump manually. |
+| `schema_version` | Directory layout version. `2` = folder-per-entity, `3` = adds `dialect` field support (current). Owned by the CLI — do not bump manually. |
 | `name` | Project name |
 | `version` | User's own project version (free-form, no effect on parsing) |
 | `catalog` | **Wren Engine namespace** — NOT your database catalog. Identifies this MDL project within the engine. Default: `wren`. |
@@ -146,6 +146,19 @@ cached: false
 properties: {}
 ```
 
+**`dialect`** — optional field declaring which SQL dialect the model's `ref_sql` is written in. When omitted, the project-level `data_source` is used. This lets a single project contain models whose SQL targets different databases:
+
+```yaml
+name: revenue
+ref_sql: "SELECT * FROM `project.dataset.table`"
+dialect: bigquery
+columns:
+  - name: amount
+    type: DECIMAL
+```
+
+Requires `schema_version: 3`. See [Dialect Override](#dialect-override) for details.
+
 **ref_sql** — defines the model via a SQL query. SQL can be inline in `metadata.yml` or in a separate `ref_sql.sql` file (the `.sql` file takes precedence if both exist):
 
 ```yaml
@@ -185,6 +198,16 @@ statement: >
 properties:
   description: "Top customers by lifetime value"
 ```
+
+Like models, views support an optional **`dialect`** field (requires `schema_version: 3`):
+
+```yaml
+name: monthly_summary
+statement: "SELECT date_trunc('month', created_at) FROM orders"
+dialect: postgres
+```
+
+When set, the dialect is stored as metadata for downstream consumers. It does not currently affect how the engine parses the view's statement — view statements are always normalized into a logical plan via DataFusion's generic SQL parser. See [Dialect Override](#dialect-override) for details.
 
 ### `relationships.yml`
 
@@ -297,8 +320,60 @@ The `build` step converts all YAML keys from snake_case to camelCase:
 | `primary_key` | `primaryKey` |
 | `join_type` | `joinType` |
 | `data_source` | `dataSource` |
+| `layout_version` | `layoutVersion` |
+| `refresh_time` | `refreshTime` |
+| `base_object` | `baseObject` |
 
-Generic rule: split on `_`, capitalize each word after the first, join. All other fields (`name`, `type`, `catalog`, `schema`, `table`, `condition`, `models`, `columns`, `cached`, `properties`) are identical in both formats.
+Generic rule: split on `_`, capitalize each word after the first, join. All other fields (`name`, `type`, `catalog`, `schema`, `table`, `condition`, `models`, `columns`, `cached`, `dialect`, `properties`) are identical in both formats.
+
+The `layoutVersion` field is stamped automatically by `wren context build` based on the project's `schema_version`. You do not set it manually in YAML.
+
+---
+
+## Dialect Override
+
+Models and views support an optional `dialect` field that declares which SQL dialect their embedded SQL is written in. This requires `schema_version: 3`.
+
+### Semantics
+
+- **`dialect` omitted (or `null`)** — falls back to the project-level `data_source`. This is the default and matches the behavior of all existing projects.
+- **`dialect` set** — the embedded SQL is written in the specified dialect, which may differ from the project's `data_source`.
+
+### Model dialect
+
+When a model has `dialect: bigquery` but the project's `data_source` is `postgres`, the engine knows the model's `ref_sql` contains BigQuery-flavored SQL (e.g. backtick-quoted identifiers, BigQuery functions). The engine uses this to select the correct SQL parser for the ref_sql.
+
+```yaml
+# models/revenue/metadata.yml
+name: revenue
+ref_sql: "SELECT * FROM `my-project.dataset.table`"
+dialect: bigquery
+columns:
+  - name: amount
+    type: DECIMAL
+```
+
+### View dialect
+
+For views, the `dialect` field is currently **metadata only**. The engine normalizes view statements into a logical plan using DataFusion's generic SQL parser regardless of the dialect setting. The field is still valuable because:
+
+- It documents the author's intent (which dialect the SQL was written in).
+- Downstream consumers (ibis-server, MCP clients) can use it for dialect-aware processing.
+- When dialect-aware view parsing is added in the future, the field will already be in place.
+
+### Valid dialect values
+
+`athena`, `bigquery`, `canner`, `clickhouse`, `databricks`, `datafusion`, `doris`, `duckdb`, `gcs_file`, `local_file`, `minio_file`, `mssql`, `mysql`, `oracle`, `postgres`, `redshift`, `s3_file`, `snowflake`, `spark`, `trino`
+
+### Version requirements
+
+The `dialect` field requires `schema_version: 3` in `wren_project.yml`. Using `dialect` in a `schema_version: 2` project produces a validation warning. The `schema_version` also controls the `layoutVersion` stamped in the compiled `target/mdl.json`:
+
+| `schema_version` | `layoutVersion` | Capabilities |
+|-------------------|-----------------|--------------|
+| 1 | 1 | Legacy flat-file project format |
+| 2 | 1 | Folder-per-entity project format |
+| 3 | 2 | `dialect` field on models and views |
 
 ---
 

@@ -96,6 +96,14 @@ _CAMEL_TO_SNAKE_MAP = {
     "primaryKey": "primary_key",
     "joinType": "join_type",
     "dataSource": "data_source",
+    "layoutVersion": "layout_version",
+    "refreshTime": "refresh_time",
+    "baseObject": "base_object",
+    "rowLevelAccessControls": "row_level_access_controls",
+    "columnLevelAccessControl": "column_level_access_control",
+    "requiredProperties": "required_properties",
+    "defaultExpr": "default_expr",
+    "isHidden": "is_hidden",
 }
 
 
@@ -141,7 +149,13 @@ def convert_mdl_to_project(mdl_json: dict) -> list[ProjectFile]:
     files: list[ProjectFile] = []
 
     # ── wren_project.yml ──────────────────────────────────────
-    project_config: dict[str, Any] = {"schema_version": 2}
+    # Map layoutVersion back to schema_version
+    layout_version = mdl_json.get("layoutVersion", 1)
+    _LAYOUT_TO_SCHEMA = {1: 2, 2: 3}
+    schema_version = _LAYOUT_TO_SCHEMA.get(
+        layout_version, 3 if layout_version >= 2 else 2
+    )
+    project_config: dict[str, Any] = {"schema_version": schema_version}
     if "name" in mdl_json:
         project_config["name"] = mdl_json["name"]
     elif "projectName" in mdl_json:
@@ -367,7 +381,34 @@ def load_project_config(project_path: Path) -> dict:
     return yaml.safe_load(config_file.read_text()) or {}
 
 
-_SUPPORTED_SCHEMA_VERSIONS = {1, 2}
+_SUPPORTED_SCHEMA_VERSIONS = {1, 2, 3}
+
+# schema_version → layoutVersion mapping for the engine
+_LAYOUT_VERSION_MAP = {1: 1, 2: 1, 3: 2}
+
+# Valid dialect values (matches Rust DataSource enum)
+_VALID_DIALECTS = {
+    "athena",
+    "bigquery",
+    "canner",
+    "clickhouse",
+    "databricks",
+    "datafusion",
+    "doris",
+    "duckdb",
+    "gcs_file",
+    "local_file",
+    "minio_file",
+    "mssql",
+    "mysql",
+    "oracle",
+    "postgres",
+    "redshift",
+    "s3_file",
+    "snowflake",
+    "spark",
+    "trino",
+}
 
 
 def get_schema_version(project_path: Path) -> int:
@@ -557,8 +598,14 @@ def build_manifest(project_path: Path) -> dict:
 
 
 def build_json(project_path: Path) -> dict:
-    """Build the final camelCase JSON manifest for the engine."""
-    return _convert_keys(build_manifest(project_path))
+    """Build the final camelCase JSON manifest for the engine.
+
+    Stamps layoutVersion based on schema_version mapping.
+    """
+    manifest = _convert_keys(build_manifest(project_path))
+    sv = get_schema_version(project_path)
+    manifest["layoutVersion"] = _LAYOUT_VERSION_MAP.get(sv, 1)
+    return manifest
 
 
 def save_target(manifest_json: dict, project_path: Path) -> Path:
@@ -600,6 +647,7 @@ def validate_project(project_path: Path) -> list[ValidationError]:
     8. table_reference (if used) has at least a table field
     """
     errors: list[ValidationError] = []
+    sv = 1  # default; may be overridden below
 
     # Check project config
     config = load_project_config(project_path)
@@ -759,6 +807,26 @@ def validate_project(project_path: Path) -> list[ValidationError]:
                 )
             )
 
+        # Validate dialect (if present)
+        model_dialect = model.get("dialect")
+        if model_dialect is not None:
+            if sv < 3:
+                errors.append(
+                    ValidationError(
+                        "warning",
+                        f"{src_path} > {name}",
+                        f"'dialect' field requires schema_version >= 3 (current: {sv})",
+                    )
+                )
+            if model_dialect.lower() not in _VALID_DIALECTS:
+                errors.append(
+                    ValidationError(
+                        "error",
+                        f"{src_path} > {name}",
+                        f"unknown dialect '{model_dialect}'",
+                    )
+                )
+
     # Check views
     for i, view in enumerate(views):
         src_dir = view.get("_source_dir", f"views[{i}]")
@@ -784,6 +852,26 @@ def validate_project(project_path: Path) -> list[ValidationError]:
                     "view missing 'statement' (define in metadata.yml or sql.yml)",
                 )
             )
+
+        # Validate dialect (if present)
+        view_dialect = view.get("dialect")
+        if view_dialect is not None:
+            if sv < 3:
+                errors.append(
+                    ValidationError(
+                        "warning",
+                        f"views/{src_dir}",
+                        f"'dialect' field requires schema_version >= 3 (current: {sv})",
+                    )
+                )
+            if view_dialect.lower() not in _VALID_DIALECTS:
+                errors.append(
+                    ValidationError(
+                        "error",
+                        f"views/{src_dir}",
+                        f"unknown dialect '{view_dialect}'",
+                    )
+                )
 
     # Check relationships
     all_entity_names = model_names | view_names

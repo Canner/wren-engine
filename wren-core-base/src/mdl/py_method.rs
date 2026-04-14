@@ -27,6 +27,11 @@ mod manifest_python_impl {
     #[pymethods]
     impl Manifest {
         #[getter]
+        fn layout_version(&self) -> PyResult<u32> {
+            Ok(self.layout_version)
+        }
+
+        #[getter]
         fn catalog(&self) -> PyResult<String> {
             Ok(self.catalog.clone())
         }
