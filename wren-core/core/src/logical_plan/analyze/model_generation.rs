@@ -179,7 +179,7 @@ impl ModelGenerationRule {
                                     .project(required_exprs)?
                                     .build()
                                 }
-                                _ => {
+                                wren_core_base::mdl::ModelSource::TableReference => {
                                     let table_ref_name = model.table_reference()
                                         .expect("table_reference model must have a table_reference");
                                     LogicalPlanBuilder::scan(
@@ -193,6 +193,9 @@ impl ModelGenerationRule {
                                     .alias(SOURCE_ALIAS)?
                                     .project(required_exprs)?
                                     .build()
+                                }
+                                wren_core_base::mdl::ModelSource::Invalid(reason) => {
+                                    return plan_err!("{reason}");
                                 }
                             }
                         },

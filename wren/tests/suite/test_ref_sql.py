@@ -158,13 +158,13 @@ class TestRefSqlQuery:
     def test_query_ref_sql_with_where(self, engine: WrenEngine) -> None:
         """WHERE clause on top of a refSql model should compose correctly."""
         result = engine.query(
-            'SELECT o_orderkey FROM "high_value_orders" '
+            'SELECT o_orderkey, o_totalprice FROM "high_value_orders" '
             "WHERE o_totalprice > 200000 LIMIT 10"
         )
         assert isinstance(result, pa.Table)
         # All rows must satisfy both the refSql filter (>100k) and query filter (>200k)
         for i in range(result.num_rows):
-            assert result["o_orderkey"][i].as_py() > 0
+            assert result["o_totalprice"][i].as_py() > 200000
 
     def test_query_ref_sql_count(self, engine: WrenEngine) -> None:
         """COUNT(*) on a refSql model."""

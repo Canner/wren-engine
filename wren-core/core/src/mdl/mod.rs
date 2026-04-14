@@ -244,7 +244,9 @@ impl WrenMDL {
                         let datasource = WrenDataSource::new_with_schema(schema);
                         Ok(Some((quoted(model.name()), Arc::new(datasource))))
                     }
-                    ModelSource::Invalid(_) => Ok(None),
+                    ModelSource::Invalid(reason) => {
+                        Err(datafusion::error::DataFusionError::Plan(reason))
+                    }
                 }
             })
             .collect::<Result<Vec<_>>>()?;
