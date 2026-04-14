@@ -1,0 +1,130 @@
+name: Publish ibis-server Docker image
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "Version number (e.g. 0.25.0)"
+        required: true
+        type: string
+      tag_name:
+        description: "Git tag to checkout (e.g. ibis-server-v0.25.0)"
+        required: true
+        type: string
+      prerelease:
+        description: "Whether this is a pre-release build"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IBIS_IMAGE: ghcr.io/canner/wren-engine-ibis
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - runner: ubuntu-latest
+            platform: linux/amd64
+          - runner: linux_arm64_runner
+            platform: linux/arm64
+    runs-on: ${{ matrix.arch.runner }}
+    steps:
+      - name: Prepare platform
+        run: |
+          platform=${{ matrix.arch.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag_name }}
+      - name: Read mcp-server version
+        id: mcp
+        run: |
+          MCP_VERSION=$(python3 -c "
+          import re
+          with open('mcp-server/pyproject.toml') as f:
+              content = f.read()
+          match = re.search(r'^version\s*=\s*\"(.+?)\"', content, re.MULTILINE)
+          print(match.group(1))
+          ")
+          echo "version=$MCP_VERSION" >> "$GITHUB_OUTPUT"
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IBIS_IMAGE }}
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          platforms: ${{ matrix.arch.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          context: ./ibis-server
+          build-args: |
+            ENV=prod
+            MCP_SERVER_VERSION=${{ steps.mcp.outputs.version }}
+          build-contexts: |
+            wren-core-py=./wren-core-py
+            wren-core=./wren-core
+            wren-core-base=./wren-core-base
+            mcp-server=./mcp-server
+          outputs: type=image,name=${{ env.IBIS_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ env.PLATFORM_PAIR }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IBIS_IMAGE }}
+          tags: |
+            type=raw,value=${{ inputs.version }}
+            ${{ !inputs.prerelease && 'type=raw,value=latest' || '' }}
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create manifest list and push
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.IBIS_IMAGE }}@sha256:%s ' *)

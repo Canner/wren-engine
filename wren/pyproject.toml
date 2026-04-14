@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "wren-engine"
-dynamic = ["version"]
+version = "0.2.0"
 description = "Wren Engine CLI and Python SDK — semantic SQL layer for 20+ data sources"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -74,9 +74,6 @@ wren = "wren.cli:app"
 Homepage = "https://getwren.ai"
 Repository = "https://github.com/Canner/wren-engine"
 Issues = "https://github.com/Canner/wren-engine/issues"
-
-[tool.hatch.version]
-path = "src/wren/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/wren"]
