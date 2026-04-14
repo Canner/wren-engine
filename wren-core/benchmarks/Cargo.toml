@@ -21,5 +21,5 @@ num_cpus = "1.16.0"
 serde = { workspace = true }
 serde_json = { workspace = true }
 structopt = { version = "0.3.26", default-features = false }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
 wren-core = { workspace = true }
