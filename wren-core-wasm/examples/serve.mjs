@@ -7,8 +7,8 @@
 
 import { createServer } from 'node:http';
 import { createReadStream } from 'node:fs';
-import { stat, readFile } from 'node:fs/promises';
-import { join, dirname, extname } from 'node:path';
+import { stat } from 'node:fs/promises';
+import { join, dirname, extname, resolve, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -36,7 +36,13 @@ createServer(async (req, res) => {
     if (req.method === 'OPTIONS') return res.writeHead(204, CORS).end();
 
     try {
-        const filePath = join(ROOT, decodeURIComponent(new URL(req.url, 'http://x').pathname));
+        const reqPath = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+        const filePath = resolve(join(ROOT, reqPath));
+        // Reject path traversal (e.g. `..`) that escapes ROOT
+        const rel = relative(ROOT, filePath);
+        if (rel.startsWith('..')) {
+            return res.writeHead(403, { 'Content-Type': 'text/plain' }).end('Forbidden');
+        }
         const info = await stat(filePath);
         const contentType = MIME[extname(filePath)] || 'application/octet-stream';
         const size = info.size;

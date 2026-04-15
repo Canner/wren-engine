@@ -57,11 +57,12 @@
                 + '</table>';
         }
 
+        let engine;
         try {
             // 1. Init engine from CDN
             log('Loading WASM from CDN...');
             const t0 = performance.now();
-            const engine = await WrenEngine.init();
+            engine = await WrenEngine.init();
             log(`Engine ready (${((performance.now() - t0) / 1000).toFixed(1)}s)`);
 
             // 2. Inline data
@@ -123,11 +124,12 @@
                 options: { plugins: { legend: { display: false } } },
             });
 
-            engine.free();
             log('Done');
         } catch (e) {
             log(`Error: ${e.message || e}`, false);
             console.error(e);
+        } finally {
+            engine?.free();
         }
     </script>
 </body>

@@ -41,11 +41,11 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             wren-core-wasm/target/
-          key: wasm-cargo-${{ hashFiles('wren-core-wasm/Cargo.toml') }}
+          key: wasm-cargo-${{ hashFiles('wren-core-wasm/Cargo.toml', 'wren-core-wasm/Cargo.lock') }}
           restore-keys: wasm-cargo-
 
       - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        run: cargo install wasm-pack --version 0.14.0 --locked
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

@@ -42,7 +42,10 @@ export class WrenEngine {
    *
    * @param mdl - MDL manifest object (will be JSON-serialized)
    * @param profile - Profile with source path/URL
-   *   - `{ source: "https://cdn/data/" }` — URL mode: auto-registers ListingTables from remote Parquet
+   *   - `{ source: "https://cdn/data/" }` — URL mode: auto-registers ListingTables from remote Parquet.
+   *     ⚠ URL mode resolves files as `{source}/{bare_name}.parquet`, so models with the same bare
+   *     name across different schemas (e.g., `raw.orders` and `staging.orders`) will silently collide.
+   *     Use unique bare names or pre-register via local mode until schema-aware layout is supported.
    *   - `{ source: "./data/" }` — local mode: expects pre-registered tables via registerParquet/registerJson
    *   - `{ source: "" }` — fallback: auto-detect from tableReference fields in MDL
    */
@@ -52,11 +55,18 @@ export class WrenEngine {
   }
 
   /**
-   * Register Parquet data from an ArrayBuffer as a named table.
+   * Register Parquet data as a named table.
    * Call before loadMDL when using local mode.
+   *
+   * Accepts any `BufferSource` — ArrayBuffer, TypedArray (e.g., `Uint8Array`), or Node.js Buffer.
+   * For TypedArray inputs, the `byteOffset` and `byteLength` view metadata are preserved.
    */
-  async registerParquet(name: string, data: ArrayBuffer): Promise<void> {
-    await this.engine.registerParquet(name, new Uint8Array(data));
+  async registerParquet(name: string, data: BufferSource): Promise<void> {
+    const bytes =
+      data instanceof ArrayBuffer
+        ? new Uint8Array(data)
+        : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+    await this.engine.registerParquet(name, bytes);
   }
 
   /**

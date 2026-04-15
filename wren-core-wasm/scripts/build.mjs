@@ -8,7 +8,7 @@
  */
 
 import { execSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, rmSync, statSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -54,7 +54,6 @@ execSync("npx tsc -p sdk/tsconfig.json", { cwd: root, stdio: "inherit" });
 // 3. Report
 const wasmPath = resolve(dist, "wren_core_wasm_bg.wasm");
 if (existsSync(wasmPath)) {
-  const { statSync } = await import("node:fs");
   const stats = statSync(wasmPath);
   const sizeMB = (stats.size / (1024 * 1024)).toFixed(1);
   console.log(`\n✓ dist/ ready (WASM binary: ${sizeMB} MB)`);

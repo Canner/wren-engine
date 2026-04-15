@@ -65,7 +65,9 @@ size:
     fi
     raw=$(stat -f%z "$wasm" 2>/dev/null || stat -c%s "$wasm")
     gzip=$(gzip -c "$wasm" | wc -c | tr -d ' ')
-    echo "WASM binary: $(echo "scale=1; $raw / 1048576" | bc) MB raw, $(echo "scale=1; $gzip / 1048576" | bc) MB gzip"
+    raw_mb=$(awk "BEGIN {printf \"%.1f\", $raw / 1048576}")
+    gzip_mb=$(awk "BEGIN {printf \"%.1f\", $gzip / 1048576}")
+    echo "WASM binary: ${raw_mb} MB raw, ${gzip_mb} MB gzip"
 
 # -- Clean ----------------------------------------------------------
 

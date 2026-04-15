@@ -10,7 +10,7 @@ Shared code: `wren-core-base` (manifest types, no DataFusion dependency) and `wr
 
 ## Architecture
 
-```
+```text
 Browser JS
   ├── registerParquet(name, bytes) → Arrow RecordBatch → MemTable
   ├── registerJson(name, json)     → Arrow JSON reader → MemTable
@@ -23,7 +23,7 @@ Browser JS
 
 ## Key Source Files
 
-- `src/lib.rs` (758 lines) — Single-file crate with `WrenEngine` struct:
+- `src/lib.rs` — Single-file crate with `WrenEngine` struct:
   - `new()` → SessionContext with single-thread config
   - `register_json()` → JSON array → NDJSON → Arrow RecordBatch → MemTable
   - `register_parquet()` → Parquet bytes → Arrow RecordBatch → MemTable
@@ -33,7 +33,7 @@ Browser JS
 - `sdk/src/wren_core_wasm.d.ts` — Hand-maintained type stubs for wasm-bindgen output
 - `sdk/tests/index.test.mjs` — Node.js integration tests
 - `scripts/build.mjs` — Build script: copy pkg/ artifacts + compile TS → dist/
-- `examples/` — Browser HTML examples and headless Node.js tests
+- `examples/` — Browser HTML examples (inline, url-mode, test-cdn) + HTTP server (serve.mjs)
 
 ## Dev Commands
 
@@ -45,7 +45,6 @@ just build-dist      # Assemble dist/ from pkg/ + TS (requires pkg/ to exist)
 just test            # SDK integration tests (requires dist/)
 just typecheck       # TypeScript type check only
 just serve           # HTTP server on localhost:8787 for browser examples
-just test-examples   # Headless Node.js example tests
 just size            # Report WASM binary size (raw + gzip)
 just clean           # Remove pkg/, dist/, target/
 ```
