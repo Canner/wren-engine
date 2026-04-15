@@ -18,6 +18,9 @@ Or use directly via CDN:
 </script>
 ```
 
+> **Note:** Use **unpkg**, not jsDelivr. jsDelivr's free CDN has a 50 MB
+> per-file limit and the WASM binary is ~68 MB raw.
+
 ## Quick Start
 
 ### URL Mode (remote Parquet files)

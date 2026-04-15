@@ -10,7 +10,8 @@ Reference for AI agents generating browser-based HTML dashboard artifacts using 
 </script>
 ```
 
-Alternative CDN: `https://cdn.jsdelivr.net/npm/wren-core-sdk@0.1.0/dist/index.js`
+**Use unpkg, not jsDelivr.** jsDelivr's free CDN has a 50 MB per-file limit and
+the WASM binary is ~68 MB raw, so jsDelivr returns 403 on the `.wasm` fetch.
 
 ## Two Data Loading Modes
 

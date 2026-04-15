@@ -68,4 +68,5 @@ createServer(async (req, res) => {
     console.log(`Serving on http://localhost:${PORT}`);
     console.log(`  inline demo:   http://localhost:${PORT}/examples/inline.html`);
     console.log(`  url-mode demo: http://localhost:${PORT}/examples/url-mode.html`);
+    console.log(`  cdn demo:      http://localhost:${PORT}/examples/test-cdn.html`);
 });
