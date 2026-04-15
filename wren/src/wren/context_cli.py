@@ -24,6 +24,102 @@ ProjectPathOpt = Annotated[
 ]
 
 
+@context_app.command("import")
+def import_cmd(
+    source: Annotated[str, typer.Argument(help="Import source (currently: dbt)")],
+    path: ProjectPathOpt = None,
+    project_dir: Annotated[
+        Optional[str],
+        typer.Option(
+            "--project-dir",
+            help="dbt project directory containing dbt_project.yml.",
+        ),
+    ] = None,
+    profiles_path: Annotated[
+        Optional[str],
+        typer.Option("--profiles-path", help="Path to dbt profiles.yml."),
+    ] = None,
+    profile_name: Annotated[
+        Optional[str],
+        typer.Option("--profile", help="dbt profile name override."),
+    ] = None,
+    target_name: Annotated[
+        Optional[str],
+        typer.Option("--target", help="dbt target name override."),
+    ] = None,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Preview generated files without writing."),
+    ] = False,
+    force: Annotated[
+        bool,
+        typer.Option("--force", help="Overwrite managed project files."),
+    ] = False,
+) -> None:
+    """Import a project from an external source."""
+    if source != "dbt":
+        typer.echo(
+            f"Error: unsupported import source '{source}'. Only 'dbt' is supported.",
+            err=True,
+        )
+        raise typer.Exit(1)
+    if not project_dir:
+        typer.echo(
+            "Error: --project-dir is required for `wren context import dbt`.",
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    from wren.context import write_project_files  # noqa: PLC0415
+    from wren.dbt import (  # noqa: PLC0415
+        DbtLoadError,
+        convert_dbt_project_to_wren_project,
+    )
+
+    output_path = Path(path).expanduser() if path else Path.cwd()
+
+    try:
+        imported = convert_dbt_project_to_wren_project(
+            project_dir,
+            output_dir=output_path,
+            profiles_path=profiles_path,
+            profile_name=profile_name,
+            target_name=target_name,
+        )
+    except DbtLoadError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(1)
+
+    if dry_run:
+        typer.echo(f"Dry run: would write {len(imported.files)} files to {output_path}")
+        typer.echo(
+            "  "
+            f"{imported.model_count} models, {imported.source_count} sources, "
+            f"{imported.skipped_ephemeral} ephemeral skipped, "
+            f"{imported.skipped_without_columns} without columns skipped"
+        )
+        for project_file in imported.files:
+            typer.echo(f"  - {project_file.relative_path}")
+        return
+
+    try:
+        write_project_files(imported.files, output_path, force=force)
+    except SystemExit as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(1)
+
+    typer.echo(f"Imported dbt project to YAML project at {output_path}/")
+    typer.echo(
+        "  "
+        f"{imported.model_count} models, {imported.source_count} sources, "
+        f"{imported.skipped_ephemeral} ephemeral skipped, "
+        f"{imported.skipped_without_columns} without columns skipped"
+    )
+    typer.echo("\nNext steps:")
+    typer.echo(f"  wren context validate --path {output_path}")
+    typer.echo(f"  wren context build --path {output_path}")
+
+
 @context_app.command()
 def init(
     path: ProjectPathOpt = None,
@@ -244,18 +340,19 @@ def validate(
     # ── Semantic validation (dry-plan + description checks) ──────────────
     sem_errors: list[str] = []
     sem_warnings: list[str] = []
-    try:
-        config = load_project_config(project_path)
-        ds_str = config.get("data_source", "")
-        manifest_json = build_json(project_path)
-        manifest_str = _b64.b64encode(
-            json.dumps(manifest_json, ensure_ascii=False).encode()
-        ).decode()
-        sem_result = validate_manifest(manifest_str, ds_str, level=level)
-        sem_errors = sem_result["errors"]
-        sem_warnings = sem_result["warnings"]
-    except Exception as e:
-        sem_errors = [f"Semantic validation failed: {e}"]
+    if not struct_errors:
+        try:
+            config = load_project_config(project_path)
+            ds_str = config.get("data_source", "")
+            manifest_json = build_json(project_path)
+            manifest_str = _b64.b64encode(
+                json.dumps(manifest_json, ensure_ascii=False).encode()
+            ).decode()
+            sem_result = validate_manifest(manifest_str, ds_str, level=level)
+            sem_errors = sem_result["errors"]
+            sem_warnings = sem_result["warnings"]
+        except Exception as e:
+            sem_errors = [f"Semantic validation failed: {e}"]
 
     if sem_errors:
         typer.echo("\nSemantic errors:")
