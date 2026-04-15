@@ -96,6 +96,7 @@ class DbtProjectImport:
     source_count: int
     skipped_ephemeral: int
     skipped_without_columns: int
+    relationship_count: int = 0
 
 
 def default_wren_profile_name(target: DbtTarget) -> str:
@@ -335,9 +336,14 @@ def convert_dbt_project_to_wren_project(
         else Path.cwd().resolve()
     )
 
-    imported_models, model_count, source_count, skipped_ephemeral, skipped_no_columns = (
-        _build_imported_models(artifacts)
-    )
+    (
+        imported_models,
+        model_count,
+        source_count,
+        skipped_ephemeral,
+        skipped_no_columns,
+    ) = _build_imported_models(artifacts)
+    relationships, test_events = _apply_dbt_test_enrichment(artifacts, imported_models)
 
     dbt_binding_dir = _relative_or_absolute_path(target.project_dir, project_root)
     project_config = {
@@ -364,14 +370,21 @@ def convert_dbt_project_to_wren_project(
         ProjectFile(
             relative_path="relationships.yml",
             content=yaml.dump(
-                {"relationships": []},
+                {"relationships": relationships},
                 default_flow_style=False,
                 sort_keys=False,
             ),
         ),
         ProjectFile(
             relative_path="instructions.md",
-            content=_build_base_instructions(target, model_count, source_count),
+            content=_build_base_instructions(
+                target,
+                model_count,
+                source_count,
+                relationships,
+                test_events,
+                artifacts.run_results is not None,
+            ),
         ),
         ProjectFile(relative_path="AGENTS.md", content=_AGENTS_MD_TEMPLATE),
         ProjectFile(
@@ -398,6 +411,7 @@ def convert_dbt_project_to_wren_project(
         source_count=source_count,
         skipped_ephemeral=skipped_ephemeral,
         skipped_without_columns=skipped_no_columns,
+        relationship_count=len(relationships),
     )
 
 
@@ -646,6 +660,82 @@ def _build_imported_models(
     )
 
 
+def _apply_dbt_test_enrichment(
+    artifacts: DbtArtifacts, imported_models: list[dict[str, Any]]
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    model_by_unique_id = {
+        model.get("properties", {}).get("dbt_unique_id"): model for model in imported_models
+    }
+    status_by_unique_id = _build_run_results_index(artifacts.run_results)
+    relationships: list[dict[str, Any]] = []
+    relationship_keys: dict[tuple[str, str, str, str], str] = {}
+    test_events: list[dict[str, Any]] = []
+
+    for unique_id, node in sorted(artifacts.manifest.get("nodes", {}).items()):
+        if node.get("resource_type") != "test":
+            continue
+
+        attached_uid = node.get("attached_node") or _infer_attached_node(node)
+        if not attached_uid or attached_uid not in model_by_unique_id:
+            continue
+
+        model = model_by_unique_id[attached_uid]
+        test_meta = node.get("test_metadata") or {}
+        test_name = str(test_meta.get("name") or node.get("name") or "").strip()
+        if not test_name:
+            continue
+        kwargs = test_meta.get("kwargs") or {}
+        column_name = node.get("column_name") or kwargs.get("column_name")
+        column = _find_column(model, str(column_name)) if column_name else None
+        status_info = status_by_unique_id.get(unique_id, {})
+        status = _normalize_test_status(status_info.get("status"))
+        failures = status_info.get("failures")
+
+        event: dict[str, Any] = {
+            "unique_id": unique_id,
+            "model_name": model["name"],
+            "column_name": str(column_name) if column_name else None,
+            "test_name": test_name,
+            "status": status,
+            "failures": failures,
+        }
+
+        if column is not None:
+            _record_column_test(column, test_name, status)
+            if test_name == "not_null":
+                column["not_null"] = True
+            elif test_name == "accepted_values":
+                values = kwargs.get("values") or []
+                if values:
+                    column.setdefault("properties", {})["accepted_values"] = ",".join(
+                        str(value) for value in values
+                    )
+                    event["values"] = [str(value) for value in values]
+            elif test_name == "relationships":
+                target_uid = _resolve_relationship_target_uid(node, attached_uid)
+                target_model = model_by_unique_id.get(target_uid)
+                target_field = str(kwargs.get("field") or "id")
+                if target_model is not None:
+                    rel_name = _ensure_relationship(
+                        relationships,
+                        relationship_keys,
+                        model,
+                        column["name"],
+                        target_model,
+                        target_field,
+                    )
+                    column["relationship"] = rel_name
+                    event["relationship_name"] = rel_name
+                    event["target_model_name"] = target_model["name"]
+                    event["target_field"] = target_field
+
+        test_events.append(event)
+
+    _finalize_column_tests(imported_models)
+    _sort_relationships(relationships)
+    return relationships, test_events
+
+
 def _build_model_metadata(
     *,
     unique_id: str,
@@ -767,17 +857,56 @@ def _build_base_instructions(
     target: DbtTarget,
     model_count: int,
     source_count: int,
+    relationships: list[dict[str, Any]],
+    test_events: list[dict[str, Any]],
+    has_run_results: bool,
 ) -> str:
-    return (
-        "# Imported from dbt\n\n"
-        f"- dbt project: `{target.project.get('name', target.project_dir.name)}`\n"
-        f"- dbt profile/target: `{target.profile_name}.{target.target_name}`\n"
-        f"- imported models: {model_count}\n"
-        f"- imported sources: {source_count}\n\n"
-        "This is the base dbt import. Structural metadata comes from "
-        "`manifest.json` and `catalog.json`. Additional enrichment from dbt "
-        "tests and compiled SQL can be layered on in later steps.\n"
-    )
+    lines = [
+        "# Imported from dbt",
+        "",
+        f"- dbt project: `{target.project.get('name', target.project_dir.name)}`",
+        f"- dbt profile/target: `{target.profile_name}.{target.target_name}`",
+        f"- imported models: {model_count}",
+        f"- imported sources: {source_count}",
+        f"- imported relationships: {len(relationships)}",
+        "",
+        "Structural metadata comes from `manifest.json` and `catalog.json`. "
+        "The sections below summarize dbt test-derived constraints and warnings.",
+        "",
+    ]
+
+    verified_lines = _build_verified_constraint_lines(test_events)
+    warning_lines = _build_warning_lines(test_events, has_run_results)
+
+    lines.extend(["## Verified Constraints", ""])
+    if verified_lines:
+        lines.extend(f"- {line}" for line in verified_lines)
+    else:
+        lines.append("- No verified dbt constraints were imported.")
+    lines.append("")
+
+    lines.extend(["## Relationships", ""])
+    if relationships:
+        for rel in relationships:
+            models = rel.get("models", [])
+            if len(models) >= 2:
+                lines.append(
+                    f"- {models[0]} -> {models[1]} ({rel.get('join_type', 'MANY_TO_ONE')})"
+                )
+    else:
+        lines.append("- No dbt relationship tests were imported.")
+    lines.append("")
+
+    lines.extend(["## Data Quality Warnings", ""])
+    if warning_lines:
+        lines.extend(f"- {line}" for line in warning_lines)
+    elif not has_run_results and test_events:
+        lines.append("- Test status unknown. Run `dbt test` or `dbt build` to verify.")
+    else:
+        lines.append("- No dbt test warnings detected.")
+    lines.append("")
+
+    return "\n".join(lines)
 
 
 def _relative_or_absolute_path(path: Path, root: Path) -> str:
@@ -785,3 +914,223 @@ def _relative_or_absolute_path(path: Path, root: Path) -> str:
         return str(path.relative_to(root))
     except ValueError:
         return os.path.relpath(path, root)
+
+
+def _build_run_results_index(run_results: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
+    if not run_results:
+        return {}
+    index: dict[str, dict[str, Any]] = {}
+    for row in run_results.get("results", []):
+        unique_id = row.get("unique_id")
+        if unique_id:
+            index[str(unique_id)] = {
+                "status": row.get("status"),
+                "failures": row.get("failures"),
+            }
+    return index
+
+
+def _normalize_test_status(status: Any) -> str:
+    value = str(status or "").lower()
+    if value in {"pass", "success"}:
+        return "verified"
+    if value == "fail":
+        return "failing"
+    if value == "error":
+        return "error"
+    if value in {"warn", "warning"}:
+        return "warning"
+    return "unknown"
+
+
+def _infer_attached_node(node: dict[str, Any]) -> str | None:
+    depends_on = node.get("depends_on", {}) or {}
+    for unique_id in depends_on.get("nodes", []):
+        if str(unique_id).startswith(("model.", "source.")):
+            return str(unique_id)
+    return None
+
+
+def _find_column(model: dict[str, Any], column_name: str) -> dict[str, Any] | None:
+    for column in model.get("columns", []):
+        if column.get("name") == column_name:
+            return column
+    return None
+
+
+def _record_column_test(column: dict[str, Any], test_name: str, status: str) -> None:
+    props = column.setdefault("properties", {})
+    tests = props.setdefault("_dbt_tests", [])
+    tests.append(test_name)
+    statuses = props.setdefault("_dbt_test_statuses", [])
+    statuses.append(status)
+
+
+def _resolve_relationship_target_uid(
+    node: dict[str, Any], attached_uid: str
+) -> str | None:
+    depends_on = node.get("depends_on", {}) or {}
+    for candidate in depends_on.get("nodes", []):
+        candidate = str(candidate)
+        if candidate != attached_uid and candidate.startswith(("model.", "source.")):
+            return candidate
+    return None
+
+
+def _ensure_relationship(
+    relationships: list[dict[str, Any]],
+    relationship_keys: dict[tuple[str, str, str, str], str],
+    model: dict[str, Any],
+    column_name: str,
+    target_model: dict[str, Any],
+    target_field: str,
+) -> str:
+    key = (model["name"], column_name, target_model["name"], target_field)
+    existing = relationship_keys.get(key)
+    if existing:
+        return existing
+
+    base_name = f"{model['name']}_to_{target_model['name']}"
+    rel_name = base_name
+    suffix = 2
+    existing_names = {rel["name"] for rel in relationships}
+    while rel_name in existing_names:
+        rel_name = f"{base_name}_{suffix}"
+        suffix += 1
+
+    relationship_keys[key] = rel_name
+    relationships.append(
+        {
+            "name": rel_name,
+            "models": [model["name"], target_model["name"]],
+            "join_type": _infer_join_type(model, target_model),
+            "condition": (
+                f"{model['name']}.{column_name} = "
+                f"{target_model['name']}.{target_field}"
+            ),
+            "properties": {"source": "dbt_test"},
+        }
+    )
+    return rel_name
+
+
+def _infer_join_type(model: dict[str, Any], target_model: dict[str, Any]) -> str:
+    model_layer = str(model.get("properties", {}).get("dbt_layer", "")).lower()
+    model_name = model["name"].lower()
+    target_name = target_model["name"].lower()
+
+    if model_name.startswith("fct_") or model_layer == "mart":
+        if target_name.startswith("dim_") or target_model.get("properties", {}).get(
+            "dbt_layer"
+        ) == "mart":
+            return "MANY_TO_ONE"
+    if model_name.startswith("dim_"):
+        return "ONE_TO_ONE"
+    return "MANY_TO_ONE"
+
+
+def _finalize_column_tests(imported_models: list[dict[str, Any]]) -> None:
+    for model in imported_models:
+        primary_key = model.get("primary_key")
+        for column in model.get("columns", []):
+            props = column.setdefault("properties", {})
+            tests = sorted(set(props.pop("_dbt_tests", [])))
+            statuses = props.pop("_dbt_test_statuses", [])
+
+            if tests:
+                props["dbt_tests"] = ",".join(tests)
+            if statuses:
+                props["dbt_test_status"] = _aggregate_status(statuses)
+
+            if column.get("not_null") and "unique" in tests:
+                column["is_primary_key"] = True
+                if primary_key is None:
+                    primary_key = column["name"]
+        if primary_key:
+            model["primary_key"] = primary_key
+
+
+def _aggregate_status(statuses: list[str]) -> str:
+    if any(status in {"failing", "error", "warning"} for status in statuses):
+        for priority in ("failing", "error", "warning"):
+            if priority in statuses:
+                return priority
+    if any(status == "verified" for status in statuses):
+        return "verified"
+    return "unknown"
+
+
+def _sort_relationships(relationships: list[dict[str, Any]]) -> None:
+    relationships.sort(key=lambda rel: rel.get("name", ""))
+
+
+def _build_verified_constraint_lines(test_events: list[dict[str, Any]]) -> list[str]:
+    grouped: dict[tuple[str, str | None], dict[str, Any]] = {}
+    relationship_lines: list[str] = []
+
+    for event in test_events:
+        if event["status"] != "verified":
+            continue
+        if event["test_name"] == "relationships" and event.get("target_model_name"):
+            relationship_lines.append(
+                f"{event['model_name']}.{event['column_name']} -> "
+                f"{event['target_model_name']}.{event['target_field']} "
+                f"(MANY_TO_ONE join verified)"
+            )
+            continue
+
+        key = (event["model_name"], event.get("column_name"))
+        entry = grouped.setdefault(
+            key,
+            {
+                "tests": set(),
+                "values": None,
+            },
+        )
+        entry["tests"].add(event["test_name"])
+        if event["test_name"] == "accepted_values":
+            entry["values"] = event.get("values") or []
+
+    lines: list[str] = []
+    for (model_name, column_name), entry in sorted(grouped.items()):
+        tests = entry["tests"]
+        if not column_name:
+            continue
+        if {"unique", "not_null"} <= tests:
+            lines.append(f"{model_name}.{column_name}: NOT NULL, UNIQUE (primary key)")
+        else:
+            if "not_null" in tests:
+                lines.append(f"{model_name}.{column_name}: NOT NULL")
+            if "unique" in tests:
+                lines.append(f"{model_name}.{column_name}: UNIQUE")
+        if entry["values"]:
+            values = ", ".join(entry["values"])
+            lines.append(f"{model_name}.{column_name}: accepted values = {values}")
+
+    lines.extend(sorted(set(relationship_lines)))
+    return lines
+
+
+def _build_warning_lines(
+    test_events: list[dict[str, Any]], has_run_results: bool
+) -> list[str]:
+    warnings: list[str] = []
+    for event in test_events:
+        status = event["status"]
+        if status == "verified":
+            continue
+        if status == "unknown" and not has_run_results:
+            continue
+
+        location = event["model_name"]
+        if event.get("column_name"):
+            location += f".{event['column_name']}"
+
+        test_name = event["test_name"]
+        failures = event.get("failures")
+        failure_suffix = f" ({failures} failures)" if failures not in (None, "") else ""
+        warnings.append(f"{location}: {test_name} {status}{failure_suffix}")
+
+    if not has_run_results and test_events:
+        warnings.append("Test status unknown. Run `dbt test` or `dbt build` to verify.")
+    return warnings

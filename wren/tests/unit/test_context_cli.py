@@ -85,6 +85,7 @@ def _make_dbt_project(tmp_path: Path) -> tuple[Path, Path]:
                         "columns": {
                             "order_id": {"name": "order_id"},
                             "customer_id": {"name": "customer_id"},
+                            "status": {"name": "status"},
                             "net_amount": {"name": "net_amount"},
                         },
                         "config": {"materialized": "table"},
@@ -97,6 +98,75 @@ def _make_dbt_project(tmp_path: Path) -> tuple[Path, Path]:
                         "schema": "main",
                         "columns": {"order_id": {"name": "order_id"}},
                         "config": {"materialized": "ephemeral"},
+                    },
+                    "model.jaffle_shop.customers": {
+                        "resource_type": "model",
+                        "name": "customers",
+                        "alias": "customers",
+                        "database": "jaffle",
+                        "schema": "main",
+                        "description": "Customers dimension",
+                        "fqn": ["jaffle_shop", "marts", "customers"],
+                        "columns": {
+                            "customer_id": {"name": "customer_id"},
+                            "first_name": {"name": "first_name"},
+                        },
+                        "config": {"materialized": "table"},
+                    },
+                    "test.jaffle_shop.not_null_fct_orders_order_id": {
+                        "resource_type": "test",
+                        "name": "not_null_fct_orders_order_id",
+                        "column_name": "order_id",
+                        "attached_node": "model.jaffle_shop.fct_orders",
+                        "test_metadata": {
+                            "name": "not_null",
+                            "kwargs": {"column_name": "order_id"},
+                        },
+                        "depends_on": {"nodes": ["model.jaffle_shop.fct_orders"]},
+                    },
+                    "test.jaffle_shop.unique_fct_orders_order_id": {
+                        "resource_type": "test",
+                        "name": "unique_fct_orders_order_id",
+                        "column_name": "order_id",
+                        "attached_node": "model.jaffle_shop.fct_orders",
+                        "test_metadata": {
+                            "name": "unique",
+                            "kwargs": {"column_name": "order_id"},
+                        },
+                        "depends_on": {"nodes": ["model.jaffle_shop.fct_orders"]},
+                    },
+                    "test.jaffle_shop.relationships_fct_orders_customer_id": {
+                        "resource_type": "test",
+                        "name": "relationships_fct_orders_customer_id",
+                        "column_name": "customer_id",
+                        "attached_node": "model.jaffle_shop.fct_orders",
+                        "test_metadata": {
+                            "name": "relationships",
+                            "kwargs": {
+                                "column_name": "customer_id",
+                                "field": "customer_id",
+                            },
+                        },
+                        "depends_on": {
+                            "nodes": [
+                                "model.jaffle_shop.fct_orders",
+                                "model.jaffle_shop.customers",
+                            ]
+                        },
+                    },
+                    "test.jaffle_shop.accepted_values_fct_orders_status": {
+                        "resource_type": "test",
+                        "name": "accepted_values_fct_orders_status",
+                        "column_name": "status",
+                        "attached_node": "model.jaffle_shop.fct_orders",
+                        "test_metadata": {
+                            "name": "accepted_values",
+                            "kwargs": {
+                                "column_name": "status",
+                                "values": ["placed", "shipped", "completed"],
+                            },
+                        },
+                        "depends_on": {"nodes": ["model.jaffle_shop.fct_orders"]},
                     },
                 },
                 "sources": {
@@ -129,7 +199,14 @@ def _make_dbt_project(tmp_path: Path) -> tuple[Path, Path]:
                         "columns": {
                             "order_id": {"type": "integer", "index": 1},
                             "customer_id": {"type": "integer", "index": 2},
-                            "net_amount": {"type": "numeric(10,2)", "index": 3},
+                            "status": {"type": "varchar", "index": 3},
+                            "net_amount": {"type": "numeric(10,2)", "index": 4},
+                        }
+                    },
+                    "model.jaffle_shop.customers": {
+                        "columns": {
+                            "customer_id": {"type": "integer", "index": 1},
+                            "first_name": {"type": "varchar", "index": 2},
                         }
                     },
                 },
@@ -140,6 +217,34 @@ def _make_dbt_project(tmp_path: Path) -> tuple[Path, Path]:
                         }
                     }
                 },
+            }
+        )
+    )
+    (target_dir / "run_results.json").write_text(
+        json.dumps(
+            {
+                "results": [
+                    {
+                        "unique_id": "test.jaffle_shop.not_null_fct_orders_order_id",
+                        "status": "success",
+                        "failures": 0,
+                    },
+                    {
+                        "unique_id": "test.jaffle_shop.unique_fct_orders_order_id",
+                        "status": "success",
+                        "failures": 0,
+                    },
+                    {
+                        "unique_id": "test.jaffle_shop.relationships_fct_orders_customer_id",
+                        "status": "success",
+                        "failures": 0,
+                    },
+                    {
+                        "unique_id": "test.jaffle_shop.accepted_values_fct_orders_status",
+                        "status": "fail",
+                        "failures": 3,
+                    },
+                ]
             }
         )
     )
@@ -459,6 +564,20 @@ def test_import_dbt_writes_project_and_builds(tmp_path):
     project_config = (output_dir / "wren_project.yml").read_text()
     assert "data_source: duckdb" in project_config
     assert "project_dir:" in project_config
+
+    fct_orders_metadata = (output_dir / "models" / "fct_orders" / "metadata.yml").read_text()
+    assert "primary_key: order_id" in fct_orders_metadata
+    assert "is_primary_key: true" in fct_orders_metadata
+    assert "accepted_values: placed,shipped,completed" in fct_orders_metadata
+    assert "relationship: fct_orders_to_customers" in fct_orders_metadata
+
+    relationships = (output_dir / "relationships.yml").read_text()
+    assert "fct_orders_to_customers" in relationships
+    assert "fct_orders.customer_id = customers.customer_id" in relationships
+
+    instructions = (output_dir / "instructions.md").read_text()
+    assert "fct_orders.order_id: NOT NULL, UNIQUE (primary key)" in instructions
+    assert "fct_orders.status: accepted_values failing (3 failures)" in instructions
 
     build_result = runner.invoke(
         app,
