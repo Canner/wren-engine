@@ -579,6 +579,11 @@ def test_import_dbt_writes_project_and_builds(tmp_path):
     assert "fct_orders.order_id: NOT NULL, UNIQUE (primary key)" in instructions
     assert "fct_orders.status: accepted_values failing (3 failures)" in instructions
 
+    queries = (output_dir / "queries.yml").read_text()
+    assert "source: dbt" in queries
+    assert "Show fct_orders where status is placed" in queries
+    assert "WHERE status = 'placed'" in queries
+
     build_result = runner.invoke(
         app,
         ["context", "build", "--path", str(output_dir)],

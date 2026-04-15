@@ -344,6 +344,11 @@ def convert_dbt_project_to_wren_project(
         skipped_no_columns,
     ) = _build_imported_models(artifacts)
     relationships, test_events = _apply_dbt_test_enrichment(artifacts, imported_models)
+    query_pairs = _build_dbt_query_pairs(
+        imported_models,
+        relationships,
+        datasource=target.datasource,
+    )
 
     dbt_binding_dir = _relative_or_absolute_path(target.project_dir, project_root)
     project_config = {
@@ -390,7 +395,7 @@ def convert_dbt_project_to_wren_project(
         ProjectFile(
             relative_path="queries.yml",
             content=yaml.dump(
-                {"version": 1, "pairs": []},
+                {"version": 1, "pairs": query_pairs},
                 default_flow_style=False,
                 sort_keys=False,
             ),
@@ -1134,3 +1139,69 @@ def _build_warning_lines(
     if not has_run_results and test_events:
         warnings.append("Test status unknown. Run `dbt test` or `dbt build` to verify.")
     return warnings
+
+
+def _build_dbt_query_pairs(
+    imported_models: list[dict[str, Any]],
+    relationships: list[dict[str, Any]],
+    *,
+    datasource: str,
+) -> list[dict[str, Any]]:
+    from wren.memory.seed_queries import generate_seed_queries  # noqa: PLC0415
+
+    manifest = {
+        "models": [_seed_model_payload(model) for model in imported_models],
+        "relationships": [_seed_relationship_payload(rel) for rel in relationships],
+    }
+
+    pairs = generate_seed_queries(manifest)
+    return [
+        {
+            "nl": pair["nl"],
+            "sql": pair["sql"],
+            "source": "dbt",
+            "datasource": datasource,
+        }
+        for pair in pairs
+    ]
+
+
+def _seed_model_payload(model: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "name": model["name"],
+        "primaryKey": model.get("primary_key"),
+        "properties": _camelize_props(model.get("properties", {})),
+        "columns": [
+            {
+                "name": column["name"],
+                "type": column.get("type"),
+                "isCalculated": column.get("is_calculated", False),
+                "properties": _camelize_props(column.get("properties", {})),
+            }
+            for column in model.get("columns", [])
+        ],
+    }
+
+
+def _seed_relationship_payload(relationship: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "name": relationship.get("name"),
+        "models": relationship.get("models", []),
+        "joinType": relationship.get("join_type"),
+        "condition": relationship.get("condition", ""),
+    }
+
+
+def _camelize_props(properties: dict[str, Any]) -> dict[str, Any]:
+    mapping = {
+        "accepted_values": "acceptedValues",
+        "data_scope": "dataScope",
+        "dbt_layer": "dbtLayer",
+        "dbt_test_status": "dbtTestStatus",
+        "dbt_tests": "dbtTests",
+        "derived_from": "derivedFrom",
+    }
+    result: dict[str, Any] = {}
+    for key, value in properties.items():
+        result[mapping.get(key, key)] = value
+    return result
