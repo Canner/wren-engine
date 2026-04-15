@@ -171,9 +171,7 @@ def load_dbt_profiles(
     if profiles is None:
         raise DbtLoadError(f"dbt profiles file is empty: {path}")
     if not isinstance(profiles, dict):
-        raise DbtLoadError(
-            f"dbt profiles file must contain a YAML mapping: {path}"
-        )
+        raise DbtLoadError(f"dbt profiles file must contain a YAML mapping: {path}")
     return profiles
 
 
@@ -204,9 +202,7 @@ def resolve_dbt_target(
 
     profile = profiles[selected_profile_name]
     if not isinstance(profile, dict):
-        raise DbtLoadError(
-            f"dbt profile '{selected_profile_name}' must be a mapping."
-        )
+        raise DbtLoadError(f"dbt profile '{selected_profile_name}' must be a mapping.")
 
     outputs = profile.get("outputs")
     if not isinstance(outputs, dict) or not outputs:
@@ -370,7 +366,9 @@ def convert_dbt_project_to_wren_project(
     files = [
         ProjectFile(
             relative_path="wren_project.yml",
-            content=yaml.dump(project_config, default_flow_style=False, sort_keys=False),
+            content=yaml.dump(
+                project_config, default_flow_style=False, sort_keys=False
+            ),
         ),
         ProjectFile(
             relative_path="relationships.yml",
@@ -669,7 +667,8 @@ def _apply_dbt_test_enrichment(
     artifacts: DbtArtifacts, imported_models: list[dict[str, Any]]
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     model_by_unique_id = {
-        model.get("properties", {}).get("dbt_unique_id"): model for model in imported_models
+        model.get("properties", {}).get("dbt_unique_id"): model
+        for model in imported_models
     }
     status_by_unique_id = _build_run_results_index(artifacts.run_results)
     relationships: list[dict[str, Any]] = []
@@ -802,7 +801,9 @@ def _extract_columns(node: dict[str, Any], catalog_entry: dict[str, Any]) -> lis
         manifest_col = manifest_columns.get(name, {}) or {}
         catalog_col = catalog_columns.get(name, {}) or {}
         description = _clean_description(manifest_col.get("description"))
-        data_type = catalog_col.get("type") or manifest_col.get("data_type") or "VARCHAR"
+        data_type = (
+            catalog_col.get("type") or manifest_col.get("data_type") or "VARCHAR"
+        )
         column = {
             "name": name,
             "type": str(data_type).upper(),
@@ -921,7 +922,9 @@ def _relative_or_absolute_path(path: Path, root: Path) -> str:
         return os.path.relpath(path, root)
 
 
-def _build_run_results_index(run_results: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
+def _build_run_results_index(
+    run_results: dict[str, Any] | None,
+) -> dict[str, dict[str, Any]]:
     if not run_results:
         return {}
     index: dict[str, dict[str, Any]] = {}
@@ -1010,8 +1013,7 @@ def _ensure_relationship(
             "models": [model["name"], target_model["name"]],
             "join_type": _infer_join_type(model, target_model),
             "condition": (
-                f"{model['name']}.{column_name} = "
-                f"{target_model['name']}.{target_field}"
+                f"{model['name']}.{column_name} = {target_model['name']}.{target_field}"
             ),
             "properties": {"source": "dbt_test"},
         }
@@ -1025,9 +1027,10 @@ def _infer_join_type(model: dict[str, Any], target_model: dict[str, Any]) -> str
     target_name = target_model["name"].lower()
 
     if model_name.startswith("fct_") or model_layer == "mart":
-        if target_name.startswith("dim_") or target_model.get("properties", {}).get(
-            "dbt_layer"
-        ) == "mart":
+        if (
+            target_name.startswith("dim_")
+            or target_model.get("properties", {}).get("dbt_layer") == "mart"
+        ):
             return "MANY_TO_ONE"
     if model_name.startswith("dim_"):
         return "ONE_TO_ONE"

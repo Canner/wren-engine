@@ -110,7 +110,9 @@ def _describe_column(col: dict, lines: list[str]) -> None:
     if derived_from:
         parts.append(f" [derived from: {derived_from}]")
 
-    accepted_values = _format_csv_values(_prop_value(col, "acceptedValues", "accepted_values"))
+    accepted_values = _format_csv_values(
+        _prop_value(col, "acceptedValues", "accepted_values")
+    )
     if accepted_values:
         parts.append(f" [accepted values: {accepted_values}]")
 
@@ -233,7 +235,9 @@ def _column_record(col: dict, model_name: str, mdl_h: str, now: datetime) -> dic
         parts.append(f". Derived from: {derived_from}")
     if rel:
         parts.append(f". Relationship: {rel}")
-    accepted_values = _format_csv_values(_prop_value(col, "acceptedValues", "accepted_values"))
+    accepted_values = _format_csv_values(
+        _prop_value(col, "acceptedValues", "accepted_values")
+    )
     if accepted_values:
         parts.append(f". Accepted values: {accepted_values}")
     constraints = _column_constraints(col)
