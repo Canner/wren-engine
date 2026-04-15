@@ -87,6 +87,17 @@ class DbtArtifacts:
     compiled_sql: dict[str, str]
 
 
+@dataclass(frozen=True)
+class DbtProjectImport:
+    """Project files and summary generated from a dbt project."""
+
+    files: list[Any]
+    model_count: int
+    source_count: int
+    skipped_ephemeral: int
+    skipped_without_columns: int
+
+
 def default_wren_profile_name(target: DbtTarget) -> str:
     """Return a stable default Wren profile name for a dbt target."""
     return f"{target.profile_name}-{target.target_name}".replace("_", "-")
@@ -297,6 +308,99 @@ def load_compiled_sql(compiled_dir: str | Path) -> dict[str, str]:
     }
 
 
+def convert_dbt_project_to_wren_project(
+    project_dir: str | Path,
+    *,
+    output_dir: str | Path | None = None,
+    profiles_path: str | Path | None = None,
+    profile_name: str | None = None,
+    target_name: str | None = None,
+) -> DbtProjectImport:
+    """Convert dbt artifacts into Wren project files."""
+    from wren.context import (  # noqa: PLC0415
+        _AGENTS_MD_TEMPLATE,
+        ProjectFile,
+    )
+
+    target = resolve_dbt_target(
+        project_dir,
+        profiles_path=profiles_path,
+        profile_name=profile_name,
+        target_name=target_name,
+    )
+    artifacts = load_dbt_artifacts(project_dir, target_path=target.target_path)
+    project_root = (
+        Path(output_dir).expanduser().resolve()
+        if output_dir is not None
+        else Path.cwd().resolve()
+    )
+
+    imported_models, model_count, source_count, skipped_ephemeral, skipped_no_columns = (
+        _build_imported_models(artifacts)
+    )
+
+    dbt_binding_dir = _relative_or_absolute_path(target.project_dir, project_root)
+    project_config = {
+        "schema_version": 2,
+        "name": artifacts.manifest.get("metadata", {}).get(
+            "project_name", target.project.get("name", "dbt_project")
+        ),
+        "version": str(target.project.get("version", "1.0")),
+        "catalog": "wren",
+        "schema": "public",
+        "data_source": target.datasource,
+        "dbt": {
+            "project_dir": dbt_binding_dir,
+            "profile": target.profile_name,
+            "target": target.target_name,
+        },
+    }
+
+    files = [
+        ProjectFile(
+            relative_path="wren_project.yml",
+            content=yaml.dump(project_config, default_flow_style=False, sort_keys=False),
+        ),
+        ProjectFile(
+            relative_path="relationships.yml",
+            content=yaml.dump(
+                {"relationships": []},
+                default_flow_style=False,
+                sort_keys=False,
+            ),
+        ),
+        ProjectFile(
+            relative_path="instructions.md",
+            content=_build_base_instructions(target, model_count, source_count),
+        ),
+        ProjectFile(relative_path="AGENTS.md", content=_AGENTS_MD_TEMPLATE),
+        ProjectFile(
+            relative_path="queries.yml",
+            content=yaml.dump(
+                {"version": 1, "pairs": []},
+                default_flow_style=False,
+                sort_keys=False,
+            ),
+        ),
+    ]
+
+    files.extend(
+        ProjectFile(
+            relative_path=f"models/{model['name']}/metadata.yml",
+            content=yaml.dump(model, default_flow_style=False, sort_keys=False),
+        )
+        for model in imported_models
+    )
+
+    return DbtProjectImport(
+        files=files,
+        model_count=model_count,
+        source_count=source_count,
+        skipped_ephemeral=skipped_ephemeral,
+        skipped_without_columns=skipped_no_columns,
+    )
+
+
 def convert_dbt_target_to_wren_profile(target: DbtTarget) -> dict[str, Any]:
     """Convert a resolved dbt target into a Wren profile payload."""
     output = target.output
@@ -478,3 +582,203 @@ def _bigquery_credentials_base64(output: dict[str, Any]) -> str:
     raise DbtLoadError(
         "BigQuery dbt target requires one of: credentials, keyfile, or keyfile_json."
     )
+
+
+def _build_imported_models(
+    artifacts: DbtArtifacts,
+) -> tuple[list[dict[str, Any]], int, int, int, int]:
+    manifest = artifacts.manifest
+    catalog_nodes = artifacts.catalog.get("nodes", {})
+    catalog_sources = artifacts.catalog.get("sources", {})
+
+    imported_models: list[dict[str, Any]] = []
+    used_names: set[str] = set()
+    model_count = 0
+    source_count = 0
+    skipped_ephemeral = 0
+    skipped_without_columns = 0
+
+    for unique_id, node in sorted(manifest.get("nodes", {}).items()):
+        if node.get("resource_type") != "model":
+            continue
+        if str(node.get("config", {}).get("materialized", "")).lower() == "ephemeral":
+            skipped_ephemeral += 1
+            continue
+        model = _build_model_metadata(
+            unique_id=unique_id,
+            node=node,
+            catalog_entry=catalog_nodes.get(unique_id, {}),
+            wren_name=str(node.get("alias") or node.get("name") or ""),
+            dbt_resource_type="model",
+        )
+        if model is None:
+            skipped_without_columns += 1
+            continue
+        _ensure_unique_model_name(model["name"], used_names)
+        imported_models.append(model)
+        model_count += 1
+
+    for unique_id, node in sorted(manifest.get("sources", {}).items()):
+        source_name = _choose_source_model_name(node, used_names)
+        model = _build_model_metadata(
+            unique_id=unique_id,
+            node=node,
+            catalog_entry=catalog_sources.get(unique_id, {}),
+            wren_name=source_name,
+            dbt_resource_type="source",
+        )
+        if model is None:
+            skipped_without_columns += 1
+            continue
+        _ensure_unique_model_name(model["name"], used_names)
+        imported_models.append(model)
+        source_count += 1
+
+    return (
+        imported_models,
+        model_count,
+        source_count,
+        skipped_ephemeral,
+        skipped_without_columns,
+    )
+
+
+def _build_model_metadata(
+    *,
+    unique_id: str,
+    node: dict[str, Any],
+    catalog_entry: dict[str, Any],
+    wren_name: str,
+    dbt_resource_type: str,
+) -> dict[str, Any] | None:
+    columns = _extract_columns(node, catalog_entry)
+    if not columns:
+        return None
+
+    table_name = (
+        node.get("identifier")
+        or node.get("alias")
+        or node.get("relation_name")
+        or node.get("name")
+    )
+    if not table_name:
+        raise DbtLoadError(f"dbt node '{unique_id}' is missing a relation name.")
+
+    properties = _filter_none(
+        {
+            "description": _clean_description(node.get("description")),
+            "dbt_layer": infer_dbt_layer(node),
+            "dbt_unique_id": unique_id,
+            "dbt_resource_type": dbt_resource_type,
+        }
+    )
+
+    return {
+        "name": wren_name,
+        "table_reference": {
+            "catalog": node.get("database", ""),
+            "schema": node.get("schema", ""),
+            "table": str(table_name),
+        },
+        "columns": columns,
+        "cached": False,
+        "properties": properties,
+    }
+
+
+def _extract_columns(node: dict[str, Any], catalog_entry: dict[str, Any]) -> list[dict]:
+    manifest_columns = node.get("columns", {}) or {}
+    catalog_columns = catalog_entry.get("columns", {}) or {}
+
+    merged_names = list(manifest_columns)
+    for name in catalog_columns:
+        if name not in merged_names:
+            merged_names.append(name)
+
+    def _sort_key(name: str) -> tuple[int, int, str]:
+        catalog_index = catalog_columns.get(name, {}).get("index")
+        return (0 if catalog_index is not None else 1, catalog_index or 0, name)
+
+    columns: list[dict] = []
+    for name in sorted(merged_names, key=_sort_key):
+        manifest_col = manifest_columns.get(name, {}) or {}
+        catalog_col = catalog_columns.get(name, {}) or {}
+        description = _clean_description(manifest_col.get("description"))
+        data_type = catalog_col.get("type") or manifest_col.get("data_type") or "VARCHAR"
+        column = {
+            "name": name,
+            "type": str(data_type).upper(),
+            "is_calculated": False,
+            "not_null": False,
+            "properties": _filter_none({"description": description}),
+        }
+        columns.append(column)
+    return columns
+
+
+def infer_dbt_layer(node: dict[str, Any]) -> str:
+    """Infer a dbt layer from resource metadata."""
+    if node.get("resource_type") == "source":
+        return "raw"
+
+    fqn = [str(part).lower() for part in node.get("fqn", [])]
+    name = str(node.get("name") or "").lower()
+    materialized = str(node.get("config", {}).get("materialized") or "").lower()
+
+    if materialized == "ephemeral":
+        return "ephemeral"
+    if any("staging" == part for part in fqn) or name.startswith("stg_"):
+        return "staging"
+    if any("marts" == part for part in fqn) or name.startswith(("fct_", "dim_")):
+        return "mart"
+    if any("intermediate" == part for part in fqn) or name.startswith("int_"):
+        return "intermediate"
+    return "model"
+
+
+def _choose_source_model_name(node: dict[str, Any], used_names: set[str]) -> str:
+    base = f"raw_{node.get('name')}"
+    if base not in used_names:
+        return base
+    source_name = node.get("source_name") or "source"
+    return f"raw_{source_name}_{node.get('name')}"
+
+
+def _ensure_unique_model_name(name: str, used_names: set[str]) -> None:
+    if name in used_names:
+        raise DbtLoadError(
+            f"Duplicate Wren model name '{name}' generated from dbt artifacts. "
+            "Use dbt aliases or adjust the import naming strategy."
+        )
+    used_names.add(name)
+
+
+def _clean_description(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _build_base_instructions(
+    target: DbtTarget,
+    model_count: int,
+    source_count: int,
+) -> str:
+    return (
+        "# Imported from dbt\n\n"
+        f"- dbt project: `{target.project.get('name', target.project_dir.name)}`\n"
+        f"- dbt profile/target: `{target.profile_name}.{target.target_name}`\n"
+        f"- imported models: {model_count}\n"
+        f"- imported sources: {source_count}\n\n"
+        "This is the base dbt import. Structural metadata comes from "
+        "`manifest.json` and `catalog.json`. Additional enrichment from dbt "
+        "tests and compiled SQL can be layered on in later steps.\n"
+    )
+
+
+def _relative_or_absolute_path(path: Path, root: Path) -> str:
+    try:
+        return str(path.relative_to(root))
+    except ValueError:
+        return os.path.relpath(path, root)

@@ -43,6 +43,119 @@ def _make_valid_project(tmp_path: Path) -> Path:
     return tmp_path
 
 
+def _make_dbt_project(tmp_path: Path) -> tuple[Path, Path]:
+    dbt_project = tmp_path / "jaffle_shop"
+    target_dir = dbt_project / "target"
+    target_dir.mkdir(parents=True)
+
+    (dbt_project / "dbt_project.yml").write_text(
+        "name: jaffle_shop\n"
+        "profile: jaffle_shop\n"
+    )
+    (target_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "metadata": {"project_name": "jaffle_shop"},
+                "nodes": {
+                    "model.jaffle_shop.stg_orders": {
+                        "resource_type": "model",
+                        "name": "stg_orders",
+                        "alias": "stg_orders",
+                        "database": "jaffle",
+                        "schema": "main",
+                        "description": "Cleaned orders",
+                        "fqn": ["jaffle_shop", "staging", "stg_orders"],
+                        "columns": {
+                            "order_id": {
+                                "name": "order_id",
+                                "description": "Order identifier",
+                            },
+                            "amount": {"name": "amount"},
+                        },
+                        "config": {"materialized": "view"},
+                    },
+                    "model.jaffle_shop.fct_orders": {
+                        "resource_type": "model",
+                        "name": "fct_orders",
+                        "alias": "fct_orders",
+                        "database": "jaffle",
+                        "schema": "main",
+                        "description": "Orders fact table",
+                        "fqn": ["jaffle_shop", "marts", "fct_orders"],
+                        "columns": {
+                            "order_id": {"name": "order_id"},
+                            "customer_id": {"name": "customer_id"},
+                            "net_amount": {"name": "net_amount"},
+                        },
+                        "config": {"materialized": "table"},
+                    },
+                    "model.jaffle_shop.int_order_rollup": {
+                        "resource_type": "model",
+                        "name": "int_order_rollup",
+                        "alias": "int_order_rollup",
+                        "database": "jaffle",
+                        "schema": "main",
+                        "columns": {"order_id": {"name": "order_id"}},
+                        "config": {"materialized": "ephemeral"},
+                    },
+                },
+                "sources": {
+                    "source.jaffle_shop.app.orders": {
+                        "resource_type": "source",
+                        "name": "orders",
+                        "source_name": "app",
+                        "database": "jaffle",
+                        "schema": "raw",
+                        "description": "Raw orders source",
+                        "columns": {
+                            "id": {"name": "id", "description": "Raw order id"}
+                        },
+                    }
+                },
+            }
+        )
+    )
+    (target_dir / "catalog.json").write_text(
+        json.dumps(
+            {
+                "nodes": {
+                    "model.jaffle_shop.stg_orders": {
+                        "columns": {
+                            "order_id": {"type": "integer", "index": 1},
+                            "amount": {"type": "numeric(10,2)", "index": 2},
+                        }
+                    },
+                    "model.jaffle_shop.fct_orders": {
+                        "columns": {
+                            "order_id": {"type": "integer", "index": 1},
+                            "customer_id": {"type": "integer", "index": 2},
+                            "net_amount": {"type": "numeric(10,2)", "index": 3},
+                        }
+                    },
+                },
+                "sources": {
+                    "source.jaffle_shop.app.orders": {
+                        "columns": {
+                            "id": {"type": "integer", "index": 1},
+                        }
+                    }
+                },
+            }
+        )
+    )
+
+    profiles_path = tmp_path / "profiles.yml"
+    profiles_path.write_text(
+        "jaffle_shop:\n"
+        "  target: dev\n"
+        "  outputs:\n"
+        "    dev:\n"
+        "      type: duckdb\n"
+        "      path: /tmp/jaffle.duckdb\n"
+    )
+    return dbt_project, profiles_path
+
+
 # ── wren context init ─────────────────────────────────────────────────────
 
 
@@ -281,3 +394,104 @@ def test_upgrade_cli_explicit_to_version(tmp_path):
 
     config = yaml.safe_load((tmp_path / "wren_project.yml").read_text())
     assert config["schema_version"] == 2
+
+
+# ── wren context import dbt ──────────────────────────────────────────────
+
+
+def test_import_dbt_dry_run(tmp_path):
+    dbt_project, profiles_path = _make_dbt_project(tmp_path)
+    output_dir = tmp_path / "generated"
+
+    result = runner.invoke(
+        app,
+        [
+            "context",
+            "import",
+            "dbt",
+            "--project-dir",
+            str(dbt_project),
+            "--profiles-path",
+            str(profiles_path),
+            "--path",
+            str(output_dir),
+            "--dry-run",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Dry run" in result.output
+    assert "models/fct_orders/metadata.yml" in result.output
+    assert "models/raw_orders/metadata.yml" in result.output
+    assert not (output_dir / "wren_project.yml").exists()
+
+
+def test_import_dbt_writes_project_and_builds(tmp_path):
+    dbt_project, profiles_path = _make_dbt_project(tmp_path)
+    output_dir = tmp_path / "generated"
+
+    result = runner.invoke(
+        app,
+        [
+            "context",
+            "import",
+            "dbt",
+            "--project-dir",
+            str(dbt_project),
+            "--profiles-path",
+            str(profiles_path),
+            "--path",
+            str(output_dir),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert (output_dir / "wren_project.yml").exists()
+    assert (output_dir / "models" / "fct_orders" / "metadata.yml").exists()
+    assert (output_dir / "models" / "stg_orders" / "metadata.yml").exists()
+    assert (output_dir / "models" / "raw_orders" / "metadata.yml").exists()
+    assert not (output_dir / "models" / "int_order_rollup").exists()
+    assert (output_dir / "relationships.yml").exists()
+    assert (output_dir / "instructions.md").exists()
+    assert (output_dir / "AGENTS.md").exists()
+    assert (output_dir / "queries.yml").exists()
+
+    project_config = (output_dir / "wren_project.yml").read_text()
+    assert "data_source: duckdb" in project_config
+    assert "project_dir:" in project_config
+
+    build_result = runner.invoke(
+        app,
+        ["context", "build", "--path", str(output_dir)],
+    )
+    assert build_result.exit_code == 0, build_result.output
+
+    manifest = json.loads((output_dir / "target" / "mdl.json").read_text())
+    model_names = {model["name"] for model in manifest["models"]}
+    assert {"fct_orders", "stg_orders", "raw_orders"} <= model_names
+
+
+def test_import_dbt_force_overwrites_managed_files(tmp_path):
+    dbt_project, profiles_path = _make_dbt_project(tmp_path)
+    output_dir = tmp_path / "generated"
+    output_dir.mkdir()
+    (output_dir / "wren_project.yml").write_text("name: existing\n")
+
+    result = runner.invoke(
+        app,
+        [
+            "context",
+            "import",
+            "dbt",
+            "--project-dir",
+            str(dbt_project),
+            "--profiles-path",
+            str(profiles_path),
+            "--path",
+            str(output_dir),
+            "--force",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "schema_version: 2" in (output_dir / "wren_project.yml").read_text()
