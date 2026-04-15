@@ -45,7 +45,9 @@ jobs:
           restore-keys: wasm-cargo-
 
       - name: Install wasm-pack
-        run: cargo install wasm-pack --version 0.14.0 --locked
+        uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-pack@0.14.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
