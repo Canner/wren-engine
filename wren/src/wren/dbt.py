@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import re
@@ -84,6 +85,11 @@ class DbtArtifacts:
     catalog: dict[str, Any]
     run_results: dict[str, Any] | None
     compiled_sql: dict[str, str]
+
+
+def default_wren_profile_name(target: DbtTarget) -> str:
+    """Return a stable default Wren profile name for a dbt target."""
+    return f"{target.profile_name}-{target.target_name}".replace("_", "-")
 
 
 def map_dbt_adapter_to_wren(adapter_type: str) -> str:
@@ -291,6 +297,126 @@ def load_compiled_sql(compiled_dir: str | Path) -> dict[str, str]:
     }
 
 
+def convert_dbt_target_to_wren_profile(target: DbtTarget) -> dict[str, Any]:
+    """Convert a resolved dbt target into a Wren profile payload."""
+    output = target.output
+    datasource = target.datasource
+
+    if datasource == "duckdb":
+        path_value = str(_require_output_field(output, "path"))
+        db_path = Path(path_value).expanduser()
+        url = db_path if not db_path.suffix else db_path.parent
+        if str(url) in {"", "."}:
+            url = Path.cwd()
+        return {"datasource": "duckdb", "url": str(url), "format": "duckdb"}
+
+    if datasource == "postgres":
+        return {
+            "datasource": "postgres",
+            "host": str(_require_output_field(output, "host")),
+            "port": str(output.get("port", "5432")),
+            "database": str(_require_output_field(output, "dbname", "database")),
+            "user": str(_require_output_field(output, "user")),
+            "password": str(output["password"]) if output.get("password") else None,
+        }
+
+    if datasource in {"mysql", "redshift", "mssql", "clickhouse"}:
+        return _filter_none(
+            {
+                "datasource": datasource,
+                "host": str(_require_output_field(output, "host")),
+                "port": str(_require_output_field(output, "port")),
+                "database": str(
+                    _require_output_field(output, "dbname", "database", "catalog")
+                ),
+                "user": str(_require_output_field(output, "user")),
+                "password": str(output["password"]) if output.get("password") else None,
+            }
+        )
+
+    if datasource == "snowflake":
+        return _filter_none(
+            {
+                "datasource": "snowflake",
+                "account": str(_require_output_field(output, "account")),
+                "user": str(_require_output_field(output, "user")),
+                "password": str(output["password"]) if output.get("password") else None,
+                "database": str(_require_output_field(output, "database")),
+                "schema": str(_require_output_field(output, "schema")),
+                "warehouse": output.get("warehouse"),
+            }
+        )
+
+    if datasource == "trino":
+        return _filter_none(
+            {
+                "datasource": "trino",
+                "host": str(_require_output_field(output, "host")),
+                "port": str(output.get("port", "8080")),
+                "catalog": str(_require_output_field(output, "database", "catalog")),
+                "schema": str(_require_output_field(output, "schema")),
+                "user": output.get("user"),
+                "password": (
+                    str(output["password"]) if output.get("password") else None
+                ),
+            }
+        )
+
+    if datasource == "athena":
+        return _filter_none(
+            {
+                "datasource": "athena",
+                "s3_staging_dir": str(
+                    _require_output_field(output, "s3_staging_dir", "s3_data_dir")
+                ),
+                "region_name": output.get("region_name"),
+                "schema_name": output.get("schema", output.get("schema_name")),
+                "aws_access_key_id": output.get("aws_access_key_id"),
+                "aws_secret_access_key": output.get("aws_secret_access_key"),
+                "aws_session_token": output.get("aws_session_token"),
+                "role_arn": output.get("role_arn"),
+                "role_session_name": output.get("role_session_name"),
+            }
+        )
+
+    if datasource == "spark":
+        return {
+            "datasource": "spark",
+            "host": str(_require_output_field(output, "host")),
+            "port": str(output.get("port", "15002")),
+        }
+
+    if datasource == "databricks":
+        return {
+            "datasource": "databricks",
+            "databricks_type": "token",
+            "server_hostname": str(
+                _require_output_field(output, "server_hostname", "host")
+            ),
+            "http_path": str(_require_output_field(output, "http_path", "httpPath")),
+            "access_token": str(
+                _require_output_field(output, "token", "access_token", "accessToken")
+            ),
+        }
+
+    if datasource == "bigquery":
+        credentials = _bigquery_credentials_base64(output)
+        return _filter_none(
+            {
+                "datasource": "bigquery",
+                "bigquery_type": "dataset",
+                "project_id": str(_require_output_field(output, "project")),
+                "dataset_id": str(_require_output_field(output, "dataset")),
+                "credentials": credentials,
+            }
+        )
+
+    raise DbtLoadError(
+        f"dbt adapter '{target.adapter_type}' maps to datasource '{datasource}', "
+        "but profile conversion has not been implemented yet."
+    )
+
+
 def _load_yaml_file(path: Path, *, label: str) -> Any:
     """Load YAML from *path* with a consistent error surface."""
     if not path.exists():
@@ -312,3 +438,43 @@ def _load_json_file(path: Path, *, label: str) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise DbtLoadError(f"{label} must contain a JSON object: {path}")
     return data
+
+
+def _require_output_field(output: dict[str, Any], *keys: str) -> Any:
+    """Return the first present non-empty output field."""
+    for key in keys:
+        value = output.get(key)
+        if value not in (None, ""):
+            return value
+    names = ", ".join(keys)
+    raise DbtLoadError(f"dbt target is missing required field(s): {names}")
+
+
+def _filter_none(values: dict[str, Any]) -> dict[str, Any]:
+    """Drop keys with None values."""
+    return {key: value for key, value in values.items() if value is not None}
+
+
+def _bigquery_credentials_base64(output: dict[str, Any]) -> str:
+    """Encode BigQuery credentials from dbt output into Wren's expected format."""
+    if output.get("credentials"):
+        return str(output["credentials"])
+
+    if output.get("keyfile"):
+        keyfile = Path(str(output["keyfile"])).expanduser()
+        if not keyfile.exists():
+            raise DbtLoadError(f"BigQuery keyfile not found: {keyfile}")
+        return base64.b64encode(keyfile.read_bytes()).decode()
+
+    if output.get("keyfile_json"):
+        payload = output["keyfile_json"]
+        raw = (
+            json.dumps(payload, ensure_ascii=False)
+            if isinstance(payload, dict)
+            else str(payload)
+        )
+        return base64.b64encode(raw.encode("utf-8")).decode()
+
+    raise DbtLoadError(
+        "BigQuery dbt target requires one of: credentials, keyfile, or keyfile_json."
+    )

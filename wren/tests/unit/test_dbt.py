@@ -8,6 +8,8 @@ import pytest
 
 from wren.dbt import (
     DbtLoadError,
+    convert_dbt_target_to_wren_profile,
+    default_wren_profile_name,
     load_compiled_sql,
     load_dbt_artifacts,
     map_dbt_adapter_to_wren,
@@ -153,6 +155,101 @@ class TestResolveDbtTarget:
 
         with pytest.raises(DbtLoadError, match="Available targets: dev"):
             resolve_dbt_target(project_dir, profiles_path=profiles_path)
+
+
+@pytest.mark.unit
+class TestConvertDbtTargetToWrenProfile:
+    def test_default_profile_name(self, tmp_path):
+        project_dir, profiles_path = _write_basic_dbt_project(tmp_path)
+        target = resolve_dbt_target(
+            project_dir,
+            profiles_path=profiles_path,
+            env={"JAFFLE_DUCKDB_PATH": "/tmp/jaffle.duckdb"},
+        )
+
+        assert default_wren_profile_name(target) == "jaffle-shop-dev"
+
+    def test_convert_duckdb_profile(self, tmp_path):
+        project_dir, profiles_path = _write_basic_dbt_project(tmp_path)
+        target = resolve_dbt_target(
+            project_dir,
+            profiles_path=profiles_path,
+            env={"JAFFLE_DUCKDB_PATH": "/tmp/jaffle.duckdb"},
+        )
+
+        profile = convert_dbt_target_to_wren_profile(target)
+
+        assert profile == {
+            "datasource": "duckdb",
+            "url": "/tmp",
+            "format": "duckdb",
+        }
+
+    def test_convert_postgres_profile(self, tmp_path):
+        project_dir, profiles_path = _write_basic_dbt_project(tmp_path)
+        profiles_path.write_text(
+            "jaffle_shop:\n"
+            "  target: dev\n"
+            "  outputs:\n"
+            "    dev:\n"
+            "      type: postgres\n"
+            "      host: localhost\n"
+            "      port: 5432\n"
+            "      dbname: analytics\n"
+            "      user: postgres\n"
+            "      password: secret\n"
+        )
+        target = resolve_dbt_target(project_dir, profiles_path=profiles_path)
+
+        profile = convert_dbt_target_to_wren_profile(target)
+
+        assert profile == {
+            "datasource": "postgres",
+            "host": "localhost",
+            "port": "5432",
+            "database": "analytics",
+            "user": "postgres",
+            "password": "secret",
+        }
+
+    def test_convert_bigquery_profile_from_keyfile_json(self, tmp_path):
+        project_dir, profiles_path = _write_basic_dbt_project(tmp_path)
+        profiles_path.write_text(
+            "jaffle_shop:\n"
+            "  target: dev\n"
+            "  outputs:\n"
+            "    dev:\n"
+            "      type: bigquery\n"
+            "      project: demo-project\n"
+            "      dataset: analytics\n"
+            "      keyfile_json:\n"
+            "        client_email: analytics@example.com\n"
+        )
+        target = resolve_dbt_target(project_dir, profiles_path=profiles_path)
+
+        profile = convert_dbt_target_to_wren_profile(target)
+
+        assert profile["datasource"] == "bigquery"
+        assert profile["bigquery_type"] == "dataset"
+        assert profile["project_id"] == "demo-project"
+        assert profile["dataset_id"] == "analytics"
+        assert profile["credentials"]
+
+    def test_convert_profile_missing_required_field(self, tmp_path):
+        project_dir, profiles_path = _write_basic_dbt_project(tmp_path)
+        profiles_path.write_text(
+            "jaffle_shop:\n"
+            "  target: dev\n"
+            "  outputs:\n"
+            "    dev:\n"
+            "      type: postgres\n"
+            "      host: localhost\n"
+            "      port: 5432\n"
+        )
+        target = resolve_dbt_target(project_dir, profiles_path=profiles_path)
+
+        with pytest.raises(DbtLoadError, match="dbname, database"):
+            convert_dbt_target_to_wren_profile(target)
 
 
 @pytest.mark.unit
