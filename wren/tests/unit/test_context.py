@@ -312,6 +312,34 @@ def test_build_json_camel_case(tmp_path):
     assert "_instructions" not in result
 
 
+def test_build_manifest_includes_data_source(tmp_path):
+    """build_manifest must include data_source from project config."""
+    _minimal_v2_project(tmp_path)
+    manifest = build_manifest(tmp_path)
+    assert manifest["data_source"] == "postgres"
+
+
+def test_build_json_includes_data_source(tmp_path):
+    """build_json must include dataSource (camelCase) from project config."""
+    _minimal_v2_project(tmp_path)
+    result = build_json(tmp_path)
+    assert result["dataSource"] == "postgres"
+
+
+def test_build_manifest_omits_data_source_when_unset(tmp_path):
+    """If project config lacks data_source, the field is omitted."""
+    (tmp_path / "wren_project.yml").write_text(
+        "schema_version: 2\nname: test\ncatalog: wren\nschema: public\n"
+    )
+    d = tmp_path / "models" / "orders"
+    d.mkdir(parents=True)
+    (d / "metadata.yml").write_text(
+        "name: orders\ntable_reference:\n  table: orders\ncolumns: []\n"
+    )
+    manifest = build_manifest(tmp_path)
+    assert "data_source" not in manifest
+
+
 def test_build_json_round_trip(tmp_path):
     _minimal_v2_project(tmp_path)
     result = build_json(tmp_path)

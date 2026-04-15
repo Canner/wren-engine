@@ -588,13 +588,17 @@ def build_manifest(project_path: Path) -> dict:
     for v in views:
         v.pop("_source_dir", None)
 
-    return {
+    manifest: dict = {
         "catalog": project_config.get("catalog", "wren"),
         "schema": project_config.get("schema", "public"),
         "models": models,
         "relationships": relationships,
         "views": views,
     }
+    data_source = project_config.get("data_source")
+    if data_source:
+        manifest["data_source"] = data_source
+    return manifest
 
 
 def build_json(project_path: Path) -> dict:
