@@ -1,7 +1,6 @@
 name: WASM SDK
 permissions:
   contents: read
-  id-token: write
 
 on:
   push:
@@ -96,43 +95,3 @@ jobs:
           name: wasm-sdk-dist
           path: wren-core-wasm/dist/
           retention-days: 30
-
-  publish:
-    name: Publish to npm
-    needs: build
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/wasm-sdk/v')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-
-      - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          registry-url: https://registry.npmjs.org
-
-      - name: Install npm dependencies
-        working-directory: wren-core-wasm
-        run: npm install
-
-      - name: Build WASM
-        working-directory: wren-core-wasm
-        run: wasm-pack build --target web --release
-
-      - name: Build dist
-        working-directory: wren-core-wasm
-        run: npm run build:dist
-
-      - name: Publish to npm
-        working-directory: wren-core-wasm
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
