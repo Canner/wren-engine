@@ -174,14 +174,14 @@ class TestConvertDbtTargetToWrenProfile:
         target = resolve_dbt_target(
             project_dir,
             profiles_path=profiles_path,
-            env={"JAFFLE_DUCKDB_PATH": "/tmp/jaffle.duckdb"},
+            env={"JAFFLE_DUCKDB_PATH": "warehouse/jaffle.duckdb"},
         )
 
         profile = convert_dbt_target_to_wren_profile(target)
 
         assert profile == {
             "datasource": "duckdb",
-            "url": "/tmp",
+            "url": str((project_dir / "warehouse").resolve()),
             "format": "duckdb",
         }
 
@@ -293,3 +293,10 @@ class TestLoadDbtArtifacts:
 
     def test_load_compiled_sql_missing_dir(self, tmp_path):
         assert load_compiled_sql(tmp_path / "missing") == {}
+
+    def test_load_artifacts_missing_catalog_has_actionable_hint(self, tmp_path):
+        project_dir, _profiles_path = _write_basic_dbt_project(tmp_path)
+        (project_dir / "build" / "catalog.json").unlink()
+
+        with pytest.raises(DbtLoadError, match="dbt docs generate"):
+            load_dbt_artifacts(project_dir)

@@ -168,6 +168,34 @@ def test_import_dbt_duckdb_profile(tmp_path, monkeypatch):
     assert profile_mod.get_active_name() == "jaffle-shop-dev"
 
 
+def test_import_dbt_duckdb_relative_path_uses_project_dir(tmp_path):
+    project_dir, profiles_path = _write_dbt_project(tmp_path)
+    profiles_path.write_text(
+        "jaffle_shop:\n"
+        "  target: dev\n"
+        "  outputs:\n"
+        "    dev:\n"
+        "      type: duckdb\n"
+        "      path: warehouse/jaffle.duckdb\n"
+    )
+
+    result = runner.invoke(
+        profile_app,
+        [
+            "import",
+            "dbt",
+            "--project-dir",
+            str(project_dir),
+            "--profiles-path",
+            str(profiles_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    profiles = profile_mod.list_profiles()
+    assert profiles["jaffle-shop-dev"]["url"] == str(project_dir / "warehouse")
+
+
 def test_import_dbt_postgres_profile_custom_name_no_activate(tmp_path):
     project_dir, profiles_path = _write_dbt_project(tmp_path)
     profiles_path.write_text(

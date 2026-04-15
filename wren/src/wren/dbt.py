@@ -409,9 +409,9 @@ def convert_dbt_target_to_wren_profile(target: DbtTarget) -> dict[str, Any]:
     if datasource == "duckdb":
         path_value = str(_require_output_field(output, "path"))
         db_path = Path(path_value).expanduser()
+        if not db_path.is_absolute():
+            db_path = (target.project_dir / db_path).resolve()
         url = db_path if not db_path.suffix else db_path.parent
-        if str(url) in {"", "."}:
-            url = Path.cwd()
         return {"datasource": "duckdb", "url": str(url), "format": "duckdb"}
 
     if datasource == "postgres":
@@ -534,7 +534,10 @@ def _load_yaml_file(path: Path, *, label: str) -> Any:
 def _load_json_file(path: Path, *, label: str) -> dict[str, Any]:
     """Load JSON from *path* with a consistent error surface."""
     if not path.exists():
-        raise DbtLoadError(f"{label} file not found: {path}")
+        hint = ""
+        if label == "dbt catalog":
+            hint = " Run `dbt docs generate` to create catalog.json."
+        raise DbtLoadError(f"{label} file not found: {path}.{hint}")
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
