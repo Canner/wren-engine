@@ -77,3 +77,4 @@ jobs:
         with:
           repository-url: ${{ inputs.pypi_target == 'testpypi' && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}
           packages-dir: dist/
+          attestations: false
