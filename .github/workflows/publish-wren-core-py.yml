@@ -51,14 +51,19 @@ jobs:
         run: |
           import re, os
           version = os.environ["VERSION"]
-          for path in ["wren-core-py/Cargo.toml", "wren-core-py/pyproject.toml"]:
+          # Cargo requires semver: convert PEP 440 "0.3.0rc1" to "0.3.0-rc.1"
+          cargo_version = re.sub(r'(\d+\.\d+\.\d+)rc(\d+)', r'\1-rc.\2', version)
+          for path, ver in [
+              ("wren-core-py/Cargo.toml", cargo_version),
+              ("wren-core-py/pyproject.toml", version),
+          ]:
               text = open(path).read()
-              text = re.sub(r'^(version\s*=\s*)".*?"', rf'\1"{version}"', text, count=1, flags=re.MULTILINE)
+              text = re.sub(r'^(version\s*=\s*)".*?"', rf'\1"{ver}"', text, count=1, flags=re.MULTILINE)
               open(path, "w").write(text)
           lock = open("wren-core-py/Cargo.lock").read()
           lock = re.sub(
               r'(name = "wren-core-py"\nversion = )".*?"',
-              rf'\1"{version}"',
+              rf'\1"{cargo_version}"',
               lock, count=1,
           )
           open("wren-core-py/Cargo.lock", "w").write(lock)
@@ -92,14 +97,19 @@ jobs:
         run: |
           import re, os
           version = os.environ["VERSION"]
-          for path in ["wren-core-py/Cargo.toml", "wren-core-py/pyproject.toml"]:
+          # Cargo requires semver: convert PEP 440 "0.3.0rc1" to "0.3.0-rc.1"
+          cargo_version = re.sub(r'(\d+\.\d+\.\d+)rc(\d+)', r'\1-rc.\2', version)
+          for path, ver in [
+              ("wren-core-py/Cargo.toml", cargo_version),
+              ("wren-core-py/pyproject.toml", version),
+          ]:
               text = open(path).read()
-              text = re.sub(r'^(version\s*=\s*)".*?"', rf'\1"{version}"', text, count=1, flags=re.MULTILINE)
+              text = re.sub(r'^(version\s*=\s*)".*?"', rf'\1"{ver}"', text, count=1, flags=re.MULTILINE)
               open(path, "w").write(text)
           lock = open("wren-core-py/Cargo.lock").read()
           lock = re.sub(
               r'(name = "wren-core-py"\nversion = )".*?"',
-              rf'\1"{version}"',
+              rf'\1"{cargo_version}"',
               lock, count=1,
           )
           open("wren-core-py/Cargo.lock", "w").write(lock)
