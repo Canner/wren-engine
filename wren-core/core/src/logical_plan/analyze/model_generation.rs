@@ -3,9 +3,11 @@ use std::sync::Arc;
 
 use crate::logical_plan::analyze::plan::{
     CalculationPlanNode, ModelPlanNode, ModelSourceNode, PartialModelPlanNode,
+    SqlReferencePlanNode,
 };
 use crate::logical_plan::utils::{
-    create_remote_table_source, eliminate_ambiguous_columns, rebase_column,
+    create_df_schema, create_remote_table_source, eliminate_ambiguous_columns,
+    rebase_column,
 };
 use crate::mdl::context::SessionPropertiesRef;
 use crate::mdl::manifest::Model;
@@ -143,11 +145,12 @@ impl ModelGenerationRule {
                         *expr = rebase_column(expr, SOURCE_ALIAS)?;
                         Ok::<(), DataFusionError>(())
                     })?;
-                    // support table reference
                     let table_scan = match &model_plan.original_table_scan {
                         Some(LogicalPlan::TableScan(original_scan)) => {
+                            let table_ref_name = model.table_reference()
+                                .expect("TableScan-based model must have a table_reference");
                             LogicalPlanBuilder::scan_with_filters(
-                                TableReference::from(model.table_reference()),
+                                TableReference::from(table_ref_name),
                                 create_remote_table_source(
                                     Arc::clone(&model),
                                     &self.analyzed_wren_mdl.wren_mdl(),
@@ -165,17 +168,36 @@ impl ModelGenerationRule {
                                 .to_string(),
                         )),
                         None => {
-                            LogicalPlanBuilder::scan(
-                                TableReference::from(model.table_reference()),
-                                create_remote_table_source(
-                                    Arc::clone(&model),
-                                    &self.analyzed_wren_mdl.wren_mdl(),
-                                    Arc::clone(&self.session_state))?,
-                                None,
-                            )?
-                                .alias(SOURCE_ALIAS)?
-                                .project(required_exprs)?
-                                .build()
+                            match model.source() {
+                                wren_core_base::mdl::ModelSource::RefSql => {
+                                    let schema_ref = create_df_schema(&model)?;
+                                    let plan = SqlReferencePlanNode::new(&model, schema_ref)?;
+                                    LogicalPlanBuilder::from(LogicalPlan::Extension(Extension {
+                                        node: Arc::new(plan),
+                                    }))
+                                    .alias(SOURCE_ALIAS)?
+                                    .project(required_exprs)?
+                                    .build()
+                                }
+                                wren_core_base::mdl::ModelSource::TableReference => {
+                                    let table_ref_name = model.table_reference()
+                                        .expect("table_reference model must have a table_reference");
+                                    LogicalPlanBuilder::scan(
+                                        TableReference::from(table_ref_name),
+                                        create_remote_table_source(
+                                            Arc::clone(&model),
+                                            &self.analyzed_wren_mdl.wren_mdl(),
+                                            Arc::clone(&self.session_state))?,
+                                        None,
+                                    )?
+                                    .alias(SOURCE_ALIAS)?
+                                    .project(required_exprs)?
+                                    .build()
+                                }
+                                wren_core_base::mdl::ModelSource::Invalid(reason) => {
+                                    return plan_err!("{reason}");
+                                }
+                            }
                         },
                     }?;
 

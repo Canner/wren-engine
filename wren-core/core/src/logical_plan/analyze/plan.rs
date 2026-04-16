@@ -1200,3 +1200,74 @@ impl UserDefinedLogicalNodeCore for PartialModelPlanNode {
         })
     }
 }
+
+/// A logical plan node representing a model whose source is a raw SQL query (`ref_sql`).
+///
+/// Instead of scanning a physical table, this node carries the original SQL string
+/// and gets unparsed back into a subquery by [`SqlReferenceNodeUnparser`].
+#[derive(PartialEq, Eq, Hash, Debug, Clone)]
+pub struct SqlReferencePlanNode {
+    pub sql: String,
+    pub model_name: String,
+    pub schema_ref: DFSchemaRef,
+}
+
+impl SqlReferencePlanNode {
+    pub fn new(model: &Model, schema_ref: DFSchemaRef) -> Result<Self> {
+        let sql = model.ref_sql().ok_or_else(|| {
+            DataFusionError::Plan(format!(
+                "Model '{}' has no ref_sql defined",
+                model.name()
+            ))
+        })?;
+        Ok(Self {
+            sql: sql.to_string(),
+            model_name: model.name().to_string(),
+            schema_ref,
+        })
+    }
+}
+
+impl PartialOrd for SqlReferencePlanNode {
+    fn partial_cmp(&self, _other: &Self) -> Option<Ordering> {
+        None
+    }
+}
+
+impl UserDefinedLogicalNodeCore for SqlReferencePlanNode {
+    fn name(&self) -> &str {
+        "SqlReference"
+    }
+
+    fn inputs(&self) -> Vec<&LogicalPlan> {
+        vec![]
+    }
+
+    fn schema(&self) -> &DFSchemaRef {
+        &self.schema_ref
+    }
+
+    fn expressions(&self) -> Vec<Expr> {
+        self.schema_ref
+            .fields()
+            .iter()
+            .map(|field| col(field.name()))
+            .collect()
+    }
+
+    fn fmt_for_explain(&self, f: &mut Formatter) -> fmt::Result {
+        write!(
+            f,
+            "SqlReference: model={}, sql={}",
+            self.model_name, self.sql
+        )
+    }
+
+    fn with_exprs_and_inputs(&self, _: Vec<Expr>, _: Vec<LogicalPlan>) -> Result<Self> {
+        Ok(Self {
+            sql: self.sql.clone(),
+            model_name: self.model_name.clone(),
+            schema_ref: self.schema_ref.clone(),
+        })
+    }
+}

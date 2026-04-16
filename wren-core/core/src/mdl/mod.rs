@@ -9,7 +9,7 @@ use crate::mdl::function::{
     RemoteFunction,
 };
 use crate::mdl::manifest::{Column, Manifest, Metric, Model, View};
-use crate::mdl::utils::to_field;
+use crate::mdl::utils::{quoted, to_field};
 use crate::DataFusionError;
 use context::SessionPropertiesRef;
 use datafusion::arrow::datatypes::Field;
@@ -194,45 +194,65 @@ impl WrenMDL {
         properties: SessionPropertiesRef,
         mode: Mode,
     ) -> Result<Self> {
+        use wren_core_base::mdl::ModelSource;
+
         let mut mdl = WrenMDL::new(manifest);
         let sources: Vec<_> = mdl
             .models()
             .iter()
             .map(|model| {
-                let name = TableReference::from(model.table_reference());
-                let available_columns = model
-                    .columns
-                    .iter()
-                    .map(|column| {
-                        if mode.is_permission_analyze()
-                            || validate_clac_rule(
-                                model.name(),
-                                column,
-                                &properties,
-                                None,
-                            )?
-                            .0
-                        {
-                            Ok(Some(Arc::clone(column)))
-                        } else {
-                            Ok(None)
-                        }
-                    })
-                    .collect::<Result<Vec<_>>>()?;
-                let fields: Vec<_> = available_columns
-                    .into_iter()
-                    .filter(|c| c.is_some())
-                    .filter_map(|column| {
-                        Self::infer_source_column(&column.unwrap()).ok().flatten()
-                    })
-                    .collect();
-                let schema = Arc::new(datafusion::arrow::datatypes::Schema::new(fields));
-                let datasource = WrenDataSource::new_with_schema(schema);
-                Ok((name.to_quoted_string(), Arc::new(datasource)))
+                match model.source() {
+                    ModelSource::TableReference => {
+                        let name = TableReference::from(model.table_reference().expect("table_reference must exist for TableReference source"));
+                        let available_columns = model
+                            .columns
+                            .iter()
+                            .map(|column| {
+                                if mode.is_permission_analyze()
+                                    || validate_clac_rule(
+                                        model.name(),
+                                        column,
+                                        &properties,
+                                        None,
+                                    )?
+                                    .0
+                                {
+                                    Ok(Some(Arc::clone(column)))
+                                } else {
+                                    Ok(None)
+                                }
+                            })
+                            .collect::<Result<Vec<_>>>()?;
+                        let fields: Vec<_> = available_columns
+                            .into_iter()
+                            .filter(|c| c.is_some())
+                            .filter_map(|column| {
+                                Self::infer_source_column(&column.unwrap()).ok().flatten()
+                            })
+                            .collect();
+                        let schema = Arc::new(datafusion::arrow::datatypes::Schema::new(fields));
+                        let datasource = WrenDataSource::new_with_schema(schema);
+                        Ok(Some((name.to_quoted_string(), Arc::new(datasource))))
+                    }
+                    ModelSource::RefSql => {
+                        let fields: Vec<_> = model
+                            .get_physical_columns(false)
+                            .iter()
+                            .filter_map(|column| to_field(column).ok())
+                            .collect();
+                        let schema = Arc::new(datafusion::arrow::datatypes::Schema::new(fields));
+                        let datasource = WrenDataSource::new_with_schema(schema);
+                        Ok(Some((quoted(model.name()), Arc::new(datasource))))
+                    }
+                    ModelSource::Invalid(reason) => {
+                        Err(datafusion::error::DataFusionError::Plan(reason))
+                    }
+                }
             })
             .collect::<Result<Vec<_>>>()?;
         sources
             .into_iter()
+            .flatten()
             .for_each(|(name, ds_ref)| mdl.register_table(name, ds_ref));
         Ok(mdl)
     }
@@ -460,7 +480,11 @@ pub async fn transform_sql_with_ctx(
 
     let data_source = analyzed_mdl.wren_mdl().data_source().unwrap_or_default();
     let wren_dialect = WrenDialect::new(&data_source);
-    let unparser = Unparser::new(&wren_dialect).with_pretty(true);
+    let unparser = Unparser::new(&wren_dialect)
+        .with_pretty(true)
+        .with_extension_unparsers(vec![Arc::new(
+            crate::logical_plan::unparser::SqlReferenceNodeUnparser,
+        )]);
     // show the planned sql
     match unparser.plan_to_sql(&analyzed) {
         Ok(sql) => {
@@ -4059,5 +4083,156 @@ mod test {
             headers.insert(key.to_lowercase(), value.clone());
         }
         headers
+    }
+
+    #[tokio::test]
+    async fn test_ref_sql_model() -> Result<()> {
+        let mdl_json = r#"
+        {
+            "catalog": "wren",
+            "schema": "test",
+            "models": [
+                {
+                    "name": "revenue_summary",
+                    "refSql": "SELECT region, SUM(amount) AS total FROM raw_sales GROUP BY region",
+                    "columns": [
+                        {
+                            "name": "region",
+                            "type": "string"
+                        },
+                        {
+                            "name": "total",
+                            "type": "int"
+                        }
+                    ]
+                }
+            ]
+        }
+        "#;
+        let manifest: Manifest = serde_json::from_str(mdl_json).unwrap();
+        let ctx = create_wren_ctx(None, None);
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest,
+            Arc::new(HashMap::default()),
+            Mode::Unparse,
+        )?);
+
+        // Simple SELECT on refSql model
+        let sql = r#"SELECT region, total FROM revenue_summary"#;
+        let result = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            Arc::new(HashMap::new()),
+            sql,
+        )
+        .await?;
+        // The refSql should appear as a subquery in the output
+        assert!(
+            result.contains("SELECT region, SUM(amount) AS total FROM raw_sales GROUP BY region"),
+            "Expected refSql subquery in output, got: {result}"
+        );
+
+        // SELECT with WHERE filter on refSql model
+        let sql = r#"SELECT region FROM revenue_summary WHERE total > 100"#;
+        let result = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            Arc::new(HashMap::new()),
+            sql,
+        )
+        .await?;
+        assert!(
+            result.contains("SELECT region, SUM(amount) AS total FROM raw_sales GROUP BY region"),
+            "Expected refSql subquery in filtered output, got: {result}"
+        );
+        assert!(
+            result.contains("total > 100"),
+            "Expected WHERE filter in output, got: {result}"
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_ref_sql_model_with_table_ref_model() -> Result<()> {
+        let mdl_json = r#"
+        {
+            "catalog": "wren",
+            "schema": "test",
+            "models": [
+                {
+                    "name": "orders",
+                    "tableReference": {
+                        "table": "orders"
+                    },
+                    "columns": [
+                        {
+                            "name": "o_orderkey",
+                            "type": "int"
+                        },
+                        {
+                            "name": "o_totalprice",
+                            "type": "float"
+                        }
+                    ]
+                },
+                {
+                    "name": "order_summary",
+                    "refSql": "SELECT o_orderkey, SUM(o_totalprice) AS total FROM orders GROUP BY o_orderkey",
+                    "columns": [
+                        {
+                            "name": "o_orderkey",
+                            "type": "int"
+                        },
+                        {
+                            "name": "total",
+                            "type": "float"
+                        }
+                    ]
+                }
+            ]
+        }
+        "#;
+        let manifest: Manifest = serde_json::from_str(mdl_json).unwrap();
+        let ctx = create_wren_ctx(None, None);
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
+            manifest,
+            Arc::new(HashMap::default()),
+            Mode::Unparse,
+        )?);
+
+        // Query the refSql model — coexistence with table_reference model
+        let sql = r#"SELECT o_orderkey, total FROM order_summary"#;
+        let result = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            Arc::new(HashMap::new()),
+            sql,
+        )
+        .await?;
+        assert!(
+            result.contains("SELECT o_orderkey, SUM(o_totalprice) AS total FROM orders GROUP BY o_orderkey"),
+            "Expected refSql subquery in output, got: {result}"
+        );
+
+        // Query the table_reference model — should still work normally
+        let sql = r#"SELECT o_orderkey FROM orders"#;
+        let result = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &[],
+            Arc::new(HashMap::new()),
+            sql,
+        )
+        .await?;
+        assert!(
+            !result.contains("refSql"),
+            "Table reference model output should not contain refSql, got: {result}"
+        );
+
+        Ok(())
     }
 }

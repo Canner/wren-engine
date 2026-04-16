@@ -6,7 +6,7 @@ use crate::mdl::{Dataset, SessionStateRef};
 use datafusion::arrow::datatypes::{
     DataType, Field, IntervalUnit, Schema, SchemaBuilder, SchemaRef, TimeUnit,
 };
-use datafusion::common::plan_err;
+use datafusion::common::{plan_err, DFSchema, DFSchemaRef};
 use datafusion::common::tree_node::{
     Transformed, TransformedResult, TreeNode, TreeNodeRecursion,
 };
@@ -259,12 +259,36 @@ pub fn create_schema(columns: Vec<Arc<Column>>) -> Result<SchemaRef> {
     )))
 }
 
+pub fn create_df_schema(model: &Model) -> Result<DFSchemaRef> {
+    let fields: Vec<_> = model
+        .get_physical_columns(false)
+        .iter()
+        .map(|col| {
+            Ok((
+                Some(TableReference::bare(model.name())),
+                Arc::new(Field::new(
+                    col.name(),
+                    try_map_data_type(&col.r#type)?,
+                    col.not_null,
+                )),
+            ))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    Ok(Arc::new(DFSchema::new_with_metadata(
+        fields,
+        HashMap::new(),
+    )?))
+}
+
 pub fn create_remote_table_source(
     model: Arc<Model>,
     mdl: &WrenMDL,
     session_state_ref: SessionStateRef,
 ) -> Result<Arc<dyn TableSource>> {
-    if let Some(table_provider) = mdl.get_table(model.table_reference()) {
+    let key = model
+        .table_reference()
+        .unwrap_or_else(|| model.name());
+    if let Some(table_provider) = mdl.get_table(key) {
         Ok(Arc::new(DefaultTableSource::new(table_provider)))
     } else {
         let dataset = Dataset::Model(model);

@@ -92,7 +92,7 @@ mod tests {
             Some("SELECT * FROM table".to_string())
         );
         assert_eq!(manifest.models[1].name(), "model_2");
-        assert_eq!(manifest.models[1].table_reference(), "catalog.schema.table");
+        assert_eq!(manifest.models[1].table_reference(), Some("catalog.schema.table"));
         assert_eq!(manifest.data_source, Some(BigQuery));
     }
 }
