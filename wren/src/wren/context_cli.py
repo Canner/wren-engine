@@ -40,7 +40,7 @@ def init(
 
     Without --from-mdl: scaffolds an empty project structure.
     With --from-mdl: imports an existing MDL JSON and produces a complete
-    v2 YAML project, ready for `wren context validate/build`.
+    YAML project, ready for `wren context validate/build`.
     """
     project_path = Path(path).expanduser() if path else Path.cwd()
 

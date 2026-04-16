@@ -705,7 +705,8 @@ def test_convert_mdl_v1_layout_version(tmp_path):
     files = convert_mdl_to_project(mdl)
     import yaml
 
-    project = yaml.safe_load(files[0].content)
+    file_map = {f.relative_path: f.content for f in files}
+    project = yaml.safe_load(file_map["wren_project.yml"])
     assert project["schema_version"] == 2
 
 
