@@ -1,6 +1,6 @@
 [project]
 name = "mcp-server"
-version = "0.24.6"
+version = "0.25.0"
 description = "MCP server exposing Wren Engine to AI agents"
 readme = "README.md"
 requires-python = ">=3.11"
