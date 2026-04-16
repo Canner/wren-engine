@@ -49,23 +49,34 @@ jobs:
           VERSION: ${{ inputs.version }}
         shell: python
         run: |
-          import re, os
+          import re, os, sys
           version = os.environ["VERSION"]
-          # Cargo requires semver: convert PEP 440 "0.3.0rc1" to "0.3.0-rc.1"
-          cargo_version = re.sub(r'(\d+\.\d+\.\d+)rc(\d+)', r'\1-rc.\2', version)
+          if re.fullmatch(r"\d+\.\d+\.\d+", version):
+              cargo_version = version
+          elif re.fullmatch(r"\d+\.\d+\.\d+rc\d+", version):
+              cargo_version = re.sub(r"(\d+\.\d+\.\d+)rc(\d+)", r"\1-rc.\2", version)
+          else:
+              print(f"::error::Unsupported version format: {version!r}. Expected X.Y.Z or X.Y.ZrcN.")
+              sys.exit(1)
           for path, ver in [
               ("wren-core-py/Cargo.toml", cargo_version),
               ("wren-core-py/pyproject.toml", version),
           ]:
               text = open(path).read()
-              text = re.sub(r'^(version\s*=\s*)".*?"', rf'\1"{ver}"', text, count=1, flags=re.MULTILINE)
+              text, n = re.subn(r'^(version\s*=\s*)".*?"', rf'\1"{ver}"', text, count=1, flags=re.MULTILINE)
+              if n != 1:
+                  print(f"::error::Failed to update version in {path}")
+                  sys.exit(1)
               open(path, "w").write(text)
           lock = open("wren-core-py/Cargo.lock").read()
-          lock = re.sub(
+          lock, n = re.subn(
               r'(name = "wren-core-py"\nversion = )".*?"',
               rf'\1"{cargo_version}"',
               lock, count=1,
           )
+          if n != 1:
+              print("::error::Failed to update wren-core-py version in Cargo.lock")
+              sys.exit(1)
           open("wren-core-py/Cargo.lock", "w").write(lock)
       - name: Build wheel
         uses: PyO3/maturin-action@v1
@@ -95,23 +106,34 @@ jobs:
           VERSION: ${{ inputs.version }}
         shell: python
         run: |
-          import re, os
+          import re, os, sys
           version = os.environ["VERSION"]
-          # Cargo requires semver: convert PEP 440 "0.3.0rc1" to "0.3.0-rc.1"
-          cargo_version = re.sub(r'(\d+\.\d+\.\d+)rc(\d+)', r'\1-rc.\2', version)
+          if re.fullmatch(r"\d+\.\d+\.\d+", version):
+              cargo_version = version
+          elif re.fullmatch(r"\d+\.\d+\.\d+rc\d+", version):
+              cargo_version = re.sub(r"(\d+\.\d+\.\d+)rc(\d+)", r"\1-rc.\2", version)
+          else:
+              print(f"::error::Unsupported version format: {version!r}. Expected X.Y.Z or X.Y.ZrcN.")
+              sys.exit(1)
           for path, ver in [
               ("wren-core-py/Cargo.toml", cargo_version),
               ("wren-core-py/pyproject.toml", version),
           ]:
               text = open(path).read()
-              text = re.sub(r'^(version\s*=\s*)".*?"', rf'\1"{ver}"', text, count=1, flags=re.MULTILINE)
+              text, n = re.subn(r'^(version\s*=\s*)".*?"', rf'\1"{ver}"', text, count=1, flags=re.MULTILINE)
+              if n != 1:
+                  print(f"::error::Failed to update version in {path}")
+                  sys.exit(1)
               open(path, "w").write(text)
           lock = open("wren-core-py/Cargo.lock").read()
-          lock = re.sub(
+          lock, n = re.subn(
               r'(name = "wren-core-py"\nversion = )".*?"',
               rf'\1"{cargo_version}"',
               lock, count=1,
           )
+          if n != 1:
+              print("::error::Failed to update wren-core-py version in Cargo.lock")
+              sys.exit(1)
           open("wren-core-py/Cargo.lock", "w").write(lock)
       - name: Build sdist
         uses: PyO3/maturin-action@v1
