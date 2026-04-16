@@ -50,6 +50,7 @@ Merging a Release PR triggers:
   - ibis-server → multi-arch Docker image pushed to GHCR (tagged `<version>` + `latest`)
   - wren-core-py → multi-platform wheels + sdist published to PyPI
   - wren → sdist + wheel published to PyPI
+  - wren-core-wasm → WASM package published to npm
   - mcp-server → version verification
 
 ## RC (pre-release) workflow
