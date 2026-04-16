@@ -916,6 +916,185 @@ def validate_project(project_path: Path) -> list[ValidationError]:
     return errors
 
 
+# ── Upgrade ──────────────────────────────────────────────────────────────────
+
+_LATEST_SCHEMA_VERSION = max(_SUPPORTED_SCHEMA_VERSIONS)
+
+
+@dataclass
+class UpgradeResult:
+    """Result of a project schema upgrade."""
+
+    from_version: int
+    to_version: int
+    files_created: list[str]
+    files_deleted: list[str]
+    files_modified: list[str]
+
+
+class UpgradeError(Exception):
+    """Raised when a project upgrade cannot proceed."""
+
+
+def plan_upgrade(
+    project_path: Path,
+    target_version: int | None = None,
+) -> UpgradeResult:
+    """Compute what an upgrade would do, without touching disk.
+
+    Raises UpgradeError if the upgrade is invalid (e.g. downgrade, unsupported version).
+    Returns an UpgradeResult with empty lists if already at target (no-op).
+    """
+    current = get_schema_version(project_path)
+    target = target_version if target_version is not None else _LATEST_SCHEMA_VERSION
+
+    if target not in _SUPPORTED_SCHEMA_VERSIONS:
+        raise UpgradeError(f"Unsupported target schema_version {target}")
+    if target < current:
+        raise UpgradeError(
+            f"Cannot downgrade from schema_version {current} to {target}"
+        )
+    if target == current:
+        return UpgradeResult(
+            from_version=current,
+            to_version=target,
+            files_created=[],
+            files_deleted=[],
+            files_modified=[],
+        )
+
+    files_created: list[str] = []
+    files_deleted: list[str] = []
+
+    # Apply steps sequentially
+    for version in range(current, target):
+        if version == 1:
+            created, deleted = _plan_v1_to_v2(project_path)
+            files_created.extend(created)
+            files_deleted.extend(deleted)
+        # v2→v3: no file layout changes needed
+
+    return UpgradeResult(
+        from_version=current,
+        to_version=target,
+        files_created=files_created,
+        files_deleted=files_deleted,
+        files_modified=[_PROJECT_FILE],
+    )
+
+
+def _plan_v1_to_v2(project_path: Path) -> tuple[list[str], list[str]]:
+    """Plan the v1→v2 file restructuring. Returns (files_created, files_deleted)."""
+    created: list[str] = []
+    deleted: list[str] = []
+
+    # Models: flat files → directories
+    models = _load_models_v1(project_path)
+    for model in models:
+        source_dir = model.pop("_source_dir", None)
+        name = model.get("name", source_dir or "unknown")
+        dir_path = f"models/{name}"
+
+        ref_sql = model.get("ref_sql")
+        if ref_sql:
+            created.append(f"{dir_path}/ref_sql.sql")
+
+        created.append(f"{dir_path}/metadata.yml")
+
+        if source_dir:
+            deleted.append(f"models/{source_dir}.yml")
+
+    # Views: single file → directories
+    views = _load_views_v1(project_path)
+    for view in views:
+        name = view.get("name")
+        if not name:
+            continue
+        dir_path = f"views/{name}"
+
+        statement = view.get("statement")
+        if statement and "\n" in statement.strip():
+            created.append(f"{dir_path}/sql.yml")
+
+        created.append(f"{dir_path}/metadata.yml")
+
+    views_file = project_path / "views.yml"
+    if views_file.exists():
+        deleted.append("views.yml")
+
+    return created, deleted
+
+
+def apply_upgrade(project_path: Path, result: UpgradeResult) -> None:
+    """Write upgrade changes to disk."""
+    if not result.files_created and not result.files_deleted:
+        # No-op (e.g. v2→v3, only wren_project.yml changes)
+        pass
+    else:
+        _apply_v1_to_v2(project_path)
+
+    # Update wren_project.yml
+    config = load_project_config(project_path)
+    config["schema_version"] = result.to_version
+    config_file = project_path / _PROJECT_FILE
+    config_file.write_text(yaml.dump(config, default_flow_style=False, sort_keys=False))
+
+
+def _apply_v1_to_v2(project_path: Path) -> None:
+    """Execute the v1→v2 restructuring: write new files, delete old ones."""
+    # Write new model directories
+    models = _load_models_v1(project_path)
+    for model in models:
+        source_dir = model.pop("_source_dir", None)
+        name = model.get("name", source_dir or "unknown")
+        model_dir = project_path / "models" / name
+        model_dir.mkdir(parents=True, exist_ok=True)
+
+        ref_sql = model.pop("ref_sql", None)
+        if ref_sql:
+            (model_dir / "ref_sql.sql").write_text(ref_sql.strip() + "\n")
+
+        (model_dir / "metadata.yml").write_text(
+            yaml.dump(model, default_flow_style=False, sort_keys=False)
+        )
+
+        # Delete old flat file
+        if source_dir:
+            old_file = project_path / "models" / f"{source_dir}.yml"
+            if old_file.exists():
+                old_file.unlink()
+
+    # Write new view directories
+    views = _load_views_v1(project_path)
+    for view in views:
+        name = view.get("name")
+        if not name:
+            continue
+        view_dir = project_path / "views" / name
+        view_dir.mkdir(parents=True, exist_ok=True)
+
+        statement = view.pop("statement", None)
+        if statement and "\n" in statement.strip():
+            (view_dir / "sql.yml").write_text(
+                yaml.dump(
+                    {"statement": statement},
+                    default_flow_style=False,
+                    sort_keys=False,
+                )
+            )
+        elif statement:
+            view["statement"] = statement
+
+        (view_dir / "metadata.yml").write_text(
+            yaml.dump(view, default_flow_style=False, sort_keys=False)
+        )
+
+    # Delete old views.yml
+    views_file = project_path / "views.yml"
+    if views_file.exists():
+        views_file.unlink()
+
+
 # ── Semantic validation (view dry-plan + description completeness) ─────────
 
 _VALID_LEVELS = frozenset({"error", "warning", "strict"})

@@ -215,3 +215,69 @@ def test_instructions_discovers_project(tmp_path):
     result = runner.invoke(app, ["context", "instructions", "--path", str(tmp_path)])
     assert result.exit_code == 0
     assert "custom rule here" in result.output
+
+
+# ── wren context upgrade ─────────────────────────────────────────────────
+
+
+def _make_v1_project(tmp_path: Path) -> Path:
+    (tmp_path / "wren_project.yml").write_text(
+        "schema_version: 1\nname: test\ndata_source: postgres\ncatalog: wren\nschema: public\n"
+    )
+    models_dir = tmp_path / "models"
+    models_dir.mkdir()
+    (models_dir / "orders.yml").write_text(
+        "name: orders\ntable_reference:\n  table: orders\n"
+        "columns:\n  - name: id\n    type: INTEGER\nprimary_key: id\n"
+    )
+    (tmp_path / "relationships.yml").write_text("relationships: []\n")
+    return tmp_path
+
+
+def test_upgrade_cli_v2_to_v3(tmp_path):
+    _make_valid_project(tmp_path)
+    result = runner.invoke(app, ["context", "upgrade", "--path", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    assert "Upgrade complete" in result.output
+    import yaml
+
+    config = yaml.safe_load((tmp_path / "wren_project.yml").read_text())
+    assert config["schema_version"] == 3
+
+
+def test_upgrade_cli_dry_run(tmp_path):
+    _make_v1_project(tmp_path)
+    result = runner.invoke(
+        app, ["context", "upgrade", "--path", str(tmp_path), "--dry-run"]
+    )
+    assert result.exit_code == 0, result.output
+    assert "Dry run" in result.output
+    assert "Would create" in result.output
+    # Verify no files were actually changed
+    assert not (tmp_path / "models" / "orders" / "metadata.yml").exists()
+    import yaml
+
+    config = yaml.safe_load((tmp_path / "wren_project.yml").read_text())
+    assert config["schema_version"] == 1
+
+
+def test_upgrade_cli_already_current(tmp_path):
+    (tmp_path / "wren_project.yml").write_text(
+        "schema_version: 3\nname: test\ndata_source: postgres\n"
+    )
+    result = runner.invoke(app, ["context", "upgrade", "--path", str(tmp_path)])
+    assert result.exit_code == 0
+    assert "Already at" in result.output
+
+
+def test_upgrade_cli_explicit_to_version(tmp_path):
+    _make_v1_project(tmp_path)
+    result = runner.invoke(
+        app, ["context", "upgrade", "--path", str(tmp_path), "--to", "2"]
+    )
+    assert result.exit_code == 0, result.output
+    assert "Upgrade complete" in result.output
+    import yaml
+
+    config = yaml.safe_load((tmp_path / "wren_project.yml").read_text())
+    assert config["schema_version"] == 2
