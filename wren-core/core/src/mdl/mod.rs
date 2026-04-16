@@ -166,13 +166,14 @@ impl WrenMDL {
         use wren_core_base::mdl::ModelSource;
 
         let mut mdl = WrenMDL::new(manifest);
-        let sources: Vec<_> = mdl
-            .models()
-            .iter()
-            .map(|model| {
-                match model.source() {
+        let sources: Vec<_> =
+            mdl.models()
+                .iter()
+                .map(|model| match model.source() {
                     ModelSource::TableReference => {
-                        let name = TableReference::from(model.table_reference().expect("table_reference must exist for TableReference source"));
+                        let name = TableReference::from(model.table_reference().expect(
+                            "table_reference must exist for TableReference source",
+                        ));
                         let available_columns = model
                             .columns
                             .iter()
@@ -199,7 +200,8 @@ impl WrenMDL {
                                 Self::infer_source_column(&column.unwrap()).ok().flatten()
                             })
                             .collect();
-                        let schema = Arc::new(datafusion::arrow::datatypes::Schema::new(fields));
+                        let schema =
+                            Arc::new(datafusion::arrow::datatypes::Schema::new(fields));
                         let datasource = WrenDataSource::new_with_schema(schema);
                         Ok(Some((name.to_quoted_string(), Arc::new(datasource))))
                     }
@@ -209,16 +211,16 @@ impl WrenMDL {
                             .iter()
                             .filter_map(|column| to_field(column).ok())
                             .collect();
-                        let schema = Arc::new(datafusion::arrow::datatypes::Schema::new(fields));
+                        let schema =
+                            Arc::new(datafusion::arrow::datatypes::Schema::new(fields));
                         let datasource = WrenDataSource::new_with_schema(schema);
                         Ok(Some((quoted(model.name()), Arc::new(datasource))))
                     }
                     ModelSource::Invalid(reason) => {
                         Err(datafusion::error::DataFusionError::Plan(reason))
                     }
-                }
-            })
-            .collect::<Result<Vec<_>>>()?;
+                })
+                .collect::<Result<Vec<_>>>()?;
         sources
             .into_iter()
             .flatten()
@@ -524,7 +526,7 @@ fn register_remote_function(
     // and add the lowercase name as an alias for parsing.
     let normalized_name = remote_function.name.to_lowercase();
     let original_name = &remote_function.name;
-    
+
     match &remote_function.function_type {
         FunctionType::Scalar => ctx.register_udf(ScalarUDF::new_from_impl(
             ByPassScalarUDF::new_with_original_name(
@@ -4094,7 +4096,9 @@ mod test {
         .await?;
         // The refSql should appear as a subquery in the output
         assert!(
-            result.contains("SELECT region, SUM(amount) AS total FROM raw_sales GROUP BY region"),
+            result.contains(
+                "SELECT region, SUM(amount) AS total FROM raw_sales GROUP BY region"
+            ),
             "Expected refSql subquery in output, got: {result}"
         );
 
@@ -4109,7 +4113,9 @@ mod test {
         )
         .await?;
         assert!(
-            result.contains("SELECT region, SUM(amount) AS total FROM raw_sales GROUP BY region"),
+            result.contains(
+                "SELECT region, SUM(amount) AS total FROM raw_sales GROUP BY region"
+            ),
             "Expected refSql subquery in filtered output, got: {result}"
         );
         assert!(

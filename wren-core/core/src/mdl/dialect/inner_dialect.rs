@@ -28,7 +28,7 @@ use crate::mdl::manifest::DataSource;
 use datafusion::common::{plan_err, Result};
 use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
 use datafusion::logical_expr::{Expr, LogicalPlan};
-use datafusion::sql::sqlparser::tokenizer::Span; 
+use datafusion::sql::sqlparser::tokenizer::Span;
 
 use datafusion::scalar::ScalarValue;
 use datafusion::sql::sqlparser::ast::{
@@ -585,7 +585,6 @@ impl InnerDialect for SnowflakeDialect {
 /// instead of standard SQL EXTRACT or date_part.
 pub struct ClickHouseDialect {}
 
-
 impl ClickHouseDialect {
     fn clickhouse_function_to_sql(
         unparser: &Unparser,
@@ -640,7 +639,7 @@ impl InnerDialect for ClickHouseDialect {
 
                 // Extract the field name from the first argument
                 if let Expr::Literal(ScalarValue::Utf8(Some(field)), _)
-                    | Expr::Literal(ScalarValue::LargeUtf8(Some(field)), _) = &args[0]
+                | Expr::Literal(ScalarValue::LargeUtf8(Some(field)), _) = &args[0]
                 {
                     let clickhouse_func = match field.to_lowercase().as_str() {
                         "year" => "toYear",
@@ -700,20 +699,36 @@ impl InnerDialect for ClickHouseDialect {
             "tomonth" => Self::clickhouse_function_to_sql(unparser, "toMonth", args),
             "todate" => Self::clickhouse_function_to_sql(unparser, "toDate", args),
             "todate32" => Self::clickhouse_function_to_sql(unparser, "toDate32", args),
-            "todatetime" => Self::clickhouse_function_to_sql(unparser, "toDateTime", args),
-            "todatetime64" => Self::clickhouse_function_to_sql(unparser, "toDateTime64", args),
+            "todatetime" => {
+                Self::clickhouse_function_to_sql(unparser, "toDateTime", args)
+            }
+            "todatetime64" => {
+                Self::clickhouse_function_to_sql(unparser, "toDateTime64", args)
+            }
             "toisoweek" => Self::clickhouse_function_to_sql(unparser, "toISOWeek", args),
-            "todayofmonth" => Self::clickhouse_function_to_sql(unparser, "toDayOfMonth", args),
-            "todayofweek" => Self::clickhouse_function_to_sql(unparser, "toDayOfWeek", args),
-            "todayofyear" => Self::clickhouse_function_to_sql(unparser, "toDayOfYear", args),
+            "todayofmonth" => {
+                Self::clickhouse_function_to_sql(unparser, "toDayOfMonth", args)
+            }
+            "todayofweek" => {
+                Self::clickhouse_function_to_sql(unparser, "toDayOfWeek", args)
+            }
+            "todayofyear" => {
+                Self::clickhouse_function_to_sql(unparser, "toDayOfYear", args)
+            }
             "tohour" => Self::clickhouse_function_to_sql(unparser, "toHour", args),
             "tominute" => Self::clickhouse_function_to_sql(unparser, "toMinute", args),
             "tosecond" => Self::clickhouse_function_to_sql(unparser, "toSecond", args),
             "uniqexact" => Self::clickhouse_function_to_sql(unparser, "uniqExact", args),
-            "grouparray" => Self::clickhouse_function_to_sql(unparser, "groupArray", args),
-            "groupuniqarray" => Self::clickhouse_function_to_sql(unparser, "groupUniqArray", args),
+            "grouparray" => {
+                Self::clickhouse_function_to_sql(unparser, "groupArray", args)
+            }
+            "groupuniqarray" => {
+                Self::clickhouse_function_to_sql(unparser, "groupUniqArray", args)
+            }
             "stddevpop" => Self::clickhouse_function_to_sql(unparser, "stddevPop", args),
-            "stddevsamp" => Self::clickhouse_function_to_sql(unparser, "stddevSamp", args),
+            "stddevsamp" => {
+                Self::clickhouse_function_to_sql(unparser, "stddevSamp", args)
+            }
             "varpop" => Self::clickhouse_function_to_sql(unparser, "varPop", args),
             "varsamp" => Self::clickhouse_function_to_sql(unparser, "varSamp", args),
             "anylast" => Self::clickhouse_function_to_sql(unparser, "anyLast", args),

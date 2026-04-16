@@ -23,11 +23,7 @@ use crate::mdl::manifest::{
     Column, Cube, CubeDimension, DataSource, JoinType, Manifest, Measure, Model, Relationship,
     TimeDimension, View,
 };
-#[allow(deprecated)]
-use crate::mdl::{
-    ColumnLevelOperator, ColumnLevelSecurity, NormalizedExpr, RowLevelAccessControl,
-    RowLevelOperator, RowLevelSecurity, SessionProperty,
-};
+use crate::mdl::{ColumnLevelOperator, NormalizedExpr, RowLevelAccessControl, SessionProperty};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
@@ -199,7 +195,6 @@ pub struct ColumnBuilder {
     pub column: Column,
 }
 
-#[allow(deprecated)]
 impl ColumnBuilder {
     pub fn new(name: &str, r#type: &str) -> Self {
         Self {
@@ -211,8 +206,6 @@ impl ColumnBuilder {
                 is_hidden: false,
                 not_null: false,
                 expression: None,
-                rls: None,
-                cls: None,
                 column_level_access_control: None,
             },
         }
@@ -248,29 +241,6 @@ impl ColumnBuilder {
 
     pub fn hidden(mut self, is_hidden: bool) -> Self {
         self.column.is_hidden = is_hidden;
-        self
-    }
-
-    #[allow(deprecated)]
-    pub fn row_level_security(mut self, name: &str, operator: RowLevelOperator) -> Self {
-        self.column.rls = Some(RowLevelSecurity {
-            name: name.to_string(),
-            operator,
-        });
-        self
-    }
-
-    pub fn column_level_security(
-        mut self,
-        name: &str,
-        operator: ColumnLevelOperator,
-        threshold: &str,
-    ) -> Self {
-        self.column.cls = Some(ColumnLevelSecurity {
-            name: name.to_string(),
-            operator,
-            threshold: NormalizedExpr::new(threshold),
-        });
         self
     }
 
@@ -475,15 +445,12 @@ mod test {
     use crate::mdl::manifest::DataSource::MySQL;
     use crate::mdl::manifest::{Column, DataSource, JoinType, Manifest, Model, Relationship, View};
     use crate::mdl::ColumnLevelOperator;
-    #[allow(deprecated)]
-    use crate::mdl::RowLevelOperator;
     use crate::mdl::SessionProperty;
     use std::fs;
     use std::path::PathBuf;
     use std::sync::Arc;
 
     #[test]
-    #[allow(deprecated)]
     fn test_column_roundtrip() {
         let expected = ColumnBuilder::new("id", "integer")
             .relationship("test")
@@ -491,8 +458,6 @@ mod test {
             .not_null(true)
             .hidden(true)
             .expression("test")
-            .row_level_security("SESSION_STATUS", RowLevelOperator::Equals)
-            .column_level_security("SESSION_LEVEL", ColumnLevelOperator::Equals, "'NORMAL'")
             .column_level_access_control(
                 "rlac",
                 vec![SessionProperty::new_required("session_id")],
@@ -707,7 +672,6 @@ mod test {
     }
 
     #[test]
-    #[allow(deprecated)]
     fn test_json_serde() {
         let test_data: PathBuf = [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
             .iter()
@@ -802,22 +766,6 @@ mod test {
                         ColumnBuilder::new("hash_orderkey", "varchar")
                             .expression("md5(o_orderkey)")
                             .calculated(true)
-                            .build(),
-                    )
-                    .column(
-                        ColumnBuilder::new("rls_orderkey", "integer")
-                            .row_level_security("SESSION_STATUS", RowLevelOperator::Equals)
-                            .expression("o_orderkey")
-                            .build(),
-                    )
-                    .column(
-                        ColumnBuilder::new("cls_orderkey", "integer")
-                            .column_level_security(
-                                "SESSION_LEVEL",
-                                ColumnLevelOperator::Equals,
-                                "'NORMAL'",
-                            )
-                            .expression("o_orderkey")
                             .build(),
                     )
                     .primary_key("o_orderkey")

@@ -72,10 +72,7 @@ impl Dataset {
                         .collect();
                     let arrow_schema = datafusion::arrow::datatypes::Schema::new(fields);
 
-                    DFSchema::try_from_qualified_schema(
-                        qualifier.as_str(),
-                        &arrow_schema,
-                    )
+                    DFSchema::try_from_qualified_schema(qualifier.as_str(), &arrow_schema)
                 }
             }
         }

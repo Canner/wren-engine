@@ -22,15 +22,13 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 #[cfg(not(feature = "python-binding"))]
-#[allow(deprecated)]
 mod manifest_impl {
     use crate::mdl::manifest::bool_from_int;
     use crate::mdl::manifest::table_reference;
     use manifest_macro::{
-        column, column_level_access_control, column_level_operator, column_level_security, cube,
-        cube_dimension, data_source, join_type, manifest, measure, model, normalized_expr,
-        normalized_expr_type, relationship, row_level_access_control, row_level_operator,
-        row_level_security, session_property, time_dimension, view,
+        column, column_level_access_control, column_level_operator, cube, cube_dimension,
+        data_source, join_type, manifest, measure, model, normalized_expr, normalized_expr_type,
+        relationship, row_level_access_control, session_property, time_dimension, view,
     };
     use serde::{Deserialize, Serialize};
     use serde_with::serde_as;
@@ -52,24 +50,19 @@ mod manifest_impl {
     row_level_access_control!(false);
     column_level_access_control!(false);
     session_property!(false);
-    row_level_security!(false);
-    row_level_operator!(false);
-    column_level_security!(false);
     normalized_expr!(false);
     normalized_expr_type!(false);
     column_level_operator!(false);
 }
 
 #[cfg(feature = "python-binding")]
-#[allow(deprecated)]
 mod manifest_impl {
     use crate::mdl::manifest::bool_from_int;
     use crate::mdl::manifest::table_reference;
     use manifest_macro::{
-        column, column_level_access_control, column_level_operator, column_level_security, cube,
-        cube_dimension, data_source, join_type, manifest, measure, model, normalized_expr,
-        normalized_expr_type, relationship, row_level_access_control, row_level_operator,
-        row_level_security, session_property, time_dimension, view,
+        column, column_level_access_control, column_level_operator, cube, cube_dimension,
+        data_source, join_type, manifest, measure, model, normalized_expr, normalized_expr_type,
+        relationship, row_level_access_control, session_property, time_dimension, view,
     };
     use pyo3::pyclass;
     use serde::{Deserialize, Serialize};
@@ -93,9 +86,6 @@ mod manifest_impl {
     row_level_access_control!(true);
     column_level_access_control!(true);
     session_property!(true);
-    row_level_security!(true);
-    row_level_operator!(true);
-    column_level_security!(true);
     normalized_expr!(true);
     normalized_expr_type!(true);
     column_level_operator!(true);

@@ -219,8 +219,12 @@ impl ByPassScalarUDF {
             doc: None,
         }
     }
-    
-    pub fn new_with_original_name(original_name: &str, alias_name: &str, return_type: DataType) -> Self {
+
+    pub fn new_with_original_name(
+        original_name: &str,
+        alias_name: &str,
+        return_type: DataType,
+    ) -> Self {
         // Register with original name (e.g., "toYear") for SQL generation
         // Add lowercase alias (e.g., "toyear") for DataFusion parsing
         let aliases = if original_name.to_lowercase() != alias_name.to_lowercase() {
@@ -228,7 +232,7 @@ impl ByPassScalarUDF {
         } else {
             vec![]
         };
-        
+
         Self {
             name: original_name.to_string(), // Use original name for SQL generation
             original_name: Some(original_name.to_string()),
@@ -241,7 +245,7 @@ impl ByPassScalarUDF {
             doc: None,
         }
     }
-    
+
     pub fn original_name(&self) -> Option<&str> {
         self.original_name.as_deref()
     }
@@ -291,7 +295,7 @@ impl ScalarUDFImpl for ByPassScalarUDF {
     fn name(&self) -> &str {
         &self.name
     }
-    
+
     fn aliases(&self) -> &[String] {
         &self.aliases
     }
