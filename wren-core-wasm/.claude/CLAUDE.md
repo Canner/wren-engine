@@ -71,7 +71,7 @@ just clean           # Remove pkg/, dist/, target/
 - **macOS build**: Needs LLVM (`brew install llvm`) for C deps — justfile handles env vars automatically
 - **Binary size**: ~68 MB raw / ~14 MB gzip (target: < 15 MB gzip)
 
-## npm Package (wren-core-sdk)
+## npm Package (wren-core-wasm)
 
 `package.json` defines the npm package. TypeScript SDK wraps the raw wasm-bindgen API:
 - `WrenEngine.init(options?)` — load WASM binary, create engine

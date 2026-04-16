@@ -1,12 +1,12 @@
 # WASM Dashboard Generation Guide
 
-Reference for AI agents generating browser-based HTML dashboard artifacts using `wren-core-sdk`.
+Reference for AI agents generating browser-based HTML dashboard artifacts using `wren-core-wasm`.
 
 ## How to Import
 
 ```html
 <script type="module">
-  import { WrenEngine } from 'https://unpkg.com/wren-core-sdk@0.1.0/dist/index.js';
+  import { WrenEngine } from 'https://unpkg.com/wren-core-wasm@0.1.0/dist/index.js';
 </script>
 ```
 
@@ -103,7 +103,7 @@ const mdl = {
   <div id="status">Loading engine...</div>
 
   <script type="module">
-    import { WrenEngine } from 'https://unpkg.com/wren-core-sdk@0.1.0/dist/index.js';
+    import { WrenEngine } from 'https://unpkg.com/wren-core-wasm@0.1.0/dist/index.js';
 
     const status = document.getElementById('status');
 

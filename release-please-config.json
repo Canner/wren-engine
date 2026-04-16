@@ -28,6 +28,14 @@
       "extra-files": [
         "src/wren/__init__.py"
       ]
+    },
+    "wren-core-wasm": {
+      "component": "wren-core-wasm",
+      "release-type": "node",
+      "bump-minor-pre-major": true,
+      "extra-files": [
+        "Cargo.toml"
+      ]
     }
   }
 }
