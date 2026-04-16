@@ -452,7 +452,7 @@ impl WrenEngine {
 
         let mut buf = Vec::new();
         let mut writer = WriterBuilder::new()
-            .with_explicit_nulls(false)
+            .with_explicit_nulls(true)
             .build::<_, JsonArray>(&mut buf);
 
         for batch in &batches {
