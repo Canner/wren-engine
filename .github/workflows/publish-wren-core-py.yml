@@ -55,6 +55,13 @@ jobs:
               text = open(path).read()
               text = re.sub(r'^(version\s*=\s*)".*?"', rf'\1"{version}"', text, count=1, flags=re.MULTILINE)
               open(path, "w").write(text)
+          lock = open("wren-core-py/Cargo.lock").read()
+          lock = re.sub(
+              r'(name = "wren-core-py"\nversion = )".*?"',
+              rf'\1"{version}"',
+              lock, count=1,
+          )
+          open("wren-core-py/Cargo.lock", "w").write(lock)
       - name: Build wheel
         uses: PyO3/maturin-action@v1
         with:
@@ -89,6 +96,13 @@ jobs:
               text = open(path).read()
               text = re.sub(r'^(version\s*=\s*)".*?"', rf'\1"{version}"', text, count=1, flags=re.MULTILINE)
               open(path, "w").write(text)
+          lock = open("wren-core-py/Cargo.lock").read()
+          lock = re.sub(
+              r'(name = "wren-core-py"\nversion = )".*?"',
+              rf'\1"{version}"',
+              lock, count=1,
+          )
+          open("wren-core-py/Cargo.lock", "w").write(lock)
       - name: Build sdist
         uses: PyO3/maturin-action@v1
         with:
