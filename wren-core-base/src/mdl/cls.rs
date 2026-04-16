@@ -121,11 +121,52 @@ impl FromStr for NormalizedExpr {
 
 #[cfg(test)]
 mod test {
-    use crate::mdl::NormalizedExpr;
+    use crate::mdl::manifest::ColumnLevelAccessControl;
+    use crate::mdl::{ColumnLevelOperator, NormalizedExpr, SessionProperty};
 
     #[test]
     #[should_panic(expected = "expr is null or empty")]
     fn test_normalized_expr_with_empty_str() {
         NormalizedExpr::new("");
+    }
+
+    fn clac(operator: ColumnLevelOperator, threshold: &str) -> ColumnLevelAccessControl {
+        ColumnLevelAccessControl {
+            name: "test".to_string(),
+            required_properties: vec![SessionProperty::new("p".to_string(), true, None)],
+            operator,
+            threshold: NormalizedExpr::new(threshold),
+        }
+    }
+
+    #[test]
+    fn test_clac_eval_numeric() {
+        assert!(clac(ColumnLevelOperator::Equals, "1").eval("1"));
+        assert!(clac(ColumnLevelOperator::NotEquals, "1").eval("2"));
+        assert!(clac(ColumnLevelOperator::GreaterThan, "1").eval("2"));
+        assert!(clac(ColumnLevelOperator::LessThan, "1").eval("-1"));
+        assert!(clac(ColumnLevelOperator::GreaterThanOrEquals, "1").eval("1"));
+        assert!(clac(ColumnLevelOperator::LessThanOrEquals, "1").eval("1"));
+    }
+
+    #[test]
+    fn test_clac_eval_string() {
+        assert!(clac(ColumnLevelOperator::Equals, "'b'").eval("'b'"));
+        assert!(clac(ColumnLevelOperator::NotEquals, "'b'").eval("'B'"));
+        assert!(clac(ColumnLevelOperator::GreaterThan, "'b'").eval("'c'"));
+        assert!(clac(ColumnLevelOperator::LessThan, "'b'").eval("'a'"));
+        assert!(clac(ColumnLevelOperator::GreaterThanOrEquals, "'b'").eval("'b'"));
+        assert!(clac(ColumnLevelOperator::LessThanOrEquals, "'b'").eval("'b'"));
+    }
+
+    #[test]
+    fn test_clac_eval_type_mismatch() {
+        // mismatched types: always false except NotEquals
+        assert!(!clac(ColumnLevelOperator::Equals, "1").eval("'1'"));
+        assert!(clac(ColumnLevelOperator::NotEquals, "1").eval("'1'"));
+        assert!(!clac(ColumnLevelOperator::GreaterThan, "1").eval("'1'"));
+        assert!(!clac(ColumnLevelOperator::LessThan, "1").eval("'1'"));
+        assert!(!clac(ColumnLevelOperator::GreaterThanOrEquals, "1").eval("'1'"));
+        assert!(!clac(ColumnLevelOperator::LessThanOrEquals, "1").eval("'1'"));
     }
 }
