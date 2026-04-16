@@ -38,6 +38,8 @@ pub fn manifest(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStr
         #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
         #[serde(rename_all = "camelCase")]
         pub struct Manifest {
+            #[serde(default = "default_layout_version")]
+            pub layout_version: u32,
             pub catalog: String,
             pub schema: String,
             #[serde(default)]
@@ -50,6 +52,10 @@ pub fn manifest(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStr
             pub views: Vec<Arc<View>>,
             #[serde(default)]
             pub data_source: Option<DataSource>,
+        }
+
+        fn default_layout_version() -> u32 {
+            1
         }
     };
     proc_macro::TokenStream::from(expanded)
@@ -154,6 +160,8 @@ pub fn model(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream
             pub refresh_time: Option<String>,
             #[serde(default)]
             pub row_level_access_controls: Vec<Arc<RowLevelAccessControl>>,
+            #[serde(default)]
+            pub dialect: Option<DataSource>,
         }
     };
     proc_macro::TokenStream::from(expanded)
@@ -363,9 +371,12 @@ pub fn view(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream 
     let expanded = quote! {
         #python_binding
         #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
+        #[serde(rename_all = "camelCase")]
         pub struct View {
             pub name: String,
             pub statement: String,
+            #[serde(default)]
+            pub dialect: Option<DataSource>,
         }
     };
     proc_macro::TokenStream::from(expanded)

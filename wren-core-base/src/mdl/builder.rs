@@ -46,6 +46,7 @@ impl ManifestBuilder {
     pub fn new() -> Self {
         Self {
             manifest: Manifest {
+                layout_version: 1,
                 catalog: "wrenai".to_string(),
                 schema: "public".to_string(),
                 models: vec![],
@@ -55,6 +56,11 @@ impl ManifestBuilder {
                 data_source: None,
             },
         }
+    }
+
+    pub fn layout_version(mut self, version: u32) -> Self {
+        self.manifest.layout_version = version;
+        self
     }
 
     pub fn catalog(mut self, catalog: &str) -> Self {
@@ -114,6 +120,7 @@ impl ModelBuilder {
                 cached: false,
                 refresh_time: None,
                 row_level_access_controls: vec![],
+                dialect: None,
             },
         }
     }
@@ -165,6 +172,11 @@ impl ModelBuilder {
             condition: condition.to_string(),
         };
         self.model.row_level_access_controls.push(Arc::new(rule));
+        self
+    }
+
+    pub fn dialect(mut self, dialect: DataSource) -> Self {
+        self.model.dialect = Some(dialect);
         self
     }
 
@@ -406,12 +418,18 @@ impl ViewBuilder {
             view: View {
                 name: name.to_string(),
                 statement: "".to_string(),
+                dialect: None,
             },
         }
     }
 
     pub fn statement(mut self, statement: &str) -> Self {
         self.view.statement = statement.to_string();
+        self
+    }
+
+    pub fn dialect(mut self, dialect: DataSource) -> Self {
+        self.view.dialect = Some(dialect);
         self
     }
 
@@ -847,5 +865,130 @@ mod test {
         let actual: SessionProperty = serde_json::from_str(&json_str).unwrap();
         assert_eq!(actual.normalized_name(), actual.name.to_lowercase());
         assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn test_manifest_layout_version_default() {
+        let json = r#"{"catalog":"wren","schema":"public"}"#;
+        let manifest: Manifest = serde_json::from_str(json).unwrap();
+        assert_eq!(manifest.layout_version, 1);
+    }
+
+    #[test]
+    fn test_manifest_layout_version_explicit() {
+        let json = r#"{"layoutVersion":2,"catalog":"wren","schema":"public"}"#;
+        let manifest: Manifest = serde_json::from_str(json).unwrap();
+        assert_eq!(manifest.layout_version, 2);
+    }
+
+    #[test]
+    fn test_manifest_layout_version_roundtrip() {
+        let expected = ManifestBuilder::new().layout_version(2).build();
+        let json_str = serde_json::to_string(&expected).unwrap();
+        assert!(json_str.contains(r#""layoutVersion":2"#));
+        let actual: Manifest = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(actual.layout_version, 2);
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_manifest_version_validation_ok() {
+        use crate::mdl::manifest::MAX_SUPPORTED_LAYOUT_VERSION;
+        let manifest = ManifestBuilder::new()
+            .layout_version(MAX_SUPPORTED_LAYOUT_VERSION)
+            .build();
+        assert!(manifest.validate_layout_version().is_ok());
+    }
+
+    #[test]
+    fn test_manifest_version_validation_rejected() {
+        let manifest = ManifestBuilder::new().layout_version(99).build();
+        let err = manifest.validate_layout_version().unwrap_err();
+        assert!(err.to_string().contains("99"));
+        assert!(err.to_string().contains("only supports up to"));
+    }
+
+    #[test]
+    fn test_model_dialect_none_default() {
+        let json = r#"{"name":"test","columns":[]}"#;
+        let model: Arc<Model> = serde_json::from_str(json).unwrap();
+        assert!(model.dialect.is_none());
+    }
+
+    #[test]
+    fn test_model_dialect_roundtrip() {
+        let expected = ModelBuilder::new("test")
+            .table_reference("test")
+            .column(ColumnBuilder::new("id", "integer").build())
+            .dialect(DataSource::BigQuery)
+            .build();
+
+        let json_str = serde_json::to_string(&expected).unwrap();
+        assert!(json_str.contains(r#""dialect":"BIGQUERY""#));
+        let actual: Arc<Model> = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(actual.dialect, Some(DataSource::BigQuery));
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_model_dialect_case_insensitive() {
+        let json = r#"{"name":"test","columns":[],"dialect":"bigquery"}"#;
+        let model: Arc<Model> = serde_json::from_str(json).unwrap();
+        assert_eq!(model.dialect, Some(DataSource::BigQuery));
+    }
+
+    #[test]
+    fn test_view_dialect_none_default() {
+        let json = r#"{"name":"test","statement":"SELECT 1"}"#;
+        let view: Arc<View> = serde_json::from_str(json).unwrap();
+        assert!(view.dialect.is_none());
+    }
+
+    #[test]
+    fn test_view_dialect_roundtrip() {
+        let expected = ViewBuilder::new("test")
+            .statement("SELECT * FROM test")
+            .dialect(DataSource::Postgres)
+            .build();
+
+        let json_str = serde_json::to_string(&expected).unwrap();
+        assert!(json_str.contains(r#""dialect":"POSTGRES""#));
+        let actual: Arc<View> = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(actual.dialect, Some(DataSource::Postgres));
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_manifest_with_dialect_models_and_views() {
+        let model = ModelBuilder::new("revenue")
+            .ref_sql("SELECT * FROM `project.dataset.table`")
+            .dialect(DataSource::BigQuery)
+            .column(ColumnBuilder::new("amount", "decimal").build())
+            .build();
+
+        let view = ViewBuilder::new("summary")
+            .statement("SELECT date_trunc('month', created_at) FROM orders")
+            .dialect(DataSource::Postgres)
+            .build();
+
+        let expected = ManifestBuilder::new()
+            .layout_version(2)
+            .model(model)
+            .view(view)
+            .data_source(DataSource::Postgres)
+            .build();
+
+        let json_str = serde_json::to_string(&expected).unwrap();
+        let actual: Manifest = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(actual, expected);
+        assert_eq!(actual.layout_version, 2);
+        assert_eq!(actual.models[0].dialect, Some(DataSource::BigQuery));
+        assert_eq!(actual.views[0].dialect, Some(DataSource::Postgres));
+    }
+
+    #[test]
+    fn test_manifest_builder_default_layout_version() {
+        let manifest = ManifestBuilder::new().build();
+        assert_eq!(manifest.layout_version, 1);
     }
 }

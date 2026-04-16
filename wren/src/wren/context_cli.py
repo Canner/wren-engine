@@ -40,7 +40,7 @@ def init(
 
     Without --from-mdl: scaffolds an empty project structure.
     With --from-mdl: imports an existing MDL JSON and produces a complete
-    v2 YAML project, ready for `wren context validate/build`.
+    YAML project, ready for `wren context validate/build`.
     """
     project_path = Path(path).expanduser() if path else Path.cwd()
 
@@ -96,7 +96,7 @@ def init(
 
     # wren_project.yml
     project_yml = (
-        "schema_version: 2\n"
+        "schema_version: 3\n"
         "name: my_project\n"
         'version: "1.0"\n'
         "\n"
@@ -436,3 +436,86 @@ def instructions(
     content = load_instructions(project_path)
     if content:
         typer.echo(content)
+
+
+@context_app.command()
+def upgrade(
+    path: ProjectPathOpt = None,
+    to: Annotated[
+        Optional[int],
+        typer.Option("--to", help="Target schema_version (default: latest)."),
+    ] = None,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Preview changes without writing."),
+    ] = False,
+) -> None:
+    """Upgrade project schema_version to enable new features."""
+    from wren.context import (  # noqa: PLC0415
+        UpgradeError,
+        apply_upgrade,
+        discover_project_path,
+        get_schema_version,
+        plan_upgrade,
+    )
+
+    try:
+        project_path = discover_project_path(path)
+    except SystemExit as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(1)
+
+    current = get_schema_version(project_path)
+
+    try:
+        result = plan_upgrade(project_path, target_version=to)
+    except UpgradeError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1)
+
+    if (
+        not result.files_created
+        and not result.files_deleted
+        and not result.files_modified
+    ):
+        typer.echo(f"Already at schema_version {current}. Nothing to do.")
+        return
+
+    if result.from_version == result.to_version:
+        typer.echo(f"Already at schema_version {current}. Nothing to do.")
+        return
+
+    if dry_run:
+        typer.echo("Dry run — no files will be changed.\n")
+        if result.files_created:
+            typer.echo("Would create:")
+            for f in result.files_created:
+                typer.echo(f"  {f}")
+        if result.files_deleted:
+            typer.echo("Would delete:")
+            for f in result.files_deleted:
+                typer.echo(f"  {f}")
+        if result.files_modified:
+            typer.echo("Would modify:")
+            for f in result.files_modified:
+                typer.echo(
+                    f"  {f} (schema_version {result.from_version} -> {result.to_version})"
+                )
+        return
+
+    typer.echo(
+        f"Upgrading project from schema_version {result.from_version} -> {result.to_version}..."
+    )
+
+    apply_upgrade(project_path, result)
+
+    for f in result.files_created:
+        typer.echo(f"  + {f}")
+    for f in result.files_deleted:
+        typer.echo(f"  - {f}")
+    for f in result.files_modified:
+        typer.echo(
+            f"  * {f} (schema_version {result.from_version} -> {result.to_version})"
+        )
+
+    typer.echo("\nUpgrade complete. Run `wren context validate` to check the result.")

@@ -53,6 +53,7 @@ statement: >
 |-------|----------|-------------|
 | `name` | Yes | Unique identifier used in SQL queries |
 | `statement` | Yes | A complete SQL SELECT statement; may reference other models or views |
+| `dialect` | No | SQL dialect of the view's `statement` (e.g. `bigquery`, `postgres`). Currently metadata only — the engine always parses view statements with its generic SQL parser. Requires `schema_version: 3`. See [Dialect Override](./wren_project.md#dialect-override). |
 | `properties` | No | Arbitrary key-value metadata (use `properties.description` for a human-readable description) |
 
 ## Model vs View

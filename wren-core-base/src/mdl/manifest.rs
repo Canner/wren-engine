@@ -101,6 +101,39 @@ mod manifest_impl {
 
 pub use crate::mdl::manifest::manifest_impl::*;
 
+pub const MAX_SUPPORTED_LAYOUT_VERSION: u32 = 2;
+
+impl Manifest {
+    pub fn validate_layout_version(&self) -> Result<(), LayoutVersionError> {
+        if self.layout_version > MAX_SUPPORTED_LAYOUT_VERSION {
+            Err(LayoutVersionError {
+                manifest_version: self.layout_version,
+                max_supported: MAX_SUPPORTED_LAYOUT_VERSION,
+            })
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LayoutVersionError {
+    pub manifest_version: u32,
+    pub max_supported: u32,
+}
+
+impl Display for LayoutVersionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "This manifest requires layout version {}, but this engine only supports up to {}",
+            self.manifest_version, self.max_supported
+        )
+    }
+}
+
+impl Error for LayoutVersionError {}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParsedDataSourceError {
     pub message: String,

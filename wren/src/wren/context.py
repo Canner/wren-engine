@@ -96,6 +96,14 @@ _CAMEL_TO_SNAKE_MAP = {
     "primaryKey": "primary_key",
     "joinType": "join_type",
     "dataSource": "data_source",
+    "layoutVersion": "layout_version",
+    "refreshTime": "refresh_time",
+    "baseObject": "base_object",
+    "rowLevelAccessControls": "row_level_access_controls",
+    "columnLevelAccessControl": "column_level_access_control",
+    "requiredProperties": "required_properties",
+    "defaultExpr": "default_expr",
+    "isHidden": "is_hidden",
 }
 
 
@@ -141,7 +149,13 @@ def convert_mdl_to_project(mdl_json: dict) -> list[ProjectFile]:
     files: list[ProjectFile] = []
 
     # ── wren_project.yml ──────────────────────────────────────
-    project_config: dict[str, Any] = {"schema_version": 2}
+    # Map layoutVersion back to schema_version
+    layout_version = mdl_json.get("layoutVersion", 1)
+    _LAYOUT_TO_SCHEMA = {1: 2, 2: 3}
+    schema_version = _LAYOUT_TO_SCHEMA.get(
+        layout_version, 3 if layout_version >= 2 else 2
+    )
+    project_config: dict[str, Any] = {"schema_version": schema_version}
     if "name" in mdl_json:
         project_config["name"] = mdl_json["name"]
     elif "projectName" in mdl_json:
@@ -367,7 +381,34 @@ def load_project_config(project_path: Path) -> dict:
     return yaml.safe_load(config_file.read_text()) or {}
 
 
-_SUPPORTED_SCHEMA_VERSIONS = {1, 2}
+_SUPPORTED_SCHEMA_VERSIONS = {1, 2, 3}
+
+# schema_version → layoutVersion mapping for the engine
+_LAYOUT_VERSION_MAP = {1: 1, 2: 1, 3: 2}
+
+# Valid dialect values (matches Rust DataSource enum)
+_VALID_DIALECTS = {
+    "athena",
+    "bigquery",
+    "canner",
+    "clickhouse",
+    "databricks",
+    "datafusion",
+    "doris",
+    "duckdb",
+    "gcs_file",
+    "local_file",
+    "minio_file",
+    "mssql",
+    "mysql",
+    "oracle",
+    "postgres",
+    "redshift",
+    "s3_file",
+    "snowflake",
+    "spark",
+    "trino",
+}
 
 
 def get_schema_version(project_path: Path) -> int:
@@ -547,18 +588,28 @@ def build_manifest(project_path: Path) -> dict:
     for v in views:
         v.pop("_source_dir", None)
 
-    return {
+    manifest: dict = {
         "catalog": project_config.get("catalog", "wren"),
         "schema": project_config.get("schema", "public"),
         "models": models,
         "relationships": relationships,
         "views": views,
     }
+    data_source = project_config.get("data_source")
+    if data_source:
+        manifest["data_source"] = data_source
+    return manifest
 
 
 def build_json(project_path: Path) -> dict:
-    """Build the final camelCase JSON manifest for the engine."""
-    return _convert_keys(build_manifest(project_path))
+    """Build the final camelCase JSON manifest for the engine.
+
+    Stamps layoutVersion based on schema_version mapping.
+    """
+    manifest = _convert_keys(build_manifest(project_path))
+    sv = get_schema_version(project_path)
+    manifest["layoutVersion"] = _LAYOUT_VERSION_MAP.get(sv, 1)
+    return manifest
 
 
 def save_target(manifest_json: dict, project_path: Path) -> Path:
@@ -600,6 +651,7 @@ def validate_project(project_path: Path) -> list[ValidationError]:
     8. table_reference (if used) has at least a table field
     """
     errors: list[ValidationError] = []
+    sv = 1  # default; may be overridden below
 
     # Check project config
     config = load_project_config(project_path)
@@ -759,6 +811,26 @@ def validate_project(project_path: Path) -> list[ValidationError]:
                 )
             )
 
+        # Validate dialect (if present)
+        model_dialect = model.get("dialect")
+        if model_dialect is not None:
+            if sv < 3:
+                errors.append(
+                    ValidationError(
+                        "warning",
+                        f"{src_path} > {name}",
+                        f"'dialect' field requires schema_version >= 3 (current: {sv})",
+                    )
+                )
+            if model_dialect.lower() not in _VALID_DIALECTS:
+                errors.append(
+                    ValidationError(
+                        "error",
+                        f"{src_path} > {name}",
+                        f"unknown dialect '{model_dialect}'",
+                    )
+                )
+
     # Check views
     for i, view in enumerate(views):
         src_dir = view.get("_source_dir", f"views[{i}]")
@@ -784,6 +856,26 @@ def validate_project(project_path: Path) -> list[ValidationError]:
                     "view missing 'statement' (define in metadata.yml or sql.yml)",
                 )
             )
+
+        # Validate dialect (if present)
+        view_dialect = view.get("dialect")
+        if view_dialect is not None:
+            if sv < 3:
+                errors.append(
+                    ValidationError(
+                        "warning",
+                        f"views/{src_dir}",
+                        f"'dialect' field requires schema_version >= 3 (current: {sv})",
+                    )
+                )
+            if view_dialect.lower() not in _VALID_DIALECTS:
+                errors.append(
+                    ValidationError(
+                        "error",
+                        f"views/{src_dir}",
+                        f"unknown dialect '{view_dialect}'",
+                    )
+                )
 
     # Check relationships
     all_entity_names = model_names | view_names
@@ -822,6 +914,185 @@ def validate_project(project_path: Path) -> list[ValidationError]:
             )
 
     return errors
+
+
+# ── Upgrade ──────────────────────────────────────────────────────────────────
+
+_LATEST_SCHEMA_VERSION = max(_SUPPORTED_SCHEMA_VERSIONS)
+
+
+@dataclass
+class UpgradeResult:
+    """Result of a project schema upgrade."""
+
+    from_version: int
+    to_version: int
+    files_created: list[str]
+    files_deleted: list[str]
+    files_modified: list[str]
+
+
+class UpgradeError(Exception):
+    """Raised when a project upgrade cannot proceed."""
+
+
+def plan_upgrade(
+    project_path: Path,
+    target_version: int | None = None,
+) -> UpgradeResult:
+    """Compute what an upgrade would do, without touching disk.
+
+    Raises UpgradeError if the upgrade is invalid (e.g. downgrade, unsupported version).
+    Returns an UpgradeResult with empty lists if already at target (no-op).
+    """
+    current = get_schema_version(project_path)
+    target = target_version if target_version is not None else _LATEST_SCHEMA_VERSION
+
+    if target not in _SUPPORTED_SCHEMA_VERSIONS:
+        raise UpgradeError(f"Unsupported target schema_version {target}")
+    if target < current:
+        raise UpgradeError(
+            f"Cannot downgrade from schema_version {current} to {target}"
+        )
+    if target == current:
+        return UpgradeResult(
+            from_version=current,
+            to_version=target,
+            files_created=[],
+            files_deleted=[],
+            files_modified=[],
+        )
+
+    files_created: list[str] = []
+    files_deleted: list[str] = []
+
+    # Apply steps sequentially
+    for version in range(current, target):
+        if version == 1:
+            created, deleted = _plan_v1_to_v2(project_path)
+            files_created.extend(created)
+            files_deleted.extend(deleted)
+        # v2→v3: no file layout changes needed
+
+    return UpgradeResult(
+        from_version=current,
+        to_version=target,
+        files_created=files_created,
+        files_deleted=files_deleted,
+        files_modified=[_PROJECT_FILE],
+    )
+
+
+def _plan_v1_to_v2(project_path: Path) -> tuple[list[str], list[str]]:
+    """Plan the v1→v2 file restructuring. Returns (files_created, files_deleted)."""
+    created: list[str] = []
+    deleted: list[str] = []
+
+    # Models: flat files → directories
+    models = _load_models_v1(project_path)
+    for model in models:
+        source_dir = model.pop("_source_dir", None)
+        name = model.get("name", source_dir or "unknown")
+        dir_path = f"models/{name}"
+
+        ref_sql = model.get("ref_sql")
+        if ref_sql:
+            created.append(f"{dir_path}/ref_sql.sql")
+
+        created.append(f"{dir_path}/metadata.yml")
+
+        if source_dir:
+            deleted.append(f"models/{source_dir}.yml")
+
+    # Views: single file → directories
+    views = _load_views_v1(project_path)
+    for view in views:
+        name = view.get("name")
+        if not name:
+            continue
+        dir_path = f"views/{name}"
+
+        statement = view.get("statement")
+        if statement and "\n" in statement.strip():
+            created.append(f"{dir_path}/sql.yml")
+
+        created.append(f"{dir_path}/metadata.yml")
+
+    views_file = project_path / "views.yml"
+    if views_file.exists():
+        deleted.append("views.yml")
+
+    return created, deleted
+
+
+def apply_upgrade(project_path: Path, result: UpgradeResult) -> None:
+    """Write upgrade changes to disk."""
+    if not result.files_created and not result.files_deleted:
+        # No-op (e.g. v2→v3, only wren_project.yml changes)
+        pass
+    else:
+        _apply_v1_to_v2(project_path)
+
+    # Update wren_project.yml
+    config = load_project_config(project_path)
+    config["schema_version"] = result.to_version
+    config_file = project_path / _PROJECT_FILE
+    config_file.write_text(yaml.dump(config, default_flow_style=False, sort_keys=False))
+
+
+def _apply_v1_to_v2(project_path: Path) -> None:
+    """Execute the v1→v2 restructuring: write new files, delete old ones."""
+    # Write new model directories
+    models = _load_models_v1(project_path)
+    for model in models:
+        source_dir = model.pop("_source_dir", None)
+        name = model.get("name", source_dir or "unknown")
+        model_dir = project_path / "models" / name
+        model_dir.mkdir(parents=True, exist_ok=True)
+
+        ref_sql = model.pop("ref_sql", None)
+        if ref_sql:
+            (model_dir / "ref_sql.sql").write_text(ref_sql.strip() + "\n")
+
+        (model_dir / "metadata.yml").write_text(
+            yaml.dump(model, default_flow_style=False, sort_keys=False)
+        )
+
+        # Delete old flat file
+        if source_dir:
+            old_file = project_path / "models" / f"{source_dir}.yml"
+            if old_file.exists():
+                old_file.unlink()
+
+    # Write new view directories
+    views = _load_views_v1(project_path)
+    for view in views:
+        name = view.get("name")
+        if not name:
+            continue
+        view_dir = project_path / "views" / name
+        view_dir.mkdir(parents=True, exist_ok=True)
+
+        statement = view.pop("statement", None)
+        if statement and "\n" in statement.strip():
+            (view_dir / "sql.yml").write_text(
+                yaml.dump(
+                    {"statement": statement},
+                    default_flow_style=False,
+                    sort_keys=False,
+                )
+            )
+        elif statement:
+            view["statement"] = statement
+
+        (view_dir / "metadata.yml").write_text(
+            yaml.dump(view, default_flow_style=False, sort_keys=False)
+        )
+
+    # Delete old views.yml
+    views_file = project_path / "views.yml"
+    if views_file.exists():
+        views_file.unlink()
 
 
 # ── Semantic validation (view dry-plan + description completeness) ─────────
