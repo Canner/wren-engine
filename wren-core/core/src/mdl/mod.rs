@@ -8,7 +8,7 @@ use crate::mdl::function::{
     ByPassAggregateUDF, ByPassScalarUDF, ByPassWindowFunction, FunctionType,
     RemoteFunction,
 };
-use crate::mdl::manifest::{Column, Manifest, Metric, Model, View};
+use crate::mdl::manifest::{Column, Manifest, Model, View};
 use crate::mdl::utils::{quoted, to_field};
 use crate::DataFusionError;
 use context::SessionPropertiesRef;
@@ -144,37 +144,6 @@ impl WrenMDL {
                 );
             });
         });
-        manifest.metrics.iter().for_each(|metric| {
-            metric.dimension.iter().for_each(|dimension| {
-                qualifed_references.insert(
-                    from_qualified_name_str(
-                        &manifest.catalog,
-                        &manifest.schema,
-                        metric.name(),
-                        dimension.name(),
-                    ),
-                    ColumnReference::new(
-                        Dataset::Metric(Arc::clone(metric)),
-                        Arc::clone(dimension),
-                    ),
-                );
-            });
-            metric.measure.iter().for_each(|measure| {
-                qualifed_references.insert(
-                    from_qualified_name_str(
-                        &manifest.catalog,
-                        &manifest.schema,
-                        metric.name(),
-                        measure.name(),
-                    ),
-                    ColumnReference::new(
-                        Dataset::Metric(Arc::clone(metric)),
-                        Arc::clone(measure),
-                    ),
-                );
-            });
-        });
-
         WrenMDL {
             catalog_schema_prefix: format!("{}.{}.", &manifest.catalog, &manifest.schema),
             manifest,
@@ -338,10 +307,6 @@ impl WrenMDL {
 
     pub fn relationships(&self) -> &[Arc<Relationship>] {
         &self.manifest.relationships
-    }
-
-    pub fn metrics(&self) -> &[Arc<Metric>] {
-        &self.manifest.metrics
     }
 
     pub fn data_source(&self) -> Option<DataSource> {

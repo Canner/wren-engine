@@ -27,10 +27,10 @@ mod manifest_impl {
     use crate::mdl::manifest::bool_from_int;
     use crate::mdl::manifest::table_reference;
     use manifest_macro::{
-        column, column_level_access_control, column_level_operator, column_level_security,
-        data_source, join_type, manifest, metric, model, normalized_expr, normalized_expr_type,
-        relationship, row_level_access_control, row_level_operator, row_level_security,
-        session_property, time_grain, time_unit, view,
+        column, column_level_access_control, column_level_operator, column_level_security, cube,
+        cube_dimension, data_source, join_type, manifest, measure, model, normalized_expr,
+        normalized_expr_type, relationship, row_level_access_control, row_level_operator,
+        row_level_security, session_property, time_dimension, view,
     };
     use serde::{Deserialize, Serialize};
     use serde_with::serde_as;
@@ -43,11 +43,12 @@ mod manifest_impl {
     model!(false);
     column!(false);
     relationship!(false);
-    metric!(false);
     view!(false);
     join_type!(false);
-    time_grain!(false);
-    time_unit!(false);
+    measure!(false);
+    cube_dimension!(false);
+    time_dimension!(false);
+    cube!(false);
     row_level_access_control!(false);
     column_level_access_control!(false);
     session_property!(false);
@@ -65,10 +66,10 @@ mod manifest_impl {
     use crate::mdl::manifest::bool_from_int;
     use crate::mdl::manifest::table_reference;
     use manifest_macro::{
-        column, column_level_access_control, column_level_operator, column_level_security,
-        data_source, join_type, manifest, metric, model, normalized_expr, normalized_expr_type,
-        relationship, row_level_access_control, row_level_operator, row_level_security,
-        session_property, time_grain, time_unit, view,
+        column, column_level_access_control, column_level_operator, column_level_security, cube,
+        cube_dimension, data_source, join_type, manifest, measure, model, normalized_expr,
+        normalized_expr_type, relationship, row_level_access_control, row_level_operator,
+        row_level_security, session_property, time_dimension, view,
     };
     use pyo3::pyclass;
     use serde::{Deserialize, Serialize};
@@ -82,11 +83,12 @@ mod manifest_impl {
     model!(true);
     column!(true);
     relationship!(true);
-    metric!(true);
     view!(true);
     join_type!(true);
-    time_grain!(true);
-    time_unit!(true);
+    measure!(true);
+    cube_dimension!(true);
+    time_dimension!(true);
+    cube!(true);
     manifest!(true);
     row_level_access_control!(true);
     column_level_access_control!(true);
@@ -402,15 +404,12 @@ impl Model {
 
     /// Determine the source type of this model
     pub fn source(&self) -> ModelSource {
-        match (
-            self.table_reference.is_some(),
-            self.ref_sql.is_some(),
-        ) {
+        match (self.table_reference.is_some(), self.ref_sql.is_some()) {
             (true, false) => ModelSource::TableReference,
             (false, true) => ModelSource::RefSql,
-            (true, true) => ModelSource::Invalid(
-                "Both table_reference and ref_sql are defined".to_string(),
-            ),
+            (true, true) => {
+                ModelSource::Invalid("Both table_reference and ref_sql are defined".to_string())
+            }
             (false, false) => ModelSource::Invalid(
                 "No source defined: must have either table_reference or ref_sql".to_string(),
             ),
@@ -461,7 +460,25 @@ impl Column {
     }
 }
 
-impl Metric {
+impl Cube {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
+impl Measure {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
+impl CubeDimension {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
+impl TimeDimension {
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -534,9 +551,7 @@ mod tests {
         assert_eq!(model.ref_sql(), None);
 
         // ref_sql only → RefSql
-        let model = ModelBuilder::new("sql_model")
-            .ref_sql("SELECT 1")
-            .build();
+        let model = ModelBuilder::new("sql_model").ref_sql("SELECT 1").build();
         assert!(matches!(model.source(), ModelSource::RefSql));
         assert_eq!(model.table_reference(), None);
         assert_eq!(model.ref_sql(), Some("SELECT 1"));

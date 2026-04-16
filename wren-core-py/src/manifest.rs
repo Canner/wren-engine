@@ -91,9 +91,9 @@ mod tests {
                 }),
             ],
             relationships: vec![],
-            metrics: vec![],
             views: vec![],
             data_source: Some(BigQuery),
+            cubes: vec![],
         };
         let base64_str = to_json_base64(py_manifest).unwrap();
         let manifest = to_manifest(&base64_str).unwrap();

@@ -227,9 +227,6 @@ impl Lineage {
                                 }
                             }
                         }
-                        Dataset::Metric(_) => {
-                            todo!("Metric dataset not supported");
-                        }
                     }
                 }
             }

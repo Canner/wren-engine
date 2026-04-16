@@ -85,9 +85,9 @@ fn extract_manifest(
         schema: mdl.schema().to_string(),
         models: used_models,
         relationships: used_relationships,
-        metrics: mdl.metrics().to_vec(),
         views: used_views,
         data_source: mdl.data_source(),
+        cubes: vec![],
     })
 }
 

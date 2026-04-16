@@ -1,4 +1,4 @@
-use crate::mdl::manifest::{Metric, Model};
+use crate::mdl::manifest::Model;
 use crate::mdl::utils::{quoted, to_field, to_remote_field};
 use crate::mdl::{RegisterTables, SessionStateRef};
 use datafusion::arrow::datatypes::Field;
@@ -10,21 +10,18 @@ use std::sync::Arc;
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
 pub enum Dataset {
     Model(Arc<Model>),
-    Metric(Arc<Metric>),
 }
 
 impl Dataset {
     pub fn name(&self) -> &str {
         match self {
             Dataset::Model(model) => model.name(),
-            Dataset::Metric(metric) => metric.name(),
         }
     }
 
     pub fn try_as_model(&self) -> Option<Arc<Model>> {
         match self {
             Dataset::Model(model) => Some(Arc::clone(model)),
-            _ => None,
         }
     }
 
@@ -39,7 +36,6 @@ impl Dataset {
                 let arrow_schema = datafusion::arrow::datatypes::Schema::new(fields);
                 DFSchema::try_from_qualified_schema(quoted(&model.name), &arrow_schema)
             }
-            Dataset::Metric(_) => todo!(),
         }
     }
 
@@ -82,7 +78,6 @@ impl Dataset {
                     )
                 }
             }
-            Dataset::Metric(_) => todo!(),
         }
     }
 }
@@ -91,7 +86,6 @@ impl Display for Dataset {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Dataset::Model(model) => write!(f, "{}", model.name()),
-            Dataset::Metric(metric) => write!(f, "{}", metric.name()),
         }
     }
 }
