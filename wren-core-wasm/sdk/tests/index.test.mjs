@@ -1,5 +1,5 @@
 /**
- * Integration tests for the wren-core-sdk TypeScript wrapper.
+ * Integration tests for the wren-core-wasm TypeScript wrapper.
  *
  * These tests load the actual WASM binary and exercise the full SDK API.
  * Run with: `npm test` (or `node --test sdk/tests/index.test.mjs`)
