@@ -12,6 +12,7 @@ on:
           - mcp-server
           - wren-core-py
           - wren
+          - wren-core-wasm
       rc_version:
         description: "RC version override (e.g. 0.25.0-rc.2). Leave empty to auto-increment."
         required: false
@@ -138,8 +139,19 @@ jobs:
       contents: read
       id-token: write
 
+  publish-wren-core-wasm:
+    needs: create-rc
+    if: inputs.component == 'wren-core-wasm'
+    uses: ./.github/workflows/publish-wren-core-wasm.yml
+    with:
+      version: ${{ needs.create-rc.outputs.version }}
+      tag_name: ${{ needs.create-rc.outputs.tag_name }}
+      npm_tag: rc
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
   create-release:
-    needs: [create-rc, publish-ibis-server, publish-mcp-server, publish-wren-core-py, publish-wren]
+    needs: [create-rc, publish-ibis-server, publish-mcp-server, publish-wren-core-py, publish-wren, publish-wren-core-wasm]
     if: always() && needs.create-rc.result == 'success' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
     runs-on: ubuntu-latest
     permissions:
