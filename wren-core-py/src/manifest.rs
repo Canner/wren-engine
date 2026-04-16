@@ -54,9 +54,10 @@ pub fn is_backward_compatible(mdl_base64: &str) -> Result<bool, CoreError> {
 #[cfg(test)]
 mod tests {
     use crate::manifest::{to_json_base64, to_manifest, Manifest};
+    use std::collections::BTreeMap;
     use std::sync::Arc;
     use wren_core::mdl::manifest::DataSource::BigQuery;
-    use wren_core::mdl::manifest::Model;
+    use wren_core::mdl::manifest::{Cube, CubeDimension, Measure, Model, TimeDimension};
 
     #[test]
     fn test_manifest_to_json_base64() {
@@ -93,7 +94,26 @@ mod tests {
             relationships: vec![],
             views: vec![],
             data_source: Some(BigQuery),
-            cubes: vec![],
+            cubes: vec![Arc::from(Cube {
+                name: "order_cube".to_string(),
+                base_object: "model_1".to_string(),
+                measures: vec![Arc::from(Measure {
+                    name: "total_price".to_string(),
+                    expression: "sum(price)".to_string(),
+                    r#type: "float".to_string(),
+                })],
+                dimensions: vec![Arc::from(CubeDimension {
+                    name: "status".to_string(),
+                    expression: "status".to_string(),
+                    r#type: "string".to_string(),
+                })],
+                time_dimensions: vec![Arc::from(TimeDimension {
+                    name: "order_date".to_string(),
+                    expression: "order_date".to_string(),
+                    r#type: "date".to_string(),
+                })],
+                hierarchies: BTreeMap::new(),
+            })],
         };
         let base64_str = to_json_base64(py_manifest).unwrap();
         let manifest = to_manifest(&base64_str).unwrap();
@@ -108,5 +128,10 @@ mod tests {
         assert_eq!(manifest.models[1].name(), "model_2");
         assert_eq!(manifest.models[1].table_reference(), Some("catalog.schema.table"));
         assert_eq!(manifest.data_source, Some(BigQuery));
+        assert_eq!(manifest.cubes.len(), 1);
+        assert_eq!(manifest.cubes[0].name, "order_cube");
+        assert_eq!(manifest.cubes[0].measures.len(), 1);
+        assert_eq!(manifest.cubes[0].dimensions.len(), 1);
+        assert_eq!(manifest.cubes[0].time_dimensions.len(), 1);
     }
 }

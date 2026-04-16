@@ -440,10 +440,12 @@ impl CubeBuilder {
 #[cfg(test)]
 mod test {
     use crate::mdl::builder::{
-        ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder, ViewBuilder,
+        ColumnBuilder, CubeBuilder, CubeDimensionBuilder, ManifestBuilder, MeasureBuilder,
+        ModelBuilder, RelationshipBuilder, TimeDimensionBuilder, ViewBuilder,
     };
     use crate::mdl::manifest::DataSource::MySQL;
     use crate::mdl::manifest::{Column, DataSource, JoinType, Manifest, Model, Relationship, View};
+    use crate::mdl::manifest::{Cube, CubeDimension, Measure, TimeDimension};
     use crate::mdl::ColumnLevelOperator;
     use crate::mdl::SessionProperty;
     use std::fs;
@@ -631,6 +633,44 @@ mod test {
 
         let json_str = serde_json::to_string(&expected).unwrap();
         let actual: Arc<View> = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn test_measure_roundtrip() {
+        let expected = MeasureBuilder::new("total_price", "sum(price)", "float").build();
+        let json_str = serde_json::to_string(&expected).unwrap();
+        let actual: Arc<Measure> = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn test_cube_dimension_roundtrip() {
+        let expected = CubeDimensionBuilder::new("status", "status", "string").build();
+        let json_str = serde_json::to_string(&expected).unwrap();
+        let actual: Arc<CubeDimension> = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn test_time_dimension_roundtrip() {
+        let expected = TimeDimensionBuilder::new("order_date", "order_date", "date").build();
+        let json_str = serde_json::to_string(&expected).unwrap();
+        let actual: Arc<TimeDimension> = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn test_cube_roundtrip() {
+        let expected = CubeBuilder::new("order_cube", "orders")
+            .measure(MeasureBuilder::new("total_price", "sum(price)", "float").build())
+            .dimension(CubeDimensionBuilder::new("status", "status", "string").build())
+            .time_dimension(TimeDimensionBuilder::new("order_date", "order_date", "date").build())
+            .hierarchy("time", vec!["year", "quarter", "month"])
+            .build();
+
+        let json_str = serde_json::to_string(&expected).unwrap();
+        let actual: Arc<Cube> = serde_json::from_str(&json_str).unwrap();
         assert_eq!(actual, expected)
     }
 

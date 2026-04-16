@@ -87,7 +87,7 @@ fn extract_manifest(
         relationships: used_relationships,
         views: used_views,
         data_source: mdl.data_source(),
-        cubes: vec![],
+        cubes: mdl.manifest.cubes.clone(),
     })
 }
 
