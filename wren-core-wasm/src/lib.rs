@@ -246,7 +246,8 @@ impl WrenEngine {
             HashMap::new();
 
         for model in &manifest.models {
-            let bare = extract_bare_table_name(model.table_reference());
+            let table_ref = model.table_reference().unwrap_or_default();
+            let bare = extract_bare_table_name(table_ref);
             let name: &str = if bare.is_empty() { model.name() } else { bare };
             let parquet_url = format!("{base_url}/{name}.parquet");
 
@@ -260,7 +261,7 @@ impl WrenEngine {
                     if let Ok(Some(table)) = schema.table(name).await {
                         // Key must match `model.table_reference()` so
                         // `WrenMDL::get_table` finds it during plan analysis.
-                        register_tables.insert(model.table_reference().to_string(), table);
+                        register_tables.insert(table_ref.to_string(), table);
                     }
                 }
             }
@@ -287,7 +288,8 @@ impl WrenEngine {
         let mut missing: Vec<String> = Vec::new();
 
         for model in &manifest.models {
-            let bare = extract_bare_table_name(model.table_reference());
+            let table_ref = model.table_reference().unwrap_or_default();
+            let bare = extract_bare_table_name(table_ref);
             let name: &str = if bare.is_empty() { model.name() } else { bare };
 
             let mut found = false;
@@ -296,7 +298,7 @@ impl WrenEngine {
                     if let Ok(Some(table)) = schema.table(name).await {
                         // Key must match `model.table_reference()` so
                         // `WrenMDL::get_table` finds it during plan analysis.
-                        register_tables.insert(model.table_reference().to_string(), table);
+                        register_tables.insert(table_ref.to_string(), table);
                         found = true;
                     }
                 }
@@ -331,7 +333,7 @@ impl WrenEngine {
         use wren_core::mdl::AnalyzedWrenMDL;
 
         let use_url_tables = manifest.models.iter().any(|m| {
-            let raw = m.table_reference();
+            let raw = m.table_reference().unwrap_or_default();
             let url_str = raw.trim_matches('"');
             url::Url::parse(url_str).is_ok()
         });
@@ -339,7 +341,7 @@ impl WrenEngine {
         if use_url_tables {
             let mut registered_origins: HashSet<String> = HashSet::new();
             for model in &manifest.models {
-                let raw = model.table_reference();
+                let raw = model.table_reference().unwrap_or_default();
                 let url_str = raw.trim_matches('"');
                 if let Ok(parsed) = url::Url::parse(url_str) {
                     let scheme = parsed.scheme();
@@ -374,7 +376,8 @@ impl WrenEngine {
             > = HashMap::new();
 
             for model in &manifest.models {
-                let bare = extract_bare_table_name(model.table_reference());
+                let table_ref = model.table_reference().unwrap_or_default();
+                let bare = extract_bare_table_name(table_ref);
                 if bare.is_empty() {
                     continue;
                 }
@@ -383,7 +386,7 @@ impl WrenEngine {
                         if let Ok(Some(table)) = schema.table(bare).await {
                             // Key must match `model.table_reference()` so
                             // `WrenMDL::get_table` finds it during plan analysis.
-                            register_tables.insert(model.table_reference().to_string(), table);
+                            register_tables.insert(table_ref.to_string(), table);
                         }
                     }
                 }
