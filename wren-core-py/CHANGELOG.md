@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/Canner/wren-engine/compare/wren-core-py-v0.3.0...wren-core-py-v0.4.0) (2026-04-16)
+
+
+### Features
+
+* add MDL layout versioning and dialect field on Model and View ([#1556](https://github.com/Canner/wren-engine/issues/1556)) ([0384931](https://github.com/Canner/wren-engine/commit/03849312d5934c606c0e43d0bd41d091892b4454))
+
 ## [0.3.0](https://github.com/Canner/wren-engine/compare/wren-core-py-v0.2.0...wren-core-py-v0.3.0) (2026-04-16)
 
 

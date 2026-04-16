@@ -1,6 +1,6 @@
 {
   "ibis-server": "0.25.0",
   "mcp-server": "0.25.0",
-  "wren-core-py": "0.3.0",
+  "wren-core-py": "0.4.0",
   "wren": "0.2.0"
 }
