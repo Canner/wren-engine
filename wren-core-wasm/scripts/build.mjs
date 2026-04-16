@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Build script for wren-core-sdk npm package.
+ * Build script for wren-core-wasm npm package.
  *
  * Assembles dist/ from wasm-pack output (pkg/) and TypeScript wrapper (sdk/).
  * Run `npm run build:wasm` first to populate pkg/, then `npm run build:dist`.

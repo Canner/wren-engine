@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CDN Test: wren-core-sdk</title>
+    <title>CDN Test: wren-core-wasm</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <style>
         body { font-family: -apple-system, sans-serif; max-width: 800px; margin: 2em auto; padding: 0 1em; color: #333; }
@@ -20,7 +20,7 @@
 </head>
 <body>
     <h1>Revenue Dashboard</h1>
-    <p>Self-contained HTML using <code>wren-core-sdk</code> from CDN. Zero server dependencies.</p>
+    <p>Self-contained HTML using <code>wren-core-wasm</code> from CDN. Zero server dependencies.</p>
     <div id="log"></div>
 
     <h3>MDL</h3>
@@ -38,7 +38,7 @@
     <script type="module">
         // unpkg used instead of jsDelivr: jsDelivr's free CDN has a 50 MB per-file
         // limit and the WASM binary is ~68 MB raw. unpkg handles larger files.
-        import { WrenEngine } from 'https://unpkg.com/wren-core-sdk@0.1.0/dist/index.js';
+        import { WrenEngine } from 'https://unpkg.com/wren-core-wasm@0.1.0/dist/index.js';
 
         const logEl = document.getElementById('log');
 
