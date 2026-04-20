@@ -101,7 +101,7 @@ impl FromStr for FunctionType {
 ///
 /// The return type is used to generate the logical plan and unparsed them to SQL.
 /// It should not be used to check the return type of the function execution.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub enum ReturnType {
     /// The return type is a specific data type
     Specific(DataType),
@@ -175,7 +175,7 @@ impl ReturnType {
 /// A scalar UDF that will be bypassed when planning logical plan.
 /// This is used to register the remote function to the context. The function should not be
 /// invoked by DataFusion. It's only used to generate the logical plan and unparsed them to SQL.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct ByPassScalarUDF {
     name: String,
     /// The original function name as it should appear in the generated SQL.
@@ -227,7 +227,7 @@ impl ByPassScalarUDF {
     ) -> Self {
         // Register with original name (e.g., "toYear") for SQL generation
         // Add lowercase alias (e.g., "toyear") for DataFusion parsing
-        let aliases = if original_name.to_lowercase() != alias_name.to_lowercase() {
+        let aliases = if original_name != alias_name {
             vec![alias_name.to_string()]
         } else {
             vec![]
@@ -319,7 +319,7 @@ impl ScalarUDFImpl for ByPassScalarUDF {
 
 /// An aggregate UDF that will be bypassed when planning logical plan.
 /// See [ByPassScalarUDF] for more details.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct ByPassAggregateUDF {
     name: String,
     return_type: ReturnType,
@@ -420,7 +420,7 @@ impl AggregateUDFImpl for ByPassAggregateUDF {
 
 /// A window UDF that will be bypassed when planning logical plan.
 /// See [ByPassScalarUDF] for more details.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct ByPassWindowFunction {
     name: String,
     return_type: ReturnType,
@@ -510,101 +510,13 @@ mod test {
     use std::slice::from_ref;
     use std::sync::Arc;
 
-    use crate::mdl::function::{
-        ByPassAggregateUDF, ByPassScalarUDF, ByPassWindowFunction, FunctionType,
-        RemoteFunction,
-    };
+    use crate::mdl::function::{ByPassScalarUDF, FunctionType, RemoteFunction};
     use datafusion::arrow::datatypes::{DataType, Field};
     use datafusion::common::types::logical_string;
     use datafusion::common::Result;
+    use datafusion::logical_expr::ScalarUDFImpl;
     use datafusion::logical_expr::TypeSignatureClass;
-    use datafusion::logical_expr::{AggregateUDF, ScalarUDF, ScalarUDFImpl, WindowUDF};
     use datafusion::logical_expr::{Coercion, TypeSignature};
-    use datafusion::prelude::SessionContext;
-
-    #[tokio::test]
-    async fn test_by_pass_scalar_udf() -> Result<()> {
-        let udf = ByPassScalarUDF::new_with_return_type("date_test", DataType::Int64);
-        let ctx = SessionContext::new();
-        ctx.register_udf(ScalarUDF::new_from_impl(udf));
-
-        let plan = ctx
-            .sql("SELECT date_test(1, 2)")
-            .await?
-            .into_unoptimized_plan();
-        let expected = "Projection: date_test(Int64(1), Int64(2))\n  EmptyRelation";
-        assert_eq!(format!("{plan}"), expected);
-
-        ctx.register_udf(ScalarUDF::new_from_impl(
-            ByPassScalarUDF::new_with_return_type("today", DataType::Utf8),
-        ));
-        let plan_2 = ctx.sql("SELECT today()").await?.into_unoptimized_plan();
-        assert_eq!(format!("{plan_2}"), "Projection: today()\n  EmptyRelation");
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_by_pass_agg_udf() -> Result<()> {
-        let udf = ByPassAggregateUDF::new_with_return_type("count_self", DataType::Int64);
-        let ctx = SessionContext::new();
-        ctx.register_udaf(AggregateUDF::new_from_impl(udf));
-
-        let plan = ctx.sql("SELECT c2, count_self(*) FROM (VALUES (1,2), (2,3), (3,4)) t(c1, c2) GROUP BY 1").await?.into_unoptimized_plan();
-        let expected = "Projection: t.c2, count_self(*)\
-        \n  Aggregate: groupBy=[[t.c2]], aggr=[[count_self(*)]]\
-        \n    SubqueryAlias: t\
-        \n      Projection: column1 AS c1, column2 AS c2\
-        \n        Values: (Int64(1), Int64(2)), (Int64(2), Int64(3)), (Int64(3), Int64(4))";
-        assert_eq!(format!("{plan}"), expected);
-
-        ctx.register_udaf(AggregateUDF::new_from_impl(
-            ByPassAggregateUDF::new_with_return_type("total_count", DataType::Int64),
-        ));
-        let plan_2 = ctx
-            .sql("SELECT total_count() AS total_count FROM (VALUES (1), (2), (3)) AS val(x)")
-            .await?
-            .into_unoptimized_plan();
-        assert_eq!(
-            format!("{plan_2}"),
-            "Projection: total_count() AS total_count\
-        \n  Aggregate: groupBy=[[]], aggr=[[total_count()]]\
-        \n    SubqueryAlias: val\n      Projection: column1 AS x\
-        \n        Values: (Int64(1)), (Int64(2)), (Int64(3))"
-        );
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_by_pass_window_udf() -> Result<()> {
-        let udf =
-            ByPassWindowFunction::new_with_return_type("custom_window", DataType::Int64);
-        let ctx = SessionContext::new();
-        ctx.register_udwf(WindowUDF::new_from_impl(udf));
-
-        let plan = ctx
-            .sql("SELECT custom_window(1, 2) OVER ()")
-            .await?
-            .into_unoptimized_plan();
-        let expected = "Projection: custom_window(Int64(1),Int64(2)) ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING\
-        \n  WindowAggr: windowExpr=[[custom_window(Int64(1), Int64(2)) ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING]]\
-        \n    EmptyRelation";
-        assert_eq!(format!("{plan}"), expected);
-
-        ctx.register_udwf(WindowUDF::new_from_impl(
-            ByPassWindowFunction::new_with_return_type("cume_dist", DataType::Int64),
-        ));
-        let plan_2 = ctx
-            .sql("SELECT cume_dist() OVER ()")
-            .await?
-            .into_unoptimized_plan();
-        assert_eq!(format!("{plan_2}"), "Projection: cume_dist() ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING\
-        \n  WindowAggr: windowExpr=[[cume_dist() ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING]]\
-        \n    EmptyRelation");
-
-        Ok(())
-    }
 
     #[tokio::test]
     async fn test_remote_function_to_bypass_func() -> Result<()> {

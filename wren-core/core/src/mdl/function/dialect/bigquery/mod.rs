@@ -1,12 +1,11 @@
 use std::sync::Arc;
 
 use datafusion::{
+    config::ConfigOptions,
     functions::{
         core::{coalesce, greatest, least, named_struct, nullif, nvl, nvl2},
         crypto::{md5, sha256, sha512},
-        datetime::{
-            current_date, current_time, date_diff, date_trunc, from_unixtime, now,
-        },
+        datetime::{current_date, current_time, date_trunc, from_unixtime, now},
         math::{
             abs, acos, acosh, asin, asinh, atan, atan2, atanh, cbrt, ceil, cos, cosh,
             cot, floor, ln, log, log10, log2, power, random, round, signum, sin, sinh,
@@ -37,7 +36,7 @@ use datafusion::{
         sum::sum_udaf,
         variance::{var_pop_udaf, var_samp_udaf},
     },
-    functions_array::{
+    functions_nested::{
         array_has::array_has_udf,
         cardinality::cardinality_udf,
         concat::array_concat_udf,
@@ -71,6 +70,7 @@ mod window;
 
 /// https://cloud.google.com/bigquery/docs/reference/standard-sql/functions-all#function_list
 pub fn bigquery_scalar_functions() -> Vec<Arc<ScalarUDF>> {
+    let config = ConfigOptions::default();
     vec![
         // array() isn't supported by Wren
         // list_cat, list_concat
@@ -278,7 +278,7 @@ pub fn bigquery_scalar_functions() -> Vec<Arc<ScalarUDF>> {
         signum(),
         contains(),
         array_element_udf(),
-        now(),
+        now(&config),
         uuid(),
         from_unixtime(),
         make_array_udf(),

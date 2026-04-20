@@ -131,7 +131,7 @@ pub fn build_filter_expression(
     } = rule;
     let mut error: Option<Result<Expr, DataFusionError>> = None;
     let dialect = GenericDialect {};
-    let mut parser = DFParserBuilder::new(condition)
+    let mut parser = DFParserBuilder::new(condition.as_str())
         .with_dialect(&dialect)
         .build()?;
     let mut expr = parser.parse_expr()?;

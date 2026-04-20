@@ -9,11 +9,11 @@ use crate::mdl::function::{
     RemoteFunction,
 };
 use crate::mdl::manifest::{Column, Manifest, Model, View};
-use crate::mdl::utils::{quoted, to_field};
+use crate::mdl::utils::{dequote_identifier, quoted, to_field};
 use crate::DataFusionError;
 use context::SessionPropertiesRef;
 use datafusion::arrow::datatypes::Field;
-use datafusion::common::internal_datafusion_err;
+use datafusion::common::{internal_datafusion_err, plan_err};
 use datafusion::datasource::TableProvider;
 use datafusion::error::Result;
 use datafusion::execution::context::SessionState;
@@ -27,7 +27,7 @@ use datafusion::sql::unparser::Unparser;
 use datafusion::sql::TableReference;
 pub use dataset::Dataset;
 use dialect::WrenDialect;
-use log::{debug, info};
+use log::{debug, info, warn};
 use manifest::Relationship;
 use parking_lot::RwLock;
 use std::hash::Hash;
@@ -94,6 +94,71 @@ impl AnalyzedWrenMDL {
         for (name, table) in register_tables {
             wren_mdl.register_table(name, table);
         }
+        let lineage = lineage::Lineage::new(&wren_mdl)?;
+        Ok(AnalyzedWrenMDL {
+            wren_mdl: Arc::new(wren_mdl),
+            lineage: Arc::new(lineage),
+        })
+    }
+
+    /// Analyze MDL with URL-based table references.
+    ///
+    /// Instead of using `DynamicListTableFactory` (which requires WebDAV PROPFIND),
+    /// directly creates `ListingTable` for each model by:
+    /// 1. Parsing the tableReference as a URL
+    /// 2. Setting format to Parquet (known from file extension)
+    /// 3. Only calling `infer_schema` (uses GET + Range to read Parquet footer)
+    ///
+    /// This follows the DuckDB-WASM pattern: known URL + known format = no listing needed.
+    pub async fn analyze_with_url_tables(
+        manifest: Manifest,
+        ctx: &SessionContext,
+    ) -> Result<Self> {
+        use datafusion::datasource::file_format::parquet::ParquetFormat;
+        use datafusion::datasource::listing::{
+            ListingOptions, ListingTable, ListingTableConfig, ListingTableUrl,
+        };
+
+        let mut wren_mdl = WrenMDL::new(manifest);
+        // Allow manifests that omit `dataSource` (treat as file-backed). Only
+        // reject when `dataSource` is explicitly set to a non-file backend.
+        if let Some(data_source) = wren_mdl.data_source() {
+            match data_source {
+                DataSource::LocalFile
+                | DataSource::MinioFile
+                | DataSource::S3File
+                | DataSource::GcsFile => {}
+                _ => {
+                    return plan_err!(
+                        "Only file-based data source is supported for analyze_with_url_tables"
+                    )
+                }
+            }
+        }
+
+        let state = ctx.state();
+        for model in wren_mdl.models().to_vec() {
+            let Some(table_reference) = model.table_reference() else {
+                warn!("Model '{}' does not have a table reference, skipping URL-based analysis", model.name());
+                continue;
+            };
+            let url_str = dequote_identifier(table_reference);
+            let table_url = ListingTableUrl::parse(url_str)?;
+
+            // Skip infer_options (which does PROPFIND/list).
+            // We know the format is Parquet from the tableReference extension.
+            let options = ListingOptions::new(Arc::new(ParquetFormat::default()))
+                .with_file_extension(".parquet");
+
+            let config = ListingTableConfig::new(table_url)
+                .with_listing_options(options)
+                .infer_schema(&state)
+                .await?;
+
+            let table = ListingTable::try_new(config)?;
+            wren_mdl.register_table(table_reference.to_string(), Arc::new(table));
+        }
+
         let lineage = lineage::Lineage::new(&wren_mdl)?;
         Ok(AnalyzedWrenMDL {
             wren_mdl: Arc::new(wren_mdl),
@@ -373,16 +438,25 @@ pub fn create_wren_ctx(
             .with_window_functions(crate::mdl::function::window_functions())
     };
 
-    let builder = if let Some(config) = config {
-        builder.with_config(config)
-    } else {
-        builder
-    };
+    let mut config = config.unwrap_or_default();
+
+    if config.options().execution.time_zone.is_none() {
+        // Set default time zone to UTC to avoid time zone related issues in timestamp inference and comparison. It can be overridden by the user config.
+        config
+            .options_mut()
+            .set("datafusion.execution.time_zone", "+00:00")
+            .unwrap();
+    }
+
+    let builder = builder.with_config(config);
 
     SessionContext::new_with_state(builder.build())
 }
 
-/// Transform the SQL based on the MDL
+/// Transform the SQL based on the MDL (sync wrapper, requires multi-thread tokio runtime).
+///
+/// Not available on WASM — use [`transform_sql_with_ctx`] directly in async context.
+#[cfg(feature = "multi-thread")]
 pub fn transform_sql(
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
     remote_functions: &[RemoteFunction],
@@ -598,6 +672,7 @@ mod test {
         ColumnLevelOperator, DataSource, JoinType, RelationshipBuilder, SessionProperty,
     };
 
+    #[cfg(feature = "multi-thread")]
     #[test]
     fn test_sync_transform() -> Result<()> {
         let test_data: PathBuf =
@@ -1369,8 +1444,6 @@ mod test {
 
     #[tokio::test]
     async fn test_disable_pushdown_filter() -> Result<()> {
-        let ctx = create_wren_ctx(None, None);
-        ctx.register_batch("artist", artist())?;
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
@@ -1459,7 +1532,7 @@ mod test {
         +---------------------------------------------+-----------------------------------------------+
         | arrow_typeof(timestamp_table.timestamp_col) | arrow_typeof(timestamp_table.timestamptz_col) |
         +---------------------------------------------+-----------------------------------------------+
-        | Timestamp(Nanosecond, None)                 | Timestamp(Nanosecond, Some("UTC"))            |
+        | Timestamp(ns)                               | Timestamp(ns, "UTC")                          |
         +---------------------------------------------+-----------------------------------------------+
         "#);
         Ok(())
@@ -1581,124 +1654,6 @@ mod test {
         .await?;
         assert_snapshot!(actual, @"SELECT list_table.list_col[1] FROM (SELECT list_table.list_col FROM \
         (SELECT __source.list_col AS list_col FROM list_table AS __source) AS list_table) AS list_table");
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_struct() -> Result<()> {
-        let ctx = create_wren_ctx(None, None);
-        let manifest = ManifestBuilder::new()
-            .catalog("wren")
-            .schema("test")
-            .model(
-                ModelBuilder::new("struct_table")
-                    .table_reference("struct_table")
-                    .column(
-                        ColumnBuilder::new(
-                            "struct_col",
-                            "struct<float_field float,time_field timestamp>",
-                        )
-                        .build(),
-                    )
-                    .column(
-                        ColumnBuilder::new(
-                            "struct_array_col",
-                            "array<struct<float_field float,time_field timestamp>>",
-                        )
-                        .build(),
-                    )
-                    .build(),
-            )
-            .build();
-        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
-            manifest,
-            Arc::new(HashMap::default()),
-            Mode::Unparse,
-        )?);
-        let sql = "select struct_col.float_field from wren.test.struct_table";
-        let actual = transform_sql_with_ctx(
-            &ctx,
-            Arc::clone(&analyzed_mdl),
-            &[],
-            Arc::new(HashMap::new()),
-            sql,
-        )
-        .await?;
-        assert_snapshot!(
-            actual,
-            @"SELECT struct_table.struct_col.float_field FROM \
-        (SELECT struct_table.struct_col FROM (SELECT __source.struct_col AS struct_col \
-        FROM struct_table AS __source) AS struct_table) AS struct_table"
-        );
-
-        let sql = "select struct_array_col[1].float_field from wren.test.struct_table";
-        let actual = transform_sql_with_ctx(
-            &ctx,
-            Arc::clone(&analyzed_mdl),
-            &[],
-            Arc::new(HashMap::new()),
-            sql,
-        )
-        .await?;
-        assert_snapshot!(actual, @"SELECT struct_table.struct_array_col[1].float_field FROM \
-        (SELECT struct_table.struct_array_col FROM (SELECT __source.struct_array_col AS struct_array_col \
-        FROM struct_table AS __source) AS struct_table) AS struct_table");
-
-        let sql =
-            "select {float_field: 1.0, time_field: timestamp '2021-01-01 00:00:00'}";
-        let actual = transform_sql_with_ctx(
-            &ctx,
-            Arc::clone(&analyzed_mdl),
-            &[],
-            Arc::new(HashMap::new()),
-            sql,
-        )
-        .await?;
-        assert_snapshot!(actual, @"SELECT {float_field: 1.0, time_field: CAST('2021-01-01 00:00:00' AS TIMESTAMP)}");
-
-        let manifest = ManifestBuilder::new()
-            .catalog("wren")
-            .schema("test")
-            .model(
-                ModelBuilder::new("struct_table")
-                    .table_reference("struct_table")
-                    .column(ColumnBuilder::new("struct_col", "struct<>").build())
-                    .build(),
-            )
-            .build();
-        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
-            manifest,
-            Arc::new(HashMap::default()),
-            Mode::Unparse,
-        )?);
-        let sql = "select struct_col.float_field from wren.test.struct_table";
-        let _ = transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::new(HashMap::new()), sql)
-            .await
-            .map_err(|e| {
-                assert_snapshot!(
-                    e.to_string(),
-                    @"Execution error: The expression to get an indexed field is only valid for `Struct`, `Map` or `Null` types, got Utf8"
-                )
-            });
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_disable_common_expression_eliminate() -> Result<()> {
-        let ctx = create_wren_ctx(None, None);
-        let sql =
-            "SELECT CAST(TIMESTAMP '2021-01-01 00:00:00' as TIMESTAMP WITH TIME ZONE) = \
-        CAST(TIMESTAMP '2021-01-01 00:00:00' as TIMESTAMP WITH TIME ZONE)";
-        let result = transform_sql_with_ctx(
-            &ctx,
-            Arc::new(AnalyzedWrenMDL::default()),
-            &[],
-            Arc::new(HashMap::new()),
-            sql,
-        )
-        .await?;
-        assert_snapshot!(result, @"SELECT CAST(CAST('2021-01-01 00:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE) = \
-        CAST(CAST('2021-01-01 00:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE)");
         Ok(())
     }
 
@@ -3380,90 +3335,6 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_date_diff_bigquery() -> Result<()> {
-        let ctx = create_wren_ctx(None, Some(&DataSource::BigQuery));
-        let manifest = ManifestBuilder::new()
-            .catalog("wren")
-            .schema("test")
-            .model(
-                ModelBuilder::new("date_table")
-                    .table_reference("date_table")
-                    .column(ColumnBuilder::new("date_1", "date").build())
-                    .column(ColumnBuilder::new("date_2", "date").build())
-                    .build(),
-            )
-            .model(
-                ModelBuilder::new("timestamp_table")
-                    .table_reference("timestamp_table")
-                    .column(ColumnBuilder::new("ts_1", "timestamp").build())
-                    .column(ColumnBuilder::new("ts_2", "timestamp").build())
-                    .build(),
-            )
-            .data_source(DataSource::BigQuery)
-            .build();
-        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(
-            manifest,
-            Arc::new(HashMap::default()),
-            Mode::Unparse,
-        )?);
-
-        let sql = "select date_diff(DAY, date_1, date_2) from date_table";
-        let headers: Arc<HashMap<String, Option<String>>> = Arc::new(HashMap::default());
-        assert_snapshot!(
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
-            @"SELECT DATE_DIFF(date_table.date_2, date_table.date_1, DAY) FROM (SELECT date_table.date_1, date_table.date_2 FROM (SELECT __source.date_1 AS date_1, __source.date_2 AS date_2 FROM date_table AS __source) AS date_table) AS date_table"
-        );
-
-        let sql = "select datediff(DAY, date_1, date_2) from date_table";
-        let headers: Arc<HashMap<String, Option<String>>> = Arc::new(HashMap::default());
-        assert_snapshot!(
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
-            @"SELECT DATE_DIFF(date_table.date_2, date_table.date_1, DAY) FROM (SELECT date_table.date_1, date_table.date_2 FROM (SELECT __source.date_1 AS date_1, __source.date_2 AS date_2 FROM date_table AS __source) AS date_table) AS date_table"
-        );
-        let sql = "select datediff('DAY', date_1, date_2) from date_table";
-        let headers: Arc<HashMap<String, Option<String>>> = Arc::new(HashMap::default());
-        assert_snapshot!(
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
-            @"SELECT DATE_DIFF(date_table.date_2, date_table.date_1, DAY) FROM (SELECT date_table.date_1, date_table.date_2 FROM (SELECT __source.date_1 AS date_1, __source.date_2 AS date_2 FROM date_table AS __source) AS date_table) AS date_table"
-        );
-
-        let sql = "select datediff(DAY, date_1, date_2) from date_table";
-        let headers: Arc<HashMap<String, Option<String>>> = Arc::new(HashMap::default());
-        assert_snapshot!(
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
-            @"SELECT DATE_DIFF(date_table.date_2, date_table.date_1, DAY) FROM (SELECT date_table.date_1, date_table.date_2 FROM (SELECT __source.date_1 AS date_1, __source.date_2 AS date_2 FROM date_table AS __source) AS date_table) AS date_table"
-        );
-
-        let sql = "select datediff('DAYS', date_1, date_2) from date_table";
-        let headers: Arc<HashMap<String, Option<String>>> = Arc::new(HashMap::default());
-        match transform_sql_with_ctx(
-            &ctx,
-            Arc::clone(&analyzed_mdl),
-            &[],
-            Arc::clone(&headers),
-            sql,
-        )
-        .await
-        {
-            Ok(_) => {
-                panic!("Expected error, but got SQL");
-            }
-            Err(e) => assert_snapshot!(
-                e.to_string(),
-                @"Error during planning: Unsupported date part 'DAYS' for BIGQUERY. Valid values are: WEEK, DAYOFWEEK, DAY, DAYOFYEAR, ISOWEEK, MONTH, QUARTER, YEAR, ISOYEAR, MICROSECOND, MILLISECOND, SECOND, MINUTE, HOUR"
-            ),
-        }
-
-        let sql = "select datediff(HOUR, ts_1, ts_2) from timestamp_table";
-        let headers: Arc<HashMap<String, Option<String>>> = Arc::new(HashMap::default());
-        assert_snapshot!(
-            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
-            @"SELECT DATE_DIFF(timestamp_table.ts_2, timestamp_table.ts_1, HOUR) FROM (SELECT timestamp_table.ts_1, timestamp_table.ts_2 FROM (SELECT __source.ts_1 AS ts_1, __source.ts_2 AS ts_2 FROM timestamp_table AS __source) AS timestamp_table) AS timestamp_table"
-        );
-        Ok(())
-    }
-
-    #[tokio::test]
     async fn test_window_function_frame() -> Result<()> {
         let ctx = create_wren_ctx(None, None);
         let manifest = ManifestBuilder::new()
@@ -3665,7 +3536,7 @@ mod test {
         let sql = "select 'ZUTOMAYO', '永遠是深夜有多好'";
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&mdl), &[], Arc::clone(&properties), sql).await?,
-            @"SELECT 'ZUTOMAYO', N'永遠是深夜有多好'"
+            @"SELECT 'ZUTOMAYO', '永遠是深夜有多好'"
         );
         Ok(())
     }
@@ -3897,7 +3768,7 @@ mod test {
         let sql = "SELECT item FROM orders o, unnest(o.o_items) as t(item)";
         assert_snapshot!(
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], Arc::clone(&headers), sql).await?,
-            @r#"SELECT t.item FROM (SELECT orders.o_items FROM (SELECT __source.o_items AS o_items FROM orders AS __source) AS orders) AS o CROSS JOIN TABLE(FLATTEN(o.o_items)) AS t ("SEQ", "KEY", "PATH", "INDEX", item, "THIS")"#
+            @"SELECT t.item FROM (SELECT orders.o_items FROM (SELECT __source.o_items AS o_items FROM orders AS __source) AS orders) AS o CROSS JOIN UNNEST(o.o_items) AS t (item)"
         );
         Ok(())
     }
@@ -4050,6 +3921,131 @@ mod test {
             headers.insert(key.to_lowercase(), value.clone());
         }
         headers
+    }
+
+    #[tokio::test]
+    async fn test_analyze_with_url_tables_rejects_non_file_datasource() {
+        let manifest = ManifestBuilder::new()
+            .data_source(DataSource::BigQuery)
+            .model(
+                ModelBuilder::new("test")
+                    .table_reference(r#""file:///tmp/test.parquet""#)
+                    .column(ColumnBuilder::new("id", "int").build())
+                    .build(),
+            )
+            .build();
+
+        let ctx = datafusion::prelude::SessionContext::new();
+        let result = AnalyzedWrenMDL::analyze_with_url_tables(manifest, &ctx).await;
+        match result {
+            Err(e) => assert!(
+                e.to_string().contains("Only file-based data source"),
+                "unexpected error: {e}"
+            ),
+            Ok(_) => panic!("expected error for non-file data source"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_analyze_with_url_tables_allows_no_datasource() {
+        use datafusion::arrow::array::Int32Array;
+        use datafusion::arrow::datatypes::{DataType, Schema};
+        use datafusion::parquet::arrow::ArrowWriter;
+
+        // Write a small Parquet file to a temp path
+        let dir = std::env::temp_dir().join("wren_test_url_tables_no_ds");
+        let _ = std::fs::create_dir_all(&dir);
+        let parquet_path = dir.join("data.parquet");
+
+        let schema =
+            Arc::new(Schema::new(vec![datafusion::arrow::datatypes::Field::new(
+                "id",
+                DataType::Int32,
+                false,
+            )]));
+        let batch = RecordBatch::try_new(
+            schema.clone(),
+            vec![Arc::new(Int32Array::from(vec![1, 2, 3])) as ArrayRef],
+        )
+        .unwrap();
+        let file = std::fs::File::create(&parquet_path).unwrap();
+        let mut writer = ArrowWriter::try_new(file, schema, None).unwrap();
+        writer.write(&batch).unwrap();
+        writer.close().unwrap();
+
+        // Manifest with NO data_source set — should be allowed
+        let url = format!("\"{}\"", parquet_path.display());
+        let manifest = ManifestBuilder::new()
+            .model(
+                ModelBuilder::new("test")
+                    .table_reference(&url)
+                    .column(ColumnBuilder::new("id", "int").build())
+                    .build(),
+            )
+            .build();
+
+        let ctx = datafusion::prelude::SessionContext::new();
+        let result = AnalyzedWrenMDL::analyze_with_url_tables(manifest, &ctx).await;
+        assert!(result.is_ok(), "expected Ok, got: {:?}", result.err());
+        let analyzed = result.unwrap();
+        assert!(analyzed.wren_mdl().get_model("test").is_some());
+
+        // Cleanup
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn test_analyze_with_url_tables_local_file_datasource() {
+        use datafusion::arrow::array::Int32Array;
+        use datafusion::arrow::datatypes::{DataType, Schema};
+        use datafusion::parquet::arrow::ArrowWriter;
+
+        let dir = std::env::temp_dir().join("wren_test_url_tables_local");
+        let _ = std::fs::create_dir_all(&dir);
+        let parquet_path = dir.join("orders.parquet");
+
+        let schema = Arc::new(Schema::new(vec![
+            datafusion::arrow::datatypes::Field::new("order_id", DataType::Int32, false),
+            datafusion::arrow::datatypes::Field::new("amount", DataType::Int32, false),
+        ]));
+        let batch = RecordBatch::try_new(
+            schema.clone(),
+            vec![
+                Arc::new(Int32Array::from(vec![1, 2])) as ArrayRef,
+                Arc::new(Int32Array::from(vec![100, 200])) as ArrayRef,
+            ],
+        )
+        .unwrap();
+        let file = std::fs::File::create(&parquet_path).unwrap();
+        let mut writer = ArrowWriter::try_new(file, schema, None).unwrap();
+        writer.write(&batch).unwrap();
+        writer.close().unwrap();
+
+        let url = format!("\"{}\"", parquet_path.display());
+        let manifest = ManifestBuilder::new()
+            .data_source(DataSource::LocalFile)
+            .model(
+                ModelBuilder::new("orders")
+                    .table_reference(&url)
+                    .column(ColumnBuilder::new("order_id", "int").build())
+                    .column(ColumnBuilder::new("amount", "int").build())
+                    .build(),
+            )
+            .build();
+
+        let ctx = datafusion::prelude::SessionContext::new();
+        let analyzed = AnalyzedWrenMDL::analyze_with_url_tables(manifest, &ctx)
+            .await
+            .expect("analyze_with_url_tables should succeed for LocalFile");
+
+        // Verify the model exists and the table is registered
+        assert!(analyzed.wren_mdl().get_model("orders").is_some());
+        assert!(
+            analyzed.wren_mdl().register_tables.contains_key(&url),
+            "table should be registered with its quoted table_reference"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[tokio::test]

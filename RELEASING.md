@@ -10,6 +10,7 @@ Wren Engine uses [release-please](https://github.com/googleapis/release-please) 
 | mcp-server | — (bundled in ibis-server image) | `mcp-server-v0.25.0` | Version verify only |
 | wren-core-py | `wren-core-py` on PyPI | `wren-core-py-v0.2.0` | PyPI |
 | wren | `wren-engine` on PyPI | `wren-v0.3.0` | PyPI |
+| wren-core-wasm | `wren-core-wasm` on npm | `wren-core-wasm-v0.2.0` | npm |
 
 ## How it works
 
@@ -49,6 +50,7 @@ Merging a Release PR triggers:
   - ibis-server → multi-arch Docker image pushed to GHCR (tagged `<version>` + `latest`)
   - wren-core-py → multi-platform wheels + sdist published to PyPI
   - wren → sdist + wheel published to PyPI
+  - wren-core-wasm → WASM package published to npm
   - mcp-server → version verification
 
 ## RC (pre-release) workflow
@@ -113,6 +115,7 @@ Note: while on 0.x with `bump-minor-pre-major`, this only bumps minor. Use `Rele
 | `.github/workflows/publish-ibis-server.yml` | Docker multi-arch build + push |
 | `.github/workflows/publish-wren-core-py.yml` | Multi-platform wheel build + PyPI publish |
 | `.github/workflows/publish-wren.yml` | sdist + wheel build + PyPI publish |
+| `.github/workflows/publish-wren-core-wasm.yml` | WASM build + npm publish |
 | `.github/workflows/publish-mcp-server.yml` | Version verification |
 
 ## Continuous builds (unchanged)

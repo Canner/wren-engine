@@ -33,13 +33,14 @@ use datafusion::{
         binary::{comparison_coercion, like_coercion, BinaryTypeCoercer},
         expr::{
             self, AggregateFunction, AggregateFunctionParams, Alias, Exists, InList,
-            InSubquery, ScalarFunction, WindowFunction, WindowFunctionParams,
+            InSubquery, ScalarFunction, SetComparison, WindowFunction,
+            WindowFunctionParams,
         },
         expr_rewriter::coerce_plan_expr_for_schema,
         expr_schema::cast_subquery,
         type_coercion::{
-            functions::{data_types_with_scalar_udf, fields_with_aggregate_udf},
-            is_datetime, is_utf8_or_utf8view_or_large_utf8,
+            functions::fields_with_udf,
+            is_datetime,
             other::{get_coerce_type_for_case_expression, get_coerce_type_for_list},
         },
         utils::merge_schema,
@@ -54,8 +55,7 @@ use datafusion::{
 
 use datafusion::logical_expr::{
     is_false, is_not_false, is_not_true, is_not_unknown, is_true, is_unknown, not,
-    AggregateUDF, ExprFunctionExt, ScalarUDF, WindowFrame, WindowFrameBound,
-    WindowFrameUnits,
+    AggregateUDF, ScalarUDF, WindowFrame, WindowFrameBound, WindowFrameUnits,
 };
 
 /// It's a fork from [datafusion::logical_expr::type_coercion] but we customize some behaviors:
@@ -377,6 +377,43 @@ impl TreeNodeRewriter for TypeCoercionRewriter<'_> {
                     negated,
                 ))))
             }
+            Expr::SetComparison(SetComparison {
+                expr,
+                subquery,
+                op,
+                quantifier,
+            }) => {
+                let new_plan = analyze_internal(
+                    self.schema,
+                    Arc::unwrap_or_clone(subquery.subquery),
+                )?
+                .data;
+                let expr_type = expr.get_type(self.schema)?;
+                let subquery_type = new_plan.schema().field(0).data_type();
+                if (expr_type.is_numeric() && subquery_type.is_string())
+                    || (subquery_type.is_numeric() && expr_type.is_string())
+                {
+                    return plan_err!(
+                        "expr type {expr_type} can't cast to {subquery_type} in SetComparison"
+                    );
+                }
+                let common_type = comparison_coercion(&expr_type, subquery_type).ok_or(
+                    plan_datafusion_err!(
+                        "expr type {expr_type} can't cast to {subquery_type} in SetComparison"
+                    ),
+                )?;
+                let new_subquery = Subquery {
+                    subquery: Arc::new(new_plan),
+                    outer_ref_columns: subquery.outer_ref_columns,
+                    spans: subquery.spans,
+                };
+                Ok(Transformed::yes(Expr::SetComparison(SetComparison::new(
+                    Box::new(expr.cast_to(&common_type, self.schema)?),
+                    cast_subquery(new_subquery, &common_type)?,
+                    op,
+                    quantifier,
+                ))))
+            }
             Expr::Not(expr) => Ok(Transformed::yes(not(get_casted_expr_for_bool_op(
                 *expr,
                 self.schema,
@@ -571,7 +608,9 @@ impl TreeNodeRewriter for TypeCoercionRewriter<'_> {
                             partition_by,
                             order_by,
                             window_frame,
+                            filter,
                             null_treatment,
+                            distinct,
                         },
                 } = *window_fun;
 
@@ -589,14 +628,18 @@ impl TreeNodeRewriter for TypeCoercionRewriter<'_> {
                     _ => args,
                 };
 
-                Ok(Transformed::yes(
-                    Expr::from(WindowFunction::new(fun, args))
-                        .partition_by(partition_by)
-                        .order_by(order_by)
-                        .window_frame(window_frame)
-                        .null_treatment(null_treatment)
-                        .build()?,
-                ))
+                Ok(Transformed::yes(Expr::from(WindowFunction {
+                    fun,
+                    params: WindowFunctionParams {
+                        args,
+                        partition_by,
+                        order_by,
+                        window_frame,
+                        filter,
+                        null_treatment,
+                        distinct,
+                    },
+                })))
             }
             // TODO: remove the next line after `Expr::Wildcard` is removed
             #[expect(deprecated)]
@@ -742,12 +785,15 @@ fn coerce_frame_bound(
 
 fn extract_window_frame_target_type(col_type: &DataType) -> Result<DataType> {
     if col_type.is_numeric()
-        || is_utf8_or_utf8view_or_large_utf8(col_type)
-        || matches!(col_type, DataType::List(_))
-        || matches!(col_type, DataType::LargeList(_))
-        || matches!(col_type, DataType::FixedSizeList(_, _))
-        || matches!(col_type, DataType::Null)
-        || matches!(col_type, DataType::Boolean)
+        || col_type.is_string()
+        || col_type.is_null()
+        || matches!(
+            col_type,
+            DataType::List(_)
+                | DataType::LargeList(_)
+                | DataType::FixedSizeList(_, _)
+                | DataType::Boolean
+        )
     {
         Ok(col_type.clone())
     } else if is_datetime(col_type) {
@@ -809,12 +855,15 @@ fn coerce_arguments_for_signature_with_scalar_udf(
         return Ok(expressions);
     }
 
-    let current_types = expressions
+    let current_fields = expressions
         .iter()
-        .map(|e| e.get_type(schema))
+        .map(|e| e.to_field(schema).map(|(_, f)| f))
         .collect::<Result<Vec<_>>>()?;
 
-    let new_types = data_types_with_scalar_udf(&current_types, func)?;
+    let new_types = fields_with_udf(&current_fields, func)?
+        .into_iter()
+        .map(|f| f.data_type().clone())
+        .collect::<Vec<_>>();
 
     expressions
         .into_iter()
@@ -841,7 +890,7 @@ fn coerce_arguments_for_signature_with_aggregate_udf(
         .map(|e| e.to_field(schema).map(|(_, f)| f))
         .collect::<Result<Vec<_>>>()?;
 
-    let new_types = fields_with_aggregate_udf(&current_fields, func)?
+    let new_types = fields_with_udf(&current_fields, func)?
         .into_iter()
         .map(|f| f.data_type().clone())
         .collect::<Vec<_>>();
