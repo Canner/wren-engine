@@ -55,8 +55,7 @@ use datafusion::{
 
 use datafusion::logical_expr::{
     is_false, is_not_false, is_not_true, is_not_unknown, is_true, is_unknown, not,
-    AggregateUDF, ExprFunctionExt, ScalarUDF, WindowFrame, WindowFrameBound,
-    WindowFrameUnits,
+    AggregateUDF, ScalarUDF, WindowFrame, WindowFrameBound, WindowFrameUnits,
 };
 
 /// It's a fork from [datafusion::logical_expr::type_coercion] but we customize some behaviors:
@@ -609,8 +608,9 @@ impl TreeNodeRewriter for TypeCoercionRewriter<'_> {
                             partition_by,
                             order_by,
                             window_frame,
+                            filter,
                             null_treatment,
-                            ..
+                            distinct,
                         },
                 } = *window_fun;
 
@@ -628,14 +628,18 @@ impl TreeNodeRewriter for TypeCoercionRewriter<'_> {
                     _ => args,
                 };
 
-                Ok(Transformed::yes(
-                    Expr::from(WindowFunction::new(fun, args))
-                        .partition_by(partition_by)
-                        .order_by(order_by)
-                        .window_frame(window_frame)
-                        .null_treatment(null_treatment)
-                        .build()?,
-                ))
+                Ok(Transformed::yes(Expr::from(WindowFunction {
+                    fun,
+                    params: WindowFunctionParams {
+                        args,
+                        partition_by,
+                        order_by,
+                        window_frame,
+                        filter,
+                        null_treatment,
+                        distinct,
+                    },
+                })))
             }
             // TODO: remove the next line after `Expr::Wildcard` is removed
             #[expect(deprecated)]
