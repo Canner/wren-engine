@@ -707,6 +707,7 @@ mod test {
         ColumnLevelOperator, DataSource, JoinType, RelationshipBuilder, SessionProperty,
     };
 
+    #[cfg(feature = "multi-thread")]
     #[test]
     fn test_sync_transform() -> Result<()> {
         let test_data: PathBuf =

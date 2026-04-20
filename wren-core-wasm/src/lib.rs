@@ -44,11 +44,18 @@ impl WrenEngine {
     /// Initialize a new WrenEngine instance.
     ///
     /// Creates a DataFusion SessionContext with default configuration
-    /// suitable for single-threaded WASM execution.
+    /// suitable for single-threaded WASM execution. The session time zone
+    /// defaults to UTC (`+00:00`) so browser timestamp inference and
+    /// comparisons match `create_wren_ctx` on the native side.
     #[wasm_bindgen(constructor)]
     pub fn new() -> Result<WrenEngine, JsError> {
         // Configure DataFusion for single-threaded WASM environment
-        let config = datafusion::execution::context::SessionConfig::new().with_target_partitions(1); // Single-threaded in WASM
+        let mut config =
+            datafusion::execution::context::SessionConfig::new().with_target_partitions(1); // Single-threaded in WASM
+        config
+            .options_mut()
+            .set("datafusion.execution.time_zone", "+00:00")
+            .map_err(|e| JsError::new(&format!("Failed to set default time zone: {e}")))?;
 
         let ctx = datafusion::execution::context::SessionContext::new_with_config(config);
 
@@ -242,8 +249,14 @@ impl WrenEngine {
             }
         }
 
-        let mut register_tables: HashMap<String, Arc<dyn datafusion::datasource::TableProvider>> =
-            HashMap::new();
+        // Stage every model's schema inference first. Only after all models
+        // succeed do we mutate `self.ctx`, so a failed `loadMDL` does not
+        // leave partially-registered tables behind for the next retry.
+        let mut staged: Vec<(
+            String,
+            String,
+            Arc<dyn datafusion::datasource::TableProvider>,
+        )> = Vec::with_capacity(manifest.models.len());
 
         for model in &manifest.models {
             let table_ref = model.table_reference().unwrap_or_default();
@@ -251,20 +264,23 @@ impl WrenEngine {
             let name: &str = if bare.is_empty() { model.name() } else { bare };
             let parquet_url = format!("{base_url}/{name}.parquet");
 
-            // Register under the bare table name in the default datafusion catalog.
-            // `register_listing_table` propagates schema-inference failures
-            // (unreachable URL, bad Parquet) as a JsError with the model context.
-            self.register_listing_table(name, &parquet_url).await?;
+            // Inference can fail (unreachable URL, bad Parquet) — propagated
+            // as a JsError with the model context. Nothing has been committed
+            // to `self.ctx` yet.
+            let table = self.build_listing_table(name, &parquet_url).await?;
+            staged.push((name.to_string(), table_ref.to_string(), table));
+        }
 
-            if let Some(catalog) = self.ctx.catalog("datafusion") {
-                if let Some(schema) = catalog.schema("public") {
-                    if let Ok(Some(table)) = schema.table(name).await {
-                        // Key must match `model.table_reference()` so
-                        // `WrenMDL::get_table` finds it during plan analysis.
-                        register_tables.insert(table_ref.to_string(), table);
-                    }
-                }
-            }
+        let mut register_tables: HashMap<String, Arc<dyn datafusion::datasource::TableProvider>> =
+            HashMap::with_capacity(staged.len());
+
+        for (name, table_ref, table) in staged {
+            self.ctx
+                .register_table(name.as_str(), Arc::clone(&table))
+                .map_err(|e| JsError::new(&format!("Failed to register table '{name}': {e}")))?;
+            // Key must match `model.table_reference()` so
+            // `WrenMDL::get_table` finds it during plan analysis.
+            register_tables.insert(table_ref, table);
         }
 
         AnalyzedWrenMDL::analyze_with_tables(manifest.clone(), register_tables)
@@ -398,10 +414,15 @@ impl WrenEngine {
         }
     }
 
-    /// Register a `ListingTable` backed by a single Parquet URL under `name`
-    /// in the default catalog/schema. Schema is inferred via a Range GET on
-    /// the Parquet footer.
-    async fn register_listing_table(&self, name: &str, url: &str) -> Result<(), JsError> {
+    /// Build a `ListingTable` backed by a single Parquet URL. Schema is
+    /// inferred via a Range GET on the Parquet footer. Does not mutate
+    /// `self.ctx` — caller is responsible for registering the returned
+    /// table once all staged builds succeed.
+    async fn build_listing_table(
+        &self,
+        name: &str,
+        url: &str,
+    ) -> Result<std::sync::Arc<dyn datafusion::datasource::TableProvider>, JsError> {
         use datafusion::datasource::file_format::parquet::ParquetFormat;
         use datafusion::datasource::listing::{
             ListingOptions, ListingTable, ListingTableConfig, ListingTableUrl,
@@ -425,10 +446,7 @@ impl WrenEngine {
         let table = ListingTable::try_new(config).map_err(|e| {
             JsError::new(&format!("Failed to create ListingTable for '{name}': {e}"))
         })?;
-        self.ctx
-            .register_table(name, Arc::new(table))
-            .map_err(|e| JsError::new(&format!("Failed to register table '{name}': {e}")))?;
-        Ok(())
+        Ok(Arc::new(table))
     }
 
     /// Execute a SQL query and return results as a JSON string.
