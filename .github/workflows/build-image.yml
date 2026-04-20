@@ -10,9 +10,6 @@ on:
       - main
     paths:
       - 'ibis-server/**'
-      - 'wren-core/**'
-      - 'wren-core-base/**'
-      - 'wren-core-py/**'
       - 'mcp-server/**'
   workflow_dispatch:
     inputs:
