@@ -236,6 +236,17 @@ class TrinoConnectionInfo(BaseConnectionInfo):
     kwargs: dict[str, str] | None = Field(default=None)
 
 
+class DataFusionConnectionInfo(BaseConnectionInfo):
+    source: str = Field(
+        description="Root path for data files",
+        examples=["./data", "/absolute/path/data"],
+    )
+    format: Literal["parquet", "csv"] = Field(
+        default="parquet",
+        description="Default file format to scan",
+    )
+
+
 class LocalFileConnectionInfo(BaseConnectionInfo):
     url: str = Field(default="/", examples=["/data"])
     format: str = Field(default="csv", examples=["csv", "parquet", "json", "duckdb"])
@@ -281,6 +292,7 @@ ConnectionInfo = (
     | CannerConnectionInfo
     | ClickHouseConnectionInfo
     | ConnectionUrl
+    | DataFusionConnectionInfo
     | MSSqlConnectionInfo
     | MySqlConnectionInfo
     | DorisConnectionInfo

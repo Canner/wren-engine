@@ -47,6 +47,9 @@ test:
 test-unit:
     uv run pytest tests/unit/ -v -m unit
 
+test-datafusion:
+    uv run pytest tests/connectors/test_datafusion.py -v -m datafusion
+
 test-duckdb:
     uv run pytest tests/connectors/test_duckdb.py -v -m duckdb
 

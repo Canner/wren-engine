@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use datafusion::{
+    config::ConfigOptions,
     functions::{
         core::*, crypto::*, datetime::*, encoding::*, math::*, regex::*, string::*,
         unicode::*,
@@ -17,6 +18,7 @@ mod to_char;
 make_datafusion_udf_function!(to_char::ToCharFunc, to_char);
 
 pub fn scalar_functions() -> Vec<Arc<ScalarUDF>> {
+    let config = ConfigOptions::default();
     vec![
         // datefusion core
         nullif(),
@@ -47,19 +49,18 @@ pub fn scalar_functions() -> Vec<Arc<ScalarUDF>> {
         date_bin(),
         date_part(),
         date_trunc(),
-        date_diff(),
         from_unixtime(),
         make_date(),
-        now(),
+        now(&config),
         to_char(),
         to_date(),
         to_local_time(),
         to_unixtime(),
-        to_timestamp(),
-        to_timestamp_seconds(),
-        to_timestamp_millis(),
-        to_timestamp_micros(),
-        to_timestamp_nanos(),
+        to_timestamp(&config),
+        to_timestamp_seconds(&config),
+        to_timestamp_millis(&config),
+        to_timestamp_micros(&config),
+        to_timestamp_nanos(&config),
         // datafusion encoding
         encode(),
         decode(),
