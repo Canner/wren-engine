@@ -729,7 +729,10 @@ def _apply_dbt_test_enrichment(
                         target_model,
                         target_field,
                     )
-                    column["relationship"] = rel_name
+                    # Do NOT stamp column["relationship"] — the relationship is
+                    # already recorded in relationships.yml. Putting it on the
+                    # column causes the Wren engine to treat the FK as a join
+                    # dereference, hiding it from direct SELECT.
                     event["relationship_name"] = rel_name
                     event["target_model_name"] = target_model["name"]
                     event["target_field"] = target_field
@@ -788,10 +791,16 @@ def _extract_columns(node: dict[str, Any], catalog_entry: dict[str, Any]) -> lis
     manifest_columns = node.get("columns", {}) or {}
     catalog_columns = catalog_entry.get("columns", {}) or {}
 
-    merged_names = list(manifest_columns)
-    for name in catalog_columns:
-        if name not in merged_names:
-            merged_names.append(name)
+    # When catalog data is available, restrict to columns that actually exist in
+    # the database. Manifest-only columns (documented in schema.yml but not
+    # materialized) are skipped to avoid referencing non-existent columns.
+    if catalog_columns:
+        merged_names = list(catalog_columns)
+        for name in manifest_columns:
+            if name not in merged_names:
+                pass  # manifest-only: skip
+    else:
+        merged_names = list(manifest_columns)
 
     def _sort_key(name: str) -> tuple[int, int, str]:
         catalog_index = catalog_columns.get(name, {}).get("index")
