@@ -23,7 +23,7 @@ ibis-framework = { version = "10.8.0", extras = [
 ] }
 google-auth = "2.38.0"
 httpx = "0.28.1"
-python-dotenv = "1.0.1"
+python-dotenv = "1.2.2"
 orjson = "3.11.7"
 pandas = "2.2.3"
 geopandas = "^1.0.1"
