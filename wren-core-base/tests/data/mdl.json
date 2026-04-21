@@ -147,25 +147,6 @@
           "type": "varchar",
           "expression": "md5(o_orderkey)",
           "isCalculated": true
-        },
-        {
-          "name": "rls_orderkey",
-          "type": "integer",
-          "expression": "o_orderkey",
-          "rls": {
-            "name": "SESSION_STATUS",
-            "operator": "EQUALS"
-          }
-        },
-        {
-          "name": "cls_orderkey",
-          "type": "integer",
-          "expression": "o_orderkey",
-            "cls": {
-                "name": "SESSION_LEVEL",
-                "operator": "EQUALS",
-                "threshold": "'NORMAL'"
-            }
         }
       ],
       "primaryKey": "o_orderkey"

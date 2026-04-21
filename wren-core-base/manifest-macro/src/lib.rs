@@ -47,11 +47,11 @@ pub fn manifest(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStr
             #[serde(default)]
             pub relationships: Vec<Arc<Relationship>>,
             #[serde(default)]
-            pub metrics: Vec<Arc<Metric>>,
-            #[serde(default)]
             pub views: Vec<Arc<View>>,
             #[serde(default)]
             pub data_source: Option<DataSource>,
+            #[serde(default)]
+            pub cubes: Vec<Arc<Cube>>,
         }
 
         fn default_layout_version() -> u32 {
@@ -185,7 +185,6 @@ pub fn column(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStrea
         #[serde_as]
         #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
         #[serde(rename_all = "camelCase")]
-        #[allow(deprecated)]
         pub struct Column {
             pub name: String,
             pub r#type: String,
@@ -200,10 +199,6 @@ pub fn column(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStrea
             pub expression: Option<String>,
             #[serde(default, with = "bool_from_int")]
             pub is_hidden: bool,
-            #[deprecated]
-            pub rls: Option<RowLevelSecurity>,
-            #[deprecated]
-            pub cls: Option<ColumnLevelSecurity>,
             pub column_level_access_control: Option<Arc<ColumnLevelAccessControl>>,
         }
     };
@@ -269,87 +264,123 @@ pub fn join_type(python_binding: proc_macro::TokenStream) -> proc_macro::TokenSt
     proc_macro::TokenStream::from(expanded)
 }
 
-/// This macro generates a struct for `Metric`
-/// If python_binding is true, it will generate a `pyclass` attribute
+/// This macro generates a struct for `Measure` (part of a Cube).
+/// If python_binding is true, it will generate a `pyclass` attribute.
 #[proc_macro]
-pub fn metric(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn measure(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(python_binding as LitBool);
     let python_binding = if input.value {
-        quote! {
-            #[pyclass]
-        }
+        quote! { #[pyclass] }
     } else {
         quote! {}
     };
 
     let expanded = quote! {
         #python_binding
-        #[serde_as]
-        #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
+        #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
         #[serde(rename_all = "camelCase")]
-        pub struct Metric {
+        pub struct Measure {
+            pub name: String,
+            pub expression: String,
+            pub r#type: String,
+        }
+    };
+    proc_macro::TokenStream::from(expanded)
+}
+
+/// This macro generates a struct for `CubeDimension` (a grouping attribute in a Cube).
+/// If python_binding is true, it will generate a `pyclass` attribute.
+#[proc_macro]
+pub fn cube_dimension(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = parse_macro_input!(python_binding as LitBool);
+    let python_binding = if input.value {
+        quote! { #[pyclass] }
+    } else {
+        quote! {}
+    };
+
+    let expanded = quote! {
+        #python_binding
+        #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
+        #[serde(rename_all = "camelCase")]
+        pub struct CubeDimension {
+            pub name: String,
+            pub expression: String,
+            pub r#type: String,
+        }
+    };
+    proc_macro::TokenStream::from(expanded)
+}
+
+/// This macro generates a struct for `TimeDimension` (a date/timestamp column in a Cube).
+/// If python_binding is true, it will generate a `pyclass` attribute.
+#[proc_macro]
+pub fn time_dimension(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = parse_macro_input!(python_binding as LitBool);
+    let python_binding = if input.value {
+        quote! { #[pyclass] }
+    } else {
+        quote! {}
+    };
+
+    let expanded = quote! {
+        #python_binding
+        #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
+        #[serde(rename_all = "camelCase")]
+        pub struct TimeDimension {
+            pub name: String,
+            pub expression: String,
+            pub r#type: String,
+        }
+    };
+    proc_macro::TokenStream::from(expanded)
+}
+
+/// This macro generates a struct for `Cube` — the first-class MDL analytical type.
+/// Hierarchies use `BTreeMap` (sorted keys) so `Hash` is implemented manually
+/// rather than derived (`BTreeMap` does not implement `Hash`).
+/// If python_binding is true, it will generate a `pyclass` attribute.
+#[proc_macro]
+pub fn cube(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = parse_macro_input!(python_binding as LitBool);
+    let python_binding = if input.value {
+        quote! { #[pyclass] }
+    } else {
+        quote! {}
+    };
+
+    let expanded = quote! {
+        #python_binding
+        #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+        #[serde(rename_all = "camelCase")]
+        pub struct Cube {
             pub name: String,
             pub base_object: String,
-            pub dimension: Vec<Arc<Column>>,
-            pub measure: Vec<Arc<Column>>,
-            pub time_grain: Vec<TimeGrain>,
-            #[serde(default, with = "bool_from_int")]
-            pub cached: bool,
-            pub refresh_time: Option<String>,
+            #[serde(default)]
+            pub measures: Vec<std::sync::Arc<Measure>>,
+            #[serde(default)]
+            pub dimensions: Vec<std::sync::Arc<CubeDimension>>,
+            #[serde(default)]
+            pub time_dimensions: Vec<std::sync::Arc<TimeDimension>>,
+            /// Ordered drill-down paths: coarsest to finest dimension names.
+            /// Uses `BTreeMap` so key iteration is deterministic.
+            #[serde(default)]
+            pub hierarchies: std::collections::BTreeMap<String, Vec<String>>,
         }
-    };
-    proc_macro::TokenStream::from(expanded)
-}
 
-/// This macro generates a struct for `TimeGrain`
-/// If python_binding is true, it will generate a `pyclass` attribute
-#[proc_macro]
-pub fn time_grain(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let input = parse_macro_input!(python_binding as LitBool);
-    let python_binding = if input.value {
-        quote! {
-            #[pyclass]
-        }
-    } else {
-        quote! {}
-    };
-
-    let expanded = quote! {
-        #python_binding
-        #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
-        #[serde(rename_all = "camelCase")]
-        pub struct TimeGrain {
-            pub name: String,
-            pub ref_column: String,
-            pub date_parts: Vec<TimeUnit>,
-        }
-    };
-    proc_macro::TokenStream::from(expanded)
-}
-
-/// This macro generates an enum for `TimeUnit`
-/// If python_binding is true, it will generate a `pyclass` attribute
-#[proc_macro]
-pub fn time_unit(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let input = parse_macro_input!(python_binding as LitBool);
-    let python_binding = if input.value {
-        quote! {
-            #[pyclass(eq, eq_int)]
-        }
-    } else {
-        quote! {}
-    };
-
-    let expanded = quote! {
-        #python_binding
-        #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
-        pub enum TimeUnit {
-            Year,
-            Month,
-            Day,
-            Hour,
-            Minute,
-            Second,
+        impl std::hash::Hash for Cube {
+            fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+                self.name.hash(state);
+                self.base_object.hash(state);
+                self.measures.hash(state);
+                self.dimensions.hash(state);
+                self.time_dimensions.hash(state);
+                // BTreeMap iterates in sorted key order — consistent with its PartialEq impl.
+                for (k, v) in &self.hierarchies {
+                    k.hash(state);
+                    v.hash(state);
+                }
+            }
         }
     };
     proc_macro::TokenStream::from(expanded)
@@ -466,85 +497,6 @@ pub fn session_property(python_binding: proc_macro::TokenStream) -> proc_macro::
                     default_expr: helper.default_expr,
                 })
             }
-        }
-    };
-    proc_macro::TokenStream::from(expanded)
-}
-
-#[proc_macro]
-#[deprecated]
-pub fn row_level_security(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let input = parse_macro_input!(python_binding as LitBool);
-    let python_binding = if input.value {
-        quote! {
-            #[pyclass]
-        }
-    } else {
-        quote! {}
-    };
-    let expanded = quote! {
-        #python_binding
-        #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
-        #[deprecated]
-        pub struct RowLevelSecurity {
-            pub name: String,
-            #[allow(deprecated)]
-            pub operator: RowLevelOperator,
-        }
-    };
-    proc_macro::TokenStream::from(expanded)
-}
-
-#[proc_macro]
-#[deprecated]
-pub fn row_level_operator(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let input = parse_macro_input!(python_binding as LitBool);
-    let python_binding = if input.value {
-        quote! {
-            #[pyclass(eq, eq_int)]
-        }
-    } else {
-        quote! {}
-    };
-    let expanded = quote! {
-        #python_binding
-        #[deprecated]
-        #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-        #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-        pub enum RowLevelOperator {
-            Equals,
-            NotEquals,
-            GreaterThan,
-            LessThan,
-            GreaterThanOrEquals,
-            LessThanOrEquals,
-            IN,
-            NotIn,
-            LIKE,
-            NotLike,
-        }
-    };
-    proc_macro::TokenStream::from(expanded)
-}
-
-#[proc_macro]
-#[deprecated]
-pub fn column_level_security(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let input = parse_macro_input!(python_binding as LitBool);
-    let python_binding = if input.value {
-        quote! {
-            #[pyclass]
-        }
-    } else {
-        quote! {}
-    };
-    let expanded = quote! {
-        #python_binding
-        #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
-        pub struct ColumnLevelSecurity {
-            pub name: String,
-            pub operator: ColumnLevelOperator,
-            pub threshold: NormalizedExpr,
         }
     };
     proc_macro::TokenStream::from(expanded)

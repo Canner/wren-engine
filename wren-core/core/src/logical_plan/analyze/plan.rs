@@ -672,45 +672,44 @@ fn collect_model_required_fields(
         else {
             return plan_err!("Column reference not found for {c}");
         };
-        if let Dataset::Model(m) = dataset {
-            if column.is_calculated {
-                let expr_plan = if let Some(expression) = &column.expression {
-                    let Ok(expr) = create_wren_expr_for_model(
-                        expression,
-                        Arc::clone(&m),
-                        Arc::clone(&session_state_ref),
-                    ) else {
-                        // skip the semantic expression (e.g. calculated field or relationship column)
-                        debug!("Error creating expression for calculated field: {expression}");
-                        continue;
-                    };
-                    expr
-                } else {
-                    return plan_err!("Only support calculated field with expression");
-                }
-                .alias(column.name.clone());
-                debug!("Required Calculated field: {}", &expr_plan);
-                required_fields
-                    .entry(relation_ref.clone())
-                    .or_default()
-                    .insert(OrdExpr::with_column(expr_plan, column));
-            } else {
-                let expr_plan = get_remote_column_exp(
-                    &column,
+        let Dataset::Model(m) = dataset;
+        if column.is_calculated {
+            let expr_plan = if let Some(expression) = &column.expression {
+                let Ok(expr) = create_wren_expr_for_model(
+                    expression,
                     Arc::clone(&m),
-                    Arc::clone(&analyzed_wren_mdl),
                     Arc::clone(&session_state_ref),
-                    Arc::clone(&session_properties),
-                )?;
-                debug!("Required field: {}", &expr_plan);
-                required_fields
-                    .entry(relation_ref.clone())
-                    .or_default()
-                    .insert(OrdExpr::with_column(expr_plan, column));
+                ) else {
+                    // skip the semantic expression (e.g. calculated field or relationship column)
+                    debug!(
+                        "Error creating expression for calculated field: {expression}"
+                    );
+                    continue;
+                };
+                expr
+            } else {
+                return plan_err!("Only support calculated field with expression");
             }
+            .alias(column.name.clone());
+            debug!("Required Calculated field: {}", &expr_plan);
+            required_fields
+                .entry(relation_ref.clone())
+                .or_default()
+                .insert(OrdExpr::with_column(expr_plan, column));
         } else {
-            return plan_err!("Only support model as source dataset");
-        };
+            let expr_plan = get_remote_column_exp(
+                &column,
+                Arc::clone(&m),
+                Arc::clone(&analyzed_wren_mdl),
+                Arc::clone(&session_state_ref),
+                Arc::clone(&session_properties),
+            )?;
+            debug!("Required field: {}", &expr_plan);
+            required_fields
+                .entry(relation_ref.clone())
+                .or_default()
+                .insert(OrdExpr::with_column(expr_plan, column));
+        }
     }
     Ok(())
 }

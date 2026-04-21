@@ -14,9 +14,7 @@ use crate::mdl::Dataset;
 use crate::mdl::{AnalyzedWrenMDL, SessionStateRef};
 use crate::{mdl, DataFusionError};
 use datafusion::common::alias::AliasGenerator;
-use datafusion::common::{
-    internal_err, not_impl_err, plan_err, DFSchema, DFSchemaRef, Result,
-};
+use datafusion::common::{internal_err, plan_err, DFSchema, DFSchemaRef, Result};
 use datafusion::common::{plan_datafusion_err, TableReference};
 use datafusion::logical_expr::{
     col, Expr, Extension, LogicalPlan, LogicalPlanBuilder, SubqueryAlias,
@@ -47,23 +45,17 @@ impl RelationChain {
         session_state_ref: SessionStateRef,
         session_properties: SessionPropertiesRef,
     ) -> Result<Self> {
-        match dataset {
-            Dataset::Model(source_model) => {
-                Ok(Start(LogicalPlan::Extension(Extension {
-                    node: Arc::new(ModelSourceNode::new(
-                        Arc::clone(source_model),
-                        required_fields,
-                        analyzed_wren_mdl,
-                        session_state_ref,
-                        session_properties,
-                        None,
-                    )?),
-                })))
-            }
-            _ => {
-                not_impl_err!("Only support model as source dataset")
-            }
-        }
+        let Dataset::Model(source_model) = dataset;
+        Ok(Start(LogicalPlan::Extension(Extension {
+            node: Arc::new(ModelSourceNode::new(
+                Arc::clone(source_model),
+                required_fields,
+                analyzed_wren_mdl,
+                session_state_ref,
+                session_properties,
+                None,
+            )?),
+        })))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -93,44 +85,40 @@ impl RelationChain {
             let Some(fields) = model_required_fields.get(&target_ref) else {
                 return plan_err!("Required fields not found for {}", target_ref);
             };
-            match target {
-                Dataset::Model(target_model) => {
-                    let schema = create_schema(
-                        fields
-                            .iter()
-                            .map(|e| {
-                                e.column.clone().ok_or_else(|| {
-                                    plan_datafusion_err!(
-                                        "Required field {:?} has no physical column",
-                                        e.expr
-                                    )
-                                })
-                            })
-                            .collect::<Result<_>>()?,
-                    )?;
-                    let exprs = fields.iter().cloned().map(|c| c.expr).collect();
-                    let plan = ModelPlanNode::new(
-                        Arc::clone(target_model),
-                        exprs,
-                        None,
-                        Arc::clone(&analyzed_wren_mdl),
-                        Arc::clone(&session_state_ref),
-                        Arc::clone(&properties),
-                    )?;
+            let Dataset::Model(target_model) = target;
+            let schema = create_schema(
+                fields
+                    .iter()
+                    .map(|e| {
+                        e.column.clone().ok_or_else(|| {
+                            plan_datafusion_err!(
+                                "Required field {:?} has no physical column",
+                                e.expr
+                            )
+                        })
+                    })
+                    .collect::<Result<_>>()?,
+            )?;
+            let exprs = fields.iter().cloned().map(|c| c.expr).collect();
+            let plan = ModelPlanNode::new(
+                Arc::clone(target_model),
+                exprs,
+                None,
+                Arc::clone(&analyzed_wren_mdl),
+                Arc::clone(&session_state_ref),
+                Arc::clone(&properties),
+            )?;
 
-                    let df_schema = DFSchemaRef::from(DFSchema::try_from(schema)?);
-                    let node = LogicalPlan::Extension(Extension {
-                        node: Arc::new(PartialModelPlanNode::new(plan, df_schema)),
-                    });
-                    relation_chain = RelationChain::Chain(
-                        node,
-                        link.join_type,
-                        link.condition.clone(),
-                        Box::new(relation_chain),
-                    );
-                }
-                _ => return plan_err!("Only support model as source dataset"),
-            }
+            let df_schema = DFSchemaRef::from(DFSchema::try_from(schema)?);
+            let node = LogicalPlan::Extension(Extension {
+                node: Arc::new(PartialModelPlanNode::new(plan, df_schema)),
+            });
+            relation_chain = RelationChain::Chain(
+                node,
+                link.join_type,
+                link.condition.clone(),
+                Box::new(relation_chain),
+            );
             start = next;
         }
         Ok(relation_chain)

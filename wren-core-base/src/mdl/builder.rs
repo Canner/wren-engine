@@ -20,13 +20,11 @@
 #![allow(dead_code)]
 
 use crate::mdl::manifest::{
-    Column, DataSource, JoinType, Manifest, Metric, Model, Relationship, TimeGrain, TimeUnit, View,
+    Column, Cube, CubeDimension, DataSource, JoinType, Manifest, Measure, Model, Relationship,
+    TimeDimension, View,
 };
-#[allow(deprecated)]
-use crate::mdl::{
-    ColumnLevelOperator, ColumnLevelSecurity, NormalizedExpr, RowLevelAccessControl,
-    RowLevelOperator, RowLevelSecurity, SessionProperty,
-};
+use crate::mdl::{ColumnLevelOperator, NormalizedExpr, RowLevelAccessControl, SessionProperty};
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use super::ColumnLevelAccessControl;
@@ -51,9 +49,9 @@ impl ManifestBuilder {
                 schema: "public".to_string(),
                 models: vec![],
                 relationships: vec![],
-                metrics: vec![],
                 views: vec![],
                 data_source: None,
+                cubes: vec![],
             },
         }
     }
@@ -83,13 +81,13 @@ impl ManifestBuilder {
         self
     }
 
-    pub fn metric(mut self, metric: Arc<Metric>) -> Self {
-        self.manifest.metrics.push(metric);
+    pub fn view(mut self, view: Arc<View>) -> Self {
+        self.manifest.views.push(view);
         self
     }
 
-    pub fn view(mut self, view: Arc<View>) -> Self {
-        self.manifest.views.push(view);
+    pub fn cube(mut self, cube: Arc<Cube>) -> Self {
+        self.manifest.cubes.push(cube);
         self
     }
 
@@ -197,7 +195,6 @@ pub struct ColumnBuilder {
     pub column: Column,
 }
 
-#[allow(deprecated)]
 impl ColumnBuilder {
     pub fn new(name: &str, r#type: &str) -> Self {
         Self {
@@ -209,8 +206,6 @@ impl ColumnBuilder {
                 is_hidden: false,
                 not_null: false,
                 expression: None,
-                rls: None,
-                cls: None,
                 column_level_access_control: None,
             },
         }
@@ -246,29 +241,6 @@ impl ColumnBuilder {
 
     pub fn hidden(mut self, is_hidden: bool) -> Self {
         self.column.is_hidden = is_hidden;
-        self
-    }
-
-    #[allow(deprecated)]
-    pub fn row_level_security(mut self, name: &str, operator: RowLevelOperator) -> Self {
-        self.column.rls = Some(RowLevelSecurity {
-            name: name.to_string(),
-            operator,
-        });
-        self
-    }
-
-    pub fn column_level_security(
-        mut self,
-        name: &str,
-        operator: ColumnLevelOperator,
-        threshold: &str,
-    ) -> Self {
-        self.column.cls = Some(ColumnLevelSecurity {
-            name: name.to_string(),
-            operator,
-            threshold: NormalizedExpr::new(threshold),
-        });
         self
     }
 
@@ -329,85 +301,6 @@ impl RelationshipBuilder {
     }
 }
 
-pub struct MetricBuilder {
-    pub metric: Metric,
-}
-
-impl MetricBuilder {
-    pub fn new(name: &str) -> Self {
-        Self {
-            metric: Metric {
-                name: name.to_string(),
-                base_object: "".to_string(),
-                dimension: vec![],
-                measure: vec![],
-                time_grain: vec![],
-                cached: false,
-                refresh_time: None,
-            },
-        }
-    }
-
-    pub fn dimension(mut self, dimension: Arc<Column>) -> Self {
-        self.metric.dimension.push(dimension);
-        self
-    }
-
-    pub fn measure(mut self, measure: Arc<Column>) -> Self {
-        self.metric.measure.push(measure);
-        self
-    }
-
-    pub fn time_grain(mut self, time_grain: TimeGrain) -> Self {
-        self.metric.time_grain.push(time_grain);
-        self
-    }
-
-    pub fn cached(mut self, cached: bool) -> Self {
-        self.metric.cached = cached;
-        self
-    }
-
-    pub fn refresh_time(mut self, refresh_time: &str) -> Self {
-        self.metric.refresh_time = Some(refresh_time.to_string());
-        self
-    }
-
-    pub fn build(self) -> Arc<Metric> {
-        Arc::new(self.metric)
-    }
-}
-
-pub struct TimeGrainBuilder {
-    pub time_grain: TimeGrain,
-}
-
-impl TimeGrainBuilder {
-    pub fn new(name: &str) -> Self {
-        Self {
-            time_grain: TimeGrain {
-                name: name.to_string(),
-                ref_column: "".to_string(),
-                date_parts: vec![],
-            },
-        }
-    }
-
-    pub fn ref_column(mut self, ref_column: &str) -> Self {
-        self.time_grain.ref_column = ref_column.to_string();
-        self
-    }
-
-    pub fn date_part(mut self, date_part: TimeUnit) -> Self {
-        self.time_grain.date_parts.push(date_part);
-        self
-    }
-
-    pub fn build(self) -> TimeGrain {
-        self.time_grain
-    }
-}
-
 pub struct ViewBuilder {
     pub view: View,
 }
@@ -438,26 +331,128 @@ impl ViewBuilder {
     }
 }
 
+pub struct MeasureBuilder {
+    pub measure: Measure,
+}
+
+impl MeasureBuilder {
+    pub fn new(name: &str, expression: &str, r#type: &str) -> Self {
+        Self {
+            measure: Measure {
+                name: name.to_string(),
+                expression: expression.to_string(),
+                r#type: r#type.to_string(),
+            },
+        }
+    }
+
+    pub fn build(self) -> Arc<Measure> {
+        Arc::new(self.measure)
+    }
+}
+
+pub struct CubeDimensionBuilder {
+    pub dimension: CubeDimension,
+}
+
+impl CubeDimensionBuilder {
+    pub fn new(name: &str, expression: &str, r#type: &str) -> Self {
+        Self {
+            dimension: CubeDimension {
+                name: name.to_string(),
+                expression: expression.to_string(),
+                r#type: r#type.to_string(),
+            },
+        }
+    }
+
+    pub fn build(self) -> Arc<CubeDimension> {
+        Arc::new(self.dimension)
+    }
+}
+
+pub struct TimeDimensionBuilder {
+    pub time_dimension: TimeDimension,
+}
+
+impl TimeDimensionBuilder {
+    pub fn new(name: &str, expression: &str, r#type: &str) -> Self {
+        Self {
+            time_dimension: TimeDimension {
+                name: name.to_string(),
+                expression: expression.to_string(),
+                r#type: r#type.to_string(),
+            },
+        }
+    }
+
+    pub fn build(self) -> Arc<TimeDimension> {
+        Arc::new(self.time_dimension)
+    }
+}
+
+pub struct CubeBuilder {
+    pub cube: Cube,
+}
+
+impl CubeBuilder {
+    pub fn new(name: &str, base_object: &str) -> Self {
+        Self {
+            cube: Cube {
+                name: name.to_string(),
+                base_object: base_object.to_string(),
+                measures: vec![],
+                dimensions: vec![],
+                time_dimensions: vec![],
+                hierarchies: BTreeMap::new(),
+            },
+        }
+    }
+
+    pub fn measure(mut self, measure: Arc<Measure>) -> Self {
+        self.cube.measures.push(measure);
+        self
+    }
+
+    pub fn dimension(mut self, dimension: Arc<CubeDimension>) -> Self {
+        self.cube.dimensions.push(dimension);
+        self
+    }
+
+    pub fn time_dimension(mut self, time_dimension: Arc<TimeDimension>) -> Self {
+        self.cube.time_dimensions.push(time_dimension);
+        self
+    }
+
+    pub fn hierarchy(mut self, name: &str, levels: Vec<&str>) -> Self {
+        self.cube.hierarchies.insert(
+            name.to_string(),
+            levels.iter().map(|s| s.to_string()).collect(),
+        );
+        self
+    }
+
+    pub fn build(self) -> Arc<Cube> {
+        Arc::new(self.cube)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::mdl::builder::{
-        ColumnBuilder, ManifestBuilder, MetricBuilder, ModelBuilder, RelationshipBuilder,
-        TimeGrainBuilder, ViewBuilder,
+        ColumnBuilder, CubeBuilder, CubeDimensionBuilder, ManifestBuilder, MeasureBuilder,
+        ModelBuilder, RelationshipBuilder, TimeDimensionBuilder, ViewBuilder,
     };
     use crate::mdl::manifest::DataSource::MySQL;
-    use crate::mdl::manifest::{
-        Column, DataSource, JoinType, Manifest, Metric, Model, Relationship, TimeUnit, View,
-    };
+    use crate::mdl::manifest::{Column, DataSource, JoinType, Manifest, Model, Relationship, View};
+    use crate::mdl::manifest::{Cube, CubeDimension, Measure, TimeDimension};
     use crate::mdl::ColumnLevelOperator;
-    #[allow(deprecated)]
-    use crate::mdl::RowLevelOperator;
     use crate::mdl::SessionProperty;
     use std::fs;
     use std::path::PathBuf;
     use std::sync::Arc;
 
     #[test]
-    #[allow(deprecated)]
     fn test_column_roundtrip() {
         let expected = ColumnBuilder::new("id", "integer")
             .relationship("test")
@@ -465,8 +460,6 @@ mod test {
             .not_null(true)
             .hidden(true)
             .expression("test")
-            .row_level_security("SESSION_STATUS", RowLevelOperator::Equals)
-            .column_level_security("SESSION_LEVEL", ColumnLevelOperator::Equals, "'NORMAL'")
             .column_level_access_control(
                 "rlac",
                 vec![SessionProperty::new_required("session_id")],
@@ -633,26 +626,6 @@ mod test {
     }
 
     #[test]
-    fn test_metric_roundtrip() {
-        let model = MetricBuilder::new("test")
-            .dimension(ColumnBuilder::new("dim", "integer").build())
-            .measure(ColumnBuilder::new("mea", "integer").build())
-            .time_grain(
-                TimeGrainBuilder::new("tg")
-                    .ref_column("tg")
-                    .date_part(TimeUnit::Day)
-                    .build(),
-            )
-            .cached(true)
-            .refresh_time("1h")
-            .build();
-
-        let json_str = serde_json::to_string(&model).unwrap();
-        let actual: Arc<Metric> = serde_json::from_str(&json_str).unwrap();
-        assert_eq!(actual, model)
-    }
-
-    #[test]
     fn test_view_roundtrip() {
         let expected = ViewBuilder::new("test")
             .statement("SELECT * FROM test")
@@ -660,6 +633,44 @@ mod test {
 
         let json_str = serde_json::to_string(&expected).unwrap();
         let actual: Arc<View> = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn test_measure_roundtrip() {
+        let expected = MeasureBuilder::new("total_price", "sum(price)", "float").build();
+        let json_str = serde_json::to_string(&expected).unwrap();
+        let actual: Arc<Measure> = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn test_cube_dimension_roundtrip() {
+        let expected = CubeDimensionBuilder::new("status", "status", "string").build();
+        let json_str = serde_json::to_string(&expected).unwrap();
+        let actual: Arc<CubeDimension> = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn test_time_dimension_roundtrip() {
+        let expected = TimeDimensionBuilder::new("order_date", "order_date", "date").build();
+        let json_str = serde_json::to_string(&expected).unwrap();
+        let actual: Arc<TimeDimension> = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn test_cube_roundtrip() {
+        let expected = CubeBuilder::new("order_cube", "orders")
+            .measure(MeasureBuilder::new("total_price", "sum(price)", "float").build())
+            .dimension(CubeDimensionBuilder::new("status", "status", "string").build())
+            .time_dimension(TimeDimensionBuilder::new("order_date", "order_date", "date").build())
+            .hierarchy("time", vec!["year", "quarter", "month"])
+            .build();
+
+        let json_str = serde_json::to_string(&expected).unwrap();
+        let actual: Arc<Cube> = serde_json::from_str(&json_str).unwrap();
         assert_eq!(actual, expected)
     }
 
@@ -682,19 +693,6 @@ mod test {
             .condition("test")
             .build();
 
-        let metric = MetricBuilder::new("test")
-            .dimension(ColumnBuilder::new("dim", "integer").build())
-            .measure(ColumnBuilder::new("mea", "integer").build())
-            .time_grain(
-                TimeGrainBuilder::new("tg")
-                    .ref_column("tg")
-                    .date_part(TimeUnit::Day)
-                    .build(),
-            )
-            .cached(true)
-            .refresh_time("1h")
-            .build();
-
         let view = ViewBuilder::new("test")
             .statement("SELECT * FROM test")
             .build();
@@ -704,7 +702,6 @@ mod test {
             .schema("public")
             .model(model)
             .relationship(relationship)
-            .metric(metric)
             .view(view)
             .data_source(DataSource::Datafusion)
             .build();
@@ -715,7 +712,6 @@ mod test {
     }
 
     #[test]
-    #[allow(deprecated)]
     fn test_json_serde() {
         let test_data: PathBuf = [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
             .iter()
@@ -810,22 +806,6 @@ mod test {
                         ColumnBuilder::new("hash_orderkey", "varchar")
                             .expression("md5(o_orderkey)")
                             .calculated(true)
-                            .build(),
-                    )
-                    .column(
-                        ColumnBuilder::new("rls_orderkey", "integer")
-                            .row_level_security("SESSION_STATUS", RowLevelOperator::Equals)
-                            .expression("o_orderkey")
-                            .build(),
-                    )
-                    .column(
-                        ColumnBuilder::new("cls_orderkey", "integer")
-                            .column_level_security(
-                                "SESSION_LEVEL",
-                                ColumnLevelOperator::Equals,
-                                "'NORMAL'",
-                            )
-                            .expression("o_orderkey")
                             .build(),
                     )
                     .primary_key("o_orderkey")
