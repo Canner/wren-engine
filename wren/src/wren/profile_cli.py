@@ -251,6 +251,9 @@ def _validate_connection(name: str) -> None:
         return  # should not happen — profile was just added
 
     ds_str = profile.get("datasource")
+    if not isinstance(ds_str, str) or not ds_str:
+        typer.echo("⚠ Cannot validate: profile has no datasource.", err=True)
+        return
     typer.echo("→ Validating connection...")
     try:
         ds = DataSource(ds_str.lower())
@@ -262,10 +265,11 @@ def _validate_connection(name: str) -> None:
     try:
         conn_info_dict = expand_profile_secrets(conn_info_dict)
     except MissingSecretError as exc:
-        typer.echo(f"⚠ Cannot validate: {exc}")
+        typer.echo(f"⚠ Cannot validate: {exc}", err=True)
         typer.echo(
             "  Set the variable in your shell or a .env file and retry "
-            f"with: wren profile add {name} --from-file <path> --force",
+            f"with: wren profile add {name} --from-file <path>",
+            err=True,
         )
         return
 
@@ -279,10 +283,11 @@ def _validate_connection(name: str) -> None:
     try:
         conn_info = ds.get_connection_info(conn_info_dict)
     except (ValidationError, ValueError) as exc:
-        typer.echo(f"⚠ Cannot validate: invalid connection info: {exc}")
+        typer.echo(f"⚠ Cannot validate: invalid connection info: {exc}", err=True)
         typer.echo(
             f"  Fix the fields in your profile / .env then retry:\n"
-            f"    wren profile add {name} --from-file <path> --force",
+            f"    wren profile add {name} --from-file <path>",
+            err=True,
         )
         return
 
@@ -290,11 +295,12 @@ def _validate_connection(name: str) -> None:
         connector = get_connector(ds, conn_info)
         connector.dry_run("SELECT 1")
     except Exception as exc:  # noqa: BLE001 — surface whatever driver raises
-        typer.echo(f"⚠ Connection failed: {exc}")
+        typer.echo(f"⚠ Connection failed: {exc}", err=True)
         typer.echo(
             "  The profile has been saved. To fix:\n"
             "    wren profile debug                 # show resolved config\n"
             f"    wren profile add {name} --ui       # edit and re-validate",
+            err=True,
         )
         return
     typer.echo("✓ Connection validated")

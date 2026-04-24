@@ -167,12 +167,11 @@ profiles:
 wren looks for values in this order (first match wins; process env
 wins over any `.env`):
 
-1. `os.environ` — anything you `export`ed (Unix) or set with
-   `$env:NAME = ...` (PowerShell) / `set NAME=...` (cmd.exe) before
-   running `wren`.
-2. `<project_root>/.env` — a dotenv file co-located with
-   `wren_project.yml`.
-3. `~/.wren/.env` — user-global fallback for operators running many
+1. `os.environ` — variables already exported in your shell.
+2. `$CWD/.env` — the directory you run `wren` from (typical agent
+   workflow drops the file here).
+3. `<project_root>/.env` — co-located with `wren_project.yml`.
+4. `~/.wren/.env` — user-global fallback for operators running many
    projects against the same secret bundle.
 
 ### Rules
@@ -187,14 +186,10 @@ wins over any `.env`):
 ### `.env` example
 
 ```bash
-# .env (in project root; add to .gitignore!)
+# .env — add to .gitignore
 POSTGRES_USER=paul
 POSTGRES_PASSWORD=s3cr3t
 ```
-
-On Unix you may want `chmod 600 .env` so only your user can read it.
-Windows inherits permissions from the user profile and usually needs
-no action.
 
 ### Agents and secrets
 

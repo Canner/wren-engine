@@ -7,7 +7,6 @@ import json
 
 import pytest
 import typer
-import yaml  # noqa: F401 — referenced by yaml-loading tests below
 from typer.testing import CliRunner
 
 import wren.profile as profile_mod
