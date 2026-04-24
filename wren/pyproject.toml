@@ -33,6 +33,9 @@ dependencies = [
   "pandas>=2",
   "boto3>=1.26",
   "pyyaml>=6.0",
+  # Reads `.env` files so profile values like `password: ${POSTGRES_PASSWORD}`
+  # resolve at connection time without the secret living in profiles.yml.
+  "python-dotenv>=1.0",
   # Transitive dependency constraints for security patches
   "requests>=2.33.0",
   "pyasn1>=0.6.3",
@@ -55,9 +58,9 @@ oracle = ["oracledb>=2"]
 memory = ["lancedb>=0.6", "sentence-transformers>=2.2"]
 interactive = ["InquirerPy>=0.3.4"]
 ui = ["starlette>=0.37", "uvicorn>=0.29", "jinja2>=3.1", "python-multipart>=0.0.9"]
-main = ["wren-engine[memory,interactive,ui]"]
+main = ["wren-engine[interactive,ui]"]
 all = [
-  "wren-engine[postgres,mysql,bigquery,snowflake,clickhouse,trino,mssql,databricks,redshift,athena,oracle,spark,main]",
+  "wren-engine[postgres,mysql,bigquery,snowflake,clickhouse,trino,mssql,databricks,redshift,athena,oracle,spark,main,memory]",
 ]
 dev = [
   "pytest>=8",

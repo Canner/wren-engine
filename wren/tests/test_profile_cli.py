@@ -2,16 +2,25 @@
 
 from __future__ import annotations
 
+import io
 import json
 
 import pytest
-import yaml
+import typer
+import yaml  # noqa: F401 — referenced by yaml-loading tests below
 from typer.testing import CliRunner
 
 import wren.profile as profile_mod
 from wren.profile_cli import profile_app
 
 runner = CliRunner()
+
+
+def _capture_typer_echo(monkeypatch) -> io.StringIO:
+    """Redirect ``typer.echo`` into a buffer for assertions."""
+    buf = io.StringIO()
+    monkeypatch.setattr(typer, "echo", lambda msg="", **kw: buf.write(str(msg) + "\n"))
+    return buf
 
 
 @pytest.fixture(autouse=True)
@@ -99,6 +108,61 @@ def test_add_from_file_normalizes_properties_envelope(tmp_path):
     assert "properties" not in profiles["duck"]
     assert profiles["duck"]["url"] == "/tmp/warehouse"
     assert profiles["duck"]["datasource"] == "duckdb"
+
+
+def test_add_from_file_normalizes_connection_envelope(tmp_path):
+    """Common `connection: {...}` shape should flatten too, not get saved nested."""
+    conn_file = tmp_path / "conn.yml"
+    conn_file.write_text(
+        "datasource: mysql\n"
+        "connection:\n"
+        "  host: db.local\n"
+        "  port: '3306'\n"
+        "  database: wren\n"
+        "  user: root\n"
+    )
+    result = runner.invoke(profile_app, ["add", "my", "--from-file", str(conn_file)])
+    assert result.exit_code == 0, result.output
+    profiles = profile_mod.list_profiles()
+    assert "connection" not in profiles["my"]
+    assert profiles["my"]["host"] == "db.local"
+    assert profiles["my"]["port"] == "3306"
+    assert profiles["my"]["datasource"] == "mysql"
+
+
+def test_add_from_file_normalizes_config_envelope(tmp_path):
+    conn_file = tmp_path / "conn.yml"
+    conn_file.write_text(
+        "datasource: postgres\nconfig:\n  host: pg.local\n  port: 5432\n"
+    )
+    result = runner.invoke(profile_app, ["add", "pg", "--from-file", str(conn_file)])
+    assert result.exit_code == 0
+    assert "config" not in profile_mod.list_profiles()["pg"]
+    assert profile_mod.list_profiles()["pg"]["host"] == "pg.local"
+
+
+def test_add_from_file_rejects_unknown_nested_keys(tmp_path):
+    """Unknown nested dicts are rejected rather than silently saved."""
+    conn_file = tmp_path / "conn.yml"
+    conn_file.write_text(
+        "datasource: mysql\nmystery:\n  host: db.local\n"
+    )
+    result = runner.invoke(profile_app, ["add", "my", "--from-file", str(conn_file)])
+    assert result.exit_code == 1
+    assert "mystery" in result.output.lower() or "unexpected nested" in result.output.lower()
+
+
+def test_add_from_file_allows_kwargs_nested(tmp_path):
+    """`kwargs` / `settings` are legitimate nested dicts (MySQL, ClickHouse)."""
+    conn_file = tmp_path / "conn.yml"
+    conn_file.write_text(
+        "datasource: mysql\nhost: db.local\nport: '3306'\n"
+        "kwargs:\n  ssl_disabled: 'true'\n"
+    )
+    result = runner.invoke(profile_app, ["add", "my", "--from-file", str(conn_file)])
+    assert result.exit_code == 0, result.output
+    saved = profile_mod.list_profiles()["my"]
+    assert saved["kwargs"] == {"ssl_disabled": "true"}
 
 
 def test_add_from_file_not_found():
@@ -200,3 +264,160 @@ def test_debug_named_profile():
     data = json.loads(result.output)
     assert data["name"] == "b"
     assert data["config"]["password"] == "***"
+
+
+# ── add --validate ────────────────────────────────────────────────────────────
+
+
+def test_add_minimal_skips_validation():
+    """Minimal profiles have no connection fields — nothing to validate."""
+    result = runner.invoke(profile_app, ["add", "pg", "--datasource", "postgres"])
+    assert result.exit_code == 0
+    assert "Validating connection" not in result.output
+    assert "Next: wren context init" in result.output
+
+
+def test_add_from_file_runs_validation_by_default(tmp_path, monkeypatch):
+    """When a non-minimal profile lands, validation runs automatically."""
+    import wren.profile_cli as profile_cli  # noqa: PLC0415
+
+    calls: list[str] = []
+
+    def fake_validate(name):
+        calls.append(name)
+
+    monkeypatch.setattr(profile_cli, "_validate_connection", fake_validate)
+
+    conn_file = tmp_path / "conn.json"
+    conn_file.write_text(
+        json.dumps(
+            {
+                "datasource": "duckdb",
+                "url": str(tmp_path),
+                "format": "duckdb",
+            }
+        )
+    )
+    result = runner.invoke(profile_app, ["add", "duck", "--from-file", str(conn_file)])
+    assert result.exit_code == 0
+    assert calls == ["duck"]
+    assert "Next: wren context init" in result.output
+
+
+def test_add_from_file_respects_no_validate(tmp_path, monkeypatch):
+    import wren.profile_cli as profile_cli  # noqa: PLC0415
+
+    calls: list[str] = []
+    monkeypatch.setattr(
+        profile_cli, "_validate_connection", lambda name: calls.append(name)
+    )
+
+    conn_file = tmp_path / "conn.json"
+    conn_file.write_text(json.dumps({"datasource": "postgres", "host": "db.local"}))
+
+    result = runner.invoke(
+        profile_app,
+        ["add", "pg", "--from-file", str(conn_file), "--no-validate"],
+    )
+    assert result.exit_code == 0
+    assert calls == [], "validation should not be invoked with --no-validate"
+    # Next hint is still shown
+    assert "Next: wren context init" in result.output
+
+
+def test_validate_success(tmp_path, monkeypatch):
+    """Directly exercise _validate_connection with a fake connector."""
+    from wren import profile_cli  # noqa: PLC0415
+
+    profile_mod.add_profile(
+        "duck", {"datasource": "duckdb", "url": str(tmp_path), "format": "duckdb"}
+    )
+
+    class FakeConnector:
+        def dry_run(self, sql):
+            assert sql == "SELECT 1"
+
+    monkeypatch.setattr(
+        "wren.connector.factory.get_connector", lambda ds, info: FakeConnector()
+    )
+
+    buf = _capture_typer_echo(monkeypatch)
+    profile_cli._validate_connection("duck")
+    output = buf.getvalue()
+    assert "Validating connection" in output
+    assert "Connection validated" in output
+
+
+def test_validate_failure_prints_warning(monkeypatch):
+    from wren import profile_cli  # noqa: PLC0415
+
+    # Full set of required postgres fields — we're exercising the "driver
+    # connects but the DB refuses" path, not the "profile is incomplete"
+    # path covered by test_validate_invalid_connection_info below.
+    profile_mod.add_profile(
+        "pg",
+        {
+            "datasource": "postgres",
+            "host": "db.local",
+            "port": "5432",
+            "database": "wren",
+            "user": "PaulChen79",
+            "password": "paultest",
+        },
+    )
+
+    def failing_get_connector(ds, info):
+        raise RuntimeError("connection refused")
+
+    monkeypatch.setattr(
+        "wren.connector.factory.get_connector", failing_get_connector
+    )
+
+    buf = _capture_typer_echo(monkeypatch)
+    profile_cli._validate_connection("pg")
+    output = buf.getvalue()
+    assert "Connection failed: connection refused" in output
+    assert "wren profile debug" in output
+    assert "wren profile add pg --ui" in output
+
+
+def test_validate_invalid_connection_info(monkeypatch):
+    """Missing required fields surface the Pydantic error, not a dict
+    AttributeError swallowed by the generic except clause."""
+    from wren import profile_cli  # noqa: PLC0415
+
+    profile_mod.add_profile(
+        "pg",
+        {
+            "datasource": "postgres",
+            # deliberately missing port / database / user
+            "host": "db.local",
+        },
+    )
+
+    # get_connector should never be reached — we expect the Pydantic
+    # conversion to fail first.
+    def should_not_be_called(ds, info):
+        raise AssertionError("get_connector called despite invalid profile")
+
+    monkeypatch.setattr(
+        "wren.connector.factory.get_connector", should_not_be_called
+    )
+
+    buf = _capture_typer_echo(monkeypatch)
+    profile_cli._validate_connection("pg")
+    output = buf.getvalue()
+    assert "invalid connection info" in output
+    assert "Field required" in output or "field required" in output.lower()
+
+
+def test_validate_unknown_datasource(monkeypatch):
+    from wren import profile_cli  # noqa: PLC0415
+
+    profile_mod.add_profile("junk", {"datasource": "not-a-db"})
+
+    buf = _capture_typer_echo(monkeypatch)
+    profile_cli._validate_connection("junk")
+    output = buf.getvalue()
+    assert "Cannot validate" in output
+    assert "unknown datasource" in output

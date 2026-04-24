@@ -76,6 +76,72 @@ def test_init_refuses_existing(tmp_path):
     assert "already exists" in result.output
 
 
+def test_print_warnings_collapses_beyond_threshold(capsys):
+    """Noisy "missing description" lists collapse into grouped counts."""
+    from wren import context_cli  # noqa: PLC0415
+
+    # 15 "missing description" + 3 "missing primary_key" — total 18,
+    # comfortably above the summary threshold of 10.
+    warnings = [
+        f"model 'orders_{i}': missing description" for i in range(15)
+    ] + [f"model 'log_{i}': missing primary_key" for i in range(3)]
+
+    context_cli._print_warnings(warnings, verbose=False)
+    out = capsys.readouterr().out
+
+    # Summary line mentions the total and hint
+    assert "Warnings: 18 total" in out
+    assert "--verbose" in out
+
+    # Individual models collapsed away
+    for i in range(15):
+        assert f"orders_{i}" not in out
+
+    # Exactly two category buckets (not 18 unique lines)
+    assert "missing description: 15" in out
+    assert "missing primary_key: 3" in out
+
+
+def test_print_warnings_verbose_prints_every_line(capsys):
+    from wren import context_cli  # noqa: PLC0415
+
+    warnings = [f"model 'orders_{i}': missing description" for i in range(15)]
+    context_cli._print_warnings(warnings, verbose=True)
+    out = capsys.readouterr().out
+    for i in range(15):
+        assert f"orders_{i}" in out
+    assert "15 warning(s)" in out
+
+
+def test_print_warnings_below_threshold_prints_each(capsys):
+    from wren import context_cli  # noqa: PLC0415
+
+    warnings = [f"model 'orders_{i}': missing description" for i in range(3)]
+    context_cli._print_warnings(warnings, verbose=False)
+    out = capsys.readouterr().out
+    for i in range(3):
+        assert f"orders_{i}" in out
+
+
+def test_init_empty_skips_example_model_and_view(tmp_path):
+    result = runner.invoke(
+        app, ["context", "init", "--path", str(tmp_path), "--empty"]
+    )
+    assert result.exit_code == 0, result.output
+    # Directories exist but are empty
+    assert (tmp_path / "models").is_dir()
+    assert (tmp_path / "views").is_dir()
+    assert list((tmp_path / "models").iterdir()) == []
+    assert list((tmp_path / "views").iterdir()) == []
+    # Other scaffold files are still produced
+    assert (tmp_path / "wren_project.yml").exists()
+    assert (tmp_path / "relationships.yml").exists()
+    assert (tmp_path / "AGENTS.md").exists()
+    assert (tmp_path / "queries.yml").exists()
+    # Summary mentions empty rather than the example paths
+    assert "empty" in result.output
+
+
 # ── wren context validate ─────────────────────────────────────────────────
 
 

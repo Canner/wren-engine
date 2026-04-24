@@ -162,7 +162,11 @@ def _build_engine(
 
     # Try active profile when no explicit connection flags given
     if not connection_info and not connection_file:
-        from wren.profile import get_active_profile  # noqa: PLC0415
+        from wren.profile import (  # noqa: PLC0415
+            MissingSecretError,
+            expand_profile_secrets,
+            get_active_profile,
+        )
 
         prof_name, prof_dict = get_active_profile()
         if prof_dict:
@@ -175,6 +179,14 @@ def _build_engine(
                 ds = DataSource(ds_str.lower())
             except ValueError:
                 typer.echo(f"Error: unknown datasource '{ds_str}'", err=True)
+                raise typer.Exit(1)
+            # Resolve ${VAR} references right before handing the connection
+            # info to the engine.  Keep the stored profile untouched so
+            # debug output never leaks real secrets.
+            try:
+                prof_dict = expand_profile_secrets(prof_dict)
+            except MissingSecretError as e:
+                typer.echo(f"Error: {e}", err=True)
                 raise typer.Exit(1)
             from pydantic import ValidationError  # noqa: PLC0415
 
@@ -277,6 +289,20 @@ def _maybe_print_store_tip(sql: str, quiet: bool) -> None:
 # ── Default command (no subcommand = query) ────────────────────────────────
 
 
+def _version_callback(value: bool) -> None:
+    """Handle ``wren --version`` the idiomatic Typer way.
+
+    ``wren version`` remains for scripts that already use it; ``--version``
+    is what most CLI tools expose and what new users try first.
+    """
+    if not value:
+        return
+    from wren import __version__  # noqa: PLC0415
+
+    typer.echo(f"wren-engine {__version__}")
+    raise typer.Exit()
+
+
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
@@ -292,6 +318,16 @@ def main(
     limit: LimitOpt = None,
     output: OutputOpt = "table",
     quiet: QuietOpt = False,
+    version: Annotated[
+        Optional[bool],
+        typer.Option(
+            "--version",
+            "-V",
+            callback=_version_callback,
+            is_eager=True,
+            help="Print the wren-engine version and exit.",
+        ),
+    ] = None,
 ) -> None:
     """Wren Engine CLI.
 
@@ -558,7 +594,9 @@ try:
 
     app.add_typer(memory_app)
 except ImportError:
-    pass  # wren[memory] not installed
+    # `memory` is installed on demand via `wren add memory`; until then
+    # the subcommand group simply isn't registered.
+    pass
 
 from wren.profile_cli import profile_app  # noqa: PLC0415, E402
 

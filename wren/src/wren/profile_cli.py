@@ -63,11 +63,23 @@ def add(
     no_open: Annotated[
         bool, typer.Option("--no-open", help="Don't auto-open browser (just print URL)")
     ] = False,
+    validate: Annotated[
+        bool,
+        typer.Option(
+            "--validate/--no-validate",
+            help="Test the connection after save (default on).",
+        ),
+    ] = True,
 ) -> None:
     """Add a new connection profile.
 
     Four modes: --ui (browser form), --from-file (import), --interactive
     (guided prompts), or inline --datasource (minimal profile).
+
+    The saved profile is validated against its database by default — a
+    failed validation is reported as a warning without deleting the
+    profile, so the user can fix it with ``wren profile add --ui`` or
+    by editing ``~/.wren/profiles.yml``.
     """
     from wren.profile import add_profile  # noqa: PLC0415
 
@@ -80,14 +92,18 @@ def add(
         raise typer.Exit(1)
 
     if ui:
+        # starlette / uvicorn / jinja2 ship with core wren-engine so this
+        # import normally succeeds; the except branch is defensive for
+        # broken installs where the web stack got stripped.
         try:
             from wren.profile_web import start as web_start  # noqa: PLC0415
         except ImportError as e:
             if e.name not in {"starlette", "uvicorn", "jinja2"}:
                 raise
             typer.echo(
-                "Error: --ui requires extra dependencies.\n"
-                "Install with: pip install 'wren-engine[ui]'",
+                "Error: --ui requires the browser UI dependencies, which "
+                "normally ship with wren-engine.\n"
+                "Reinstall wren-engine, or use --interactive instead.",
                 err=True,
             )
             raise typer.Exit(1)
@@ -102,11 +118,13 @@ def add(
             )
             if activate:
                 typer.echo(f"  Profile '{result['name']}' is now active.")
+            _post_add(result["name"], validate=validate, minimal=False)
         else:
             typer.echo("Cancelled.", err=True)
             raise typer.Exit(1)
         return
 
+    minimal = False
     if from_file:
         from pathlib import Path  # noqa: PLC0415
 
@@ -126,18 +144,10 @@ def add(
         if not isinstance(raw, dict):
             typer.echo("Error: file must contain a JSON/YAML object.", err=True)
             raise typer.Exit(1)
-        # Flatten the MCP/web envelope {"datasource": ..., "properties": {...}}
-        # into a flat profile dict so _build_engine receives consistent connection_info.
-        if "properties" in raw and isinstance(raw["properties"], dict):
-            props = raw["properties"]
-            props["datasource"] = raw.get("datasource", props.get("datasource"))
-            profile_data = props
-        else:
-            profile_data = raw
-        if not profile_data.get("datasource"):
-            typer.echo(
-                "Error: imported file must contain a 'datasource' key.", err=True
-            )
+        try:
+            profile_data = _flatten_connection_envelope(raw)
+        except ValueError as exc:
+            typer.echo(f"Error: {exc}", err=True)
             raise typer.Exit(1)
     elif interactive:
         profile_data = _interactive_add(datasource)
@@ -153,9 +163,141 @@ def add(
             f"Created minimal profile '{name}' with datasource={datasource}. "
             "Edit ~/.wren/profiles.yml to add connection fields."
         )
+        minimal = True
 
     add_profile(name, profile_data, activate=activate)
     typer.echo(f"Profile '{name}' added.")
+    _post_add(name, validate=validate, minimal=minimal)
+
+
+def _flatten_connection_envelope(raw: dict) -> dict:
+    """Accept the few shapes users/agents actually produce and emit a flat dict.
+
+    The CLI's internal profile format is flat — ``{datasource, host, port, …}``.
+    Historically we only flattened the MCP/web envelope ``{datasource,
+    properties: {…}}``; everything else was stored verbatim and blew up
+    downstream with opaque Pydantic errors.  Now we explicitly accept:
+
+    - flat:       ``{datasource: …, host: …, port: …}``
+    - properties: ``{datasource: …, properties: {host: …, …}}`` (MCP/web)
+    - connection: ``{datasource: …, connection: {host: …, …}}`` (common guess)
+    - config:     ``{datasource: …, config: {host: …, …}}`` (another guess)
+
+    Anything else raises :class:`ValueError` with a message that shows the
+    expected flat form, so the user isn't left debugging a dict of dicts.
+    """
+    NESTED_KEYS = ("properties", "connection", "config")
+    nested_key = next((k for k in NESTED_KEYS if isinstance(raw.get(k), dict)), None)
+
+    if nested_key:
+        inner = dict(raw[nested_key])
+        # Merge any top-level scalar keys (datasource, aliases) into the inner
+        # dict; top-level keys win if both sides set the same name.
+        outer = {k: v for k, v in raw.items() if k != nested_key}
+        inner.update(outer)
+        flat = inner
+    else:
+        # Reject stray nested dicts we don't know how to interpret — much
+        # better than silently storing them and failing later.
+        unknown_nested = [
+            k
+            for k, v in raw.items()
+            if isinstance(v, dict) and k not in {"kwargs", "settings"}
+        ]
+        if unknown_nested:
+            raise ValueError(
+                f"Unexpected nested key(s) {unknown_nested!r}. "
+                "Connection fields must be flat — see "
+                "https://docs.getwren.ai/oss/engine/guide/profiles for the "
+                "supported shapes."
+            )
+        flat = dict(raw)
+
+    if not flat.get("datasource"):
+        raise ValueError("imported file must contain a 'datasource' key.")
+    return flat
+
+
+def _post_add(name: str, *, validate: bool, minimal: bool) -> None:
+    """Run validation (optional) and print the next-step hint."""
+    if validate and not minimal:
+        _validate_connection(name)
+    typer.echo("")
+    typer.echo("Next: wren context init")
+
+
+def _validate_connection(name: str) -> None:
+    """Test the saved profile by running ``SELECT 1`` through its connector.
+
+    Connection failure is a warning, not an error — the profile stays on
+    disk so the user can fix and retry.  We deliberately surface the raw
+    driver error so they know what to change.
+
+    Resolves ``${VAR}`` references just before handing the connection
+    info to the connector; the stored profile keeps the placeholders.
+    """
+    from pydantic import ValidationError  # noqa: PLC0415
+
+    from wren.connector.factory import get_connector  # noqa: PLC0415
+    from wren.model.data_source import DataSource  # noqa: PLC0415
+    from wren.profile import (  # noqa: PLC0415
+        MissingSecretError,
+        _load_raw,
+        expand_profile_secrets,
+    )
+
+    profile = _load_raw().get("profiles", {}).get(name)
+    if not profile:
+        return  # should not happen — profile was just added
+
+    ds_str = profile.get("datasource")
+    typer.echo("→ Validating connection...")
+    try:
+        ds = DataSource(ds_str.lower())
+    except ValueError:
+        typer.echo(f"⚠ Cannot validate: unknown datasource {ds_str!r}", err=True)
+        return
+
+    conn_info_dict = {k: v for k, v in profile.items() if k != "datasource"}
+    try:
+        conn_info_dict = expand_profile_secrets(conn_info_dict)
+    except MissingSecretError as exc:
+        typer.echo(f"⚠ Cannot validate: {exc}")
+        typer.echo(
+            "  Set the variable in your shell or a .env file and retry "
+            f"with: wren profile add {name} --from-file <path> --force",
+        )
+        return
+
+    # Convert the flat dict into the datasource's typed ConnectionInfo
+    # *before* calling get_connector.  Connectors read attributes like
+    # ``info.kwargs`` / ``info.host`` and raise AttributeError on a plain
+    # dict, which would swallow the actual driver error (e.g. MySQL 1044
+    # Access Denied) and report "'dict' object has no attribute 'kwargs'"
+    # instead.  WrenEngine does the same conversion when initialised from
+    # a dict; we mirror that code path here.
+    try:
+        conn_info = ds.get_connection_info(conn_info_dict)
+    except (ValidationError, ValueError) as exc:
+        typer.echo(f"⚠ Cannot validate: invalid connection info: {exc}")
+        typer.echo(
+            f"  Fix the fields in your profile / .env then retry:\n"
+            f"    wren profile add {name} --from-file <path> --force",
+        )
+        return
+
+    try:
+        connector = get_connector(ds, conn_info)
+        connector.dry_run("SELECT 1")
+    except Exception as exc:  # noqa: BLE001 — surface whatever driver raises
+        typer.echo(f"⚠ Connection failed: {exc}")
+        typer.echo(
+            "  The profile has been saved. To fix:\n"
+            "    wren profile debug                 # show resolved config\n"
+            f"    wren profile add {name} --ui       # edit and re-validate",
+        )
+        return
+    typer.echo("✓ Connection validated")
 
 
 def _interactive_add(default_ds: str | None) -> dict:

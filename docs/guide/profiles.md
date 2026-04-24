@@ -145,6 +145,65 @@ Install the extra for your data source before creating a profile:
 pip install "wren-engine[postgres,main]"
 ```
 
+## Secrets: `${VAR}` references and `.env` files
+
+Any profile value can contain `${VAR_NAME}` placeholders that are
+resolved from the environment at connection time.  The stored
+profile keeps the placeholder, so `profiles.yml` (and `wren profile
+debug`) never shows a plaintext secret:
+
+```yaml
+# ~/.wren/profiles.yml
+profiles:
+  prod:
+    datasource: postgres
+    host: db.example.com
+    port: '5432'
+    database: wren
+    user: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+```
+
+wren looks for values in this order (first match wins; process env
+wins over any `.env`):
+
+1. `os.environ` — anything you `export`ed (Unix) or set with
+   `$env:NAME = ...` (PowerShell) / `set NAME=...` (cmd.exe) before
+   running `wren`.
+2. `<project_root>/.env` — a dotenv file co-located with
+   `wren_project.yml`.
+3. `~/.wren/.env` — user-global fallback for operators running many
+   projects against the same secret bundle.
+
+### Rules
+
+- Names must be **UPPERCASE** (`[A-Z_][A-Z0-9_]*`).  Lowercase
+  `${foo}` is treated as a literal string so it doesn't collide with
+  real passwords or URL encodings.
+- `$$` escapes a literal dollar sign (`a$$b` stores as `a$b`).
+- Missing vars fail **early** with a clear error referencing the
+  variable name — no cryptic driver-level auth errors.
+
+### `.env` example
+
+```bash
+# .env (in project root; add to .gitignore!)
+POSTGRES_USER=paul
+POSTGRES_PASSWORD=s3cr3t
+```
+
+On Unix you may want `chmod 600 .env` so only your user can read it.
+Windows inherits permissions from the user profile and usually needs
+no action.
+
+### Agents and secrets
+
+AI coding agents should **never** ask for passwords in chat.  See
+[Installation](../get_started/installation.md) for the recommended
+agent flow: the agent writes a profile referencing `${POSTGRES_PASSWORD}`
+and instructs the user to put the actual value in `.env` via their
+editor.
+
 ## Profile vs project
 
 Profiles and projects serve different purposes and are stored separately:
