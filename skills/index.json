@@ -6,6 +6,24 @@
   "license": "Apache-2.0",
   "skills": [
     {
+      "name": "wren-install-guide",
+      "version": "1.0",
+      "description": "Install Wren Engine end-to-end. Walks the user through environment checks, project scaffolding, connection configuration via .env, and first query. Use when the user wants to install Wren Engine, set up a new data source connection, or bootstrap a new project from scratch.",
+      "tags": [
+        "wren",
+        "install",
+        "setup",
+        "onboarding",
+        "cli",
+        "dotenv",
+        "profile"
+      ],
+      "dependencies": [
+        "wren-generate-mdl"
+      ],
+      "repository": "https://github.com/Canner/wren-engine/tree/main/skills/wren-install-guide"
+    },
+    {
       "name": "wren-dlt-connector",
       "version": "1.0",
       "description": "Connect SaaS data (HubSpot, Stripe, Salesforce, GitHub, Slack, etc.) to Wren Engine for SQL analysis via dlt pipelines into DuckDB, then auto-generate a Wren semantic project.",
