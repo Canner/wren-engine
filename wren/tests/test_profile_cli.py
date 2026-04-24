@@ -284,6 +284,7 @@ def test_add_from_file_runs_validation_by_default(tmp_path, monkeypatch):
 
     def fake_validate(name):
         calls.append(name)
+        return True
 
     monkeypatch.setattr(profile_cli, "_validate_connection", fake_validate)
 
@@ -301,6 +302,31 @@ def test_add_from_file_runs_validation_by_default(tmp_path, monkeypatch):
     assert result.exit_code == 0
     assert calls == ["duck"]
     assert "Next: wren context init" in result.output
+
+
+def test_add_from_file_suppresses_next_hint_on_validation_failure(
+    tmp_path, monkeypatch
+):
+    """When validation fails, the misleading ``Next: wren context init``
+    hint must not be printed — otherwise users proceed with a broken
+    profile because the warning above it is easy to miss."""
+    import wren.profile_cli as profile_cli  # noqa: PLC0415
+
+    monkeypatch.setattr(profile_cli, "_validate_connection", lambda name: False)
+
+    conn_file = tmp_path / "conn.json"
+    conn_file.write_text(
+        json.dumps(
+            {
+                "datasource": "duckdb",
+                "url": str(tmp_path),
+                "format": "duckdb",
+            }
+        )
+    )
+    result = runner.invoke(profile_app, ["add", "duck", "--from-file", str(conn_file)])
+    assert result.exit_code == 0
+    assert "Next: wren context init" not in result.output
 
 
 def test_add_from_file_respects_no_validate(tmp_path, monkeypatch):

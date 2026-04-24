@@ -219,19 +219,43 @@ def _flatten_connection_envelope(raw: dict) -> dict:
 
 
 def _post_add(name: str, *, validate: bool, minimal: bool) -> None:
-    """Run validation (optional) and print the next-step hint."""
+    """Run validation (optional) and print the next-step hint.
+
+    The hint is only printed when validation was skipped or succeeded;
+    printing it after a ``⚠ Connection failed`` line would mislead the
+    user into running ``wren context init`` against a broken profile.
+    """
+    ok = True
     if validate and not minimal:
-        _validate_connection(name)
-    typer.echo("")
-    typer.echo("Next: wren context init")
+        ok = _validate_connection(name)
+    if ok:
+        typer.echo("")
+        typer.echo("Next: wren context init")
 
 
-def _validate_connection(name: str) -> None:
+def _retry_hint(name: str) -> str:
+    """Retry instruction shown after a validation warning.
+
+    Mentions every way the user may have created the profile so the hint
+    is correct whether they used ``--from-file``, ``--ui``, or the
+    guided interactive flow.
+    """
+    return (
+        f"  Fix .env / profile fields, then retry with your original method:\n"
+        f"    wren profile add {name} --from-file <path>   # dotenv-driven\n"
+        f"    wren profile add {name} --ui                 # browser form\n"
+        f"    wren profile add {name} --interactive        # prompt-driven"
+    )
+
+
+def _validate_connection(name: str) -> bool:
     """Test the saved profile by running ``SELECT 1`` through its connector.
 
-    Connection failure is a warning, not an error — the profile stays on
-    disk so the user can fix and retry.  We deliberately surface the raw
-    driver error so they know what to change.
+    Returns ``True`` on success and ``False`` on any warning path so the
+    caller can suppress misleading next-step hints.  Connection failure
+    is a warning, not an error — the profile stays on disk so the user
+    can fix and retry.  We deliberately surface the raw driver error so
+    they know what to change.
 
     Resolves ``${VAR}`` references just before handing the connection
     info to the connector; the stored profile keeps the placeholders.
@@ -248,30 +272,26 @@ def _validate_connection(name: str) -> None:
 
     profile = _load_raw().get("profiles", {}).get(name)
     if not profile:
-        return  # should not happen — profile was just added
+        return False  # should not happen — profile was just added
 
     ds_str = profile.get("datasource")
     if not isinstance(ds_str, str) or not ds_str:
         typer.echo("⚠ Cannot validate: profile has no datasource.", err=True)
-        return
+        return False
     typer.echo("→ Validating connection...")
     try:
         ds = DataSource(ds_str.lower())
     except ValueError:
         typer.echo(f"⚠ Cannot validate: unknown datasource {ds_str!r}", err=True)
-        return
+        return False
 
     conn_info_dict = {k: v for k, v in profile.items() if k != "datasource"}
     try:
         conn_info_dict = expand_profile_secrets(conn_info_dict)
     except MissingSecretError as exc:
         typer.echo(f"⚠ Cannot validate: {exc}", err=True)
-        typer.echo(
-            "  Set the variable in your shell or a .env file and retry "
-            f"with: wren profile add {name} --from-file <path>",
-            err=True,
-        )
-        return
+        typer.echo(_retry_hint(name), err=True)
+        return False
 
     # Convert the flat dict into the datasource's typed ConnectionInfo
     # *before* calling get_connector.  Connectors read attributes like
@@ -284,12 +304,8 @@ def _validate_connection(name: str) -> None:
         conn_info = ds.get_connection_info(conn_info_dict)
     except (ValidationError, ValueError) as exc:
         typer.echo(f"⚠ Cannot validate: invalid connection info: {exc}", err=True)
-        typer.echo(
-            f"  Fix the fields in your profile / .env then retry:\n"
-            f"    wren profile add {name} --from-file <path>",
-            err=True,
-        )
-        return
+        typer.echo(_retry_hint(name), err=True)
+        return False
 
     try:
         connector = get_connector(ds, conn_info)
@@ -302,8 +318,9 @@ def _validate_connection(name: str) -> None:
             f"    wren profile add {name} --ui       # edit and re-validate",
             err=True,
         )
-        return
+        return False
     typer.echo("✓ Connection validated")
+    return True
 
 
 def _interactive_add(default_ds: str | None) -> dict:

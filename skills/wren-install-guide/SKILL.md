@@ -359,13 +359,15 @@ Only run this step after the user has replied "done".
      left a `.env` value blank.  Show the variable name, ask them
      to fill it in, then re-run:
 
-          wren profile add <project-name> --from-file /tmp/conn.yml --force
+          wren profile add <project-name> --from-file /tmp/conn.yml
 
+     `wren profile add` overwrites existing profiles silently, so no
+     `--force` flag is needed.
    - ⚠ **Driver error** (e.g. MySQL `1044 Access denied`, Postgres
      `password authentication failed`, `Host unreachable`) → show
      the driver error verbatim.  Diagnose when possible (firewall,
      IP allowlist for cloud DBs, wrong DB name).  Ask the user to
-     fix `.env`, then re-run with `--force`.
+     fix `.env`, then re-run the same `wren profile add` command.
    - ⚠ **Invalid profile** (Pydantic `ValidationError`) → the
      template is missing a required field.  Regenerate the `.env`
      template with the missing key and re-run.
