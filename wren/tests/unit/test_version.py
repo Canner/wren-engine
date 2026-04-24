@@ -29,3 +29,15 @@ def test_version_short_flag():
     result = runner.invoke(app, ["-V"])
     assert result.exit_code == 0
     assert __version__ in result.output
+
+
+def test_version_matches_package_metadata():
+    """Guard against drift: __version__ must come from installed metadata
+    (pyproject.toml), not a hardcoded string that release-please forgets."""
+    from importlib.metadata import PackageNotFoundError, version  # noqa: PLC0415
+
+    try:
+        meta_version = version("wren-engine")
+    except PackageNotFoundError:
+        pytest.skip("wren-engine not installed as a distribution")
+    assert __version__ == meta_version
