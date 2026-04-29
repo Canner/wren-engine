@@ -109,35 +109,32 @@ def test_add_from_file_normalizes_properties_envelope(tmp_path):
     assert profiles["duck"]["datasource"] == "duckdb"
 
 
-def test_add_from_file_normalizes_connection_envelope(tmp_path):
-    """Common `connection: {...}` shape should flatten too, not get saved nested."""
+def test_add_from_file_rejects_connection_envelope(tmp_path):
+    """`connection:` envelope is not legacy MCP/web shape — reject so the
+    user fixes it instead of having a half-broken profile."""
     conn_file = tmp_path / "conn.yml"
     conn_file.write_text(
-        "datasource: mysql\n"
-        "connection:\n"
-        "  host: db.local\n"
-        "  port: '3306'\n"
-        "  database: wren\n"
-        "  user: root\n"
+        "datasource: mysql\nconnection:\n  host: db.local\n  port: '3306'\n"
     )
     result = runner.invoke(profile_app, ["add", "my", "--from-file", str(conn_file)])
-    assert result.exit_code == 0, result.output
-    profiles = profile_mod.list_profiles()
-    assert "connection" not in profiles["my"]
-    assert profiles["my"]["host"] == "db.local"
-    assert profiles["my"]["port"] == "3306"
-    assert profiles["my"]["datasource"] == "mysql"
+    assert result.exit_code == 1
+    assert (
+        "connection" in result.output.lower()
+        or "unexpected nested" in result.output.lower()
+    )
 
 
-def test_add_from_file_normalizes_config_envelope(tmp_path):
+def test_add_from_file_rejects_config_envelope(tmp_path):
     conn_file = tmp_path / "conn.yml"
     conn_file.write_text(
         "datasource: postgres\nconfig:\n  host: pg.local\n  port: 5432\n"
     )
     result = runner.invoke(profile_app, ["add", "pg", "--from-file", str(conn_file)])
-    assert result.exit_code == 0
-    assert "config" not in profile_mod.list_profiles()["pg"]
-    assert profile_mod.list_profiles()["pg"]["host"] == "pg.local"
+    assert result.exit_code == 1
+    assert (
+        "config" in result.output.lower()
+        or "unexpected nested" in result.output.lower()
+    )
 
 
 def test_add_from_file_rejects_unknown_nested_keys(tmp_path):

@@ -594,8 +594,8 @@ try:
 
     app.add_typer(memory_app)
 except ImportError:
-    # `memory` is installed on demand via `wren add memory`; until then
-    # the subcommand group simply isn't registered.
+    # `memory` is installed on demand via `pip install "wren-engine[memory]"`;
+    # until then the subcommand group simply isn't registered.
     pass
 
 from wren.profile_cli import profile_app  # noqa: PLC0415, E402

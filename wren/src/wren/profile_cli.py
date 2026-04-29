@@ -63,13 +63,13 @@ def add(
     no_open: Annotated[
         bool, typer.Option("--no-open", help="Don't auto-open browser (just print URL)")
     ] = False,
-    validate: Annotated[
+    no_validate: Annotated[
         bool,
         typer.Option(
-            "--validate/--no-validate",
-            help="Test the connection after save (default on).",
+            "--no-validate",
+            help="Skip the connection test after save (default: validate).",
         ),
-    ] = True,
+    ] = False,
 ) -> None:
     """Add a new connection profile.
 
@@ -118,7 +118,7 @@ def add(
             )
             if activate:
                 typer.echo(f"  Profile '{result['name']}' is now active.")
-            _post_add(result["name"], validate=validate, minimal=False)
+            _post_add(result["name"], validate=not no_validate, minimal=False)
         else:
             typer.echo("Cancelled.", err=True)
             raise typer.Exit(1)
@@ -167,33 +167,28 @@ def add(
 
     add_profile(name, profile_data, activate=activate)
     typer.echo(f"Profile '{name}' added.")
-    _post_add(name, validate=validate, minimal=minimal)
+    _post_add(name, validate=not no_validate, minimal=minimal)
 
 
 def _flatten_connection_envelope(raw: dict) -> dict:
     """Accept the few shapes users/agents actually produce and emit a flat dict.
 
     The CLI's internal profile format is flat — ``{datasource, host, port, …}``.
-    Historically we only flattened the MCP/web envelope ``{datasource,
-    properties: {…}}``; everything else was stored verbatim and blew up
-    downstream with opaque Pydantic errors.  Now we explicitly accept:
+    We accept exactly two shapes:
 
     - flat:       ``{datasource: …, host: …, port: …}``
-    - properties: ``{datasource: …, properties: {host: …, …}}`` (MCP/web)
-    - connection: ``{datasource: …, connection: {host: …, …}}`` (common guess)
-    - config:     ``{datasource: …, config: {host: …, …}}`` (another guess)
+    - properties: ``{datasource: …, properties: {host: …, …}}`` (legacy
+      MCP / web shape)
 
-    Anything else raises :class:`ValueError` with a message that shows the
-    expected flat form, so the user isn't left debugging a dict of dicts.
+    Other guessed envelopes (``connection:``, ``config:``) are rejected
+    with a message showing the expected flat form, so the user isn't
+    left debugging a dict of dicts.
     """
-    NESTED_KEYS = ("properties", "connection", "config")
-    nested_key = next((k for k in NESTED_KEYS if isinstance(raw.get(k), dict)), None)
-
-    if nested_key:
-        inner = dict(raw[nested_key])
-        # Merge any top-level scalar keys (datasource, aliases) into the inner
+    if isinstance(raw.get("properties"), dict):
+        inner = dict(raw["properties"])
+        # Merge top-level scalar keys (datasource, aliases) into the inner
         # dict; top-level keys win if both sides set the same name.
-        outer = {k: v for k, v in raw.items() if k != nested_key}
+        outer = {k: v for k, v in raw.items() if k != "properties"}
         inner.update(outer)
         flat = inner
     else:

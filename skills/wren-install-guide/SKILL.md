@@ -519,7 +519,7 @@ an issue at <https://github.com/Canner/wren-engine/issues>."
 - ✅ Always report command output to the user in plain language.
 - ✅ Always preview destructive commands before running them (show
   the exact command).
-- ✅ Always validate connections (default `--validate` = on).
+- ✅ Always validate connections (default — pass `--no-validate` to skip).
 - ✅ Always use `wren-generate-mdl` to build MDL before exploring
   data.
 
