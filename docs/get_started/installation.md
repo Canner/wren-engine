@@ -76,12 +76,14 @@ The installer auto-detects your AI agent. To target a specific one:
 npx skills add Canner/wren-engine --skill '*' --agent claude-code
 ```
 
-Two skills are installed:
+The installer drops these skills into your agent's skill directory:
 
 | Skill | Purpose |
 |-------|---------|
-| **wren-usage** | Day-to-day workflow — schema context, query recall, SQL execution, result storage |
+| **wren-onboarding** | End-to-end install + first-connection flow. Triggers on `/wren-onboarding`, "install wren", "set up wren engine" |
 | **wren-generate-mdl** | One-time setup — database introspection, type normalization, MDL generation |
+| **wren-usage** | Day-to-day workflow — schema context, query recall, SQL execution, result storage |
+| **wren-dlt-connector** | Connect SaaS data (HubSpot, Stripe, Salesforce, GitHub, Slack) via dlt pipelines into DuckDB, then auto-generate a Wren project |
 
 After installation, **start a new agent session** — skills are loaded at session start.
 
