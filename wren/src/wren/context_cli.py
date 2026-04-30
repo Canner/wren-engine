@@ -35,10 +35,22 @@ def init(
         bool,
         typer.Option("--force", help="Overwrite existing project files."),
     ] = False,
+    empty: Annotated[
+        bool,
+        typer.Option(
+            "--empty",
+            help=(
+                "Skip the placeholder example model and view. "
+                "Useful when an AI agent (or a subsequent --from-mdl import) "
+                "will populate models/ itself."
+            ),
+        ),
+    ] = False,
 ) -> None:
     """Initialize a new Wren project.
 
-    Without --from-mdl: scaffolds an empty project structure.
+    Without --from-mdl: scaffolds the project.  Pass ``--empty`` to leave
+    ``models/`` and ``views/`` untouched (no placeholder example).
     With --from-mdl: imports an existing MDL JSON and produces a complete
     YAML project, ready for `wren context validate/build`.
     """
@@ -110,35 +122,7 @@ def init(
     )
     project_file.write_text(project_yml)
 
-    # Scaffold example model (table_reference mode)
-    example_model_dir = project_path / "models" / "example"
-    example_model_dir.mkdir(parents=True, exist_ok=True)
-    (example_model_dir / "metadata.yml").write_text(
-        "# Example model — replace with your actual table\n"
-        "name: example\n"
-        "# table_reference points to the ACTUAL database table location\n"
-        "table_reference:\n"
-        '  catalog: ""        # your database catalog (empty if N/A)\n'
-        "  schema: public      # your database schema\n"
-        "  table: example      # your database table name\n"
-        "columns:\n"
-        "  - name: id\n"
-        "    type: INTEGER\n"
-        "    is_calculated: false\n"
-        "    not_null: true\n"
-        "    is_primary_key: true\n"
-        "    properties: {}\n"
-        "  - name: name\n"
-        "    type: VARCHAR\n"
-        "    is_calculated: false\n"
-        "    not_null: false\n"
-        "    properties: {}\n"
-        "primary_key: id\n"
-        "cached: false\n"
-        "properties: {}\n"
-    )
-
-    # Empty relationships.yml
+    # Empty relationships.yml (shared between empty and full scaffold)
     rels = (
         "relationships: []\n"
         "# Example:\n"
@@ -152,18 +136,47 @@ def init(
     )
     (project_path / "relationships.yml").write_text(rels)
 
-    # Scaffold example view
-    example_view_dir = project_path / "views" / "example_view"
-    example_view_dir.mkdir(parents=True, exist_ok=True)
-    (example_view_dir / "metadata.yml").write_text(
-        "# Example view — replace with your actual view\n"
-        "name: example_view\n"
-        "properties:\n"
-        '  description: "An example view"\n'
-    )
-    (example_view_dir / "sql.yml").write_text(
-        "statement: >\n  SELECT * FROM example LIMIT 100\n"
-    )
+    if not empty:
+        # Scaffold example model (table_reference mode)
+        example_model_dir = project_path / "models" / "example"
+        example_model_dir.mkdir(parents=True, exist_ok=True)
+        (example_model_dir / "metadata.yml").write_text(
+            "# Example model — replace with your actual table\n"
+            "name: example\n"
+            "# table_reference points to the ACTUAL database table location\n"
+            "table_reference:\n"
+            '  catalog: ""        # your database catalog (empty if N/A)\n'
+            "  schema: public      # your database schema\n"
+            "  table: example      # your database table name\n"
+            "columns:\n"
+            "  - name: id\n"
+            "    type: INTEGER\n"
+            "    is_calculated: false\n"
+            "    not_null: true\n"
+            "    is_primary_key: true\n"
+            "    properties: {}\n"
+            "  - name: name\n"
+            "    type: VARCHAR\n"
+            "    is_calculated: false\n"
+            "    not_null: false\n"
+            "    properties: {}\n"
+            "primary_key: id\n"
+            "cached: false\n"
+            "properties: {}\n"
+        )
+
+        # Scaffold example view
+        example_view_dir = project_path / "views" / "example_view"
+        example_view_dir.mkdir(parents=True, exist_ok=True)
+        (example_view_dir / "metadata.yml").write_text(
+            "# Example view — replace with your actual view\n"
+            "name: example_view\n"
+            "properties:\n"
+            '  description: "An example view"\n'
+        )
+        (example_view_dir / "sql.yml").write_text(
+            "statement: >\n  SELECT * FROM example LIMIT 100\n"
+        )
 
     # Instructions placeholder
     (project_path / "instructions.md").write_text(
@@ -188,13 +201,31 @@ def init(
 
     typer.echo(f"Wren project initialized: {project_path}")
     typer.echo("  wren_project.yml            — project metadata (edit data_source)")
-    typer.echo("  models/example/             — example model (metadata.yml)")
-    typer.echo("  views/example_view/         — example view (metadata.yml + sql.yml)")
+    if not empty:
+        typer.echo("  models/example/             — example model (metadata.yml)")
+        typer.echo(
+            "  views/example_view/         — example view (metadata.yml + sql.yml)"
+        )
+    else:
+        typer.echo("  models/                     — (empty; add your own models)")
+        typer.echo("  views/                      — (empty; add your own views)")
     typer.echo("  relationships.yml           — define joins between models")
     typer.echo("  instructions.md             — LLM instructions")
     typer.echo("  AGENTS.md                   — AI agent workflow guidance")
     typer.echo("  queries.yml                 — curated NL-SQL pairs for memory")
-    typer.echo("\nNext: edit your models, then run `wren context build`.")
+    typer.echo("")
+    typer.echo(
+        "Next: Install agent skills via "
+        "`curl -fsSL https://raw.githubusercontent.com/Canner/wren-engine/main/skills/install.sh | bash`, "
+        "then use the `wren-generate-mdl` skill in your agent to populate models/"
+        " (or edit them manually). Run `wren context build` when done."
+    )
+
+
+# Threshold past which we collapse warnings into a grouped summary.
+# Small schemas still show every line; large schemas get a one-line
+# summary with a hint to re-run with --verbose.
+_WARNING_SUMMARY_THRESHOLD = 10
 
 
 @context_app.command()
@@ -211,6 +242,17 @@ def validate(
             help="Semantic check depth: error (dry-plan only), warning (+ descriptions), strict (+ columns).",
         ),
     ] = "warning",
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose",
+            "-v",
+            help=(
+                "Print every warning instead of the grouped summary that "
+                f"kicks in past {_WARNING_SUMMARY_THRESHOLD} warnings."
+            ),
+        ),
+    ] = False,
 ) -> None:
     """Validate MDL project: YAML structure + view SQL dry-plan + description checks."""
     import base64 as _b64  # noqa: PLC0415
@@ -237,8 +279,10 @@ def validate(
     struct_warnings = [e for e in struct_errors if e.level == "warning"]
     struct_hard = [e for e in struct_errors if e.level == "error"]
 
-    if struct_errors:
-        for e in struct_errors:
+    # Hard errors always print in full — they block the build.  Warnings
+    # flow through the shared summariser with sem_warnings below.
+    if struct_hard:
+        for e in struct_hard:
             typer.echo(str(e), err=True)
 
     # ── Semantic validation (dry-plan + description checks) ──────────────
@@ -262,14 +306,12 @@ def validate(
         for msg in sem_errors:
             typer.echo(f"  \u2717 {msg}", err=True)
 
-    if sem_warnings:
-        typer.echo("\nWarnings:")
-        for msg in sem_warnings:
-            typer.echo(f"  \u26a0 {msg}")
+    all_warnings: list[str] = [str(w) for w in struct_warnings] + list(sem_warnings)
+    _print_warnings(all_warnings, verbose=verbose)
 
-    # ── Exit logic ────────────────────────────────────────────────────────
+    # ── Exit logic ──────────────────────────────────────────────────────────────────
     has_hard_error = bool(struct_hard or sem_errors)
-    has_warning = bool(struct_warnings or sem_warnings)
+    has_warning = bool(all_warnings)
 
     if has_hard_error or (strict and has_warning):
         raise typer.Exit(1)
@@ -281,9 +323,40 @@ def validate(
         typer.echo(
             f"Valid — {len(models)} models, {len(views)} views, {len(rels)} relationships."
         )
-    elif has_warning:
-        n_warn = len(struct_warnings) + len(sem_warnings)
-        typer.echo(f"\n{n_warn} warning(s), 0 errors.")
+
+
+def _print_warnings(warnings: list[str], *, verbose: bool) -> None:
+    """Render warnings: every line below the threshold, grouped summary above.
+
+    Agents and humans both read the first "Warnings:" line as a signal
+    that something is wrong.  A 74-line flood of "missing description"
+    messages is unhelpful and misleading, so past the threshold we
+    bucket by warning-type prefix.  Pass ``--verbose`` to see every
+    message anyway.
+    """
+    if not warnings:
+        return
+
+    total = len(warnings)
+    if verbose or total <= _WARNING_SUMMARY_THRESHOLD:
+        typer.echo("\nWarnings:")
+        for msg in warnings:
+            typer.echo(f"  \u26a0 {msg}")
+        typer.echo(f"\n{total} warning(s), 0 errors.")
+        return
+
+    # Bucket by warning *category* — the text after the last colon
+    # (e.g. "missing description", "missing primary_key").  The target
+    # prefix ("model 'orders'") is unique per row and would degenerate
+    # to one bucket per line if we grouped on it.
+    groups: dict[str, int] = {}
+    for msg in warnings:
+        category = msg.rsplit(":", 1)[-1].strip() if ":" in msg else msg
+        groups[category] = groups.get(category, 0) + 1
+
+    typer.echo(f"\nWarnings: {total} total (pass --verbose to see each line)")
+    for category, count in sorted(groups.items(), key=lambda kv: -kv[1]):
+        typer.echo(f"  \u26a0 {category}: {count}")
 
 
 @context_app.command()
@@ -342,6 +415,16 @@ def build(
     n_models = len(manifest_json.get("models", []))
     n_views = len(manifest_json.get("views", []))
     typer.echo(f"Built: {n_models} models, {n_views} views → {out_path}")
+    typer.echo("")
+    typer.echo("Next: wren --sql 'SELECT ...' to query your data.")
+    # Soft nudge toward semantic memory once the schema crosses the threshold
+    # where embedding search starts to pay off.
+    if n_models >= 200:
+        typer.echo(
+            f"\nYour schema has {n_models} models — consider enabling semantic memory:\n"
+            '  pip install "wren-engine[memory]"\n'
+            "  wren memory index"
+        )
 
 
 @context_app.command()

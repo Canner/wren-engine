@@ -1,8 +1,16 @@
-"""Profile management — load, save, list, switch, add, remove profiles."""
+"""Profile management — load, save, list, switch, add, remove profiles.
+
+Profiles may contain ``${VAR}`` references; those are resolved at
+connection time (never at save time) by :func:`expand_profile_secrets`.
+The stored YAML keeps the placeholders so ``wren profile debug`` never
+prints an actual secret.
+"""
 
 from __future__ import annotations
 
 import os
+import re
+import string
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -11,6 +19,125 @@ import yaml
 
 _WREN_HOME = Path(os.environ.get("WREN_HOME", Path.home() / ".wren"))
 _PROFILES_FILE = _WREN_HOME / "profiles.yml"
+
+# ``${VAR}`` references in profile values are resolved from the environment.
+# We restrict variable names to UPPER_SNAKE_CASE so a literal "${foo}" in a
+# real password (or any other lowercase curly-brace sequence) is left alone.
+# ``string.Template`` already supports ``$$`` → ``$`` as an escape.
+
+
+class _SecretTemplate(string.Template):
+    # Disable IGNORECASE (Template's default) so ``${foo}`` does NOT match —
+    # that lets us leave lowercase curly-brace sequences alone (they may
+    # appear in URLs, query strings, or real passwords).
+    flags = re.VERBOSE
+    idpattern = r"[_A-Z][_A-Z0-9]*"
+
+
+class MissingSecretError(ValueError):
+    """Raised when a profile references an env var that isn't set."""
+
+
+_env_loaded = False
+
+
+def _ensure_env_loaded() -> None:
+    """Merge ``.env`` files into ``os.environ`` exactly once per process.
+
+    Order (first match wins per key; existing env vars are never overwritten):
+
+    1. ``$CWD/.env`` — the typical agent flow drops the file here
+    2. Walk up from ``$CWD`` to find the project root (``wren_project.yml``),
+       load its ``.env`` if different from CWD
+    3. ``~/.wren/.env`` — user-global fallback for operators with many
+       projects sharing the same secret bundle
+
+    ``python-dotenv`` handles CRLF / LF portably so the same file works on
+    Windows, macOS, and Linux.  We call ``load_dotenv`` with ``override=False``
+    so values a user exported in their shell still win.
+    """
+    global _env_loaded
+    if _env_loaded:
+        return
+    _env_loaded = True
+
+    try:
+        from dotenv import load_dotenv  # noqa: PLC0415
+    except ImportError:
+        # python-dotenv ships with core wren-engine; this branch is defensive
+        # for broken installs.  Profiles without ${VAR} still work fine.
+        return
+
+    candidates: list[Path] = []
+    cwd = Path.cwd().resolve()
+    if (cwd / ".env").exists():
+        candidates.append(cwd / ".env")
+
+    # Find project root by looking for wren_project.yml; if different from
+    # cwd, consider its .env as well.
+    for parent in [cwd, *cwd.parents]:
+        if (parent / "wren_project.yml").exists():
+            project_env = parent / ".env"
+            if project_env.exists() and project_env not in candidates:
+                candidates.append(project_env)
+            break
+
+    user_env = _WREN_HOME / ".env"
+    if user_env.exists():
+        candidates.append(user_env)
+
+    for dotenv_path in candidates:
+        load_dotenv(dotenv_path, override=False)
+
+
+def _reset_env_loaded_for_tests() -> None:
+    """Clear the cached ``_env_loaded`` flag so tests can exercise discovery."""
+    global _env_loaded
+    _env_loaded = False
+
+
+def _expand_string(value: str, env: dict[str, str]) -> str:
+    """Resolve ``${VAR}`` references in a single string.
+
+    Raises :class:`MissingSecretError` with a useful message when any
+    referenced variable is not set.
+    """
+    try:
+        return _SecretTemplate(value).substitute(env)
+    except KeyError as exc:
+        name = exc.args[0]
+        raise MissingSecretError(
+            f"Profile references ${{{name}}} but it is not set in the "
+            "environment or any discovered .env file."
+        ) from exc
+    except ValueError as exc:
+        # Template raised on a malformed $-sequence; surface the same
+        # KeyError-style message so callers get one exception type.
+        raise MissingSecretError(
+            f"Malformed reference in profile value {value!r}: {exc}"
+        ) from exc
+
+
+def expand_profile_secrets(profile: Any) -> Any:
+    """Recursively resolve ``${VAR}`` references in a profile dict.
+
+    Only string values are substituted; integers, booleans, lists, and
+    nested dicts are preserved (lists and dicts are walked recursively so
+    ``kwargs: {password: ${PG_PW}}`` works).  Use at connection time;
+    never when writing profiles back to disk or printing debug output.
+    """
+    _ensure_env_loaded()
+    return _expand_obj(profile, os.environ)
+
+
+def _expand_obj(obj: Any, env: dict[str, str]) -> Any:
+    if isinstance(obj, str):
+        return _expand_string(obj, env)
+    if isinstance(obj, dict):
+        return {k: _expand_obj(v, env) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_expand_obj(v, env) for v in obj]
+    return obj
 
 
 def _load_raw() -> dict:

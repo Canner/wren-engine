@@ -29,10 +29,10 @@ This opens a form where you select the data source type and fill in the required
 Each data source has different fields. To see the exact fields for any data source:
 
 ```bash
-wren docs connection-info --datasource postgres
+wren docs connection-info postgres
 ```
 
-Replace `postgres` with your data source name. The command prints all required and optional fields with descriptions.
+Replace `postgres` with your data source name. The command prints all required and optional fields with descriptions, derived directly from the Pydantic schema — so it always matches the running CLI.
 
 **Example — PostgreSQL:**
 
@@ -49,11 +49,63 @@ If you prefer not to use the browser UI:
 # Interactive prompts
 wren profile add my-db --interactive
 
-# Import from a JSON/YAML file
-wren profile add my-db --from-file connection.json
+# Import from a JSON/YAML file (recommended for agent-driven flows)
+wren profile add my-db --from-file connection.yml
+```
+
+For the `--from-file` flow, write a flat YAML referencing `${VAR}` placeholders so secrets stay in `.env`:
+
+```yaml
+# connection.yml
+datasource: postgres
+host: ${POSTGRES_HOST}
+port: ${POSTGRES_PORT}
+database: ${POSTGRES_DATABASE}
+user: ${POSTGRES_USER}
+password: ${POSTGRES_PASSWORD}
+```
+
+```bash
+# .env (in project root; add to .gitignore)
+POSTGRES_HOST=db.example.com
+POSTGRES_PORT=5432
+POSTGRES_DATABASE=wren
+POSTGRES_USER=alice
+POSTGRES_PASSWORD=...
 ```
 
 See [Profiles](../guide/profiles.md) for all options.
+
+### Per-datasource setup notes
+
+Most data sources only need the fields shown by `wren docs connection-info <ds>`. These need an extra step:
+
+**BigQuery** — `credentials` must be a base64-encoded service-account JSON:
+
+```bash
+base64 -i /path/to/service-account.json | pbcopy   # macOS
+base64 /path/to/service-account.json               # Linux
+```
+
+Paste the resulting string into `BIGQUERY_CREDENTIALS=` (or directly into the profile field if not using `.env`).
+
+**Snowflake** — `account` is the account locator from your URL, e.g. `xy12345.us-east-1` (not the full hostname). `warehouse`, `database`, and `schema` must already exist and be accessible to the user.
+
+**Trino / Presto** — `catalog` and `schema` are required even though most clients let you omit them. Set both even if you plan to fully-qualify table names in queries.
+
+**Athena** — Requires `s3_staging_dir` (an S3 URI for query results) and AWS credentials, either via `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` env vars or the standard AWS credentials chain (`~/.aws/credentials`).
+
+**Databricks** — Use a personal access token in `access_token`. The `http_path` is the SQL warehouse HTTP path from the workspace UI.
+
+**MySQL on macOS** — If `pip install "wren-engine[mysql]"` fails to build `mysqlclient`, install the system dependencies first:
+
+```bash
+brew install mysql-client pkg-config
+export PKG_CONFIG_PATH="$(brew --prefix mysql-client)/lib/pkgconfig"
+pip install "wren-engine[mysql,main]"
+```
+
+Verify `mysql-client` is actually installed (`brew list mysql-client`) — `brew --prefix` returns a path even when the keg is missing, which is misleading.
 
 ---
 
@@ -242,19 +294,87 @@ Instructions are loaded by the agent at session start and included in memory sea
 
 ---
 
-## Common issues
+## Troubleshooting
 
-**"table not found" after building:**
+### `wren: command not found`
+
+The package is installed but the bin directory isn't on `PATH`. Run `pip show wren-engine` to find the install location, then add the matching `bin/` directory to `PATH` — or activate the virtualenv if you used one.
+
+### `pip install` fails with `externally-managed-environment`
+
+PEP 668 protects system Python on Linux/macOS. Use a virtualenv:
+
+```bash
+python3 -m venv ~/.venvs/wren && source ~/.venvs/wren/bin/activate
+pip install "wren-engine[<your-ds>,main]"
+```
+
+### `wren profile add` reports a missing secret
+
+```
+⚠ Cannot validate: '${POSTGRES_PASSWORD}' is not set in the environment
+or any discovered .env file.
+```
+
+The profile references a `${VAR}` that isn't defined. Fill in the matching key in your `.env` and re-run `wren profile add`. The CLI looks for `.env` in:
+
+1. `os.environ` (anything you `export`ed before running `wren`)
+2. `$CWD/.env` (where you ran the command from)
+3. `<project_root>/.env` (next to `wren_project.yml`)
+4. `~/.wren/.env` (user-global fallback)
+
+### Driver authentication failed
+
+Examples: MySQL `1044 Access denied`, Postgres `password authentication failed`, BigQuery `403 Permission denied`.
+
+`wren profile add` surfaces the driver error verbatim. Fix the credentials in `.env` (or the relevant cloud-side IAM permission) and re-run. Use `wren profile debug <name>` to see the resolved fields with secrets masked.
+
+### `Pydantic ValidationError: Field required`
+
+A required field is missing from the imported `--from-file`. Run `wren docs connection-info <ds>` to see the full list, add the missing key to your `.env` and the corresponding `${VAR}` to the profile YAML, then re-run.
+
+### `unknown datasource: <name>`
+
+Check the canonical name with `wren docs connection-info` (no argument) — it lists every supported source. Most aliases (`gcs_file`, `local_file`, etc.) are listed there too.
+
+### Connection refused / host unreachable
+
+```
+[Errno 61] Connection refused
+```
+
+- Can your machine reach the host? `nc -zv <host> <port>` is a quick check.
+- Cloud DBs (BigQuery, Snowflake, Redshift, RDS): is your egress IP allow-listed?
+- VPN / corporate firewall in the way?
+
+### `'dict' object has no attribute 'kwargs'`
+
+You're on a wren-engine version older than 0.3.1, where validation swallowed driver errors. Upgrade:
+
+```bash
+pip install --upgrade "wren-engine[main]"
+```
+
+### `wren context validate` warnings
+
+Warnings are grouped by category once there are more than 10 — pass `--verbose` to see each line. Common categories:
+
+- **Missing description** — cosmetic; agents can still answer questions without it.
+- **Missing `primary_key`** — not always a bug; junction / log tables legitimately have no PK.
+- **Invalid relationship condition** — real bug. Regenerate via the `wren-generate-mdl` skill, or fix manually.
+
+### "table not found" after building
+
 Model names in SQL must match the `name` field in your YAML, not the physical table name. Run `wren context show` to see available models.
 
-**Wrong column types:**
-Always normalize types through `wren utils parse-type --dialect <your_datasource>`. Raw database types like `int8` or `character varying` may not be recognized.
+### Wrong column types
 
-**Relationships not working:**
-Check that both models have a `primary_key` defined. The `condition` must use `model_name.column_name` syntax on both sides.
+Always normalize types through `wren utils parse-type --dialect <your-datasource>`. Raw database types like `int8` or `character varying` may not be recognized.
 
-**Memory returns irrelevant results:**
+### Memory returns irrelevant results
+
 Re-index after every MDL change: `wren context build && wren memory index`. Add `properties.description` to improve search quality.
 
-**Switching between databases:**
+### Switching between databases
+
 Create separate profiles for each database and switch with `wren profile switch <name>`. The same project can work with different profiles if the schema is compatible.
