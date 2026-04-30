@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.0](https://github.com/Canner/wren-engine/compare/wren-core-py-v0.4.0...wren-core-py-v0.5.0) (2026-04-30)
+
+
+### Features
+
+* add wren-core-wasm module with browser WASM support ([#1568](https://github.com/Canner/wren-engine/issues/1568)) ([4f9201b](https://github.com/Canner/wren-engine/commit/4f9201b7f98ce34fba9069b10da7a52b2c338b8b))
+* **wren-core-base:** replace Metric with Cube types and remove deprecated security types ([#1574](https://github.com/Canner/wren-engine/issues/1574)) ([753da60](https://github.com/Canner/wren-engine/commit/753da60034c5924f1077ca466e42595fbd96c149))
+
 ## [0.4.0](https://github.com/Canner/wren-engine/compare/wren-core-py-v0.3.0...wren-core-py-v0.4.0) (2026-04-16)
 
 
