@@ -1,3 +1,12 @@
+# Wren Engine — Archived
+
+> **This repository has been merged into [Canner/WrenAI](https://github.com/Canner/WrenAI) under the `core/` directory and is now archived (read-only).**
+>
+> New issues and PRs → [Canner/WrenAI](https://github.com/Canner/WrenAI/issues)
+> Full migration details (path mapping, archived modules, rationale) → [discussion #1592](https://github.com/Canner/wren-engine/discussions/1592)
+
+---
+
 <p align="center">
   <a href="https://getwren.ai">
     <picture>
