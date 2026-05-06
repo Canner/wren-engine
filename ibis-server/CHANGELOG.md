@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.26.0](https://github.com/Canner/wren-engine/compare/ibis-server-v0.25.0...ibis-server-v0.26.0) (2026-05-06)
+
+
+### Features
+
+* add wren-core-wasm module with browser WASM support ([#1568](https://github.com/Canner/wren-engine/issues/1568)) ([4f9201b](https://github.com/Canner/wren-engine/commit/4f9201b7f98ce34fba9069b10da7a52b2c338b8b))
+
 ## [0.25.0](https://github.com/Canner/wren-engine/compare/ibis-server-v0.24.6...ibis-server-v0.25.0) (2026-04-14)
 
 
