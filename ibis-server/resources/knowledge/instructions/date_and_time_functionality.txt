@@ -18,3 +18,61 @@
   - `to_timestamp_micros(<int_column>)`
   - `to_timestamp_nanos(<int_column>)`
   - `to_timestamp_seconds(<int_column>)`
+
+### DATE AND TIME OUTPUT FORMATTING ###
+When grouping results by year, month, or quarter, the output column should be formatted as a human-readable label, not a raw DATE or TIMESTAMP.
+
+Always follow two steps:
+
+1. Bucket the timestamp using DATE_TRUNC
+2. Format the bucket into a readable string
+
+#### Month Output ####
+Monthly results must be formatted as **yyyy-mm**
+
+Example:
+  ```sql
+    SELECT
+      CONCAT(
+        EXTRACT(year FROM DATE_TRUNC('month', created_at)),
+        '-',
+        LPAD(EXTRACT(month FROM DATE_TRUNC('month', created_at)), 2, '0')
+      ) AS txn_month,
+      COUNT(*) AS order_count
+    FROM orders
+    GROUP BY 1
+    ORDER BY 1
+  ```
+Example output:
+```
+txn_month
+2026-01
+2026-02
+2026-03
+```
+
+Notes:
+Always bucket with DATE_TRUNC('month', ...) before formatting.
+Do not extract year/month directly from the raw timestamp when grouping.
+
+
+#### Year Output ####
+Year values should appear as a 4-digit label.
+
+Example:
+```sql
+SELECT
+  CAST(EXTRACT(year FROM DATE_TRUNC('year', created_at)) AS VARCHAR) AS txn_year,
+  COUNT(*) AS order_count
+FROM orders
+GROUP BY 1
+ORDER BY 1
+```
+
+Example output:
+```sql
+txn_year
+2024
+2025
+2026
+```
